@@ -25,3 +25,4 @@ main = run $ do
   mkIdris
   installApp "katla"
   installLib "hedgehog"
+  installApp "pack"

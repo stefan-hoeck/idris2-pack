@@ -175,6 +175,11 @@ db = MkDB
               "e9858609ea79f0d2e36e66bfb9a2dbceba7771cc"
               "hedgehog.ipkg"
 
+  , MkPackage "pack"
+              "https://github.com/stefan-hoeck/idris2-pack"
+              "430b7daa3523c570770a24581ddbfd0843d0cca5"
+              "pack.ipkg"
+
   , MkPackage "katla"
               "https://github.com/idris-community/katla"
               "e16c1ec10e9be17cba6f70e91aa3983fa85d521c"
