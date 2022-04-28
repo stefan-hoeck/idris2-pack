@@ -14,6 +14,10 @@ eitherIO :  HasIO io
          -> EitherT PackErr io a
 eitherIO toErr = MkEitherT . map (mapFst toErr)
 
+export covering
+read : HasIO io => String -> EitherT PackErr io String
+read fn = eitherIO (ReadFile fn) (readFile fn)
+
 export
 sys : HasIO io => (cmd : String) -> EitherT PackErr io ()
 sys cmd = do
@@ -37,29 +41,6 @@ mkDir : HasIO io => (path : String) -> EitherT PackErr io ()
 mkDir path = do
   False <- liftIO (exists path) | True => pure ()
   eitherIO (MkDir path) (createDir path)
-
---------------------------------------------------------------------------------
---          Environment
---------------------------------------------------------------------------------
-
-export
-packDir : HasIO io => EitherT PackErr io String
-packDir = do
-  Nothing <- getEnv "PACK_DIR" | Just v => pure v
-  Nothing <- getEnv "HOME"     | Just v => pure "\{v}/.pack"
-  throwE NoPackDir
-
-export
-env : HasIO io => DB -> EitherT PackErr io Env
-env db = do
-  dir <- packDir
-
-  let tmpDir  = "\{dir}/tmp"
-      idrisDir = "\{dir}/\{db.idrisCommit}"
-
-  traverse_ mkDir [dir, tmpDir, idrisDir]
-
-  pure $ MkEnv db dir tmpDir idrisDir
 
 --------------------------------------------------------------------------------
 --          Git
@@ -96,6 +77,52 @@ withGit url commit act = do
   putStrLn "Removing repo dir"
   sys "rm -rf \{env.packTmpDir}"
   pure res
+
+--------------------------------------------------------------------------------
+--          Environment
+--------------------------------------------------------------------------------
+
+export
+packDir : HasIO io => EitherT PackErr io String
+packDir = do
+  Nothing <- getEnv "PACK_DIR" | Just v => pure v
+  Nothing <- getEnv "HOME"     | Just v => pure "\{v}/.pack"
+  throwE NoPackDir
+
+covering
+loadDB : HasIO io => String -> EitherT PackErr io DB
+loadDB commit = do
+  dir <- packDir
+  let tmpDir = "\{dir}/tmp"
+  cur <- curDir
+  gitClone "https://github.com/stefan-hoeck/idris2-pack-db" tmpDir
+  chgDir tmpDir
+  gitCheckout commit
+  str <- read "pack.db"
+  case readDB str of
+    Left err => do
+      chgDir cur
+      sys "rm -rf \{tmpDir}"
+      throwE err
+    Right res => do
+      chgDir cur
+      sys "rm -rf \{tmpDir}"
+      pure res
+
+export covering
+env : HasIO io => (commit : String) -> EitherT PackErr io Env
+env commit = do
+  dir <- packDir
+  mkDir dir
+
+  db  <- loadDB commit
+
+  let tmpDir   = "\{dir}/tmp"
+      idrisDir = "\{dir}/\{db.idrisCommit}"
+
+  mkDir idrisDir
+
+  pure $ MkEnv db dir tmpDir idrisDir
 
 export
 run : EitherT PackErr IO () -> IO ()

@@ -21,10 +21,12 @@ package plus dependencies is installed, and the `pack` application
 itself is installed.
 
 At the moment, the philosophy of
-`pack` is to use a curated package set (which is
-hard-coded to `Pack.Types.db`) together with a
-specific Idris2 commit, used for building the packages.
-The packages are supposed to be tested to be compatible with each other.
+`pack` is to use a curated package set (which can
+be found at the [idris2-pack-db](https://github.com/stefan-hoeck/idris2-pack-db)) together with a
+repository. This specifies an Idris2 commit hash,
+used for building the packages.
+The packages are supposed to be tested to be
+compatible with each other.
 
 The idea is to have a package manager similar to Haskell's *stack*,
 where packages are being built and developed against a

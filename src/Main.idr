@@ -11,8 +11,10 @@ import Pack.Util
 ||| (plus dependencies), the `hedgehog` library, and the
 ||| `pack` executable.
 |||
-||| This is done by consulting a curated package set, which is
-||| at the moment hard-coded in `Pack.Types.db`.
+||| This is done by consulting a curated package set, which
+||| can be found at commit "ba6994813573a744350c2df4d80e1312c6a9babf"
+||| of the [idris2-pack-db](https://github.com/stefan-hoeck/idris2-pack-db)
+||| repository.
 |||
 ||| This will take several minutes if run for the first time,
 ||| because the Idris executable will be built and installed.
@@ -21,7 +23,7 @@ import Pack.Util
 covering
 main : IO ()
 main = run $ do
-  e <- env db
+  e <- env "ba6994813573a744350c2df4d80e1312c6a9babf"
   mkIdris
   installApp "katla"
   installLib "hedgehog"

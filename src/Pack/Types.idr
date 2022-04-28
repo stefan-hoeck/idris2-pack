@@ -1,6 +1,8 @@
 module Pack.Types
 
 import Core.FC
+import Data.List1
+import Data.String
 import Idris.Package.Types
 import System.File
 
@@ -105,6 +107,9 @@ data PackErr : Type where
   ChangeDir  : (path : String) -> PackErr
   UnknownPkg : (name : String) -> PackErr
   NoApp      : (name : String) -> PackErr
+  InvalidPackageDesc : (s : String) -> PackErr
+  EmptyPkgDB : PackErr
+  InvalidDBHeader : (s : String) -> PackErr
   LexFail    : FC -> String -> PackErr
   ParseFail  : List (FC, String) -> PackErr
   MissingCorePackage :  (name : String)
@@ -136,9 +141,21 @@ printErr (Sys cmd err) = """
 
 printErr (ChangeDir path) = "Failed to change to directory \"\{path}\"."
 
+printErr (InvalidPackageDesc s) = """
+  Invalid package description: \"\{s}\".
+  This should be of the format \"name,url,commit hash,ipkg file\".
+  """
+
+printErr (InvalidDBHeader s) = """
+  Invalid data base header: \"\{s}\".
+  This should be of the format \"idris2 commit hash,idris2 version\".
+  """
+
 printErr (UnknownPkg name) = "Unknown package: \{name}"
 
 printErr (NoApp name) = "Package \{name} is not an application"
+
+printErr EmptyPkgDB = "Empty package data base"
 
 printErr (LexFail fc err) = show fc ++ ":Lexer error (" ++ show err ++ ")"
 printErr (ParseFail errs) = "Parse errors (" ++ show errs ++ ")"
@@ -146,51 +163,21 @@ printErr (MissingCorePackage nm v c) =
   "Core package \"\{nm}\" is missing for Idris2 version \{v} (commit: \{c})"
 
 --------------------------------------------------------------------------------
---          Example Database
+--          Reading a Database
 --------------------------------------------------------------------------------
 
-||| Example package data base
+commaSep : String -> List String
+commaSep = forget . split (',' ==)
+
+readPkg : String -> Either PackErr Package
+readPkg s = case commaSep s of
+  [n,url,hash,pkg] => Right $ MkPackage n url hash pkg
+  _                => Left (InvalidPackageDesc s)
+
 export
-db : DB
-db = MkDB
-  "81ba322a4bb8b4c3bdbc0d42c2f1c2be89a81b23"
-  "0.5.1"
-  [ MkPackage "elab-util"
-              "https://github.com/stefan-hoeck/idris2-elab-util"
-              "29f8153c0c06a69a168f009823a31bae266c5306"
-              "elab-util.ipkg"
-
-  , MkPackage "sop"
-              "https://github.com/stefan-hoeck/idris2-sop"
-              "af9224510f5c283f3b3c8293524e51c225617658"
-              "sop.ipkg"
-
-  , MkPackage "pretty-show"
-              "https://github.com/stefan-hoeck/idris2-pretty-show"
-              "d31e1f5a191a78deea1170beee21401da063ed8d"
-              "pretty-show.ipkg"
-
-  , MkPackage "hedgehog"
-              "https://github.com/stefan-hoeck/idris2-hedgehog"
-              "e9858609ea79f0d2e36e66bfb9a2dbceba7771cc"
-              "hedgehog.ipkg"
-
-  , MkPackage "pack"
-              "https://github.com/stefan-hoeck/idris2-pack"
-              "430b7daa3523c570770a24581ddbfd0843d0cca5"
-              "pack.ipkg"
-
-  , MkPackage "katla"
-              "https://github.com/idris-community/katla"
-              "e16c1ec10e9be17cba6f70e91aa3983fa85d521c"
-              "katla.ipkg"
-
-  , MkPackage "collie"
-              "https://github.com/ohad/collie"
-              "46bff04a8d9a1598fec9b19f515541df16dc64ef"
-              "collie.ipkg"
-
-  , MkPackage "idrall"
-              "https://github.com/alexhumphreys/idrall"
-              "b5f04575c94cc5cc006791d81f106f5492e3b8f3"
-              "idrall.ipkg" ]
+readDB : String -> Either PackErr DB
+readDB s = case lines s of
+  []       => Left EmptyPkgDB
+  (h :: t) => case commaSep h of
+    [c,v] => MkDB c v <$> traverse readPkg t
+    _     => Left (InvalidDBHeader h)
