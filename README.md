@@ -16,11 +16,6 @@ available to *pack*.
 
 ## Installation
 
-The *pack* application will install all libraries and executables
-to directory `$PACK_DIR`, which defaults to `$HOME/.pack`.
-It's therefore recommended to add the `$PACK_DIR/bin` folder
-to your `$PATH`.
-
 For building *pack* the first time, you will require a recent
 installation of Idris2 plus the Idris2 API
 (for reading `.ipkg` files). To build, run
@@ -39,6 +34,12 @@ If run for the first time, this will build and install a recent
 version of the Idris2 compiler plus standard libraries and API,
 followed by the *pack* application, so this might take a couple of
 minutes.
+
+The *pack* application will install all libraries and executables
+to directory `$PACK_DIR`, which defaults to `$HOME/.pack`.
+It is recommended to add the `$PACK_DIR/bin` folder
+to your `$PATH` and let environment variable `$IDRIS2_PREFIX` point
+to `$PACK_DIR/idris2` *after* having built and installed *pack*.
 
 ## Usage
 
@@ -67,6 +68,18 @@ as they depend on packages known to *pack*:
 
 ```sh
 pack --install-app fix_whitespace.ipkg
+pack --build json.ipkg
+pack --typecheck elab-util.ipkg
+```
+
+The build tool can run executables, both from local
+packages as well as from installed applications.
+Use `--args` to pass on command line arguments (making sure
+to properly quote them):
+
+```sh
+pack --args="-n 50" --exec test.ipkg
+pack --args="--help" --exec katla
 ```
 
 ## Stuff still Missing
@@ -77,7 +90,9 @@ non-comprehensive list:
 - [ ] Support for local package collections
 - [ ] Command for starting a REPL
 - [ ] Support for custom build directories
-- [ ] Command for typechecking an Idris package
+- [x] Command for typechecking an Idris package
+- [x] Command for building a local Idris2 package
+- [x] Command for running an application
 - [ ] Command for querying a data collection
 - [ ] Command for listing current version of data collection
 - [ ] Support for running tests

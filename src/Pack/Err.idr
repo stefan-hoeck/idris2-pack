@@ -65,6 +65,13 @@ data PackErr : Type where
   ||| No repository was specified
   MissingRepo : PackErr
 
+  ||| Trying to run zero or more than one application.
+  ExecMany : PackErr
+
+  ||| Trying to run zero or more than one local package
+  ||| (or something that isn't a local package).
+  BuildMany : PackErr
+
 ||| Prints an error that occured during program execution.
 export
 printErr : PackErr -> String
@@ -121,3 +128,8 @@ printErr (UnknownArg arg) = "Unknown command line arg: \{arg}"
 printErr (ErroneousArg err) = err
 
 printErr MissingRepo = "Please specify a single repository to switch to."
+
+printErr ExecMany = "Can only run a single executable."
+
+printErr BuildMany =
+  "Can only build or typecheck a single Idris2 package given as an `.ipkg` file."
