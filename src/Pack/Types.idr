@@ -1,10 +1,10 @@
 module Pack.Types
 
-import Core.FC
 import Data.List1
 import Data.String
+import Pack.CmdLn
+import Pack.Err
 import Idris.Package.Types
-import System.File
 
 %default total
 
@@ -46,6 +46,10 @@ data ResolvedPackage : Type where
      -> (desc : PkgDesc)
      -> ResolvedPackage
 
+  Local :  (name : String)
+        -> (desc : PkgDesc)
+        -> ResolvedPackage
+
   Base    : ResolvedPackage
   Contrib : ResolvedPackage
   Idris2  : ResolvedPackage
@@ -56,14 +60,15 @@ data ResolvedPackage : Type where
 
 export
 isCorePackage : ResolvedPackage -> Bool
-isCorePackage (RP _ _) = False
-isCorePackage Base     = True
-isCorePackage Contrib  = True
-isCorePackage Linear   = True
-isCorePackage Idris2   = True
-isCorePackage Network  = True
-isCorePackage Prelude  = True
-isCorePackage Test     = True
+isCorePackage (RP _ _)    = False
+isCorePackage (Local _ _) = False
+isCorePackage Base        = True
+isCorePackage Contrib     = True
+isCorePackage Linear      = True
+isCorePackage Idris2      = True
+isCorePackage Network     = True
+isCorePackage Prelude     = True
+isCorePackage Test        = True
 
 --------------------------------------------------------------------------------
 --          Package Database
@@ -87,80 +92,12 @@ record DB where
 public export
 record Env where
   constructor MkEnv
-  db           : DB
-  packDir      : String
-  packTmpDir   : String
-  packIdrisDir : String
+  db   : DB
+  conf : Config
 
---------------------------------------------------------------------------------
---          Errors
---------------------------------------------------------------------------------
-
-||| Errors that can occur when running *pack* programs.
-public export
-data PackErr : Type where
-  CurDir     : PackErr
-  NoPackDir  : PackErr
-  MkDir      : (path : String) -> (err : FileError) -> PackErr
-  ReadFile   : (path : String) -> (err : FileError) -> PackErr
-  Sys        : (cmd : String) -> (err : Int) -> PackErr
-  ChangeDir  : (path : String) -> PackErr
-  UnknownPkg : (name : String) -> PackErr
-  NoApp      : (name : String) -> PackErr
-  InvalidPackageDesc : (s : String) -> PackErr
-  EmptyPkgDB : PackErr
-  InvalidDBHeader : (s : String) -> PackErr
-  LexFail    : FC -> String -> PackErr
-  ParseFail  : List (FC, String) -> PackErr
-  MissingCorePackage :  (name : String)
-                     -> (version : String)
-                     -> (commit : String)
-                     -> PackErr
-
-export
-printErr : PackErr -> String
-printErr CurDir = "Failed to get current directory."
-
-printErr NoPackDir = """
-  Failed to figure out package directory.
-  This means, that neither environment variable \"PACK_DIR\"
-  nor environment varaible \"HOME\" was set.
-  """
-
-printErr (MkDir path err) =
-  "Error when creating directory \"\{path}\": \{show err}."
-
-printErr (ReadFile path err) =
-  "Error when reading file \"\{path}\": \{show err}."
-
-printErr (Sys cmd err) = """
-  Error when executing system command.
-  Command: \{cmd}
-  Error code: \{show err}
-  """
-
-printErr (ChangeDir path) = "Failed to change to directory \"\{path}\"."
-
-printErr (InvalidPackageDesc s) = """
-  Invalid package description: \"\{s}\".
-  This should be of the format \"name,url,commit hash,ipkg file\".
-  """
-
-printErr (InvalidDBHeader s) = """
-  Invalid data base header: \"\{s}\".
-  This should be of the format \"idris2 commit hash,idris2 version\".
-  """
-
-printErr (UnknownPkg name) = "Unknown package: \{name}"
-
-printErr (NoApp name) = "Package \{name} is not an application"
-
-printErr EmptyPkgDB = "Empty package data base"
-
-printErr (LexFail fc err) = show fc ++ ":Lexer error (" ++ show err ++ ")"
-printErr (ParseFail errs) = "Parse errors (" ++ show errs ++ ")"
-printErr (MissingCorePackage nm v c) =
-  "Core package \"\{nm}\" is missing for Idris2 version \{v} (commit: \{c})"
+export %hint
+envToConfig : Env => Config
+envToConfig = conf %search
 
 --------------------------------------------------------------------------------
 --          Reading a Database

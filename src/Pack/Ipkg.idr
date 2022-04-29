@@ -9,6 +9,7 @@ import Core.Name.Namespace
 import Idris.Package.Types
 import Libraries.Data.String.Extra
 import Libraries.Text.Parser
+import Pack.Err
 import Pack.Types
 import Pack.Util
 import Parser.Package

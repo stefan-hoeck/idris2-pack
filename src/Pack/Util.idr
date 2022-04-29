@@ -1,7 +1,9 @@
 module Pack.Util
 
 import public Control.Monad.Either
-import public Pack.Types
+import Pack.CmdLn
+import Pack.Err
+import Pack.Types
 import System.Directory
 import System
 
@@ -59,29 +61,33 @@ gitCheckout commit = sys "git checkout \{commit}"
 
 export
 withGit :  HasIO io
-        => (env    : Env)
+        => (conf   : Config)
         => (url    : String)
         -> (commit : String)
         -> (act    : EitherT PackErr io a)
         -> EitherT PackErr io a
 withGit url commit act = do
   cur <- curDir
+  when !(exists tmpDir) (sys "rm -rf \{tmpDir}")
   putStrLn "Cloning project"
-  gitClone url env.packTmpDir
+  gitClone url tmpDir
   putStrLn "Changing into repo directory"
-  chgDir env.packTmpDir
+  chgDir tmpDir
   putStrLn "Checking out to \{commit}"
   gitCheckout commit
   res <- act
   chgDir cur
   putStrLn "Removing repo dir"
-  sys "rm -rf \{env.packTmpDir}"
+  sys "rm -rf \{tmpDir}"
   pure res
 
 --------------------------------------------------------------------------------
 --          Environment
 --------------------------------------------------------------------------------
 
+||| Return the path of the *pack* root directory,
+||| either from environment variable `PACK_DIR`, or
+||| as `$HOME/.pack`.
 export
 packDir : HasIO io => EitherT PackErr io String
 packDir = do
@@ -89,41 +95,53 @@ packDir = do
   Nothing <- getEnv "HOME"     | Just v => pure "\{v}/.pack"
   throwE NoPackDir
 
+getConfig' : HasIO io => EitherT PackErr io Config
+getConfig' = do
+  dir        <- packDir
+  pn :: args <- getArgs | Nil => pure (init dir [])
+  liftEither $ applyArgs dir args
+
+||| Read application config from command line arguments.
+export
+getConfig : HasIO io => EitherT PackErr io Config
+getConfig = do
+  c <- getConfig'
+  mkDir c.packDir
+  pure c
+
+||| Where the package database is stored.
+|||
+||| TODO: This should become a command line argument
+export
+dbRepo : String
+dbRepo = "https://github.com/stefan-hoeck/idris2-pack-db"
+
+||| Update the package database.
+export
+updateDB : HasIO io => Config => EitherT PackErr io ()
+updateDB = do 
+  when !(exists dbDir) (sys "rm -r \{dbDir}")
+  mkDir dbDir
+  withGit dbRepo "HEAD" $ do
+    sys "cp *.db \{dbDir}"
+
 covering
-loadDB : HasIO io => String -> EitherT PackErr io DB
-loadDB commit = do
-  dir <- packDir
-  let tmpDir = "\{dir}/tmp"
-  cur <- curDir
-  gitClone "https://github.com/stefan-hoeck/idris2-pack-db" tmpDir
-  chgDir tmpDir
-  gitCheckout commit
-  str <- read "pack.db"
+loadDB : HasIO io => (c : Config) => EitherT PackErr io DB
+loadDB = do
+  dbDirExists <- exists dbDir
+  when (not dbDirExists) updateDB
+  str <- read "\{dbDir}/\{c.dbVersion}.db"
   case readDB str of
-    Left err => do
-      chgDir cur
-      sys "rm -rf \{tmpDir}"
-      throwE err
-    Right res => do
-      chgDir cur
-      sys "rm -rf \{tmpDir}"
-      pure res
+    Left err  => throwE err
+    Right res => pure res
 
 export covering
-env : HasIO io => (commit : String) -> EitherT PackErr io Env
-env commit = do
-  dir <- packDir
-  mkDir dir
+env : HasIO io => (c : Config) => EitherT PackErr io Env
+env = do
+  db <- loadDB
+  pure $ MkEnv db c
 
-  db  <- loadDB commit
-
-  let tmpDir   = "\{dir}/tmp"
-      idrisDir = "\{dir}/\{db.idrisCommit}"
-
-  mkDir idrisDir
-
-  pure $ MkEnv db dir tmpDir idrisDir
-
+||| Runs a *pack* program, printing errors to standard out.
 export
 run : EitherT PackErr IO () -> IO ()
 run (MkEitherT io) = do

@@ -1,6 +1,28 @@
-# idris2-pack
+# An Idris2 Package Manager with a Curated Package Collection
 
-This requires a recent installation of Idris2 plus the Idris2 API
+This is a simple package manager taking a slightly different
+approach than other available options like
+[sirdi](https://github.com/eayus/sirdi) or
+[inigo](https://github.com/idris-community/inigo): It makes use
+of curated collections of packages linked to a specific version/commit
+of Idris2, which are guaranteed to properly work together (otherwise,
+that's a bug in the package collection). This is similar to what
+*stack* for Haskell does: It avoids dependency hell by design.
+
+There is a second GitHub repository containing the package collections:
+[idris2-pack-db](https://github.com/stefan-hoeck/idris2-pack-db).
+See instructions there if you want to make your own packages
+available to *pack*.
+
+## Installation
+
+The *pack* application will install all libraries and executables
+to directory `$PACK_DIR`, which defaults to `$HOME/.pack`.
+It's therefore recommended to add the `$PACK_DIR/bin` folder
+to your `$PATH`.
+
+For building *pack* the first time, you will require a recent
+installation of Idris2 plus the Idris2 API
 (for reading `.ipkg` files). To build, run
 
 ```sh
@@ -10,27 +32,32 @@ idris2 --build pack.ipkg
 Afterwards, run
 
 ```sh
-build/exec/pack
+build/exec/pack --switch unstable-220429
 ```
 
-Running the application will take several minutes the first time,
-because a fresh version of Idris2 is installed to directory
-`$HOME/.pack/<commit-hash>`. Afterwards, the `katla` executable
-and its dependencies are built and installed, the `hedgehog`
-package plus dependencies is installed, and the `pack` application
-itself is installed.
+If run for the first time, this will build and install a recent
+version of the Idris2 compiler plus standard libraries and API,
+followed by the *pack* application, so this might take a couple of
+minutes.
 
-At the moment, the philosophy of
-`pack` is to use a curated package set (which can
-be found at the [idris2-pack-db](https://github.com/stefan-hoeck/idris2-pack-db)) together with a
-repository. This specifies an Idris2 commit hash,
-used for building the packages.
-The packages are supposed to be tested to be
-compatible with each other.
+## Usage
 
-The idea is to have a package manager similar to Haskell's *stack*,
-where packages are being built and developed against a
-curated package set. This should not only make it easy to have
-several versions/commits of the same package installed, but also
-to have several versions/commits of Idris2 installed and to
-easily switch between these versions (switching not yet implemented).
+This assumes `$PACK_DIR/bin` is on your path and you have installed
+*pack* as described above. To install a library from the 
+package collection, run
+
+```sh
+pack --install hedgeog
+```
+
+This will download and build the
+[idris2-hedgehog](https://github.com/stefan-hoeck/idris2-hedgehog)
+library together with all its dependencies.
+
+To build and install an application (for instance, the
+[katla](https://github.com/idris-community/katla) app),
+run
+
+```sh
+pack --install-app katla
+```
