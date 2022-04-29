@@ -40,6 +40,10 @@ packBinDir : Env => String
 packBinDir = "\{rootDir}/bin"
 
 export
+packIdrisDir : Env => String
+packIdrisDir = "\{rootDir}/idris2"
+
+export
 idrisExec : Env => String
 idrisExec = "\{idrisBinDir}/idris2"
 
@@ -180,7 +184,9 @@ switchTo c = do
   e <- env
   mkIdris
   rmFile packBinDir
+  rmFile packIdrisDir
   sys "ln -s \{idrisBinDir} \{packBinDir}"
+  sys "ln -s \{idrisPrefixDir} \{packIdrisDir}"
   installApp e "pack"
   write "\{rootDir}/.db" e.conf.dbVersion
 

@@ -61,3 +61,23 @@ run
 ```sh
 pack --install-app katla
 ```
+
+It is also possible to work with local `.ipkg` files as long
+as they depend on packages known to *pack*:
+
+```sh
+pack --install-app fix_whitespace.ipkg
+```
+
+## Stuff still Missing
+
+There is a lot of functionality still missing. Here's a
+non-comprehensive list:
+
+[ ] Support for local package collections
+[ ] Command for starting a REPL
+[ ] Support for custom build directories
+[ ] Command for typechecking an Idris package
+[ ] Command for querying a data collection
+[ ] Command for listing current version of data collection
+[ ] Support for running tests
