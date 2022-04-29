@@ -74,10 +74,10 @@ pack --install-app fix_whitespace.ipkg
 There is a lot of functionality still missing. Here's a
 non-comprehensive list:
 
-[ ] Support for local package collections
-[ ] Command for starting a REPL
-[ ] Support for custom build directories
-[ ] Command for typechecking an Idris package
-[ ] Command for querying a data collection
-[ ] Command for listing current version of data collection
-[ ] Support for running tests
+- [ ] Support for local package collections
+- [ ] Command for starting a REPL
+- [ ] Support for custom build directories
+- [ ] Command for typechecking an Idris package
+- [ ] Command for querying a data collection
+- [ ] Command for listing current version of data collection
+- [ ] Support for running tests
