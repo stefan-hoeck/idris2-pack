@@ -210,8 +210,7 @@ fromLexError origin (_, l, c, _)
     = LexFail (MkFC origin (l, c) (l, c + 1)) "Can't recognise token."
 
 export
-fromParsingErrors : (Show token, Pretty token) =>
-                    OriginDesc -> List1 (ParsingError token) -> PackErr
+fromParsingErrors : Show token => OriginDesc -> List1 (ParsingError token) -> PackErr
 fromParsingErrors origin = ParseFail . (map fromError) . forget
   where
     fromError : ParsingError token -> (FC, String)
