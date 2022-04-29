@@ -18,6 +18,9 @@ data PackErr : Type where
   ||| Failed to read the given file
   ReadFile   : (path : String) -> (err : FileError) -> PackErr
 
+  ||| Failed to write to the given file
+  WriteFile  : (path : String) -> (err : FileError) -> PackErr
+
   ||| Error when running the given system command
   Sys        : (cmd : String) -> (err : Int) -> PackErr
 
@@ -78,6 +81,9 @@ printErr (MkDir path err) =
 
 printErr (ReadFile path err) =
   "Error when reading file \"\{path}\": \{show err}."
+
+printErr (WriteFile path err) =
+  "Error when writing to file \"\{path}\": \{show err}."
 
 printErr (Sys cmd err) = """
   Error when executing system command.

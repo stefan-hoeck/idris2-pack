@@ -176,13 +176,13 @@ installApp env n = do
 
 covering
 switchTo : HasIO io => Config -> EitherT PackErr io ()
-switchTo c = case c.packages of
-  (h :: []) => do
-    e <- env
-    mkIdris
-    sys "ln -s \{idrisBinDir} \{packBinDir}"
-    installApp e "pack"
-  _         => throwE MissingRepo
+switchTo c = do
+  e <- env
+  mkIdris
+  rmFile packBinDir
+  sys "ln -s \{idrisBinDir} \{packBinDir}"
+  installApp e "pack"
+  write "\{rootDir}/.db" e.conf.dbVersion
 
 export covering
 runCmd : HasIO io => EitherT PackErr io ()

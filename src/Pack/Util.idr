@@ -20,11 +20,33 @@ export covering
 read : HasIO io => String -> EitherT PackErr io String
 read fn = eitherIO (ReadFile fn) (readFile fn)
 
+export covering
+write : HasIO io => String -> String -> EitherT PackErr io ()
+write path str = eitherIO (WriteFile path) (writeFile path str)
+
+export covering
+readIfExists :  HasIO io
+             => (path : String)
+             -> (alt  : String)
+             -> EitherT PackErr io String
+readIfExists path alt = do
+  True <- exists path | False => pure alt
+  read path
+
+
 export
 sys : HasIO io => (cmd : String) -> EitherT PackErr io ()
 sys cmd = do
   0 <- system cmd | n => throwE (Sys cmd n)
   pure ()
+
+export
+rmFile : HasIO io => (f : String) -> EitherT PackErr io ()
+rmFile f = when !(exists f) $ sys "rm \{f}"
+
+export
+rmDir : HasIO io => (dir : String) -> EitherT PackErr io ()
+rmDir dir = when !(exists dir) $ sys "rm -rf \{dir}"
 
 export
 curDir : HasIO io => EitherT PackErr io String
@@ -68,7 +90,7 @@ withGit :  HasIO io
         -> EitherT PackErr io a
 withGit url commit act = do
   cur <- curDir
-  when !(exists tmpDir) (sys "rm -rf \{tmpDir}")
+  rmDir tmpDir
   putStrLn "Cloning project"
   gitClone url tmpDir
   putStrLn "Changing into repo directory"
@@ -78,7 +100,7 @@ withGit url commit act = do
   res <- act
   chgDir cur
   putStrLn "Removing repo dir"
-  sys "rm -rf \{tmpDir}"
+  rmDir tmpDir
   pure res
 
 --------------------------------------------------------------------------------
@@ -95,14 +117,22 @@ packDir = do
   Nothing <- getEnv "HOME"     | Just v => pure "\{v}/.pack"
   throwE NoPackDir
 
+covering
 getConfig' : HasIO io => EitherT PackErr io Config
 getConfig' = do
   dir        <- packDir
-  pn :: args <- getArgs | Nil => pure (init dir [])
-  liftEither $ applyArgs dir args
+  db         <- readIfExists "\{dir}/.db" "HEAD"
+  pn :: args <- getArgs | Nil => pure (init dir db [])
+  conf       <- liftEither $ applyArgs dir db args
+  case conf.cmd of
+    SwitchRepo => case conf.packages of
+      (h :: []) => pure $ {dbVersion := h} conf
+      _         => throwE MissingRepo
+    _          => pure conf
+
 
 ||| Read application config from command line arguments.
-export
+export covering
 getConfig : HasIO io => EitherT PackErr io Config
 getConfig = do
   c <- getConfig'
@@ -120,7 +150,7 @@ dbRepo = "https://github.com/stefan-hoeck/idris2-pack-db"
 export
 updateDB : HasIO io => Config => EitherT PackErr io ()
 updateDB = do 
-  when !(exists dbDir) (sys "rm -r \{dbDir}")
+  rmDir dbDir
   mkDir dbDir
   withGit dbRepo "HEAD" $ do
     sys "cp *.db \{dbDir}"

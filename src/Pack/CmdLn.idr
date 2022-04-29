@@ -57,11 +57,11 @@ Show Config where
 
 ||| Initial configuration.
 export
-init : (dir : String) -> (pkgs : List String) -> Config
-init dir pkgs = MkConfig {
+init : (dir : String) -> (db : String) -> (pkgs : List String) -> Config
+init dir db pkgs = MkConfig {
     cmd           = PrintHelp
   , packDir       = dir
-  , dbVersion     = "HEAD"
+  , dbVersion     = db
   , packages      = pkgs
   }
 
@@ -152,13 +152,15 @@ descs = [ MkOpt ['h'] ["help"]      (NoArg help)
            """
         ]
 
-||| Given a root directory for *pack*, generates the application
+||| Given a root directory for *pack* and a db version,
+||| generates the application
 ||| config from a list of command line arguments.
 export
-applyArgs : (dir : String) -> List String -> Either PackErr Config
-applyArgs dir args =
+applyArgs : (dir : String) -> (db : String) -> List String -> Either PackErr Config
+applyArgs dir db args =
   case getOpt RequireOrder descs args of
-       MkResult opts n  []      []       => Right $ foldl (flip apply) (init dir n) opts
+       MkResult opts n  []      []       =>
+         Right $ foldl (flip apply) (init dir db n) opts
        MkResult _    _ (u :: _) _        => Left (UnknownArg u)
        MkResult _    _ _        (e :: _) => Left (ErroneousArg e)
 
