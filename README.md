@@ -1,4 +1,4 @@
-# An Idris2 Package Manager with a Curated Package Collection
+# An Idris2 Package Manager with Curated Package Collections
 
 This is a simple package manager taking a slightly different
 approach than other available options like
