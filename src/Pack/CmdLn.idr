@@ -10,27 +10,29 @@ import System.Console.GetOpt
 ||| projects with an `.ipkg` file.
 public export
 data Cmd : Type where
-  Exec           : Cmd
   Build          : Cmd
-  Typecheck      : Cmd
+  CheckDB        : Cmd
+  Exec           : Cmd
   Install        : Cmd
-  InstallWithSrc : Cmd
   InstallApp     : Cmd
-  UpdateDB       : Cmd
-  SwitchRepo     : Cmd
+  InstallWithSrc : Cmd
   PrintHelp      : Cmd
+  SwitchRepo     : Cmd
+  Typecheck      : Cmd
+  UpdateDB       : Cmd
 
 export
 Show Cmd where
-  show Exec           = "Exec"
   show Build          = "Build"
-  show Typecheck      = "Typecheck"
+  show CheckDB        = "CheckDB"
+  show Exec           = "Exec"
   show Install        = "Install"
-  show InstallWithSrc = "InstallWithSrc"
   show InstallApp     = "InstallApp"
+  show InstallWithSrc = "InstallWithSrc"
   show PrintHelp      = "PrintHelp"
-  show UpdateDB       = "UpdateDB"
   show SwitchRepo     = "SwitchRepo"
+  show Typecheck      = "Typecheck"
+  show UpdateDB       = "UpdateDB"
 
 ||| Program configuration
 public export
@@ -137,6 +139,13 @@ descs = [ MkOpt ['h'] ["help"]      (NoArg $ setCmd PrintHelp)
            an `.ipkg` file or a known package from the
            database. Use `--args` to specify command line
            arguments for the executable.
+           """
+
+        , MkOpt [] ["check-db"]   (NoArg $ setCmd CheckDB)
+           """
+           Check the given package collection by freshly
+           building and installing its designated Idris2
+           followed by installing all listed packages.
            """
 
         , MkOpt [] ["build"]   (NoArg $ setCmd Build)
