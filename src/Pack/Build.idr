@@ -226,6 +226,12 @@ build env = case env.conf.packages of
   _       => throwE BuildMany
 
 covering
+checkDB : HasIO io => Env -> EitherT PackErr io ()
+checkDB env = do
+  rmDir idrisPrefixDir
+  traverse_ (\p => installLib False env p.name) env.db.packages
+
+covering
 typecheck : HasIO io => Env -> EitherT PackErr io ()
 typecheck env = case env.conf.packages of
   (h :: []) => do
@@ -275,6 +281,7 @@ runCmd = do
     Exec           => env >>= execApp
     Build          => env >>= build
     Typecheck      => env >>= typecheck
+    CheckDB        => env >>= checkDB
     PrintHelp      => putStrLn usageInfo
     Install        => env >>= \e => traverse_ (installLib False e) c.packages
     InstallWithSrc => env >>= \e => traverse_ (installLib True e) c.packages
