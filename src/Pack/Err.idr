@@ -1,6 +1,7 @@
 module Pack.Err
 
 import Core.FC
+import Data.String
 import System.File
 
 ||| Errors that can occur when running *pack* programs.
@@ -72,6 +73,10 @@ data PackErr : Type where
   ||| (or something that isn't a local package).
   BuildMany : PackErr
 
+  ||| Trying to run zero or more than one local package
+  ||| (or something that isn't a local package).
+  UnknownCommand : List String -> PackErr
+
 ||| Prints an error that occured during program execution.
 export
 printErr : PackErr -> String
@@ -133,3 +138,5 @@ printErr ExecMany = "Can only run a single executable."
 
 printErr BuildMany =
   "Can only build or typecheck a single Idris2 package given as an `.ipkg` file."
+
+printErr (UnknownCommand args) = "Invalid command: \{unwords args}"

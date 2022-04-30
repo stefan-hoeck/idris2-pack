@@ -84,23 +84,19 @@ gitCheckout commit = sys "git checkout \{commit}"
 export
 withGit :  HasIO io
         => (conf   : Config)
-        => (url    : String)
+        -> (url    : String)
         -> (commit : String)
         -> (act    : EitherT PackErr io a)
         -> EitherT PackErr io a
-withGit url commit act = do
+withGit conf url commit act = do
   cur <- curDir
-  rmDir tmpDir
-  putStrLn "Cloning project"
-  gitClone url tmpDir
-  putStrLn "Changing into repo directory"
-  chgDir tmpDir
-  putStrLn "Checking out to \{commit}"
+  rmDir (tmpDir conf)
+  gitClone url (tmpDir conf)
+  chgDir (tmpDir conf)
   gitCheckout commit
   res <- act
   chgDir cur
-  putStrLn "Removing repo dir"
-  rmDir tmpDir
+  rmDir (tmpDir conf)
   pure res
 
 --------------------------------------------------------------------------------
@@ -108,7 +104,7 @@ withGit url commit act = do
 --------------------------------------------------------------------------------
 
 ||| Return the path of the *pack* root directory,
-||| either from environment variable `PACK_DIR`, or
+||| either from environment variable `$PACK_DIR`, or
 ||| as `$HOME/.pack`.
 export
 packDir : HasIO io => EitherT PackErr io String
@@ -122,13 +118,11 @@ getConfig' : HasIO io => EitherT PackErr io Config
 getConfig' = do
   dir        <- packDir
   db         <- readIfExists "\{dir}/.db" "HEAD"
-  pn :: args <- getArgs | Nil => pure (init dir db [])
+  pn :: args <- getArgs | Nil => pure (init dir db)
   conf       <- liftEither $ applyArgs dir db args
   case conf.cmd of
-    SwitchRepo => case conf.packages of
-      (h :: []) => pure $ {dbVersion := h} conf
-      _         => throwE MissingRepo
-    _          => pure conf
+    SwitchRepo repo => pure $ {dbVersion := repo} conf
+    _               => pure conf
 
 
 ||| Read application config from command line arguments.
@@ -148,28 +142,28 @@ dbRepo = "https://github.com/stefan-hoeck/idris2-pack-db"
 
 ||| Update the package database.
 export
-updateDB : HasIO io => Config => EitherT PackErr io ()
-updateDB = do 
-  rmDir dbDir
-  mkDir dbDir
-  withGit dbRepo "HEAD" $ do
-    sys "cp *.db \{dbDir}"
+updateDB : HasIO io => Config -> EitherT PackErr io ()
+updateDB conf = do 
+  rmDir (dbDir conf)
+  mkDir (dbDir conf)
+  withGit conf dbRepo "HEAD" $ do
+    sys "cp *.db \{dbDir conf}"
 
 covering
-loadDB : HasIO io => (c : Config) => EitherT PackErr io DB
-loadDB = do
-  dbDirExists <- exists dbDir
-  when (not dbDirExists) updateDB
-  str <- read "\{dbDir}/\{c.dbVersion}.db"
+loadDB : HasIO io => (conf : Config) -> EitherT PackErr io DB
+loadDB conf = do
+  dbDirExists <- exists (dbDir conf)
+  when (not dbDirExists) (updateDB conf)
+  str <- read "\{dbDir conf}/\{conf.dbVersion}.db"
   case readDB str of
     Left err  => throwE err
     Right res => pure res
 
 export covering
-env : HasIO io => (c : Config) => EitherT PackErr io Env
-env = do
-  db <- loadDB
-  pure $ MkEnv db c
+env : HasIO io => Config -> EitherT PackErr io Env
+env conf = do
+  db <- loadDB conf
+  pure $ MkEnv db conf
 
 ||| Runs a *pack* program, printing errors to standard out.
 export
