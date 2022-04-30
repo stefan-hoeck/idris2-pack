@@ -70,6 +70,11 @@ export
 idrisBootVar : Env -> String
 idrisBootVar env = "IDRIS2_BOOT=\"\{idrisExec env}\""
 
+||| `$PREFIX` variable during Idris2 installation
+export
+schemeVar : Env -> String
+schemeVar env = "SCHEME=\"\{env.conf.scheme}\""
+
 ||| Returns the directory where a package for the current
 ||| package collection is installed.
 export
@@ -102,7 +107,7 @@ mkIdris env = do
   False <- exists (idrisInstallDir env) | True => pure ()
 
   withGit env.conf idrisRepo env.db.idrisCommit $ do
-    sys "make bootstrap \{prefixVar env}"
+    sys "make bootstrap \{prefixVar env} \{schemeVar env}"
     sys "make install \{prefixVar env}"
     sys "make clean"
     sys "make all \{idrisBootVar env} \{prefixVar env}"

@@ -40,11 +40,14 @@ installation of Idris2 plus the Idris2 API
 idris2 --build pack.ipkg
 ```
 
-Afterwards, run
+Afterwards, run the following two commands. If your chez scheme
+executable has another name than `scheme` or you want to specify
+its full path, you can give it explicitly by using the `-s`
+command line option:
 
 ```sh
 build/exec/pack update-db
-build/exec/pack switch unstable-220430
+build/exec/pack -s chez switch unstable-220430
 ```
 
 If run for the first time, this will build and install a recent
