@@ -60,6 +60,28 @@ export
 dbDir : Config -> String
 dbDir c = "\{c.packDir}/db"
 
+||| Directory where user settings are stored.
+export
+userDir : Config -> String
+userDir c = "\{c.packDir}/user"
+
+||| File where a user-defined DB for the current
+||| package collection might be stored.
+export
+userDB : Config -> String
+userDB c = "\{userDir c}/\{c.dbVersion}.db"
+
+||| File where a user-defined DB to be used in all
+||| package collections might be stored.
+export
+userGlobalDB : Config -> String
+userGlobalDB c = "\{userDir c}/global.db"
+
+||| File where package DB is located
+export
+dbFile : Config -> String
+dbFile c = "\{dbDir c}/\{c.dbVersion}.db"
+
 --------------------------------------------------------------------------------
 --          Applying Command Line Args
 --------------------------------------------------------------------------------

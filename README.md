@@ -18,10 +18,11 @@ available to *pack*.
 
 Pack will operate solely on the *pack root directory*,
 which defaults to `$HOME/.pack` and can be changed by
-setting environment variable `$PACK_DIR`.
+setting environment variable `$PACK_DIR`. We will use
+`$PACK_DIR`, whenever we talk about this directory here.
 
 In order to make use of the binaries installed by *pack*,
-make sure that folder `bin` of *pack*'s root directory is
+make sure that folder `$PACK_DIR/bin` is
 on your path. In order for the Idris2 compiler managed by
 *pack* to take precedence over the one you might already
 have installed, this folder should appear *before* the
@@ -57,7 +58,7 @@ minutes.
 
 ## Usage
 
-This assumes the `bin` folder of *pack*'s root directory
+This assumes the `$PACK_DIR/bin` folder
 is on your path and you have installed
 *pack* as described above. To install a library from the 
 package collection, run
@@ -85,6 +86,7 @@ as they depend on packages known to *pack*:
 pack install-app fix_whitespace.ipkg
 pack build json.ipkg
 pack typecheck elab-util.ipkg
+pack remove katla
 ```
 
 The build tool can run executables, both from local
@@ -97,12 +99,73 @@ pack exec test.ipkg -n 50
 pack exec katla --help
 ```
 
+## Customizing Data Collections
+
+User settings go to folder `$PACK_DIR/users`. There, you
+can define a custom package collection to be used together
+with one of the *official* package collections. For instance,
+if you are using `unstable-220430` at the moment, you can
+add custom packages to file `$PACK_DIR/users/unstable-220430.db`.
+
+Package collections are still *very* basic. Only two types of
+packages are supported at the moment. The first
+are GitHub projects, consisting
+of a comma-separated name, url, commit hash, and `.ipkg` file.
+For instance:
+
+```db
+sop,https://github.com/stefan-hoeck/idris2-sop,af9224510f5c283f3b3c8293524e51c225617658,sop.ipkg
+```
+
+The second are local projects, consisting of a comma-separated
+name, absolute directory path, and `.ipkg` file. For instance:
+
+```db
+hello,/path/to/hello/project,hello.ipkg
+```
+
+In addition, custom packages can also be globally added
+to file `$PACK_DIR/users/global.db`. This will be available
+with every package collection.
+
+Note, that you can use custom data collections to override
+packages listed in an official collection. Packages listed
+in `$PACK_DIR/users/global.db` take precedence over those
+listed in the official package collection, and custom packages
+listed for a specific package collection (for instance, those
+in `$PACK_DIR/users/unstable-220430.db`) take precedence
+even over global ones.
+
+### Full Example
+
+Assume you'd like to use local libraries `/home/me/hello` and
+`/home/me/foo` with all package collections. Here's what
+to add to `$PACK_DIR/users/global.db`:
+
+```db
+hello,/home/me/hello,hello.ipkg
+foo,/home/me/foo,foo.ipkg
+```
+
+In addition, you'd like to override the commit used for the
+`katla` project when working with the `unstable-220430`
+package collection. Here's what to add to
+`$PACK_DIR/users/unstable-220430`:
+
+```
+katla,https://github.com/idris-community/katla,HEAD,katla.ipkg
+```
+
+You could also use the same technique to make *pack* use
+a different GitHub repo (probably a fork of yours) for a
+certain package.
+
 ## Stuff still Missing
 
 There is a lot of functionality still missing. Here's a
 non-comprehensive list:
 
-- [ ] Support for local package collections
+- [x] Support for local package collections
 - [ ] Command for starting a REPL
 - [ ] Support for custom build directories
 - [x] Command for typechecking an Idris package
