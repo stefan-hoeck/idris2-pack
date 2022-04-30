@@ -1,6 +1,7 @@
 module Pack.Util
 
 import public Control.Monad.Either
+import Data.String
 import Pack.CmdLn
 import Pack.Err
 import Pack.Types
@@ -60,6 +61,20 @@ chgDir dir = do
   True <- changeDir dir | False => throwE (ChangeDir dir)
   pure ()
 
+||| Runs a program in the given directory, changing back
+||| to the current directory afterwards.
+export
+inDir :  HasIO io
+      => (dir : String)
+      -> EitherT PackErr io a
+      -> EitherT PackErr io a
+inDir dir act = do
+  cur <- curDir
+  chgDir dir
+  res <- act
+  chgDir cur
+  pure res
+
 export
 mkDir : HasIO io => (path : String) -> EitherT PackErr io ()
 mkDir path = do
@@ -89,13 +104,9 @@ withGit :  HasIO io
         -> (act    : EitherT PackErr io a)
         -> EitherT PackErr io a
 withGit conf url commit act = do
-  cur <- curDir
   rmDir (tmpDir conf)
   gitClone url (tmpDir conf)
-  chgDir (tmpDir conf)
-  gitCheckout commit
-  res <- act
-  chgDir cur
+  res <- inDir (tmpDir conf) (gitCheckout commit >> act)
   rmDir (tmpDir conf)
   pure res
 
@@ -155,8 +166,10 @@ loadDB : HasIO io => (conf : Config) -> EitherT PackErr io DB
 loadDB conf = do
   dbDirExists <- exists (dbDir conf)
   when (not dbDirExists) (updateDB conf)
-  str <- read "\{dbDir conf}/\{conf.dbVersion}.db"
-  case readDB str of
+  str  <- read "\{dbFile conf}"
+  loc  <- readIfExists "\{userDB conf}" ""
+  glob <- readIfExists "\{userGlobalDB conf}" ""
+  case readDB (unlines [str,glob,loc]) of
     Left err  => throwE err
     Right res => pure res
 
