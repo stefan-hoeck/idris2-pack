@@ -182,6 +182,17 @@ installLib ws e n = do
     _             =>
       throwE (MissingCorePackage n e.db.idrisVersion e.db.idrisCommit)
 
+export covering
+remove : HasIO io => Env -> String -> EitherT PackErr io ()
+remove env n = do
+  res <- resolve env n
+  rmDir (packageInstallDir env res)
+  case executable res of
+    Just e => do
+      rmFile (packageExec env e)
+      rmDir "\{packageExec env e}_app"
+    Nothing => pure ()
+
 covering
 installApp : HasIO io => Env -> String -> EitherT PackErr io ()
 installApp env n = do
@@ -268,6 +279,7 @@ runCmd = do
     CheckDB _         => env c >>= checkDB
     PrintHelp         => putStrLn usageInfo
     Install ps        => env c >>= \e => traverse_ (installLib False e) ps
+    Remove ps         => env c >>= \e => traverse_ (remove e) ps
     InstallWithSrc ps => env c >>= \e => traverse_ (installLib True e) ps
     InstallApp ps     => env c >>= \e => traverse_ (installApp e) ps
     SwitchRepo _      => switchTo c

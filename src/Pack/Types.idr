@@ -70,6 +70,16 @@ isCorePackage Network     = True
 isCorePackage Prelude     = True
 isCorePackage Test        = True
 
+export
+desc : ResolvedPackage -> Maybe PkgDesc
+desc (RP _ d)    = Just d
+desc (Local _ d) = Just d
+desc _           = Nothing
+
+export
+executable : ResolvedPackage -> Maybe String
+executable p = desc p >>= executable
+
 --------------------------------------------------------------------------------
 --          Package Database
 --------------------------------------------------------------------------------

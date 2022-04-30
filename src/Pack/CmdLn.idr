@@ -17,6 +17,7 @@ data Cmd : Type where
   InstallApp     : List String -> Cmd
   InstallWithSrc : List String -> Cmd
   PrintHelp      : Cmd
+  Remove         : List String -> Cmd
   SwitchRepo     : String -> Cmd
   Typecheck      : String -> Cmd
   UpdateDB       : Cmd
@@ -92,6 +93,7 @@ cmd ["build", file]            = Right $ Build file
 cmd ["typecheck", file]        = Right $ Typecheck file
 cmd ["switch", repo]           = Right $ SwitchRepo repo
 cmd ("install" :: xs)          = Right $ Install xs
+cmd ("remove" :: xs)           = Right $ Remove xs
 cmd ("install-with-src" :: xs) = Right $ InstallWithSrc xs
 cmd ("install-app" :: xs)      = Right $ InstallApp xs
 cmd xs                         = Left  $ UnknownCommand xs
@@ -151,6 +153,9 @@ usageInfo = """
 
     install-app [package or .ipkg file...]
       Install the given application(s).
+
+    remove [package or .ipkg file...]
+      Remove installed librarie(s).
 
     switch <repositoy>
       Change the repository `$PACK_DIR/bin` points
