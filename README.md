@@ -43,6 +43,7 @@ idris2 --build pack.ipkg
 Afterwards, run
 
 ```sh
+build/exec/pack update-db
 build/exec/pack switch unstable-220430
 ```
 
