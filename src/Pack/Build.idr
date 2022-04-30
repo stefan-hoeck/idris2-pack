@@ -15,33 +15,23 @@ import System
 
 %default total
 
-||| The git commit to use for building Idris2
-export
-commit : (env : Env) => String
-commit = env.db.idrisCommit
-
-||| The Idris2 version to use
-export
-version : (env : Env) => String
-version = env.db.idrisVersion
-
 ||| The directory where Idris2, installed libraries,
 ||| and binaries will be installed.
 |||
 ||| This corresponds to "$IDRIS2_PREFIX".
 export
-idrisPrefixDir : (env : Env) => String
-idrisPrefixDir = "\{rootDir}/\{env.conf.dbVersion}"
+idrisPrefixDir : Env -> String
+idrisPrefixDir env = "\{env.conf.packDir}/\{env.conf.dbVersion}"
 
 ||| The directory where Idris2 packages will be installed.
 export
-idrisInstallDir : (env : Env) => String
-idrisInstallDir = "\{idrisPrefixDir}/idris2-\{env.db.idrisVersion}"
+idrisInstallDir : Env -> String
+idrisInstallDir env = "\{idrisPrefixDir env}/idris2-\{env.db.idrisVersion}"
 
 ||| The directory where binaries will be installed.
 export
-idrisBinDir : Env => String
-idrisBinDir = "\{idrisPrefixDir}/bin"
+idrisBinDir : Env -> String
+idrisBinDir env = "\{idrisPrefixDir env}/bin"
 
 ||| A symbolic link to `idrisBinDir` of the current
 ||| db version. This corresponds to `$PACK_DIR/bin`
@@ -49,76 +39,76 @@ idrisBinDir = "\{idrisPrefixDir}/bin"
 ||| order to have access to the current Idris2 binary
 ||| and related applications.
 export
-packBinDir : Config => String
-packBinDir = "\{rootDir}/bin"
+packBinDir : Config -> String
+packBinDir c = "\{c.packDir}/bin"
 
 ||| A symbolic to `idrisInstallDir` of the current
 ||| db version. Let `$IDRIS2_PREFIX` point to this
 ||| directory.
 export
-packIdrisDir : Config => String
-packIdrisDir = "\{rootDir}/idris2"
+packIdrisDir : Config -> String
+packIdrisDir c = "\{c.packDir}/idris2"
 
 ||| Location of the Idris2 executable used to build
 ||| packages.
 export
-idrisExec : Env => String
-idrisExec = "\{idrisBinDir}/idris2"
+idrisExec : Env -> String
+idrisExec env = "\{idrisBinDir env}/idris2"
 
 ||| Location of an executable of the given name.
 export
-packageExec : Env => String -> String
-packageExec n = "\{idrisBinDir}/\{n}"
+packageExec : Env -> String -> String
+packageExec env n = "\{idrisBinDir env}/\{n}"
 
 ||| `$PREFIX` variable during Idris2 installation
 export
-prefixVar : Env => String
-prefixVar = "PREFIX=\"\{idrisPrefixDir}\""
+prefixVar : Env -> String
+prefixVar env = "PREFIX=\"\{idrisPrefixDir env}\""
 
-||| `$IDRIS2_PREFIX` variable during used for building
-||| packages.
+||| `$PREFIX` variable during Idris2 installation
 export
-idrisPrefixVar : Env => String
-idrisPrefixVar = "IDRIS2_PREFIX=\"\{idrisPrefixDir}\""
-
-||| Idris executable used for building packages.
-export
-idrisExecWithPrefix : Env => String
-idrisExecWithPrefix = "\{idrisPrefixVar} \{idrisExec}"
+idrisBootVar : Env -> String
+idrisBootVar env = "IDRIS2_BOOT=\"\{idrisExec env}\""
 
 ||| Returns the directory where a package for the current
 ||| package collection is installed.
 export
-packageInstallDir : Env => ResolvedPackage -> String
-packageInstallDir Base     = "\{idrisInstallDir}/base-\{Build.version}"
-packageInstallDir Contrib  = "\{idrisInstallDir}/contrib-\{Build.version}"
-packageInstallDir Linear   = "\{idrisInstallDir}/linear-\{Build.version}"
-packageInstallDir Network  = "\{idrisInstallDir}/network-\{Build.version}"
-packageInstallDir Prelude  = "\{idrisInstallDir}/prelude-\{Build.version}"
-packageInstallDir Idris2   = "\{idrisInstallDir}/idris2-\{Build.version}"
-packageInstallDir Test     = "\{idrisInstallDir}/test-\{Build.version}"
-packageInstallDir (RP p d) = 
-    let v = maybe "0" show d.version
-     in "\{idrisInstallDir}/\{d.name}-\{v}"
-packageInstallDir (Local p d) = 
-    let v = maybe "0" show d.version
-     in "\{idrisInstallDir}/\{d.name}-\{v}"
+packageInstallDir : Env -> ResolvedPackage -> String
+packageInstallDir e p =
+  let vers = e.db.idrisVersion
+      dir  = idrisInstallDir e
+   in case p of
+        Base     => "\{dir}/base-\{vers}"
+        Contrib  => "\{dir}/contrib-\{vers}"
+        Linear   => "\{dir}/linear-\{vers}"
+        Network  => "\{dir}/network-\{vers}"
+        Prelude  => "\{dir}/prelude-\{vers}"
+        Idris2   => "\{dir}/idris2-\{vers}"
+        Test     => "\{dir}/test-\{vers}"
+        RP p d   =>
+          let v = maybe "0" show d.version
+           in "\{dir}/\{d.name}-\{v}"
+        Local p d =>
+          let v = maybe "0" show d.version
+           in "\{dir}/\{d.name}-\{v}"
+
+idrisRepo : String
+idrisRepo = "https://github.com/idris-lang/Idris2.git"
 
 ||| Builds and installs the Idris commit given in the environment.
 export
-mkIdris : HasIO io => Env => EitherT PackErr io ()
-mkIdris = do
-  False <- exists idrisInstallDir | True => pure ()
+mkIdris : HasIO io => Env -> EitherT PackErr io ()
+mkIdris env = do
+  False <- exists (idrisInstallDir env) | True => pure ()
 
-  withGit "https://github.com/idris-lang/Idris2.git" commit $ do
-    putStrLn "Build project"
-    sys "make all"
-    putStrLn "Install project"
-    sys "make install \{prefixVar} \{idrisPrefixVar}"
-    putStrLn "Cleanup"
+  withGit env.conf idrisRepo env.db.idrisCommit $ do
+    sys "make bootstrap \{prefixVar env}"
+    sys "make install \{prefixVar env}"
     sys "make clean"
-    putStrLn "Install API"
-    sys "make install-api \{idrisPrefixVar}"
+    sys "make all \{idrisBootVar env} \{prefixVar env}"
+    sys "make install \{idrisBootVar env} \{prefixVar env}"
+    sys "make install-with-src-libs \{idrisBootVar env} \{prefixVar env}"
+    sys "make install-with-src-api \{idrisBootVar env} \{prefixVar env}"
 
 -- test if a file path ends on `.ipkg`.
 isIpkgPath : String -> Bool
@@ -132,16 +122,16 @@ isIpkgPath x = case reverse $ forget $ split ('.' ==) x of
 export covering
 resolve :  HasIO io
         => (env : Env)
-        => String
+        -> String
         -> EitherT PackErr io ResolvedPackage
-resolve "base"    = pure Base
-resolve "contrib" = pure Contrib
-resolve "linear"  = pure Linear
-resolve "idris2"  = pure Idris2
-resolve "network" = pure Network
-resolve "prelude" = pure Prelude
-resolve "test"    = pure Test
-resolve n         = case find ((n ==) . name) env.db.packages of
+resolve env "base"    = pure Base
+resolve env "contrib" = pure Contrib
+resolve env "linear"  = pure Linear
+resolve env "idris2"  = pure Idris2
+resolve env "network" = pure Network
+resolve env "prelude" = pure Prelude
+resolve env "test"    = pure Test
+resolve env n         = case find ((n ==) . name) env.db.packages of
   -- package is not in the database, so we check if we
   -- are dealing with an `.ipkg` file instead
   Nothing  =>
@@ -154,18 +144,18 @@ resolve n         = case find ((n ==) . name) env.db.packages of
   -- this is a known package so we download its `.ipkg`
   -- file from GitHub. TODO: We should probably cache these
   -- to speed things up a bit
-  Just pkg => withGit pkg.url pkg.commit $ do
+  Just pkg => withGit env.conf pkg.url pkg.commit $ do
     (nm,flds) <- parseFile pkg.ipkg (parsePkgDesc pkg.ipkg)
     pure $ RP pkg (addFields nm flds)
 
 -- check if a package has already been built and installed
-packageExists : HasIO io => (env : Env) => ResolvedPackage -> EitherT PackErr io Bool
-packageExists p = exists (packageInstallDir p)
+packageExists : HasIO io => (env : Env) -> ResolvedPackage -> EitherT PackErr io Bool
+packageExists env p = exists (packageInstallDir env p)
 
 -- check if the executable of a package has already been
 -- built and installed
-executableExists : HasIO io => (env : Env) => String -> EitherT PackErr io Bool
-executableExists p = exists (packageExec p)
+executableExists : HasIO io => (env : Env) -> String -> EitherT PackErr io Bool
+executableExists env p = exists (packageExec env p)
 
 installCmd : (withSrc : Bool) -> String
 installCmd True  = "--install-with-src"
@@ -178,112 +168,106 @@ installLib :  HasIO io
            -> String
            -> EitherT PackErr io ()
 installLib ws e n = do
-  mkIdris
-  putStrLn "Trying to install \{n}"
-  rp <- resolve n
-  False <- packageExists rp | True => putStrLn "Package already exists"
+  mkIdris e
+  rp <- resolve e n
+  False <- packageExists e rp | True => pure ()
   case rp of
     RP pkg d => do
       traverse_ (installLib ws e) (map pkgname d.depends)
-      withGit pkg.url pkg.commit $ do
-        sys "\{idrisExecWithPrefix} \{installCmd ws} \{pkg.ipkg}"
+      withGit e.conf pkg.url pkg.commit $ do
+        sys "\{idrisExec e} \{installCmd ws} \{pkg.ipkg}"
     Local ipkg d => do
       traverse_ (installLib ws e) (map pkgname d.depends)
-      sys "\{idrisExecWithPrefix} \{installCmd ws} \{ipkg}"
-    _             => throwE (MissingCorePackage n Build.version Build.commit)
+      sys "\{idrisExec e} \{installCmd ws} \{ipkg}"
+    _             =>
+      throwE (MissingCorePackage n e.db.idrisVersion e.db.idrisCommit)
 
 covering
 installApp : HasIO io => Env -> String -> EitherT PackErr io ()
 installApp env n = do
-  mkIdris
-  putStrLn "Trying to install \{n}"
-  res <- resolve n
+  mkIdris env
+  res <- resolve env n
   case res of
     RP pkg d => case d.executable of
       Nothing => throwE (NoApp n)
       Just e  => do
-        False <- executableExists e | True => putStrLn "Executable exists"
+        False <- executableExists env e | True => pure ()
         traverse_ (installLib True env) (map pkgname d.depends)
-        withGit pkg.url pkg.commit $ do
-          sys "\{idrisExecWithPrefix} --build \{pkg.ipkg}"
-          sys "cp -r build/exec/* \{idrisBinDir}"
+        withGit env.conf pkg.url pkg.commit $ do
+          sys "\{idrisExec env} --build \{pkg.ipkg}"
+          sys "cp -r build/exec/* \{idrisBinDir env}"
     Local ipkg d => case d.executable of
       Nothing => throwE (NoApp n)
       Just e  => do
-        False <- executableExists e | True => putStrLn "Executable exists"
+        False <- executableExists env e | True => pure ()
         traverse_ (installLib True env) (map pkgname d.depends)
-        sys "\{idrisExecWithPrefix} --build \{ipkg}"
-        sys "cp -r build/exec/* \{idrisBinDir}"
+        sys "\{idrisExec env} --build \{ipkg}"
+        sys "cp -r build/exec/* \{idrisBinDir env}"
     _ => throwE (NoApp n)
 
 covering
-build : HasIO io => Env -> EitherT PackErr io ()
-build env = case env.conf.packages of
-  (h :: []) => do
-    Local ipkg d <- resolve h | _ => throwE BuildMany
-    traverse_ (installLib True env) (map pkgname d.depends)
-    sys "\{idrisExecWithPrefix} --build \{ipkg}"
-  _       => throwE BuildMany
+build : HasIO io => String -> Env -> EitherT PackErr io ()
+build p env = do
+  Local ipkg d <- resolve env p | _ => throwE BuildMany
+  traverse_ (installLib True env) (map pkgname d.depends)
+  sys "\{idrisExec env} --build \{ipkg}"
+
 
 covering
 checkDB : HasIO io => Env -> EitherT PackErr io ()
 checkDB env = do
-  rmDir idrisPrefixDir
+  rmDir (idrisPrefixDir env)
   traverse_ (\p => installLib False env p.name) env.db.packages
 
 covering
-typecheck : HasIO io => Env -> EitherT PackErr io ()
-typecheck env = case env.conf.packages of
-  (h :: []) => do
-    Local ipkg d <- resolve h | _ => throwE BuildMany
-    traverse_ (installLib True env) (map pkgname d.depends)
-    sys "\{idrisExecWithPrefix} --typecheck \{ipkg}"
-  _       => throwE BuildMany
+typecheck : HasIO io => String -> Env -> EitherT PackErr io ()
+typecheck p env = do
+  Local ipkg d <- resolve env p | _ => throwE BuildMany
+  traverse_ (installLib True env) (map pkgname d.depends)
+  sys "\{idrisExec env} --typecheck \{ipkg}"
 
 covering
-execApp : HasIO io => Env -> EitherT PackErr io ()
-execApp env = case env.conf.packages of
-  (h :: []) => do
-    res <- resolve h
+execApp : HasIO io => String -> List String -> Env -> EitherT PackErr io ()
+execApp p args env = do
+    res <- resolve env p
     case res of
       RP pkg d => case d.executable of
-        Nothing => throwE (NoApp h)
+        Nothing => throwE (NoApp p)
         Just e  => do
-          installApp env h
-          sys "\{packageExec e} \{env.conf.args}"
+          installApp env p
+          sys "\{packageExec env e} \{unwords args}"
       Local ipkg d => case d.executable of
-        Nothing => throwE (NoApp h)
+        Nothing => throwE (NoApp p)
         Just e  => do
           traverse_ (installLib True env) (map pkgname d.depends)
-          sys "\{idrisExecWithPrefix} --build \{ipkg}"
-          sys "build/exec/\{e} \{env.conf.args}"
-      _ => throwE (NoApp h)
-  _       => throwE ExecMany
+          sys "\{idrisExec env} --build \{ipkg}"
+          sys "build/exec/\{e} \{unwords args}"
+      _ => throwE (NoApp p)
 
 covering
 switchTo : HasIO io => Config -> EitherT PackErr io ()
 switchTo c = do
-  e <- env
-  mkIdris
-  rmFile packBinDir
-  rmFile packIdrisDir
-  sys "ln -s \{idrisBinDir} \{packBinDir}"
-  sys "ln -s \{idrisPrefixDir} \{packIdrisDir}"
+  e <- env c
+  mkIdris e
+  rmFile (packBinDir c)
+  rmFile (packIdrisDir c)
+  sys "ln -s \{idrisBinDir e} \{packBinDir c}"
+  sys "ln -s \{idrisPrefixDir e} \{packIdrisDir c}"
   installApp e "pack"
-  write "\{rootDir}/.db" e.conf.dbVersion
+  write "\{c.packDir}/.db" e.conf.dbVersion
 
 export covering
 runCmd : HasIO io => EitherT PackErr io ()
 runCmd = do
   c <- getConfig
   case c.cmd of
-    UpdateDB       => updateDB
-    Exec           => env >>= execApp
-    Build          => env >>= build
-    Typecheck      => env >>= typecheck
-    CheckDB        => env >>= checkDB
-    PrintHelp      => putStrLn usageInfo
-    Install        => env >>= \e => traverse_ (installLib False e) c.packages
-    InstallWithSrc => env >>= \e => traverse_ (installLib True e) c.packages
-    InstallApp     => env >>= \e => traverse_ (installApp e) c.packages
-    SwitchRepo     => switchTo c
+    UpdateDB          => updateDB c
+    Exec p args       => env c >>= execApp p args
+    Build p           => env c >>= build p
+    Typecheck p       => env c >>= typecheck p
+    CheckDB _         => env c >>= checkDB
+    PrintHelp         => putStrLn usageInfo
+    Install ps        => env c >>= \e => traverse_ (installLib False e) ps
+    InstallWithSrc ps => env c >>= \e => traverse_ (installLib True e) ps
+    InstallApp ps     => env c >>= \e => traverse_ (installApp e) ps
+    SwitchRepo _      => switchTo c

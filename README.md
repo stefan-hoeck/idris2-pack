@@ -16,6 +16,22 @@ available to *pack*.
 
 ## Installation
 
+Pack will operate solely on the *pack root directory*,
+which defaults to `$HOME/.pack` and can be changed by
+setting environment variable `$PACK_DIR`.
+
+In order to make use of the binaries installed by *pack*,
+make sure that folder `bin` of *pack*'s root directory is
+on your path. In order for the Idris2 compiler managed by
+*pack* to take precedence over the one you might already
+have installed, this folder should appear *before* the
+`bin` folder where your other Idris2 installation resides.
+For instance:
+
+```sh
+export PATH="$HOME/.pack/bin:$HOME/.idris2/bin:..."
+```
+
 For building *pack* the first time, you will require a recent
 installation of Idris2 plus the Idris2 API
 (for reading `.ipkg` files). To build, run
@@ -27,7 +43,7 @@ idris2 --build pack.ipkg
 Afterwards, run
 
 ```sh
-build/exec/pack --switch unstable-220429
+build/exec/pack switch unstable-220430
 ```
 
 If run for the first time, this will build and install a recent
@@ -35,20 +51,15 @@ version of the Idris2 compiler plus standard libraries and API,
 followed by the *pack* application, so this might take a couple of
 minutes.
 
-The *pack* application will install all libraries and executables
-to directory `$PACK_DIR`, which defaults to `$HOME/.pack`.
-It is recommended to add the `$PACK_DIR/bin` folder
-to your `$PATH` and let environment variable `$IDRIS2_PREFIX` point
-to `$PACK_DIR/idris2` *after* having built and installed *pack*.
-
 ## Usage
 
-This assumes `$PACK_DIR/bin` is on your path and you have installed
+This assumes the `bin` folder of *pack*'s root directory
+is on your path and you have installed
 *pack* as described above. To install a library from the 
 package collection, run
 
 ```sh
-pack --install hedgeog
+pack install hedgeog
 ```
 
 This will download and build the
@@ -60,16 +71,16 @@ To build and install an application (for instance, the
 run
 
 ```sh
-pack --install-app katla
+pack install-app katla
 ```
 
 It is also possible to work with local `.ipkg` files as long
 as they depend on packages known to *pack*:
 
 ```sh
-pack --install-app fix_whitespace.ipkg
-pack --build json.ipkg
-pack --typecheck elab-util.ipkg
+pack install-app fix_whitespace.ipkg
+pack build json.ipkg
+pack typecheck elab-util.ipkg
 ```
 
 The build tool can run executables, both from local
@@ -78,8 +89,8 @@ Use `--args` to pass on command line arguments (making sure
 to properly quote them):
 
 ```sh
-pack --args="-n 50" --exec test.ipkg
-pack --args="--help" --exec katla
+pack exec test.ipkg -n 50
+pack exec katla --help
 ```
 
 ## Stuff still Missing
