@@ -124,6 +124,7 @@ progName : String
 progName = "pack"
 
 ||| Application info printed with the `--help` action.
+export
 usageInfo : String
 usageInfo = """
   Usage: \{progName} [options] COMMAND [args]

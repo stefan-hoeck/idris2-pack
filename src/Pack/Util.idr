@@ -122,6 +122,7 @@ getConfig' = do
   conf       <- liftEither $ applyArgs dir db args
   case conf.cmd of
     SwitchRepo repo => pure $ {dbVersion := repo} conf
+    CheckDB    repo => pure $ {dbVersion := repo} conf
     _               => pure conf
 
 
