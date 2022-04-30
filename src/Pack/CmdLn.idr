@@ -34,6 +34,9 @@ record Config where
   ||| Database to use
   dbVersion : String
 
+  ||| Database to use
+  scheme    : String
+
   ||| The pack command plus arguments to run
   cmd       : Cmd
 
@@ -44,6 +47,7 @@ init dir db = MkConfig {
     cmd           = PrintHelp
   , packDir       = dir
   , dbVersion     = db
+  , scheme        = "scheme"
   }
 
 ||| Temporary directory used for building packages.
@@ -66,6 +70,9 @@ dir s = {packDir := s}
 setDB : String -> Config -> Config
 setDB s = {dbVersion := s}
 
+setScheme : String -> Config -> Config
+setScheme s = {scheme := s}
+
 -- command line options with description
 descs : List $ OptDescr (Config -> Config)
 descs = [ MkOpt [] ["pack-dir"]   (ReqArg dir "<dir>")
@@ -80,6 +87,11 @@ descs = [ MkOpt [] ["pack-dir"]   (ReqArg dir "<dir>")
             moment, this defaults to `HEAD`, so the latest commits
             of all packages will be used. This is bound to change
             once we have a reasonably stable package set.
+            """
+        , MkOpt ['s'] ["scheme"]   (ReqArg setScheme "<scheme executable>")
+            """
+            Sets the scheme executable for installing the Idris2 compiler.
+            As a default, this is set to `scheme`.
             """
         ]
 
