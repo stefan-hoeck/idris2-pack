@@ -101,9 +101,6 @@ packageInstallDir e p =
           let v = maybe "0" show d.version
            in "\{dir}/\{d.name}-\{v}"
 
-idrisRepo : String
-idrisRepo = "https://github.com/idris-lang/Idris2.git"
-
 ||| Builds and installs the Idris commit given in the environment.
 export
 mkIdris : HasIO io => Env -> EitherT PackErr io ()
@@ -315,3 +312,4 @@ runCmd = do
     InstallWithSrc ps => env c >>= \e => traverse_ (installLib True e) ps
     InstallApp ps     => env c >>= \e => traverse_ (installApp e) ps
     SwitchRepo _      => switchTo c
+    FromHEAD p        => env c >>= fromHEAD p
