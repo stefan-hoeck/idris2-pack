@@ -127,6 +127,11 @@ commaSep : String -> List String
 commaSep = forget . split (',' ==)
 
 export
+printPkg : Package -> String
+printPkg (MkPackage n u Nothing p) = "\{n},\{u},\{p}"
+printPkg (MkPackage n u (Just c) p) = "\{n},\{u},\{c},\{p}"
+
+export
 readPkg : String -> Either PackErr Package
 readPkg s  = case commaSep s of
   [n,url,hash,pkg] => Right $ MkPackage n url (Just hash) pkg
@@ -147,3 +152,8 @@ readDB s = case lines s of
   (h :: t) => case commaSep h of
     [c,v] => MkDB c v <$> readPkgs t
     _     => Left (InvalidDBHeader h)
+
+export
+printDB : DB -> String
+printDB (MkDB c v ps) =
+    unlines $ "\{c},\{v}" :: map printPkg (values ps)

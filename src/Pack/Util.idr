@@ -2,6 +2,7 @@ module Pack.Util
 
 import public Control.Monad.Either
 import Data.String
+import Libraries.Data.SortedMap
 import Pack.CmdLn
 import Pack.Err
 import Pack.Types
@@ -40,6 +41,12 @@ sys : HasIO io => (cmd : String) -> EitherT PackErr io ()
 sys cmd = do
   0 <- system cmd | n => throwE (Sys cmd n)
   pure ()
+
+export covering
+sysRun : HasIO io => (cmd : String) -> EitherT PackErr io String
+sysRun cmd = do
+  (res,0) <- System.run cmd | (_,n) => throwE (Sys cmd n)
+  pure res
 
 export
 rmFile : HasIO io => (f : String) -> EitherT PackErr io ()
@@ -86,6 +93,10 @@ mkDir path = do
 --------------------------------------------------------------------------------
 
 export
+idrisRepo : String
+idrisRepo = "https://github.com/idris-lang/Idris2.git"
+
+export
 gitClone :  HasIO io
          => (url : String)
          -> (dest : String)
@@ -95,6 +106,10 @@ gitClone url dest = sys "git clone \{url} \{dest}"
 export
 gitCheckout : HasIO io => (commit : String) -> EitherT PackErr io ()
 gitCheckout commit = sys "git checkout \{commit}"
+
+export covering
+gitLatest : HasIO io => (url : String) -> EitherT PackErr io String
+gitLatest url = fst . break isSpace <$> sysRun "git ls-remote \{url} main"
 
 export
 withGit :  HasIO io
@@ -134,6 +149,7 @@ getConfig' = do
   case conf.cmd of
     SwitchRepo repo => pure $ {dbVersion := repo} conf
     CheckDB    repo => pure $ {dbVersion := repo} conf
+    FromHEAD _      => pure $ {dbVersion := "HEAD"} conf
     _               => pure conf
 
 
@@ -178,6 +194,26 @@ env : HasIO io => Config -> EitherT PackErr io Env
 env conf = do
   db <- loadDB conf
   pure $ MkEnv db conf
+
+covering
+latestForHEAD : HasIO io => Package -> EitherT PackErr io Package
+latestForHEAD (MkPackage n url (Just "HEAD") ipkg) = do
+  commit <- gitLatest url
+  pure $ MkPackage n url (Just commit) ipkg
+latestForHEAD p                                    = pure p
+
+export covering
+latestDBForHead : HasIO io => DB -> EitherT PackErr io DB
+latestDBForHead (MkDB commit v ps) = do
+  nc  <- gitLatest idrisRepo
+  nps <- traverse latestForHEAD ps
+  pure $ MkDB nc v nps
+
+export covering
+fromHEAD : HasIO io => String -> Env -> EitherT PackErr io ()
+fromHEAD path (MkEnv db _) = do
+  ndb <- latestDBForHead db
+  write path (printDB ndb)
 
 ||| Runs a *pack* program, printing errors to standard out.
 export

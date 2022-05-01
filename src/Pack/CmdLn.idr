@@ -13,6 +13,7 @@ data Cmd : Type where
   Build          : String -> Cmd
   CheckDB        : String -> Cmd
   Exec           : String -> List String -> Cmd
+  FromHEAD       : String -> Cmd
   Install        : List String -> Cmd
   InstallApp     : List String -> Cmd
   InstallWithSrc : List String -> Cmd
@@ -123,6 +124,7 @@ cmd ["help"]                   = Right PrintHelp
 cmd ["update-db"]              = Right UpdateDB
 cmd ["check-db", db]           = Right $ CheckDB db
 cmd ("exec" :: file :: args)   = Right $ Exec file args
+cmd ["extract-from-head", p]   = Right $ FromHEAD p
 cmd ["build", file]            = Right $ Build file
 cmd ["typecheck", file]        = Right $ Typecheck file
 cmd ["switch", repo]           = Right $ SwitchRepo repo
@@ -212,4 +214,10 @@ usageInfo = """
       Check the given package collection by freshly
       building and installing its designated Idris2 executable
       followed by installing all listed packages.
+
+    extract-from-head <output file>
+      Extracts a new unstable data collection from the HEAD
+      colletion by querying the GitHub repository of every
+      package for the latest commit and writing everything in
+      a new file and stores it in the given file.
   """
