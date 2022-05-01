@@ -6,7 +6,9 @@ depends = base >= 0.5.1
         , contrib
         , idris2
 
-modules = Pack.Types
+modules = Pack.CmdLn.Types
+        , Pack.Core.Types
+        , Pack.Database.Types
 
 -- main file (i.e. file to load at REPL)
 main = Main
