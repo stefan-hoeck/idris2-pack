@@ -292,11 +292,11 @@ switchTo : HasIO io => Config -> EitherT PackErr io ()
 switchTo c = do
   e <- env c
   mkIdris e
+  installApp e "pack"
   rmFile (packBinDir c)
   rmFile (packIdrisDir c)
   sys "ln -s \{idrisBinDir e} \{packBinDir c}"
   sys "ln -s \{idrisPrefixDir e} \{packIdrisDir c}"
-  installApp e "pack"
   write "\{c.packDir}/.db" e.conf.dbVersion
 
 export covering
