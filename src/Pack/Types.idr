@@ -1,6 +1,8 @@
 module Pack.Types
 
+import Data.List
 import Data.List1
+import Data.SnocList
 import Data.String
 import Libraries.Data.SortedMap
 import Pack.CmdLn
@@ -94,6 +96,19 @@ export
 executable : ResolvedPackage -> Maybe String
 executable p = desc p >>= executable
 
+export
+name : ResolvedPackage -> String
+name (RP n _ _ _ _)  = n
+name (Ipkg n _)      = n
+name (Local n _ _ _) = n
+name Base            = "base"
+name Contrib         = "contrib"
+name Idris2          = "idris2"
+name Linear          = "linear"
+name Network         = "network"
+name Prelude         = "prelude"
+name Test            = "test"
+
 --------------------------------------------------------------------------------
 --          Package Database
 --------------------------------------------------------------------------------
@@ -157,3 +172,71 @@ export
 printDB : DB -> String
 printDB (MkDB c v ps) =
     unlines $ "\{c},\{v}" :: map printPkg (values ps)
+
+--------------------------------------------------------------------------------
+--          Report
+--------------------------------------------------------------------------------
+
+public export
+data Report : Type where
+  Success : ResolvedPackage -> Report
+  Failure : ResolvedPackage -> List String -> Report
+  Error   : String -> PackErr -> Report
+
+public export
+0 ReportDB : Type
+ReportDB = SortedMap String Report
+
+export
+failingDependencies : List Report -> List String
+failingDependencies rs = nub $ rs >>=
+  \case Success _    => []
+        Failure _ ss => ss
+        Error s err  => [s]
+
+record RepLines where
+  constructor MkRL
+  errs      : SnocList String
+  failures  : SnocList String
+  successes : SnocList String
+
+Semigroup RepLines where
+  MkRL e1 f1 s1 <+> MkRL e2 f2 s2 = MkRL (e1 <+> e2) (f1 <+> f2) (s1 <+> s2)
+
+Monoid RepLines where
+  neutral = MkRL Lin Lin Lin
+
+report : RepLines -> String
+report (MkRL errs fails succs) = """
+  Packages failing to resolve:
+
+  \{unlines $ errs <>> Nil}
+
+  Packages failing to build:
+
+  \{unlines $ fails <>> Nil}
+
+  Packages building successfully:
+
+  \{unlines $ succs <>> Nil}
+  """
+
+toRepLines : Report -> RepLines
+toRepLines (Success x) =
+  MkRL Lin Lin (Lin :< "  \{name x}")
+
+toRepLines (Failure x []) =
+  MkRL Lin (Lin :< "  \{name x}") Lin
+
+toRepLines (Failure x ds) =
+  let fl   = "  \{name x}"
+      deps = concat $ intersperse ", " ds
+      sl   = "  failing dependencies: \{deps}"
+   in MkRL Lin [< fl,sl] Lin
+toRepLines (Error x y) =
+  MkRL [< "  \{x}: \{printErr y}"] Lin Lin
+
+
+export
+printReport : ReportDB -> String
+printReport = report . foldMap toRepLines

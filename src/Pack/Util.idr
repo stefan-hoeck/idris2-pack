@@ -18,6 +18,17 @@ eitherIO :  HasIO io
          -> EitherT PackErr io a
 eitherIO toErr = MkEitherT . map (mapFst toErr)
 
+export
+finally :  Monad m
+        => EitherT err m ()
+        -> EitherT err m a
+        -> EitherT err m a
+finally cleanup act = MkEitherT $ do
+  res <- runEitherT act
+  ignore $ runEitherT cleanup
+  pure res
+
+
 export covering
 read : HasIO io => String -> EitherT PackErr io String
 read fn = eitherIO (ReadFile fn) (readFile fn)
@@ -77,10 +88,7 @@ inDir :  HasIO io
       -> EitherT PackErr io a
 inDir dir act = do
   cur <- curDir
-  chgDir dir
-  res <- act
-  chgDir cur
-  pure res
+  finally (chgDir cur) $ chgDir dir >> act
 
 export
 mkDir : HasIO io => (path : String) -> EitherT PackErr io ()
@@ -118,12 +126,10 @@ withGit :  HasIO io
         -> (commit : String)
         -> (act    : EitherT PackErr io a)
         -> EitherT PackErr io a
-withGit conf url commit act = do
-  rmDir (tmpDir conf)
-  gitClone url (tmpDir conf)
-  res <- inDir (tmpDir conf) (gitCheckout commit >> act)
-  rmDir (tmpDir conf)
-  pure res
+withGit conf url commit act =
+  finally (rmDir (tmpDir conf)) $ do
+    gitClone url (tmpDir conf)
+    inDir (tmpDir conf) (gitCheckout commit >> act)
 
 --------------------------------------------------------------------------------
 --          Environment
