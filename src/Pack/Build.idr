@@ -1,5 +1,6 @@
 module Pack.Build
 
+import Control.Monad.State
 import Data.List
 import Data.List1
 import Data.String
@@ -247,12 +248,76 @@ build p env = do
   traverse_ (installLib True env) (map pkgname d.depends)
   sys "\{idrisExec env} --build \{ipkg}"
 
+toState : HasIO io => EitherT err io a -> StateT s io (Either err a)
+toState = lift . runEitherT
+
+updateRep :  HasIO io
+          => String
+          -> Report
+          -> StateT ReportDB io Report
+updateRep p rep = modify (insert p rep) $> rep
+
+updateFail :  HasIO io
+           => String
+           -> ResolvedPackage
+           -> List String
+           -> StateT ReportDB io Report
+updateFail n rp rs = updateRep n (Failure rp rs)
+
+updateErr :  HasIO io
+          => String
+          -> PackErr
+          -> StateT ReportDB io Report
+updateErr n err = updateRep n (Error n err)
+
+updateSuccess :  HasIO io
+              => String
+              -> ResolvedPackage
+              -> StateT ReportDB io Report
+updateSuccess n pkg = updateRep n (Success pkg)
+
+covering
+checkPkg : HasIO io => Env -> String -> StateT ReportDB io Report
+checkPkg env p = do
+  Nothing <- lookup p <$> get | Just rep => pure rep
+  Right resPkg  <- toState $ resolve env p
+    | Left err => updateErr p err 
+  case resPkg of
+    RP _ url commit ipkg d => do
+      [] <- failingDependencies <$> traverse (checkPkg env) (map pkgname d.depends)
+        | rs => updateFail p resPkg rs
+      res <- toState $ withGit env.conf url commit $ do
+        sys "\{idrisExec env} --install \{ipkg}"
+      case res of
+        Left  _ => updateFail p resPkg []
+        Right _ => updateSuccess p resPkg
+
+    Ipkg ipkg d => do
+      [] <- failingDependencies <$> traverse (checkPkg env) (map pkgname d.depends)
+        | rs => updateFail p resPkg rs
+      res <- toState $ sys "\{idrisExec env} --install \{ipkg}"
+      case res of
+        Left  _ => updateFail p resPkg []
+        Right _ => updateSuccess p resPkg
+
+    Local _ dir ipkg d => do
+      [] <- failingDependencies <$> traverse (checkPkg env) (map pkgname d.depends)
+        | rs => updateFail p resPkg rs
+      res <- toState $ inDir dir $
+        sys "\{idrisExec env} --install \{ipkg}"
+      case res of
+        Left  _ => updateFail p resPkg []
+        Right _ => updateSuccess p resPkg
+
+    _ => updateSuccess p resPkg
 
 covering
 checkDB : HasIO io => Env -> EitherT PackErr io ()
 checkDB env = do
-  rmDir (idrisPrefixDir env)
-  traverse_ (\p => installLib False env p.name) env.db.packages
+  mkIdris env
+  rep <- liftIO $ execStateT empty 
+                $ traverse_ (checkPkg env . name) env.db.packages
+  putStrLn $ printReport rep
 
 covering
 typecheck : HasIO io => String -> Env -> EitherT PackErr io ()
