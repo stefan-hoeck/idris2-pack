@@ -71,7 +71,9 @@ exists = exists . show
 ||| Tries to create a director (including parent directories)
 export
 mkDir : HasIO io => (dir : Path) -> EitherT PackErr io ()
-mkDir dir = sys "mkdir -p \{show dir}"
+mkDir dir = case show dir of
+  "" => pure ()
+  s  => sys "mkdir -p \{s}"
 
 ||| Creates a parent directory of a (file) path
 export
