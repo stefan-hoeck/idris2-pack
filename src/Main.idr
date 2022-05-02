@@ -1,7 +1,6 @@
 module Main
 
-import Pack.Build
-import Pack.Util
+import Pack.Runner
 
 covering
 main : IO ()

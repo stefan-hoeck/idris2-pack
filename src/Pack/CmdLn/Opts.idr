@@ -1,100 +1,20 @@
-module Pack.CmdLn
+module Pack.CmdLn.Opts
 
-import Pack.Err
+import Libraries.Utils.Path
+import Pack.CmdLn.Types
+import Pack.Core.Types
 import System.Console.GetOpt
 
 %default total
 
-||| Commands accepted by *pack*. Most of these
-||| operate on a list of packages and/or
-||| projects with an `.ipkg` file.
-public export
-data Cmd : Type where
-  Build          : String -> Cmd
-  CheckDB        : String -> Cmd
-  Exec           : String -> List String -> Cmd
-  FromHEAD       : String -> Cmd
-  Install        : List String -> Cmd
-  InstallApp     : List String -> Cmd
-  InstallWithSrc : List String -> Cmd
-  PrintHelp      : Cmd
-  Remove         : List String -> Cmd
-  SwitchRepo     : String -> Cmd
-  Typecheck      : String -> Cmd
-  UpdateDB       : Cmd
-
-||| Program configuration
-public export
-record Config where
-  constructor MkConfig
-
-  ||| Directory where the *pack* DB and installed
-  ||| libraries and executables reside
-  packDir   : String
-
-  ||| Database to use
-  dbVersion : String
-
-  ||| Database to use
-  scheme    : String
-
-  ||| The pack command plus arguments to run
-  cmd       : Cmd
-
-||| Initial configuration.
-export
-init : (dir : String) -> (db : String) -> Config
-init dir db = MkConfig {
-    cmd           = PrintHelp
-  , packDir       = dir
-  , dbVersion     = db
-  , scheme        = "scheme"
-  }
-
-||| Temporary directory used for building packages.
-export
-tmpDir : Config -> String
-tmpDir c = "\{c.packDir}/tmp"
-
-||| Directory where databases are stored.
-export
-dbDir : Config -> String
-dbDir c = "\{c.packDir}/db"
-
-||| Directory where user settings are stored.
-export
-userDir : Config -> String
-userDir c = "\{c.packDir}/user"
-
-||| File where a user-defined DB for the current
-||| package collection might be stored.
-export
-userDB : Config -> String
-userDB c = "\{userDir c}/\{c.dbVersion}.db"
-
-||| File where a user-defined DB to be used in all
-||| package collections might be stored.
-export
-userGlobalDB : Config -> String
-userGlobalDB c = "\{userDir c}/global.db"
-
-||| File where package DB is located
-export
-dbFile : Config -> String
-dbFile c = "\{dbDir c}/\{c.dbVersion}.db"
-
---------------------------------------------------------------------------------
---          Applying Command Line Args
---------------------------------------------------------------------------------
-
 dir : String -> Config -> Config
-dir s = {packDir := s}
+dir s = {packDir := parse s}
 
 setDB : String -> Config -> Config
-setDB s = {dbVersion := s}
+setDB s = {dbVersion := MkDBName s}
 
 setScheme : String -> Config -> Config
-setScheme s = {scheme := s}
+setScheme s = {scheme := parse s}
 
 -- command line options with description
 descs : List $ OptDescr (Config -> Config)
@@ -122,24 +42,24 @@ cmd : List String -> Either PackErr Cmd
 cmd []                         = Right PrintHelp
 cmd ["help"]                   = Right PrintHelp
 cmd ["update-db"]              = Right UpdateDB
-cmd ["check-db", db]           = Right $ CheckDB db
-cmd ("exec" :: file :: args)   = Right $ Exec file args
-cmd ["extract-from-head", p]   = Right $ FromHEAD p
-cmd ["build", file]            = Right $ Build file
-cmd ["typecheck", file]        = Right $ Typecheck file
-cmd ["switch", repo]           = Right $ SwitchRepo repo
-cmd ("install" :: xs)          = Right $ Install xs
-cmd ("remove" :: xs)           = Right $ Remove xs
-cmd ("install-with-src" :: xs) = Right $ InstallWithSrc xs
-cmd ("install-app" :: xs)      = Right $ InstallApp xs
+cmd ["check-db", db]           = Right $ CheckDB (MkDBName db)
+cmd ("exec" :: file :: args)   = Right $ Exec (fromString file) args
+cmd ["extract-from-head", p]   = Right $ FromHEAD (parse p)
+cmd ["build", file]            = Right $ Build (parse file)
+cmd ["typecheck", file]        = Right $ Typecheck (parse file)
+cmd ["switch", repo]           = Right $ SwitchRepo (MkDBName repo)
+cmd ("install" :: xs)          = Right $ Install (map fromString xs)
+cmd ("remove" :: xs)           = Right $ Remove (map fromString xs)
+cmd ("install-with-src" :: xs) = Right $ InstallWithSrc (map fromString xs)
+cmd ("install-app" :: xs)      = Right $ InstallApp (map fromString xs)
 cmd xs                         = Left  $ UnknownCommand xs
 
 ||| Given a root directory for *pack* and a db version,
 ||| generates the application
 ||| config from a list of command line arguments.
 export
-applyArgs :  (dir  : String)
-          -> (db   : String)
+applyArgs :  (dir  : Path)
+          -> (db   : DBName)
           -> (args : List String)
           -> Either PackErr Config
 applyArgs dir db args =
@@ -154,9 +74,6 @@ applyArgs dir db args =
 --------------------------------------------------------------------------------
 --          Usage Info
 --------------------------------------------------------------------------------
-
-version : String
-version = "0.0.1"
 
 progName : String
 progName = "pack"

@@ -1,7 +1,7 @@
 ||| Utilities for parsing .ipkg files. Most of this stuff
 ||| should actually be available from the Idris API after
 ||| some small refactoring.
-module Pack.Ipkg
+module Pack.Core.Ipkg
 
 import Core.Core
 import Core.FC
@@ -9,9 +9,8 @@ import Core.Name.Namespace
 import Idris.Package.Types
 import Libraries.Data.String.Extra
 import Libraries.Text.Parser
-import Pack.Err
-import Pack.Types
-import Pack.Util
+import Pack.Core.Types
+import Pack.Core.IO
 import Parser.Package
 import System.File
 
@@ -163,9 +162,8 @@ field fname
              end <- location
              pure $ fieldConstructor (MkFC (PhysicalPkgSrc fname) start end) str
 
-export
-parsePkgDesc : String -> Rule (String, List DescField)
-parsePkgDesc fname
+pkgDesc : String -> Rule (String, List DescField)
+pkgDesc fname
     = do ignore $ exactProperty "package"
          name <- packageName
          fields <- many (field fname)
@@ -198,45 +196,17 @@ addField p (PPostinstall fc e)   = { postinstall := Just (fc, e) } p
 addField p (PPreclean fc e)      = { preclean := Just (fc, e) } p
 addField p (PPostclean fc e)     = { postclean := Just (fc, e) } p
 
-export
 addFields : (name : String) -> List DescField -> PkgDesc
 addFields = foldl addField . initPkgDesc
 
-export
-fromLexError : OriginDesc -> (StopReason, Int, Int, String) -> PackErr
-fromLexError origin (ComposeNotClosing begin end, _, _, _)
-    = LexFail (MkFC origin begin end) "Bracket is not properly closed."
-fromLexError origin (_, l, c, _)
-    = LexFail (MkFC origin (l, c) (l, c + 1)) "Can't recognise token."
-
-export
-fromParsingErrors : Show token => OriginDesc -> List1 (ParsingError token) -> PackErr
-fromParsingErrors origin = ParseFail . (map fromError) . forget
-  where
-    fromError : ParsingError token -> (FC, String)
-    fromError (Error msg Nothing)
-        = (MkFC origin (0, 0) (0, 0), msg +> '.')
-    fromError (Error msg (Just t))
-        = let start = startBounds t; end = endBounds t in
-            let fc = if start == end
-                      then MkFC origin start (mapSnd (+1) start)
-                      else MkFC origin start end
-            in (fc, msg +> '.')
-
-export
-runParser : (fname : String) -> (str : String) -> Rule ty -> Either PackErr ty
-runParser fname str p
-    = do toks   <- mapFst (\err => fromLexError
-                     (PhysicalPkgSrc fname) (NoRuleApply, err)) $ lex str
-         (_, val, _) <- mapFst (fromParsingErrors (PhysicalPkgSrc fname)) $ parse p toks
-         Right val
+parseIpkg : (path : Path) -> (str : String) -> Either PackErr PkgDesc
+parseIpkg path str =
+  let err = InvalidIpkgFile path
+   in do
+     toks           <- mapFst (const err) $ lex str
+     (_, (n,fs), _) <- mapFst (const err) $ parse (pkgDesc $ show path) toks
+     Right $ addFields n fs
 
 export covering
-parseFile :  HasIO io
-          => (fname : String)
-          -> Rule ty
-          -> EitherT PackErr io ty
-parseFile fname p = MkEitherT $ do
-  Right str <- readFile fname
-    | Left err => pure (Left (ReadFile fname err))
-  pure (runParser fname str p)
+parseIpkgFile :  HasIO io => (path : Path) -> EitherT PackErr io PkgDesc
+parseIpkgFile path = read path >>= liftEither . parseIpkg path
