@@ -23,8 +23,8 @@ public export
 ReportDB = SortedMap PkgName Report
 
 export
-failingDependencies : List Report -> List PkgName
-failingDependencies rs = nub $ rs >>=
+failingDeps : List Report -> List PkgName
+failingDeps rs = nub $ rs >>=
   \case Success _    => []
         Failure _ ss => ss
         Error s err  => [s]
@@ -36,7 +36,7 @@ record RepLines where
   successes : SnocList String
 
 Semigroup RepLines where
-  MkRL e1 f1 s1 <+> MkRL e2 f2 s2 = MkRL (e1 <+> e2) (f1 <+> f2) (s1 <+> s2)
+  MkRL e1 f1 s1 <+> MkRL e2 f2 s2 = MkRL (e1<+>e2) (f1<+>f2) (s1<+>s2)
 
 Monoid RepLines where
   neutral = MkRL Lin Lin Lin

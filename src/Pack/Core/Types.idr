@@ -1,16 +1,21 @@
+||| We work a lot with Strings of distinct semantics.
+||| Since I've been bitten by this more than once, we wrap
+||| the in single field record types to drastically increase
+||| type safety.
 module Pack.Core.Types
 
+import Data.List1
 import Data.String
+import Idris.Package.Types
 import Libraries.Utils.Path
 import System.File
 
 %default total
 
 --------------------------------------------------------------------------------
---          Commits
+--          URL
 --------------------------------------------------------------------------------
 
-||| A git commit
 public export
 record URL where
   constructor MkURL
@@ -32,7 +37,7 @@ Interpolation URL where interpolate = value
 --          Commits
 --------------------------------------------------------------------------------
 
-||| A git commit
+||| A git commit hash or tag.
 public export
 record Commit where
   constructor MkCommit
@@ -54,7 +59,7 @@ Interpolation Commit where interpolate = value
 --          Package Name
 --------------------------------------------------------------------------------
 
-||| A git commit
+||| Name of an Idris package
 public export
 record PkgName where
   constructor MkPkgName
@@ -74,6 +79,51 @@ FromString PkgName where fromString = MkPkgName
 
 export %inline
 Interpolation PkgName where interpolate = value
+
+--------------------------------------------------------------------------------
+--          DBName
+--------------------------------------------------------------------------------
+
+||| Name of a package collection
+public export
+record DBName where
+  constructor MkDBName
+  value : String
+
+export %inline
+Eq DBName where (==) = (==) `on` value
+
+export %inline
+Show DBName where show = value
+
+export %inline
+FromString DBName where fromString = MkDBName
+
+export %inline
+Interpolation DBName where interpolate = value
+
+--------------------------------------------------------------------------------
+--          PkgRep
+--------------------------------------------------------------------------------
+
+||| Package representation at the command line.
+||| This is either a path to an `.ipkg` file or the
+||| name of a package in the package collection.
+public export
+data PkgRep : Type where
+  Pkg  : PkgName -> PkgRep
+  Ipkg : Path    -> PkgRep
+
+export
+Interpolation PkgRep where
+  interpolate (Pkg n)  = n.value
+  interpolate (Ipkg p) = show p
+
+export
+FromString PkgRep where
+  fromString s = case reverse $ forget $ split ('.' ==) s of
+    "ipkg" :: _ => Ipkg (parse s)
+    _           => Pkg (MkPkgName s)
 
 --------------------------------------------------------------------------------
 --          Errors
@@ -108,7 +158,7 @@ data PackErr : Type where
 
   ||| The given package is not an applicatio
   ||| (No executable name set in the `.ipkg` file)
-  NoApp      : (name : PkgName) -> PackErr
+  NoApp      : (rep : PkgRep) -> PackErr
 
   ||| An erroneous package description in a package DB file
   InvalidPackageDesc : (s : String) -> PackErr
@@ -120,13 +170,13 @@ data PackErr : Type where
   InvalidDBHeader : (s : String) -> PackErr
 
   ||| Failed to parse an .ipkg file
-  ParseFail  : (path : Path) -> PackErr
+  InvalidIpkgFile  : (path : Path) -> PackErr
 
   ||| The given core package (base, contrib, etc.)
   ||| is missing from the Idris installation.
-  MissingCorePackage :  (name : PkgName)
-                     -> (version : String)
-                     -> (commit : Commit)
+  MissingCorePackage :  (name    : PkgName)
+                     -> (version : PkgVersion)
+                     -> (commit  : Commit)
                      -> PackErr
 
   ||| Unknown command line argument
@@ -142,6 +192,10 @@ data PackErr : Type where
   ||| Unknown command or sequence of options
   ||| entered on the command line
   UnknownCommand : List String -> PackErr
+
+  ||| Trying to clone a repository into an existing
+  ||| directory.
+  DirExists : Path -> PackErr
 
 ||| Prints an error that occured during program execution.
 export
@@ -184,15 +238,15 @@ printErr (InvalidDBHeader s) = """
 
 printErr (UnknownPkg name) = "Unknown package: \{name}"
 
-printErr (NoApp name) = "Package \{name} is not an application"
+printErr (NoApp rep) = "Package \{rep} is not an application"
 
 printErr EmptyPkgDB = "Empty package data base"
 
-printErr (ParseFail path) =
+printErr (InvalidIpkgFile path) =
   "Failed to parse .ipkg file: \{show path}"
 
 printErr (MissingCorePackage nm v c) =
-  "Core package \"\{nm}\" is missing for Idris2 version \{v} (commit: \{c})"
+  "Core package \"\{nm}\" missing for Idris2 version \{show v} (commit: \{c})"
 
 printErr (UnknownArg arg) = "Unknown command line arg: \{arg}"
 
@@ -202,3 +256,8 @@ printErr (UnknownCommand cmd) = "Unknown command: \{unwords cmd}"
 
 printErr BuildMany =
   "Can only build or typecheck a single Idris2 package given as an `.ipkg` file."
+
+printErr (DirExists path) = """
+  Failed to clone GitHub repository into \{show path}.
+  Directory already exists.
+  """

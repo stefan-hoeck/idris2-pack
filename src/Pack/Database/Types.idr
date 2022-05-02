@@ -55,7 +55,7 @@ data ResolvedPackage : Type where
           -> ResolvedPackage
 
   ||| A local (and parsed) `.ipkg` file.
-  RIpkg   :  (name : PkgName)
+  RIpkg   :  (path : Path)
           -> (desc : PkgDesc)
           -> ResolvedPackage
 
@@ -112,6 +112,20 @@ desc (RIpkg _ d)          = Just d
 desc (RLocal _ _ _ d)     = Just d
 desc _                    = Nothing
 
+||| Extracts the dependencies of a resolved package.
+export
+dependencies : ResolvedPackage -> List PkgRep
+dependencies rp = case desc rp of
+  Just d  => map (Pkg . MkPkgName . pkgname) d.depends
+  Nothing => []
+
+||| Extracts the names of dependencies of a resolved package.
+export
+depNames : ResolvedPackage -> List PkgName
+depNames rp = case desc rp of
+  Just d  => map (MkPkgName . pkgname) d.depends
+  Nothing => []
+
 ||| Extracts the name of the executable (if any) from
 ||| a resolved package.
 export
@@ -123,7 +137,7 @@ namespace ResolvedPackage
   export
   name : ResolvedPackage -> PkgName
   name (RGitHub n _ _ _ _) = n
-  name (RIpkg n _)         = n
+  name (RIpkg _ d)         = MkPkgName d.name
   name (RLocal n _ _ _)    = n
   name Base                = "base"
   name Contrib             = "contrib"
@@ -144,7 +158,7 @@ public export
 record DB where
   constructor MkDB
   idrisCommit  : Commit
-  idrisVersion : String
+  idrisVersion : PkgVersion
   packages     : SortedMap PkgName Package
 
 --------------------------------------------------------------------------------
@@ -177,83 +191,20 @@ readPkgs = map toPackageMap . traverse readPkg . filter (/= "")
   where toPackageMap : List Package -> SortedMap PkgName Package
         toPackageMap = SortedMap.fromList . map (\p => (name p,p))
 
+readVersion : String -> Maybe PkgVersion
+readVersion = map MkPkgVersion . traverse parsePositive . split ('.' ==)
+
 export
 readDB : String -> Either PackErr DB
 readDB s = case lines s of
   []       => Left EmptyPkgDB
   (h :: t) => case commaSep h of
-    [c,v] => MkDB (MkCommit c) v <$> readPkgs t
+    [c,v] => case readVersion v of
+      Just v' => MkDB (MkCommit c) v' <$> readPkgs t
+      Nothing => Left (InvalidDBHeader h)
     _     => Left (InvalidDBHeader h)
 
 export
 printDB : DB -> String
 printDB (MkDB c v ps) =
-    unlines $ "\{c},\{v}" :: map printPkg (values ps)
-
--- --------------------------------------------------------------------------------
--- --          Report
--- --------------------------------------------------------------------------------
--- 
--- public export
--- data Report : Type where
---   Success : ResolvedPackage -> Report
---   Failure : ResolvedPackage -> List String -> Report
---   Error   : String -> PackErr -> Report
--- 
--- public export
--- 0 ReportDB : Type
--- ReportDB = SortedMap String Report
--- 
--- export
--- failingDependencies : List Report -> List String
--- failingDependencies rs = nub $ rs >>=
---   \case Success _    => []
---         Failure _ ss => ss
---         Error s err  => [s]
--- 
--- record RepLines where
---   constructor MkRL
---   errs      : SnocList String
---   failures  : SnocList String
---   successes : SnocList String
--- 
--- Semigroup RepLines where
---   MkRL e1 f1 s1 <+> MkRL e2 f2 s2 = MkRL (e1 <+> e2) (f1 <+> f2) (s1 <+> s2)
--- 
--- Monoid RepLines where
---   neutral = MkRL Lin Lin Lin
--- 
--- report : RepLines -> String
--- report (MkRL errs fails succs) = """
---   Packages failing to resolve:
--- 
---   \{unlines $ errs <>> Nil}
--- 
---   Packages failing to build:
--- 
---   \{unlines $ fails <>> Nil}
--- 
---   Packages building successfully:
--- 
---   \{unlines $ succs <>> Nil}
---   """
--- 
--- toRepLines : Report -> RepLines
--- toRepLines (Success x) =
---   MkRL Lin Lin (Lin :< "  \{name x}")
--- 
--- toRepLines (Failure x []) =
---   MkRL Lin (Lin :< "  \{name x}") Lin
--- 
--- toRepLines (Failure x ds) =
---   let fl   = "  \{name x}"
---       deps = concat $ intersperse ", " ds
---       sl   = "  failing dependencies: \{deps}"
---    in MkRL Lin [< fl,sl] Lin
--- toRepLines (Error x y) =
---   MkRL [< "  \{x}: \{printErr y}"] Lin Lin
--- 
--- 
--- export
--- printReport : ReportDB -> String
--- printReport = report . foldMap toRepLines
+    unlines $ "\{c},\{show v}" :: map printPkg (values ps)
