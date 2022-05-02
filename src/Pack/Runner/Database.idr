@@ -76,4 +76,4 @@ resolve e (Pkg n)         = case lookup n e.db.packages of
            copyFile ipkg cache
            RGitHub n url commit ipkg <$> parseIpkgFile ipkg
   Just (Local n dir ipkg) =>
-    RLocal n dir ipkg <$> parseIpkgFile ipkg
+    inDir dir $ RLocal n dir ipkg <$> parseIpkgFile ipkg
