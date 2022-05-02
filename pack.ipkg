@@ -6,9 +6,24 @@ depends = base >= 0.5.1
         , contrib
         , idris2
 
-modules = Pack.CmdLn.Types
+modules = Pack.CmdLn.Env
+        , Pack.CmdLn.Opts
+        , Pack.CmdLn.Types
+
+        , Pack.Core
+        , Pack.Core.Git
+        , Pack.Core.IO
+        , Pack.Core.Ipkg
         , Pack.Core.Types
+
         , Pack.Database.Types
+
+        , Pack.Report.Types
+
+        , Pack.Runner
+        , Pack.Runner.Check
+        , Pack.Runner.Database
+        , Pack.Runner.Install
 
 -- main file (i.e. file to load at REPL)
 main = Main
