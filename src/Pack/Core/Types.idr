@@ -120,10 +120,12 @@ Interpolation PkgRep where
   interpolate (Ipkg p) = show p
 
 export
+isIpkgFile : String -> Bool
+isIpkgFile = (Just "ipkg" ==) . extension
+
+export
 FromString PkgRep where
-  fromString s = case reverse $ forget $ split ('.' ==) s of
-    "ipkg" :: _ => Ipkg (parse s)
-    _           => Pkg (MkPkgName s)
+  fromString s = if isIpkgFile s then Ipkg (parse s) else Pkg (MkPkgName s)
 
 --------------------------------------------------------------------------------
 --          Errors
@@ -146,6 +148,9 @@ data PackErr : Type where
 
   ||| Failed to write to the given file
   WriteFile  : (path : Path) -> (err : FileError) -> PackErr
+
+  ||| Failed to read the content of a directory
+  DirEntries : (path : Path) -> (err : FileError) -> PackErr
 
   ||| Error when running the given system command
   Sys        : (cmd : String) -> (err : Int) -> PackErr
@@ -216,6 +221,9 @@ printErr (ReadFile path err) =
 
 printErr (WriteFile path err) =
   "Error when writing to file \"\{show path}\": \{show err}."
+
+printErr (DirEntries path err) =
+  "Error when reading directory \"\{show path}\": \{show err}."
 
 printErr (Sys cmd err) = """
   Error when executing system command.

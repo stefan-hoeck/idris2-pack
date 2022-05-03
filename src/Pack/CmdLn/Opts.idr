@@ -1,5 +1,6 @@
 module Pack.CmdLn.Opts
 
+import Data.String
 import Libraries.Utils.Path
 import Pack.CmdLn.Types
 import Pack.Core.Types
@@ -38,6 +39,14 @@ descs = [ MkOpt [] ["pack-dir"]   (ReqArg dir "<dir>")
             """
         ]
 
+export
+optionNames : List String
+optionNames = foldMap names descs
+  where names : OptDescr a -> List String
+        names (MkOpt sns lns _ _) =
+          map (\c => "-\{String.singleton c}") sns ++ map ("--" ++) lns
+
+
 cmd : List String -> Either PackErr Cmd
 cmd []                         = Right PrintHelp
 cmd ["help"]                   = Right PrintHelp
@@ -52,6 +61,8 @@ cmd ("install" :: xs)          = Right $ Install (map fromString xs)
 cmd ("remove" :: xs)           = Right $ Remove (map fromString xs)
 cmd ("install-with-src" :: xs) = Right $ InstallWithSrc (map fromString xs)
 cmd ("install-app" :: xs)      = Right $ InstallApp (map fromString xs)
+cmd ["completion",a,b]         = Right $ Completion a b
+cmd ["completion-script",f]    = Right $ CompletionScript f
 cmd xs                         = Left  $ UnknownCommand xs
 
 ||| Given a root directory for *pack* and a db version,

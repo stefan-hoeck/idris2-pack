@@ -14,18 +14,24 @@ import Libraries.Utils.Path
 ||| projects with an `.ipkg` file.
 public export
 data Cmd : Type where
-  Build          : Path -> Cmd
-  CheckDB        : DBName -> Cmd
-  Exec           : PkgRep -> List String -> Cmd
-  FromHEAD       : Path -> Cmd
-  Install        : List PkgRep -> Cmd
-  InstallApp     : List PkgRep -> Cmd
-  InstallWithSrc : List PkgRep -> Cmd
-  PrintHelp      : Cmd
-  Remove         : List PkgRep -> Cmd
-  SwitchRepo     : DBName -> Cmd
-  Typecheck      : Path -> Cmd
-  UpdateDB       : Cmd
+  Build            : Path -> Cmd
+  Typecheck        : Path -> Cmd
+  Exec             : PkgRep -> List String -> Cmd
+
+  Install          : List PkgRep -> Cmd
+  InstallApp       : List PkgRep -> Cmd
+  InstallWithSrc   : List PkgRep -> Cmd
+  Remove           : List PkgRep -> Cmd
+
+  CheckDB          : DBName -> Cmd
+  FromHEAD         : Path -> Cmd
+  SwitchRepo       : DBName -> Cmd
+  UpdateDB         : Cmd
+
+  Completion       : String -> String -> Cmd
+  CompletionScript : String -> Cmd
+
+  PrintHelp        : Cmd
 
 ||| Program configuration
 public export

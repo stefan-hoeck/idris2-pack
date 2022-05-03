@@ -44,7 +44,7 @@ idris2 --build pack.ipkg
 Afterwards, run the following two commands. If your chez scheme
 executable has another name than `scheme` or you want to specify
 its full path, you can give it explicitly by using the `-s`
-command line option:
+command-line option:
 
 ```sh
 build/exec/pack update-db
@@ -56,11 +56,37 @@ version of the Idris2 compiler plus standard libraries and API,
 followed by the *pack* application, so this might take a couple of
 minutes.
 
+### (Optional) Shell Auto-completion
+
+Idris2 supports tab auto-completion for Bash-like shells.
+
+#### For Bash Users
+
+From within bash, run the following command:
+
+```sh
+eval "$(pack completion-script pack)"
+```
+
+You can also add it to your `.bashrc` file.
+
+#### For ZSH Users
+
+From within ZSH, run the following commands:
+
+```sh
+autoload -U +X compinit && compinit
+autoload -U +X bashcompinit && bashcompinit
+eval "$(pack completion-script pack)"
+```
+
+You can also add them to your `.zshrc` file.
+
 ## Usage
 
 This assumes the `$PACK_DIR/bin` folder
 is on your path and you have installed
-*pack* as described above. To install a library from the 
+*pack* as described above. To install a library from the
 package collection, run
 
 ```sh
@@ -91,7 +117,7 @@ pack remove katla
 
 The build tool can run executables, both from local
 packages as well as from installed applications.
-Use `--args` to pass on command line arguments (making sure
+Use `--args` to pass on command-line arguments (making sure
 to properly quote them):
 
 ```sh
@@ -113,14 +139,14 @@ are GitHub projects, consisting
 of a comma-separated name, url, commit hash, and `.ipkg` file.
 For instance:
 
-```db
+```csv
 sop,https://github.com/stefan-hoeck/idris2-sop,af9224510f5c283f3b3c8293524e51c225617658,sop.ipkg
 ```
 
 The second are local projects, consisting of a comma-separated
 name, absolute directory path, and `.ipkg` file. For instance:
 
-```db
+```csv
 hello,/path/to/hello/project,hello.ipkg
 ```
 
@@ -142,7 +168,7 @@ Assume you'd like to use local libraries `/home/me/hello` and
 `/home/me/foo` with all package collections. Here's what
 to add to `$PACK_DIR/users/global.db`:
 
-```db
+```csv
 hello,/home/me/hello,hello.ipkg
 foo,/home/me/foo,foo.ipkg
 ```
@@ -152,12 +178,12 @@ In addition, you'd like to override the commit used for the
 package collection. Here's what to add to
 `$PACK_DIR/users/unstable-220430`:
 
-```
+```csv
 katla,https://github.com/idris-community/katla,HEAD,katla.ipkg
 ```
 
 You could also use the same technique to make *pack* use
-a different GitHub repo (probably a fork of yours) for a
+a different GitHub repository (probably a fork of yours) for a
 certain package.
 
 ## Stuff still Missing

@@ -6,7 +6,8 @@ depends = base >= 0.5.1
         , contrib
         , idris2
 
-modules = Pack.CmdLn.Env
+modules = Pack.CmdLn.Completion
+        , Pack.CmdLn.Env
         , Pack.CmdLn.Opts
         , Pack.CmdLn.Types
 
