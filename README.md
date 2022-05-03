@@ -56,6 +56,32 @@ version of the Idris2 compiler plus standard libraries and API,
 followed by the *pack* application, so this might take a couple of
 minutes.
 
+### (Optional) Shell Auto-completion
+
+Idris2 supports tab auto-completion for Bash-like shells.
+
+#### For Bash Users
+
+From within bash, run the following command:
+
+```sh
+eval "$(pack completion-script pack)"
+```
+
+You can also add it to your `.bashrc` file.
+
+#### For ZSH Users
+
+From within ZSH, run the following commands:
+
+```sh
+autoload -U +X compinit && compinit
+autoload -U +X bashcompinit && bashcompinit
+eval "$(pack completion-script pack)"
+```
+
+You can also add them to your `.zshrc` file.
+
 ## Usage
 
 This assumes the `$PACK_DIR/bin` folder
