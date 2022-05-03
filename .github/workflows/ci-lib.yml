@@ -51,6 +51,4 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Build lib
-        run: make lib
-      - name: Build docs
-        run: make docs
+        run: idris2 --build pack.ipkg
