@@ -1,13 +1,17 @@
 module Pack.CmdLn.Completion
 
+import Control.Monad.Trans
 import Data.List
 import Data.String
 import Libraries.Data.List.Extra
 import Libraries.Data.SortedMap
+import Libraries.Utils.Path
 import Pack.CmdLn.Env
+import Pack.CmdLn.Opts
 import Pack.CmdLn.Types
 import Pack.Core
 import Pack.Database.Types
+import System.Directory
 
 --------------------------------------------------------------------------------
 --          Bash Autocompletions
@@ -15,9 +19,21 @@ import Pack.Database.Types
 
 -- list of `.ipkg` files in the current directory
 ipkgFiles : HasIO io => io (List String)
+ipkgFiles = do
+  Right ss <- runEitherT currentEntries | Left _ => pure []
+  pure $ filter isIpkgFile ss
+
+toDBName : String -> Maybe String
+toDBName s =
+  if Just "db" == extension s
+     then fileStem s
+     else Nothing
 
 -- list of package collections in `$HOME/.pack/db`
 collections : HasIO io => Env s -> io (List String)
+collections e = do
+  Right ss <- runEitherT (entries $ dbDir e.conf) | Left _ => pure []
+  pure $ mapMaybe toDBName ss
 
 -- list of packages in the currently selected data
 -- collection
@@ -43,44 +59,68 @@ prefixOnlyIfNonEmpty "--" = id
 prefixOnlyIfNonEmpty s    = prefixOnly s
 
 optionFlags : List String
+optionFlags =
+  [ "help"
+  , "update-db"
+  , "check-db"
+  , "exec"
+  , "extract-from-head"
+  , "build"
+  , "typecheck"
+  , "switch"
+  , "install"
+  , "remove"
+  , "install-with-src"
+  , "install-app"
+  , "completion"
+  , "completion-script"
+  ] ++ optionNames
 
--- given a pair of strings, the first representing the word
--- actually being edited, the second representing the word
--- before the one being edited, return a list of possible
--- completions. If the list of completions is empty, bash
--- will perform directory completion.
-opts : HasIO io => Env s -> String -> String -> io (List String)
-opts e "--" "pack"  = pure optionFlags
+||| Given a pair of strings, the first representing the word
+||| actually being edited, the second representing the word
+||| before the one being edited, return a list of possible
+||| completions. If the list of completions is empty, bash
+||| will perform directory completion.
+opts : HasIO io => String -> String -> Env s -> io (List String)
+opts "--" "pack"  e = pure optionFlags
 
 -- options
-opts e x "--package-set"    = prefixOnlyIfNonEmpty x <$> collections e
-opts e x "-p"               = prefixOnlyIfNonEmpty x <$> collections e
+opts x "--package-set"    e = prefixOnlyIfNonEmpty x <$> collections e
+opts x "-p"               e = prefixOnlyIfNonEmpty x <$> collections e
 
 -- actions
-opts e x "build"            = prefixOnlyIfNonEmpty x <$> ipkgFiles
-opts e x "check-db"         = prefixOnlyIfNonEmpty x <$> collections e
-opts e x "exec"             = prefixOnlyIfNonEmpty x <$> anyPackage e
-opts e x "install"          = prefixOnlyIfNonEmpty x <$> anyPackage e
-opts e x "install-app"      = prefixOnlyIfNonEmpty x <$> anyPackage e
-opts e x "install-with-src" = prefixOnlyIfNonEmpty x <$> anyPackage e
-opts e x "remove"           = prefixOnlyIfNonEmpty x <$> installedPackages e
-opts e x "switch"           = prefixOnlyIfNonEmpty x <$> collections e
-opts e x "typecheck"        = prefixOnlyIfNonEmpty x <$> ipkgFiles
+opts x "build"            e = prefixOnlyIfNonEmpty x <$> ipkgFiles
+opts x "check-db"         e = prefixOnlyIfNonEmpty x <$> collections e
+opts x "exec"             e = prefixOnlyIfNonEmpty x <$> anyPackage e
+opts x "install"          e = prefixOnlyIfNonEmpty x <$> anyPackage e
+opts x "install-app"      e = prefixOnlyIfNonEmpty x <$> anyPackage e
+opts x "install-with-src" e = prefixOnlyIfNonEmpty x <$> anyPackage e
+opts x "remove"           e = prefixOnlyIfNonEmpty x <$> installedPackages e
+opts x "switch"           e = prefixOnlyIfNonEmpty x <$> collections e
+opts x "typecheck"        e = prefixOnlyIfNonEmpty x <$> ipkgFiles
 
 -- options
-opts e x _ = pure $ if (x `elem` optionFlags)
+opts x _ e = pure $ if (x `elem` optionFlags)
                       -- `x` is already a known option => perform
                       -- directory completion
                       then Nil
                       else prefixOnly x optionFlags
 
--- bash autocompletion script using the given function name
+||| Bash autocompletion script using the given function name
+export
+complete : HasIO io => String -> String -> Env s -> EitherT PackErr io ()
+complete a b e = do
+  os <- lift $ opts a b e
+  putStr $ unlines os
+
+||| Bash autocompletion script using the given function name
+export
 completionScript : (fun : String) -> String
 completionScript fun = let fun' = "_" ++ fun in """
   \{ fun' }()
   {
     ED=$([ -z $2 ] && echo "--" || echo $2)
-    COMPREPLY=($(pack --bash-completion $ED $3))
+    COMPREPLY=($(pack completion $ED $3))
   }
 
   complete -F \{ fun' } -o default pack

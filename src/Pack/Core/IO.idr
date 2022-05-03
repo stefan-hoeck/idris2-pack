@@ -109,6 +109,16 @@ inDir :  HasIO io
 inDir dir act =
   curDir >>= \cur => finally (chgDir cur) (chgDir dir >> act)
 
+||| Returns the names of entries in a directory
+export
+entries : HasIO io => (dir : Path) -> EitherT PackErr io (List String)
+entries dir = eitherIO (DirEntries dir) (listDir $ show dir)
+
+||| Returns the names of entries in the current directory
+export
+currentEntries : HasIO io => EitherT PackErr io (List String)
+currentEntries = entries (parse ".")
+
 --------------------------------------------------------------------------------
 --         File Access
 --------------------------------------------------------------------------------
