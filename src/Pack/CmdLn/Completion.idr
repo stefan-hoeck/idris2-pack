@@ -32,7 +32,7 @@ toDBName s =
 -- list of package collections in `$HOME/.pack/db`
 collections : HasIO io => Env s -> io (List String)
 collections e = do
-  Right ss <- runEitherT (entries $ dbDir e.conf) | Left _ => pure []
+  Right ss <- runEitherT (entries $ dbDir e) | Left _ => pure []
   pure $ mapMaybe toDBName ss
 
 -- list of packages in the currently selected data
