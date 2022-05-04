@@ -33,6 +33,34 @@ For instance:
 export PATH="$HOME/.pack/bin:$HOME/.idris2/bin:..."
 ```
 
+### Installation without an Idris2 Compiler
+
+If you don't yet have a recent (more recent than
+the version given in the `.idris-version` file) installation
+of the Idris2 compiler, you can use the *micropack* installer
+by running the following command (assuming the name
+of your chez scheme executable is `chez`):
+
+```sh
+make micropack SCHEME=chez
+```
+
+This will set *pack*'s root directory to `$HOME/.pack`
+and install the latest nightly package collection. If
+you want to use a different package collection, you
+can change it with the `$DB` variable. If you want to
+use a different directory as *pack*'s root directory,
+you can do so by setting the `$PACK_HOME` variable. As an
+example, the following will install package collection
+`nightly-220430` and use `$HOME/.foo` as *pack*'s root
+directory:
+
+```sh
+make micropack SCHEME=chez DB=nightly-220430 PACK_DIR="$HOME/.foo"
+```
+
+### Installation with an existing Idris2 Compiler
+
 For building *pack* the first time, you will require a recent
 installation of Idris2 plus the Idris2 API
 (for reading `.ipkg` files). To build, run
