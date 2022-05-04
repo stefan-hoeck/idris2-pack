@@ -49,3 +49,10 @@ indent_size = 2
 
 [expected]
 trim_trailing_whitespace = false
+
+# Ignore paths
+[/micropack/*]
+charset = unset
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
