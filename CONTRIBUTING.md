@@ -143,20 +143,20 @@ Most pack actions take a value of type
 indexed over a state type, signalling what kind of
 initialisation actions have already been performed:
 
-  * `Nothing` : Just the core configuration from command-line
-     options and some settings in the `$HOME/.pack` directory
-     have been assembled.
+* `Nothing` : Just the core configuration from command-line
+   options and some settings in the `$HOME/.pack` directory
+   have been assembled.
 
-  * `Just DBLoaded` : Core configuration has been assembled
-    and the requested package collection has been loaded into
-    memory. This is typically sufficient for querying package
-    collections, but not for using Idris2 for building
-    packages.
+* `Just DBLoaded` : Core configuration has been assembled
+  and the requested package collection has been loaded into
+  memory. This is typically sufficient for querying package
+  collections, but not for using Idris2 for building
+  packages.
 
-  * `Just HasIdris` : Like `Just DBLoaded`, but in addition,
-    *pack* verified that the selected package collections already
-    has a local installation of the Idris compiler. If this is
-    not the case, the compiler will be built and installed.
+* `Just HasIdris` : Like `Just DBLoaded`, but in addition,
+  *pack* verified that the selected package collections already
+  has a local installation of the Idris compiler. If this is
+  not the case, the compiler will be built and installed.
 
 #### Command-Line Arguments and Tab Completion
 
