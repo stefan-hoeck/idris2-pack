@@ -11,6 +11,9 @@ import System.Console.GetOpt
 dir : String -> Config s -> Config s
 dir s = {packDir := parse s}
 
+bootstrap : Config s -> Config s
+bootstrap = {bootstrap := True}
+
 setDB : String -> Config s -> Config s
 setDB s = {dbVersion := MkDBName s}
 
@@ -36,6 +39,13 @@ descs = [ MkOpt [] ["pack-dir"]   (ReqArg dir "<dir>")
             """
             Sets the scheme executable for installing the Idris2 compiler.
             As a default, this is set to `scheme`.
+            """
+        , MkOpt [] ["bootstrap"]   (NoArg bootstrap)
+            """
+            Use bootstrapping when building the Idris2 compiler.
+            This is for users who don't have a recent version of
+            the Idris2 compiler on their `$PATH`. Compiling Idris2
+            will take considerably longer with this option set.
             """
         ]
 

@@ -26,18 +26,29 @@ copyApp e = sys "cp -r build/exec/* \{show $ idrisBinDir e}"
 ||| Builds and installs the Idris commit given in the environment.
 export
 mkIdris : HasIO io => Env DBLoaded -> EitherT PackErr io (Env HasIdris)
-mkIdris e@(MkConfig pd v s c db) = do
-  False <- exists (idrisInstallDir e) | True => pure $ MkConfig pd v s c db
+mkIdris e@(MkConfig pd v s c b db) = do
+  False <- exists (idrisInstallDir e) | True => pure $ MkConfig pd v s c b db
 
-  withGit (tmpDir e) idrisRepo db.idrisCommit $ do
-    sys "make bootstrap \{prefixVar e} \{schemeVar e}"
-    sys "make install \{prefixVar e}"
-    sys "make clean"
-    sys "make all \{idrisBootVar e} \{prefixVar e}"
-    sys "make install \{idrisBootVar e} \{prefixVar e}"
-    sys "make install-with-src-libs \{idrisBootVar e} \{prefixVar e}"
-    sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
-    pure $ MkConfig pd v s c db
+  if b
+     then -- build with bootstrapping
+       withGit (tmpDir e) idrisRepo db.idrisCommit $ do
+         sys "make bootstrap \{prefixVar e} \{schemeVar e}"
+         sys "make install \{prefixVar e}"
+         sys "make clean"
+         sys "make all \{idrisBootVar e} \{prefixVar e}"
+         sys "make install \{idrisBootVar e} \{prefixVar e}"
+         sys "make install-with-src-libs \{idrisBootVar e} \{prefixVar e}"
+         sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
+
+     else -- build with existing Idris2 compiler
+       withGit (tmpDir e) idrisRepo db.idrisCommit $ do
+         sys "make all \{prefixVar e}"
+         sys "make install \{prefixVar e}"
+         sys "make install-with-src-libs \{prefixVar e}"
+         sys "make clean"
+         sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
+
+  pure $ MkConfig pd v s c b db
 
 ||| Creates a packaging environment with Idris2 installed.
 export

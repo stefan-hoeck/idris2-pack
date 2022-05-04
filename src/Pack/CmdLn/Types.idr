@@ -73,6 +73,9 @@ record Config (s : Maybe State) where
   ||| The pack command plus arguments to run
   cmd       : Cmd
 
+  ||| Whether to use bootstrapping when building Idris2
+  bootstrap : Bool
+
   ||| The package collection
   db        : DBType s
 
@@ -90,6 +93,7 @@ init dir db = MkConfig {
   , dbVersion     = db
   , scheme        = parse "scheme"
   , db            = ()
+  , bootstrap     = False
   }
 
 ||| Temporary directory used for building packages.
