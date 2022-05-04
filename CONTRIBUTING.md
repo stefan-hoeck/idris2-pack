@@ -130,7 +130,7 @@ GitHub, or by reading the same file from the local cache.
 The result is stored in a
 `Pack.Database.Types.ResolvedPackage`.
 
-### Command Line
+### Command-Line
 
 Subfolder of `CmdLn` provide functionality for handling
 command-line arguments and assembling a configuration
