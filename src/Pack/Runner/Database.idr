@@ -65,7 +65,7 @@ resolve e (Pkg n)         = case lookup n e.db.packages of
   Nothing  => throwE (UnknownPkg n)
 
   -- this is a known package so we download its `.ipkg`
-  -- file from GitHub.
+  -- file from GitHub and patch it, if necessary
   Just (GitHub n url commit ipkg) =>
     let cache = ipkgPath e.conf n commit ipkg
      in do
@@ -73,6 +73,8 @@ resolve e (Pkg n)         = case lookup n e.db.packages of
        case b of
          True => RGitHub n url commit ipkg <$> parseIpkgFile cache
          False => withGit (tmpDir e.conf) url commit $ do
+           let pf = patchFile e.conf n ipkg
+           when !(exists pf) (patch ipkg pf)
            copyFile ipkg cache
            RGitHub n url commit ipkg <$> parseIpkgFile ipkg
   Just (Local n dir ipkg) =>

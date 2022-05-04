@@ -163,6 +163,17 @@ export
 schemeVar : Config -> String
 schemeVar c = "SCHEME=\"\{show c.scheme}\""
 
+||| Directory where `.ipkg` patches are stored.
+export
+patchesDir : Config -> Path
+patchesDir c = dbDir c /> "patches"
+
+||| File where the patch (if any) for an `.ipkg` file is stored.
+export
+patchFile : Config -> PkgName -> Path -> Path
+patchFile c n ipkg =
+  patchesDir c /> c.dbVersion.value /> n.value /> "\{show ipkg}.patch"
+
 --------------------------------------------------------------------------------
 --          Environment
 --------------------------------------------------------------------------------
