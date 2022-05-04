@@ -59,7 +59,7 @@ minutes.
 In order to speed things up a bit, you can try and use your existing
 Idris2 installation to build the package collection's version of
 the Idris2 compiler. In order to do so, remove the `--bootstrap`
-command line option from the last command. For example (if the name
+command-line option from the last command. For example (if the name
 of your *chez scheme* executable is `chez`):
 
 ```sh
