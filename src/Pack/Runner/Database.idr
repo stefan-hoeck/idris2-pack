@@ -30,8 +30,8 @@ dbOf (MkDB commit v ps) = do
 ||| and writes the resulting DB to the given file.
 export covering
 writeLatestDB : HasIO io => Path -> Env s -> EitherT PackErr io ()
-writeLatestDB path (MkEnv db _) = do
-  ndb <- dbOf db
+writeLatestDB path e = do
+  ndb <- dbOf e.db
   write path (printDB ndb)
 
 ||| Check if a package has already been built and installed
@@ -45,7 +45,7 @@ packageExists env p = exists (packageInstallDir env p)
 ||| Check if the executable of a package has already been
 ||| built and installed
 export
-executableExists : HasIO io => Config -> String -> EitherT PackErr io Bool
+executableExists : HasIO io => Config s -> String -> EitherT PackErr io Bool
 executableExists c p = exists (packageExec c p)
 
 ||| Lookup a package name in the package data base,
@@ -67,13 +67,13 @@ resolve e (Pkg n)         = case lookup n e.db.packages of
   -- this is a known package so we download its `.ipkg`
   -- file from GitHub and patch it, if necessary
   Just (GitHub n url commit ipkg) =>
-    let cache = ipkgPath e.conf n commit ipkg
+    let cache = ipkgPath e n commit ipkg
      in do
        b <- exists cache
        case b of
          True => RGitHub n url commit ipkg <$> parseIpkgFile cache
-         False => withGit (tmpDir e.conf) url commit $ do
-           let pf = patchFile e.conf n ipkg
+         False => withGit (tmpDir e) url commit $ do
+           let pf = patchFile e n ipkg
            when !(exists pf) (patch ipkg pf)
            copyFile ipkg cache
            RGitHub n url commit ipkg <$> parseIpkgFile ipkg

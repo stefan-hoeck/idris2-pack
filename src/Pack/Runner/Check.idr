@@ -42,8 +42,8 @@ checkPkg e p = do
     | rs => updateRep p (Failure rp rs)
   case rp of
     RGitHub pn url commit ipkg d =>
-      report p rp $ withGit (tmpDir e.conf) url commit $ do
-        let pf = patchFile e.conf pn ipkg
+      report p rp $ withGit (tmpDir e) url commit $ do
+        let pf = patchFile e pn ipkg
         when !(exists pf) (patch ipkg pf)
         idrisPkg e "--install-with-src" ipkg
         idrisPkg e "--install" ipkg

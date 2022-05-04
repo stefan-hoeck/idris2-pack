@@ -24,7 +24,7 @@ packDir = do
   throwE NoPackDir
 
 covering
-getConfig' : HasIO io => EitherT PackErr io Config
+getConfig' : HasIO io => EitherT PackErr io (Config Nothing)
 getConfig' = do
   dir        <- packDir
   db         <- readIfExists (dir /> ".db") "HEAD"
@@ -38,13 +38,13 @@ getConfig' = do
 
 ||| Read application config from command line arguments.
 export covering
-getConfig : HasIO io => EitherT PackErr io Config
+getConfig : HasIO io => EitherT PackErr io (Config Nothing)
 getConfig = getConfig' >>= \c => mkDir c.packDir $> c
 
 ||| Update the package database.
 export
-updateDB : HasIO io => Config -> EitherT PackErr io ()
-updateDB conf = do 
+updateDB : HasIO io => Config s -> EitherT PackErr io ()
+updateDB conf = do
   rmDir (dbDir conf)
   mkDir (dbDir conf)
   withGit (tmpDir conf) dbRepo "main" $ do
@@ -55,7 +55,7 @@ updateDB conf = do
 --------------------------------------------------------------------------------
 
 covering
-loadDB : HasIO io => (conf : Config) -> EitherT PackErr io DB
+loadDB : HasIO io => (conf : Config s) -> EitherT PackErr io DB
 loadDB conf = do
   dbDirExists <- exists (dbDir conf)
   when (not dbDirExists) (updateDB conf)
@@ -69,7 +69,7 @@ loadDB conf = do
 ||| Load the package database and create package
 ||| environment.
 export covering
-env : HasIO io => Config -> EitherT PackErr io (Env None)
+env : HasIO io => Config s -> EitherT PackErr io (Env DBLoaded)
 env conf = do
   db <- loadDB conf
-  pure $ MkEnv db conf
+  pure $ {db := db} conf

@@ -8,17 +8,17 @@ import System.Console.GetOpt
 
 %default total
 
-dir : String -> Config -> Config
+dir : String -> Config s -> Config s
 dir s = {packDir := parse s}
 
-setDB : String -> Config -> Config
+setDB : String -> Config s -> Config s
 setDB s = {dbVersion := MkDBName s}
 
-setScheme : String -> Config -> Config
+setScheme : String -> Config s -> Config s
 setScheme s = {scheme := parse s}
 
 -- command line options with description
-descs : List $ OptDescr (Config -> Config)
+descs : List $ OptDescr (Config Nothing -> Config Nothing)
 descs = [ MkOpt [] ["pack-dir"]   (ReqArg dir "<dir>")
             """
             Directory where pack stores its database and
@@ -72,7 +72,7 @@ export
 applyArgs :  (dir  : Path)
           -> (db   : DBName)
           -> (args : List String)
-          -> Either PackErr Config
+          -> Either PackErr (Config Nothing)
 applyArgs dir db args =
   case getOpt RequireOrder descs args of
        MkResult opts n  []      []       =>
