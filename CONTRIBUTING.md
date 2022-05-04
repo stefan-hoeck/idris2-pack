@@ -133,7 +133,7 @@ The result is stored in a
 ### Command Line
 
 Subfolder of `CmdLn` provide functionality for handling
-command line arguments and assembling a configuration
+command-line arguments and assembling a configuration
 value before doing the interesting stuff.
 
 #### Program Configuration
@@ -143,7 +143,7 @@ Most pack actions take a value of type
 indexed over a state type, signalling what kind of
 initialisation actions have already been performed:
 
-  * `Nothing` : Just the core configuration from command line
+  * `Nothing` : Just the core configuration from command-line
      options and some settings in the `$HOME/.pack` directory
      have been assembled.
 
@@ -158,9 +158,9 @@ initialisation actions have already been performed:
     has a local installation of the Idris compiler. If this is
     not the case, the compiler will be built and installed.
 
-#### Command Line Arguments and Tab Completion
+#### Command-Line Arguments and Tab Completion
 
-Parsing of command line arguments is handled in module
+Parsing of command-line arguments is handled in module
 `Pack.CmdLn.Opts`. Assembling of `Config` values from
 different resources is done by the functions in
 module `Pack.CmdLn.Env`.
