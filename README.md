@@ -48,13 +48,23 @@ command-line option:
 
 ```sh
 build/exec/pack update-db
-build/exec/pack -s chez switch unstable-220430
+build/exec/pack --bootstrap -s chez switch unstable-220430
 ```
 
 If run for the first time, this will build and install a recent
 version of the Idris2 compiler plus standard libraries and API,
 followed by the *pack* application, so this might take a couple of
 minutes.
+
+In order to speed things up a bit, you can try and use your existing
+Idris2 installation to build the package collection's version of
+the Idris2 compiler. In order to do so, remove the `--bootstrap`
+command-line option from the last command. For example (if the name
+of your *chez scheme* executable is `chez`):
+
+```sh
+build/exec/pack -s chez switch unstable-220430
+```
 
 ### (Optional) Shell Auto-completion
 
