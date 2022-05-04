@@ -167,3 +167,11 @@ copyFile : HasIO io => (from,to : Path) -> EitherT PackErr io ()
 copyFile from to = do
   mkParentDir to
   sys "cp \{show from} \{show to}"
+
+||| Patch a file
+export
+patch :  HasIO io
+      => (original : Path)
+      -> (patch    : Path)
+      -> EitherT PackErr io ()
+patch o p = do sys "patch \{show o} \{show p}"

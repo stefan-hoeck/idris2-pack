@@ -41,8 +41,11 @@ checkPkg e p = do
   [] <- failingDeps <$> traverse (checkPkg e) (depNames rp)
     | rs => updateRep p (Failure rp rs)
   case rp of
-    RGitHub _ url commit ipkg d =>
-      report p rp $ withGit (tmpDir e.conf) url commit $
+    RGitHub pn url commit ipkg d =>
+      report p rp $ withGit (tmpDir e.conf) url commit $ do
+        let pf = patchFile e.conf pn ipkg
+        when !(exists pf) (patch ipkg pf)
+        idrisPkg e "--install-with-src" ipkg
         idrisPkg e "--install" ipkg
 
     RIpkg ipkg d =>
@@ -57,6 +60,6 @@ checkPkg e p = do
 export covering
 checkDB : HasIO io => Env HasIdris -> EitherT PackErr io ()
 checkDB e = do
-  rep <- liftIO $ execStateT empty 
+  rep <- liftIO $ execStateT empty
                 $ traverse_ (checkPkg e . name) e.db.packages
   putStrLn $ printReport rep
