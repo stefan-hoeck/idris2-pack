@@ -187,6 +187,9 @@ data PackErr : Type where
   ||| Unknown command line argument
   UnknownArg : (arg : String) -> PackErr
 
+  ||| Invalid command line arguments (in micropack)
+  InvalidArgs : (args : List String) -> PackErr
+
   ||| Erroneous command line argument
   ErroneousArg : (err : String) -> PackErr
 
@@ -257,6 +260,8 @@ printErr (MissingCorePackage nm v c) =
   "Core package \"\{nm}\" missing for Idris2 version \{show v} (commit: \{c})"
 
 printErr (UnknownArg arg) = "Unknown command line arg: \{arg}"
+
+printErr (InvalidArgs args) = "Invalid command line args: \{unwords args}"
 
 printErr (ErroneousArg err) = err
 
