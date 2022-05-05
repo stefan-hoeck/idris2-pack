@@ -1,6 +1,7 @@
 module Pack.CmdLn.Types
 
 import Data.List1
+import Data.Singleton
 import Data.String
 import Idris.Package.Types
 import Pack.Core.Types
@@ -59,22 +60,24 @@ DBType Nothing  = ()
 public export
 record Config (s : Maybe State) where
   constructor MkConfig
-
   ||| Directory where the *pack* DB and installed
   ||| libraries and executables reside
   packDir   : Path
 
-  ||| Database to use
-  dbVersion : DBName
+  ||| Package collection to use
+  collection : DBName
 
   ||| Scheme executable to use
   scheme    : Path
 
-  ||| The pack command plus arguments to run
-  cmd       : Cmd
-
   ||| Whether to use bootstrapping when building Idris2
   bootstrap : Bool
+
+  ||| Libraries to install automatically
+  autoLibs  : List PkgName
+
+  ||| Applications to install automatically
+  autoApps  : List PkgName
 
   ||| The package collection
   db        : DBType s
@@ -88,12 +91,13 @@ Env = Config . Just
 export
 init : (dir : Path) -> (db : DBName) -> Config Nothing
 init dir db = MkConfig {
-    cmd           = PrintHelp
-  , packDir       = dir
-  , dbVersion     = db
+    packDir       = dir
+  , collection    = db
   , scheme        = parse "scheme"
   , db            = ()
   , bootstrap     = False
+  , autoLibs      = []
+  , autoApps      = []
   }
 
 ||| Temporary directory used for building packages.
@@ -125,7 +129,7 @@ userDir c = c.packDir /> "user"
 ||| package collection might be stored.
 export
 userDB : Config s -> Path
-userDB c = userDir c /> c.dbVersion.value <.> "db"
+userDB c = userDir c /> c.collection.value <.> "db"
 
 ||| File where a user-defined DB to be used in all
 ||| package collections might be stored.
@@ -136,7 +140,7 @@ userGlobalDB c = userDir c /> "global.db"
 ||| File where package DB is located
 export
 dbFile : Config s -> Path
-dbFile c = dbDir c /> c.dbVersion.value <.> "db"
+dbFile c = dbDir c /> c.collection.value <.> "db"
 
 ||| The directory where Idris2, installed libraries,
 ||| and binaries will be installed.
@@ -144,7 +148,7 @@ dbFile c = dbDir c /> c.dbVersion.value <.> "db"
 ||| This corresponds to "$IDRIS2_PREFIX".
 export
 idrisPrefixDir : Config s -> Path
-idrisPrefixDir c = c.packDir /> c.dbVersion.value
+idrisPrefixDir c = c.packDir /> c.collection.value
 
 ||| The directory where binaries will be installed.
 export
@@ -207,7 +211,7 @@ patchesDir c = dbDir c /> "patches"
 export
 patchFile : Config s -> PkgName -> Path -> Path
 patchFile c n ipkg =
-  patchesDir c /> c.dbVersion.value /> n.value /> "\{show ipkg}.patch"
+  patchesDir c /> c.collection.value /> n.value /> "\{show ipkg}.patch"
 
 --------------------------------------------------------------------------------
 --          Environment

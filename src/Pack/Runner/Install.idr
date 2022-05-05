@@ -26,12 +26,12 @@ copyApp e = sys "cp -r build/exec/* \{show $ idrisBinDir e}"
 ||| Builds and installs the Idris commit given in the environment.
 export
 mkIdris : HasIO io => Env DBLoaded -> EitherT PackErr io (Env HasIdris)
-mkIdris e@(MkConfig pd v s c b db) = do
-  False <- exists (idrisInstallDir e) | True => pure $ MkConfig pd v s c b db
+mkIdris e = do
+  False <- exists (idrisInstallDir e) | True => pure $ {db $= id} e
 
-  if b
+  if e.bootstrap
      then -- build with bootstrapping
-       withGit (tmpDir e) idrisRepo db.idrisCommit $ do
+       withGit (tmpDir e) idrisRepo e.db.idrisCommit $ do
          sys "make bootstrap \{prefixVar e} \{schemeVar e}"
          sys "make install \{prefixVar e}"
          sys "make clean"
@@ -41,14 +41,14 @@ mkIdris e@(MkConfig pd v s c b db) = do
          sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
 
      else -- build with existing Idris2 compiler
-       withGit (tmpDir e) idrisRepo db.idrisCommit $ do
+       withGit (tmpDir e) idrisRepo e.db.idrisCommit $ do
          sys "make all \{prefixVar e}"
          sys "make install \{prefixVar e}"
          sys "make install-with-src-libs \{prefixVar e}"
          sys "make clean"
          sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
 
-  pure $ MkConfig pd v s c b db
+  pure $ {db $= id} e
 
 ||| Creates a packaging environment with Idris2 installed.
 export
@@ -176,4 +176,4 @@ switchCollection e = do
   installApp e "pack"
   link (idrisBinDir e) (packBinDir e)
   link (idrisPrefixDir e) (packIdrisDir e)
-  write (e.packDir /> ".db") e.dbVersion.value
+  write (e.packDir /> ".db") e.collection.value

@@ -24,22 +24,24 @@ packDir = do
   throwE NoPackDir
 
 covering
-getConfig' : HasIO io => EitherT PackErr io (Config Nothing)
+getConfig' : HasIO io => EitherT PackErr io (Config Nothing,Cmd)
 getConfig' = do
   dir        <- packDir
   db         <- readIfExists (dir /> ".db") "HEAD"
-  pn :: args <- getArgs | Nil => pure (init dir $ MkDBName db)
-  conf       <- liftEither $ applyArgs dir (MkDBName db) args
-  case conf.cmd of
-    SwitchRepo repo => pure $ {dbVersion := repo} conf
-    CheckDB    repo => pure $ {dbVersion := repo} conf
-    FromHEAD _      => pure $ {dbVersion := "HEAD"} conf
-    _               => pure conf
+  pn :: args <- getArgs | Nil => pure (init dir $ MkDBName db, PrintHelp)
+  (conf,cmd) <- liftEither $ applyArgs dir (MkDBName db) args
+  let conf' : Config Nothing
+      conf' = case cmd of
+        SwitchRepo repo => {collection := repo} conf
+        CheckDB    repo => {collection := repo} conf
+        FromHEAD _      => {collection := "HEAD"} conf
+        _               => conf
+  pure (conf',cmd)
 
 ||| Read application config from command line arguments.
 export covering
-getConfig : HasIO io => EitherT PackErr io (Config Nothing)
-getConfig = getConfig' >>= \c => mkDir c.packDir $> c
+getConfig : HasIO io => EitherT PackErr io (Config Nothing,Cmd)
+getConfig = getConfig' >>= \p@(c,_) => mkDir c.packDir $> p
 
 ||| Update the package database.
 export

@@ -19,12 +19,12 @@ microInit :  (dir    : Path)
           -> (db     : DBName)
           ->  Config Nothing
 microInit dir scheme db = MkConfig {
-    cmd           = SwitchRepo db
-  , packDir       = dir
+    packDir       = dir
   , dbVersion     = db
   , scheme        = parse scheme
   , db            = ()
   , bootstrap     = True
+  , autoInstall   = []
   }
 
 covering

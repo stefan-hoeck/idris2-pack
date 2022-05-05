@@ -9,13 +9,13 @@ import System.Console.GetOpt
 %default total
 
 dir : String -> Config s -> Config s
-dir s = {packDir := parse s}
+dir v = {packDir := parse v}
 
 bootstrap : Config s -> Config s
 bootstrap = {bootstrap := True}
 
 setDB : String -> Config s -> Config s
-setDB s = {dbVersion := MkDBName s}
+setDB s = {collection := MkDBName s}
 
 setScheme : String -> Config s -> Config s
 setScheme s = {scheme := parse s}
@@ -82,12 +82,12 @@ export
 applyArgs :  (dir  : Path)
           -> (db   : DBName)
           -> (args : List String)
-          -> Either PackErr (Config Nothing)
+          -> Either PackErr (Config Nothing, Cmd)
 applyArgs dir db args =
   case getOpt RequireOrder descs args of
        MkResult opts n  []      []       =>
          let conf = foldl (flip apply) (init dir db) opts
-          in map (\p => {cmd := p} conf) (cmd n)
+          in map (conf,) (cmd n)
 
        MkResult _    _ (u :: _) _        => Left (UnknownArg u)
        MkResult _    _ _        (e :: _) => Left (ErroneousArg e)
