@@ -21,7 +21,6 @@ data Cmd : Type where
 
   Install          : List PkgRep -> Cmd
   InstallApp       : List PkgRep -> Cmd
-  InstallWithSrc   : List PkgRep -> Cmd
   Remove           : List PkgRep -> Cmd
 
   CheckDB          : DBName -> Cmd
@@ -73,6 +72,9 @@ record Config (s : Maybe State) where
   ||| Whether to use bootstrapping when building Idris2
   bootstrap : Bool
 
+  ||| Whether to install the library sources as well
+  withSrc   : Bool
+
   ||| Libraries to install automatically
   autoLibs  : List PkgName
 
@@ -96,6 +98,7 @@ init dir db = MkConfig {
   , scheme        = parse "scheme"
   , db            = ()
   , bootstrap     = False
+  , withSrc       = False
   , autoLibs      = []
   , autoApps      = []
   }

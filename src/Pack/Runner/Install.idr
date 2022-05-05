@@ -62,22 +62,21 @@ installCmd False = "--install"
 ||| Install the given library with all its dependencies.
 export covering
 installLib :  HasIO io
-           => (withSrc : Bool)
-           -> Env HasIdris
+           => Env HasIdris
            -> PkgRep
            -> EitherT PackErr io ()
-installLib ws e n = do
+installLib e n = do
   rp <- resolve e n
-  traverse_ (installLib ws e) (dependencies rp)
+  traverse_ (installLib e) (dependencies rp)
   case rp of
     RGitHub pn url commit ipkg d => do
       False <- packageExists e rp | True => pure ()
       withGit (tmpDir e) url commit $ do
         let pf = patchFile e pn ipkg
         when !(exists pf) (patch ipkg pf)
-        idrisPkg e (installCmd ws) ipkg
-    RIpkg ipkg d => idrisPkg e (installCmd ws) ipkg
-    RLocal _ dir ipkg d => inDir dir $ idrisPkg e (installCmd ws) ipkg
+        idrisPkg e (installCmd e.withSrc) ipkg
+    RIpkg ipkg d => idrisPkg e (installCmd e.withSrc) ipkg
+    RLocal _ dir ipkg d => inDir dir $ idrisPkg e (installCmd e.withSrc) ipkg
     _             => do
       False <- packageExists e rp | True => pure ()
       throwE (MissingCorePackage (name rp) e.db.idrisVersion e.db.idrisCommit)
@@ -102,7 +101,7 @@ runIdrisOn :  HasIO io => (cmd : String)
            -> EitherT PackErr io ()
 runIdrisOn cmd p e = do
   RIpkg ipkg d <- resolve e (Ipkg p) | _ => throwE BuildMany
-  traverse_ (installLib True e) (dependencies $ RIpkg ipkg d)
+  traverse_ (installLib e) (dependencies $ RIpkg ipkg d)
   idrisPkg e cmd ipkg
 
 ||| Build a local library given as an `.ipkg` file.
@@ -125,7 +124,7 @@ installApp :  HasIO io
 installApp e n = do
   rp       <- resolve e n
   Just exe <- pure (executable rp) | Nothing => throwE (NoApp n)
-  traverse_ (installLib True e) (dependencies rp)
+  traverse_ (installLib e) (dependencies rp)
   case rp of
     RGitHub pn url commit ipkg d => do
       False <- executableExists e exe | True => pure ()
@@ -161,7 +160,7 @@ execApp p args e = do
   Just exe <- pure (executable rp) | Nothing => throwE (NoApp p)
   case rp of
     RIpkg ipkg d => do
-      traverse_ (installLib True e) (dependencies rp)
+      traverse_ (installLib e) (dependencies rp)
       idrisPkg e "--build" ipkg
       sys "build/exec/\{exe} \{unwords args}"
     _            => do

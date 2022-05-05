@@ -14,6 +14,9 @@ dir v = {packDir := parse v}
 bootstrap : Config s -> Config s
 bootstrap = {bootstrap := True}
 
+withSrc : Config s -> Config s
+withSrc = {withSrc := True}
+
 setDB : String -> Config s -> Config s
 setDB s = {collection := MkDBName s}
 
@@ -35,7 +38,7 @@ descs = [ MkOpt [] ["pack-dir"]   (ReqArg dir "<dir>")
             of all packages will be used. This is bound to change
             once we have a reasonably stable package set.
             """
-        , MkOpt ['s'] ["scheme"]   (ReqArg setScheme "<scheme executable>")
+        , MkOpt ['s'] ["scheme"]   (ReqArg setScheme "<exec>")
             """
             Sets the scheme executable for installing the Idris2 compiler.
             As a default, this is set to `scheme`.
@@ -46,6 +49,13 @@ descs = [ MkOpt [] ["pack-dir"]   (ReqArg dir "<dir>")
             This is for users who don't have a recent version of
             the Idris2 compiler on their `$PATH`. Compiling Idris2
             will take considerably longer with this option set.
+            """
+        , MkOpt [] ["with-src"]   (NoArg withSrc)
+            """
+            Include the source code of a library when installing
+            it. This allows some editor plugins to jump to the
+            definitions of functions and data types in other
+            modules.
             """
         ]
 
@@ -69,7 +79,6 @@ cmd ["typecheck", file]        = Right $ Typecheck (parse file)
 cmd ["switch", repo]           = Right $ SwitchRepo (MkDBName repo)
 cmd ("install" :: xs)          = Right $ Install (map fromString xs)
 cmd ("remove" :: xs)           = Right $ Remove (map fromString xs)
-cmd ("install-with-src" :: xs) = Right $ InstallWithSrc (map fromString xs)
 cmd ("install-app" :: xs)      = Right $ InstallApp (map fromString xs)
 cmd ["completion",a,b]         = Right $ Completion a b
 cmd ["completion-script",f]    = Right $ CompletionScript f

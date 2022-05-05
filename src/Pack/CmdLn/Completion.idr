@@ -70,7 +70,6 @@ optionFlags =
   , "switch"
   , "install"
   , "remove"
-  , "install-with-src"
   , "install-app"
   , "completion"
   , "completion-script"

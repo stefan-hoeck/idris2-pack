@@ -22,9 +22,8 @@ runCmd = do
     Typecheck p        => idrisEnv c >>= typecheck p
     CheckDB _          => idrisEnv c >>= checkDB
     PrintHelp          => putStrLn usageInfo
-    Install ps         => idrisEnv c >>= \e => traverse_ (installLib False e) ps
+    Install ps         => idrisEnv c >>= \e => traverse_ (installLib e) ps
     Remove ps          => idrisEnv c >>= \e => traverse_ (remove e) ps
-    InstallWithSrc ps  => idrisEnv c >>= \e => traverse_ (installLib True e) ps
     InstallApp ps      => idrisEnv c >>= \e => traverse_ (installApp e) ps
     SwitchRepo _       => idrisEnv c >>= switchCollection
     FromHEAD p         => env c >>= writeLatestDB p
