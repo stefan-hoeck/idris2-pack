@@ -4,12 +4,10 @@ import Data.String
 import Libraries.Utils.Path
 import Pack.CmdLn.Types
 import Pack.Core.Types
+import Pack.Config.Types
 import System.Console.GetOpt
 
 %default total
-
-dir : String -> Config s -> Config s
-dir v = {packDir := parse v}
 
 bootstrap : Config s -> Config s
 bootstrap = {bootstrap := True}
@@ -25,13 +23,7 @@ setScheme s = {scheme := parse s}
 
 -- command line options with description
 descs : List $ OptDescr (Config Nothing -> Config Nothing)
-descs = [ MkOpt [] ["pack-dir"]   (ReqArg dir "<dir>")
-            """
-            Directory where pack stores its database and
-            installed packages. This defaults to \"$PACK_DIR\"
-            (if set) or \"$HOME/.pack\" otherwise.
-            """
-        , MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
+descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             """
             Set the curated package set to use. At the
             moment, this defaults to `HEAD`, so the latest commits
@@ -88,14 +80,13 @@ cmd xs                         = Left  $ UnknownCommand xs
 ||| generates the application
 ||| config from a list of command line arguments.
 export
-applyArgs :  (dir  : Path)
-          -> (db   : DBName)
+applyArgs :  (init : Config Nothing)
           -> (args : List String)
           -> Either PackErr (Config Nothing, Cmd)
-applyArgs dir db args =
+applyArgs init args =
   case getOpt RequireOrder descs args of
        MkResult opts n  []      []       =>
-         let conf = foldl (flip apply) (init dir db) opts
+         let conf = foldl (flip apply) init opts
           in map (conf,) (cmd n)
 
        MkResult _    _ (u :: _) _        => Left (UnknownArg u)

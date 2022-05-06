@@ -1,9 +1,9 @@
 module Pack.Database.Types
 
 import Data.List1
+import Data.SortedMap
 import Data.String
 import Idris.Package.Types
-import Libraries.Data.SortedMap
 import Libraries.Utils.Path
 import Pack.Core.Types
 
@@ -160,51 +160,3 @@ record DB where
   idrisCommit  : Commit
   idrisVersion : PkgVersion
   packages     : SortedMap PkgName Package
-
---------------------------------------------------------------------------------
---          Reading a Database
---------------------------------------------------------------------------------
-
-commaSep : String -> List String
-commaSep = forget . split (',' ==)
-
-||| Encode a package from the data collection as a comma
-||| separated list.
-export
-printPkg : Package -> String
-printPkg (Local n d p) = "\{n},\{show d},\{show p}"
-printPkg (GitHub n u c p) = "\{n},\{u},\{c},\{show p}"
-
-||| Tries to read a line in a package collection.
-export
-readPkg : String -> Either PackErr Package
-readPkg s  = case commaSep s of
-  [n,url,hash,pkg] =>
-    Right $ GitHub (MkPkgName n) (MkURL url) (MkCommit hash) (parse pkg)
-  [n,dir,pkg]      =>
-    Right $ Local (MkPkgName n) (parse dir) (parse pkg)
-  _                => Left (InvalidPackageDesc s)
-
-export
-readPkgs : List String -> Either PackErr (SortedMap PkgName Package)
-readPkgs = map toPackageMap . traverse readPkg . filter (/= "")
-  where toPackageMap : List Package -> SortedMap PkgName Package
-        toPackageMap = SortedMap.fromList . map (\p => (name p,p))
-
-readVersion : String -> Maybe PkgVersion
-readVersion = map MkPkgVersion . traverse parsePositive . split ('.' ==)
-
-export
-readDB : String -> Either PackErr DB
-readDB s = case lines s of
-  []       => Left EmptyPkgDB
-  (h :: t) => case commaSep h of
-    [c,v] => case readVersion v of
-      Just v' => MkDB (MkCommit c) v' <$> readPkgs t
-      Nothing => Left (InvalidDBHeader h)
-    _     => Left (InvalidDBHeader h)
-
-export
-printDB : DB -> String
-printDB (MkDB c v ps) =
-    unlines $ "\{c},\{show v}" :: map printPkg (values ps)

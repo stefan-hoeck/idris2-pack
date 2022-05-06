@@ -6,9 +6,8 @@ import Data.String
 import Libraries.Data.List.Extra
 import Libraries.Data.SortedMap
 import Libraries.Utils.Path
-import Pack.CmdLn.Env
 import Pack.CmdLn.Opts
-import Pack.CmdLn.Types
+import Pack.Config.Types
 import Pack.Core
 import Pack.Database.Types
 import System.Directory

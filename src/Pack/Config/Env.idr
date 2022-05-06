@@ -1,9 +1,13 @@
-module Pack.CmdLn.Env
+module Pack.Config.Env
 
 import Data.String
 import Pack.CmdLn.Opts
 import Pack.CmdLn.Types
+import Pack.Config.TOML
+import Pack.Config.Types
 import Pack.Core
+import Pack.Core.TOML
+import Pack.Database.TOML
 import Pack.Database.Types
 import System
 
@@ -12,6 +16,9 @@ import System
 --------------------------------------------------------------------------------
 --          Environment
 --------------------------------------------------------------------------------
+
+configPath : Path -> Path
+configPath dir = dir /> "user" /> "pack.toml"
 
 ||| Return the path of the *pack* root directory,
 ||| either from environment variable `$PACK_DIR`, or
@@ -27,12 +34,11 @@ covering
 getConfig' : HasIO io => EitherT PackErr io (Config Nothing,Cmd)
 getConfig' = do
   dir        <- packDir
-  db         <- readIfExists (dir /> ".db") "HEAD"
-  pn :: args <- getArgs | Nil => pure (init dir $ MkDBName db, PrintHelp)
-  (conf,cmd) <- liftEither $ applyArgs dir (MkDBName db) args
+  ini        <- readFromTOML (configPath dir) (config dir)
+  pn :: args <- getArgs | Nil => pure (ini, PrintHelp)
+  (conf,cmd) <- liftEither $ applyArgs ini args
   let conf' : Config Nothing
       conf' = case cmd of
-        SwitchRepo repo => {collection := repo} conf
         CheckDB    repo => {collection := repo} conf
         FromHEAD _      => {collection := "HEAD"} conf
         _               => conf
@@ -61,12 +67,7 @@ loadDB : HasIO io => (conf : Config s) -> EitherT PackErr io DB
 loadDB conf = do
   dbDirExists <- exists (dbDir conf)
   when (not dbDirExists) (updateDB conf)
-  str  <- read (dbFile conf)
-  loc  <- readIfExists (userDB conf) ""
-  glob <- readIfExists (userGlobalDB conf) ""
-  case readDB (unlines [str,glob,loc]) of
-    Left err  => throwE err
-    Right res => pure res
+  readFromTOML (dbFile conf) (fromTOML)
 
 ||| Load the package database and create package
 ||| environment.
