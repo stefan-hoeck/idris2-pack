@@ -14,26 +14,38 @@ although this can be changed by setting environment variable
 
 ### Data Collections
 
-These are stored in folder `$HOME/.pack/db` and have a `.db`
-file ending. At the moment, they are just comma separated
-lists of fields in the following order:
+These are stored in folder `$HOME/.pack/db` and have a `.toml`
+file ending. These are [toml](https://toml.io/en/) files with
+a small table called `idris2` for specifying the Idris2 version and
+commit to use, followed by a table of packages called `db`. Here is
+an excerpt showing the general structure:
 
-```db
-package-name,url,commit-hash,ipkg-file
+```toml
+[idris2]
+version = "0.5.1"
+commit  = "7a5f63eab089b98a1cca75eb0719ed7814499fa8"
+
+[db.bytestring]
+type   = "github"
+url    = "https://github.com/stefan-hoeck/idris2-bytestring"
+commit = "e06ca875ce5eba11bc3faa62f18ba652c0ea73a1"
+ipkg   = "bytestring.ipkg"
+
+[db.collie]
+type   = "github"
+url    = "https://github.com/ohad/collie"
+commit = "46bff04a8d9a1598fec9b19f515541df16dc64ef"
+ipkg   = "collie.ipkg"
 ```
-
-The header of a `.db` consists of two comma separated fields:
-The commit hash of the Idris2 version to use followed
-by the Idris2 version as given in in the `idris2.ipkg` file.
 
 ### User Settings
 
-These are stored in `$HOME/.pack/user`. At the moment, there
-are two kinds of files recognized by *pack*: `global.db` lists
-user defined packages as described in the README, which will
-be included with every package collection, and `[collection].db`
-lists user defined packages, which will only be included when
-working with `[collection]`.
+These are stored at `$HOME/.pack/user/pack.toml`. This file
+not only contains general settings like the name of the Scheme
+executable to use or whether to install libraries together with
+their sources, but also custom packages (local or on GitHub)
+and package overrides (see the [README](README.md)) for
+details.
 
 ### Patches
 
@@ -72,10 +84,6 @@ directory `$HOME/.pack/[collection name]`. With
 `$HOME/.pack/bin` pointing at `$HOME/.pack/[collection name]/bin`,
 and `$HOME/.pack/idris2`, pointing at `$HOME/.pack/[collection name]`.
 
-Command `pack switch [collection name]` also stores the name of
-the package collection in file `$HOME/.pack/.db`, which will
-serve as the default collection used by *pack*.
-
 ## Map of the Source Code
 
 The sections below give an overview of the project's source
@@ -112,6 +120,11 @@ as system calls.
 and checking out to specific commits is provided in module
 `Pack.Core.Git`.
 
+#### TOML
+
+Interfaces and utilities for converting `toml` trees to Idris2
+values can be found in module `Pack.Core.TOML`.
+
 ### Package Collections
 
 Types for working with package collections are defined
@@ -130,21 +143,15 @@ GitHub, or by reading the same file from the local cache.
 The result is stored in a
 `Pack.Database.Types.ResolvedPackage`.
 
-### Command-Line
-
-Subfolder of `CmdLn` provide functionality for handling
-command-line arguments and assembling a configuration
-value before doing the interesting stuff.
-
-#### Program Configuration
+### Configuration
 
 Most pack actions take a value of type
-`Pack.CmdLn.Types.Config` as an argument. This type is
+`Pack.Config.Types.Config` as an argument. This type is
 indexed over a state type, signalling what kind of
 initialisation actions have already been performed:
 
 * `Nothing` : Just the core configuration from command-line
-   options and some settings in the `$HOME/.pack` directory
+   options and the settings in `$HOME/.pack/user/pack.toml`
    have been assembled.
 
 * `Just DBLoaded` : Core configuration has been assembled
@@ -158,12 +165,19 @@ initialisation actions have already been performed:
   has a local installation of the Idris compiler. If this is
   not the case, the compiler will be built and installed.
 
-#### Command-Line Arguments and Tab Completion
+Most functionality for assembling the program environment
+can be found in module `Pack.Config.Env`.
+
+### Command-Line
+
+Submodules of `Pack.CmdLn` provide functionality for handling
+command-line arguments and parsing the command to be
+executed by the *pack* program.
 
 Parsing of command-line arguments is handled in module
 `Pack.CmdLn.Opts`. Assembling of `Config` values from
 different resources is done by the functions in
-module `Pack.CmdLn.Env`.
+module `Pack.Config.Env`.
 
 Finally, tab completion is implemented in `Pack.CmdLn.Completion`.
 
