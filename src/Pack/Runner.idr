@@ -1,9 +1,10 @@
 module Pack.Runner
 
 import Pack.CmdLn.Completion
-import Pack.CmdLn.Env
 import Pack.CmdLn.Opts
 import Pack.CmdLn.Types
+import Pack.Config.Env
+import Pack.Config.Types
 import public Pack.Core
 import Pack.Runner.Check
 import Pack.Runner.Database
@@ -25,5 +26,4 @@ runCmd = do
     Install ps         => idrisEnv c >>= \e => traverse_ (installLib e) ps
     Remove ps          => idrisEnv c >>= \e => traverse_ (remove e) ps
     InstallApp ps      => idrisEnv c >>= \e => traverse_ (installApp e) ps
-    SwitchRepo _       => idrisEnv c >>= switchCollection
     FromHEAD p         => env c >>= writeLatestDB p

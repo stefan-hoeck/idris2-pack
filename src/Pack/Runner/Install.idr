@@ -3,8 +3,8 @@ module Pack.Runner.Install
 import Data.List1
 import Data.String
 import Idris.Package.Types
-import Pack.CmdLn.Env
-import Pack.CmdLn.Types
+import Pack.Config.Env
+import Pack.Config.Types
 import Pack.Core
 import Pack.Database.Types
 import Pack.Runner.Database
@@ -49,11 +49,6 @@ mkIdris e = do
          sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
 
   pure $ {db $= id} e
-
-||| Creates a packaging environment with Idris2 installed.
-export
-idrisEnv : HasIO io => Config Nothing -> EitherT PackErr io (Env HasIdris)
-idrisEnv c = env c >>= mkIdris
 
 installCmd : (withSrc : Bool) -> String
 installCmd True  = "--install-with-src"
@@ -167,12 +162,11 @@ execApp p args e = do
       installApp e p
       sys "\{show $ packageExec e exe} \{unwords args}"
 
-||| Switch the package collection, installing Idris2 and *pack*
-||| if necessary.
+||| Creates a packaging environment with Idris2 installed.
 export covering
-switchCollection : HasIO io => Env HasIdris -> EitherT PackErr io ()
-switchCollection e = do
-  installApp e "pack"
-  link (idrisBinDir e) (packBinDir e)
-  link (idrisPrefixDir e) (packIdrisDir e)
-  write (e.packDir /> ".db") e.collection.value
+idrisEnv : HasIO io => Config Nothing -> EitherT PackErr io (Env HasIdris)
+idrisEnv c = do
+  e <- env c >>= mkIdris
+  traverse_ (installLib e) (map Pkg e.autoLibs)
+  traverse_ (installApp e) (map Pkg e.autoApps)
+  pure e

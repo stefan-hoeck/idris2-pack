@@ -1,8 +1,8 @@
 module Pack.Runner.Check
 
 import Control.Monad.State
-import Libraries.Data.SortedMap
-import Pack.CmdLn.Types
+import Data.SortedMap
+import Pack.Config.Types
 import Pack.Core
 import Pack.Database.Types
 import Pack.Report.Types
@@ -61,5 +61,5 @@ export covering
 checkDB : HasIO io => Env HasIdris -> EitherT PackErr io ()
 checkDB e = do
   rep <- liftIO $ execStateT empty
-                $ traverse_ (checkPkg e . name) e.db.packages
+                $ traverse_ (checkPkg e) (keys e.db.packages)
   putStrLn $ printReport rep

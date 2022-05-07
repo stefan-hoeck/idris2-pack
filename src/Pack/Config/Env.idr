@@ -56,7 +56,7 @@ updateDB conf = do
   rmDir (dbDir conf)
   mkDir (dbDir conf)
   withGit (tmpDir conf) dbRepo "main" $ do
-    sys "cp *.db \{show $ dbDir conf}"
+    copyDir (tmpDir conf /> "collections") (dbDir conf)
 
 --------------------------------------------------------------------------------
 --          Environment
@@ -69,7 +69,7 @@ loadDB conf = do
   when (not dbDirExists) (updateDB conf)
   readFromTOML (dbFile conf) (fromTOML)
 
-||| Load the package database and create package
+||| Load the package database and create a package
 ||| environment.
 export covering
 env : HasIO io => Config s -> EitherT PackErr io (Env DBLoaded)

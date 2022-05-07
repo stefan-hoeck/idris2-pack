@@ -1,6 +1,7 @@
 module Pack.Core.TOML
 
 import Data.List1
+import Data.SortedMap as M
 import Data.String
 import Idris.Package.Types
 import Libraries.Utils.Path
@@ -14,15 +15,29 @@ import Pack.Core.Types
 --          Interface
 --------------------------------------------------------------------------------
 
+||| Interface for using a *pack* data type as a key
+||| in a TOML table.
+public export
+interface Ord a => TOMLKey a where
+  ||| Tries to convert a key to a value of type `a`
+  fromKey : (k : String) -> Either TOMLErr a
+
+export
+TOMLKey DBName where fromKey = Right . MkDBName
+
+export
+TOMLKey PkgName where fromKey = Right . MkPkgName
+
 ||| Interface for converting a TOML value to a *pack*
 ||| data type.
 public export
 interface FromTOML a where
   ||| Tries to convert a `Value` to a value of type `a`.
-  |||
-  ||| @ file Path to the file that was read
-  ||| @ val  toml value
   fromTOML : (val  : Value) -> Either TOMLErr a
+
+--------------------------------------------------------------------------------
+--          Utilities
+--------------------------------------------------------------------------------
 
 ||| Read a value of type `b` by reading a value of
 ||| type `a`.
@@ -35,6 +50,44 @@ tmap f = map f . fromTOML
 export
 trefine : FromTOML a => (a -> Either TOMLErr b) -> Value -> Either TOMLErr b
 trefine f v = fromTOML v >>= f
+
+-- Try to extract a value from a toml `Value`.
+valAt' :  FromTOML a
+       => (path : String)
+       -> (dflt : Maybe a)
+       -> (val  : Value)
+       -> Either TOMLErr a
+valAt' path dflt = go (forget $ split ('.' ==) path)
+  where go : List String -> Value -> Either TOMLErr a
+        go []        v          = fromTOML v
+        go (x :: xs) (VTable y) = case lookup x y of
+          Nothing => case dflt of
+            Nothing => Left $ MissingKey [x]
+            Just a  => Right a
+          Just v2 => prefixKey x $ go xs v2
+        go _ _                  = Left $ WrongType [] "Table"
+
+||| Extract and convert a mandatory value from a TOML
+||| value. The `path` string can contain several dot-separated
+||| key names.
+export %inline
+valAt : FromTOML a => (path : String) -> (val : Value) -> Either TOMLErr a
+valAt path = valAt' path Nothing
+
+||| Extract and convert an optional value from a TOML
+||| value. The `path` string can contain several dot-separated
+||| key names.
+export %inline
+optValAt :  FromTOML a
+         => (path : String)
+         -> (dflt : a)
+         -> (val  : Value)
+         -> Either TOMLErr a
+optValAt path = valAt' path . Just
+
+--------------------------------------------------------------------------------
+--          Implementations
+--------------------------------------------------------------------------------
 
 export
 FromTOML String where
@@ -75,38 +128,19 @@ export
 FromTOML PkgVersion where
   fromTOML = trefine readVersion
 
--- Try to extract a value from a toml `Value`.
-valAt' :  FromTOML a
-       => (path : String)
-       -> (dflt : Maybe a)
-       -> (val  : Value)
-       -> Either TOMLErr a
-valAt' path dflt = go (forget $ split ('.' ==) path)
-  where go : List String -> Value -> Either TOMLErr a
-        go []        v          = fromTOML v
-        go (x :: xs) (VTable y) = case lookup x y of
-          Nothing => case dflt of
-            Nothing => Left $ MissingKey [x]
-            Just a  => Right a
-          Just v2 => prefixKey x $ go xs v2
-        go _ _                  = Left $ WrongType [] "Table"
-
-export %inline
-valAt : FromTOML a => (path : String) -> (val : Value) -> Either TOMLErr a
-valAt path = valAt' path Nothing
+keyVal : TOMLKey k => FromTOML v => (String,Value) -> Either TOMLErr (k,v)
+keyVal (x,y) = prefixKey x [| MkPair (fromKey x) (fromTOML y) |]
 
 export
-optValAt :  FromTOML a
-         => (path : String)
-         -> (dflt : a)
-         -> (val  : Value)
-         -> Either TOMLErr a
-optValAt path = valAt' path . Just
+TOMLKey k => FromTOML v => FromTOML (SortedMap k v) where
+  fromTOML (VTable m) = M.fromList <$> traverse keyVal (M.toList m)
+  fromTOML _          = Left $ WrongType [] "Table"
 
 --------------------------------------------------------------------------------
 --          Reading a TOML File
 --------------------------------------------------------------------------------
 
+||| Reads a file and converts its content to a TOML value.
 export covering
 readTOML : HasIO io => (path : Path) -> EitherT PackErr io Value
 readTOML path = do
@@ -115,11 +149,13 @@ readTOML path = do
     Right v  => pure (VTable v)
     Left err => throwE $ TOMLParse path (show err)
 
+||| Reads a file, converts its content to a TOML value, and
+||| extracts an Idris value from this.
 export covering
 readFromTOML :  HasIO io
              => (path : Path)
              -> (Value -> Either TOMLErr a)
-             ->  EitherT PackErr io a
+             -> EitherT PackErr io a
 readFromTOML path f = do
   v <- readTOML path
   liftEither $ mapFst (TOMLFile path) (f v)

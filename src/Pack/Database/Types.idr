@@ -15,31 +15,23 @@ import Pack.Core.Types
 
 ||| Description of a GitHub or local Idris package in the
 ||| package database.
+|||
+||| Note: This does not contain the package name, as it
+||| will be paired with its name in a `SortedMap`.
 public export
 data Package : Type where
-  ||| A repository on GitHub, given as the package's name
-  ||| (should be the same as in the `.ipkg` file), URL,
+  ||| A repository on GitHub, given as the package's URL,
   ||| commit (hash or tag), and name of `.ipkg` file to use.
-  GitHub :  (name   : PkgName)
-         -> (url    : URL)
+  GitHub :  (url    : URL)
          -> (commit : Commit)
          -> (ipkg   : Path)
          -> Package
 
-  ||| A local Idris project given as a name (same as in
-  ||| `.ipkg` file), absolute path to package directory,
-  ||| and `.ipkg` file to use.
-  Local  :  (name   : PkgName)
-         -> (dir    : Path)
+  ||| A local Idris project given as an absolute path to a local
+  ||| directory, and `.ipkg` file to use.
+  Local  :  (dir    : Path)
          -> (ipkg   : Path)
          -> Package
-
-namespace Package
-  export
-  name : Package -> PkgName
-  name (GitHub n _ _ _) = n
-  name (Local n _ _)    = n
-
 
 ||| A resolved package, which was downloaded from GitHub
 ||| or looked up in the local file system. This comes with
@@ -132,20 +124,19 @@ export
 executable : ResolvedPackage -> Maybe String
 executable p = desc p >>= executable
 
-namespace ResolvedPackage
-  ||| Extracts the package name from a resolved package.
-  export
-  name : ResolvedPackage -> PkgName
-  name (RGitHub n _ _ _ _) = n
-  name (RIpkg _ d)         = MkPkgName d.name
-  name (RLocal n _ _ _)    = n
-  name Base                = "base"
-  name Contrib             = "contrib"
-  name Idris2              = "idris2"
-  name Linear              = "linear"
-  name Network             = "network"
-  name Prelude             = "prelude"
-  name Test                = "test"
+||| Extracts the package name from a resolved package.
+export
+name : ResolvedPackage -> PkgName
+name (RGitHub n _ _ _ _) = n
+name (RIpkg _ d)         = MkPkgName d.name
+name (RLocal n _ _ _)    = n
+name Base                = "base"
+name Contrib             = "contrib"
+name Idris2              = "idris2"
+name Linear              = "linear"
+name Network             = "network"
+name Prelude             = "prelude"
+name Test                = "test"
 
 --------------------------------------------------------------------------------
 --          Package Database
@@ -160,3 +151,33 @@ record DB where
   idrisCommit  : Commit
   idrisVersion : PkgVersion
   packages     : SortedMap PkgName Package
+
+printPair : (PkgName,Package) -> String
+printPair (x, GitHub url commit ipkg) =
+  """
+
+  [db.\{x}]
+  type   = "github"
+  url    = "\{url}"
+  commit = "\{commit}"
+  ipkg   = "\{show ipkg}"
+  """
+
+printPair (x, Local dir ipkg) =
+  """
+
+  [db.\{x}]
+  type   = "local"
+  path   = "\{show dir}"
+  ipkg   = "\{show ipkg}"
+  """
+
+export
+printDB : DB -> String
+printDB (MkDB c v db) =
+  let header = """
+        [idris2]
+        version = "\{show v}"
+        commit  = "\{c}"
+        """
+   in unlines $ header :: map printPair (SortedMap.toList db)

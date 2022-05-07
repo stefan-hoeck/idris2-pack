@@ -21,7 +21,6 @@ data Cmd : Type where
 
   CheckDB          : DBName -> Cmd
   FromHEAD         : Path -> Cmd
-  SwitchRepo       : DBName -> Cmd
   UpdateDB         : Cmd
 
   Completion       : String -> String -> Cmd

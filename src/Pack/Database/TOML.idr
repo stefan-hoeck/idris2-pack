@@ -1,6 +1,6 @@
 module Pack.Database.TOML
 
-import Data.SortedMap as M
+import Data.SortedMap
 import Idris.Package.Types
 import Libraries.Utils.Path
 import Pack.Core.TOML
@@ -9,44 +9,24 @@ import Pack.Database.Types
 
 %default total
 
-github : String -> Value -> Either TOMLErr (PkgName,Package)
-github n v = prefixKey n $ map (MkPkgName n,)
-  [| GitHub (pure $ MkPkgName n)
-            (valAt "url" v)
-            (valAt "commit" v)
-            (valAt "ipkg" v) |]
+github : Value -> Either TOMLErr Package
+github v = [| GitHub (valAt "url" v) (valAt "commit" v) (valAt "ipkg" v) |]
 
-local : String -> Value -> Either TOMLErr (PkgName,Package)
-local n v = prefixKey n $ map (MkPkgName n,)
-  [| Local (pure $ MkPkgName n)
-           (valAt "path" v)
-           (valAt "ipkg" v) |]
+local : Value -> Either TOMLErr Package
+local v = [| Local (valAt "path" v) (valAt "ipkg" v) |]
 
-package : String -> Value -> Either TOMLErr (PkgName,Package)
-package n v = case valAt {a = String} "type" v of
-  Right "github" => github n v
-  Right "local"  => local n v
-  Right _        => Left $ WrongType [n,"type"] "Package Type"
-  Left  err      => prefixKey n (Left err)
+package : Value -> Either TOMLErr Package
+package v = valAt {a = String} "type" v >>=
+  \case "github" => github v
+        "local"  => local v
+        _        => Left $ WrongType ["type"] "Package Type"
 
-githubMap : (val  : Value) -> Either TOMLErr (SortedMap PkgName Package)
-githubMap (VTable m) = M.fromList <$> traverse (uncurry github) (M.toList m)
-githubMap _          = Left $ WrongType [] "Table"
-
-packageMap : (val  : Value) -> Either TOMLErr (SortedMap PkgName Package)
-packageMap (VTable m) = M.fromList <$> traverse (uncurry package) (M.toList m)
-packageMap _          = Left $ WrongType [] "Table"
-
-export
-FromTOML (SortedMap PkgName Package) where
-  fromTOML = packageMap
-
-[GitHub] FromTOML (SortedMap PkgName Package) where
-  fromTOML = githubMap
+export %inline
+FromTOML Package where
+  fromTOML = package
 
 export
 FromTOML DB where
-  fromTOML v =
-    [| MkDB (valAt "idris2.commit" v)
-            (valAt "idris2.version" v)
-            (valAt @{GitHub} "db" v) |]
+  fromTOML v = [| MkDB (valAt "idris2.commit" v)
+                       (valAt "idris2.version" v)
+                       (valAt "db" v) |]

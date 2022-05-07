@@ -1,8 +1,8 @@
 module Pack.Report.Types
 
 import Data.SnocList
+import Data.SortedMap
 import Data.String
-import Libraries.Data.SortedMap
 import Pack.Core.Types
 import Pack.Database.Types
 

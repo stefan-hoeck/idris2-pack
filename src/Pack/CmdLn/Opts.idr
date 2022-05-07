@@ -68,7 +68,6 @@ cmd ("exec" :: file :: args)   = Right $ Exec (fromString file) args
 cmd ["extract-from-head", p]   = Right $ FromHEAD (parse p)
 cmd ["build", file]            = Right $ Build (parse file)
 cmd ["typecheck", file]        = Right $ Typecheck (parse file)
-cmd ["switch", repo]           = Right $ SwitchRepo (MkDBName repo)
 cmd ("install" :: xs)          = Right $ Install (map fromString xs)
 cmd ("remove" :: xs)           = Right $ Remove (map fromString xs)
 cmd ("install-app" :: xs)      = Right $ InstallApp (map fromString xs)
@@ -130,14 +129,6 @@ usageInfo = """
 
     remove [package or .ipkg file...]
       Remove installed librarie(s).
-
-    switch <repositoy>
-      Change the repository `$PACK_DIR/bin` points
-      to. If `$PACK_DIR/bin` is on your path, all applications
-      installed for the given repository (including Idris2
-      itself) will be on your path as well.
-      Note: This will install Idris2 and *pack* form the
-      given repository so it may take some time.
 
     update-db
       Update the pack data base by downloading the package collections

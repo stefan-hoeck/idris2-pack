@@ -1,5 +1,7 @@
 module Pack.Config.Types
 
+import Data.Maybe
+import Data.SortedMap
 import Data.String
 import Idris.Package.Types
 import Pack.Core.Types
@@ -56,6 +58,9 @@ record Config (s : Maybe State) where
   ||| Applications to install automatically
   autoApps  : List PkgName
 
+  ||| Customizations to the package data base
+  custom    : SortedMap DBName (SortedMap PkgName Package)
+
   ||| The package collection
   db        : DBType s
 
@@ -75,8 +80,23 @@ init dir db = MkConfig {
   , withSrc       = False
   , autoLibs      = []
   , autoApps      = []
+  , custom        = empty
   , db            = ()
   }
+
+infixl 8 `mergeRight`
+
+mergeRight : SortedMap k v -> SortedMap k v -> SortedMap k v
+mergeRight = mergeWith (\_,v => v)
+
+||| Merges the "official" package collection with user
+||| defined settings, which will take precedence.
+export
+allPackages : Env e -> SortedMap PkgName Package
+allPackages e =
+  let all = fromMaybe empty $ lookup "all" e.custom
+      loc = fromMaybe empty $ lookup e.collection e.custom
+   in e.db.packages `mergeRight` all `mergeRight` loc
 
 ||| Temporary directory used for building packages.
 export
@@ -103,22 +123,10 @@ export
 userDir : Config s -> Path
 userDir c = c.packDir /> "user"
 
-||| File where a user-defined DB for the current
-||| package collection might be stored.
-export
-userDB : Config s -> Path
-userDB c = userDir c /> c.collection.value <.> "db"
-
-||| File where a user-defined DB to be used in all
-||| package collections might be stored.
-export
-userGlobalDB : Config s -> Path
-userGlobalDB c = userDir c /> "global.db"
-
 ||| File where package DB is located
 export
 dbFile : Config s -> Path
-dbFile c = dbDir c /> c.collection.value <.> "db"
+dbFile c = dbDir c /> c.collection.value <.> "toml"
 
 ||| The directory where Idris2, installed libraries,
 ||| and binaries will be installed.

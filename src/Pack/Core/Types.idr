@@ -94,6 +94,9 @@ export %inline
 Eq DBName where (==) = (==) `on` value
 
 export %inline
+Ord DBName where compare = compare `on` value
+
+export %inline
 Show DBName where show = value
 
 export %inline
