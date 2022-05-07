@@ -51,7 +51,7 @@ jobs:
       - name: Checkout toml-idr
         uses: actions/checkout@v2
         with:
-          repository: cuddlfishie/toml-idr
+          repository: cuddlefishie/toml-idr
       - name: Download already installed dependencies
         uses: actions/download-artifact@master
         with:
@@ -69,7 +69,9 @@ jobs:
 
   build:
     name: Build the lib with ${{ matrix.idris-version }}
-    needs: read-ver
+    needs:
+      - read-ver
+      - toml
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
