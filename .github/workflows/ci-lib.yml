@@ -89,4 +89,4 @@ jobs:
           name: dependencies-for-${{ matrix.idris-version }}
           path: /root/.idris2/
       - name: Build lib
-        run: make test-build
+        run: idris2 --build pack.ipkg
