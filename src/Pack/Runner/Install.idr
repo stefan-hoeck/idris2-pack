@@ -48,8 +48,8 @@ mkIdris e = do
          sys "make clean"
          sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
 
-  link (packBinDir e) (idrisBinDir e)
-  link (packIdrisDir e) (idrisPrefixDir e)
+  link (idrisBinDir e) (packBinDir e)
+  link (idrisPrefixDir e) (packIdrisDir e)
   pure $ {db $= id} e
 
 installCmd : (withSrc : Bool) -> String

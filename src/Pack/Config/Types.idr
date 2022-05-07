@@ -155,8 +155,7 @@ packBinDir : Config s -> Path
 packBinDir c = c.packDir /> "bin"
 
 ||| A symbolic to `idrisInstallDir` of the current
-||| db version. Let `$IDRIS2_PREFIX` point to this
-||| directory.
+||| db version.
 export
 packIdrisDir : Config s -> Path
 packIdrisDir c = c.packDir /> "idris2"
