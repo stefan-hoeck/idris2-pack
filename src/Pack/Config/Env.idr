@@ -54,7 +54,6 @@ export
 updateDB : HasIO io => Config s -> EitherT PackErr io ()
 updateDB conf = do
   rmDir (dbDir conf)
-  mkDir (dbDir conf)
   withGit (tmpDir conf) dbRepo "main" $ do
     copyDir (tmpDir conf /> "collections") (dbDir conf)
 

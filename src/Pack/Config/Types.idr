@@ -123,6 +123,10 @@ export
 userDir : Config s -> Path
 userDir c = c.packDir /> "user"
 
+export
+packToml : (dir : Path) -> Path
+packToml dir = dir /> "user" /> "pack.toml"
+
 ||| File where package DB is located
 export
 dbFile : Config s -> Path
