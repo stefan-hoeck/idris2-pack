@@ -93,7 +93,7 @@ pack help
 
 *pack* supports tab auto-completion for Bash-like shells.
 
-#### For Bash Users
+### For Bash Users
 
 From within bash, run the following command:
 
@@ -103,7 +103,7 @@ eval "$(pack completion-script pack)"
 
 You can also add it to your `.bashrc` file.
 
-#### For ZSH Users
+### For ZSH Users
 
 From within ZSH, run the following commands:
 
