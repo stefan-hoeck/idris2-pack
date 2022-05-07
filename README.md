@@ -14,35 +14,12 @@ There is a second GitHub repository containing the package collections:
 See instructions there if you want to make your own packages
 available to *pack*.
 
-## Installation
+## Quick Installation
 
-Pack will operate solely on the *pack root directory*,
-which defaults to `$HOME/.pack` and can be changed by
-setting environment variable `$PACK_DIR`. We will use
-`$PACK_DIR`, whenever we talk about this directory here.
-
-In order to make use of the binaries installed by *pack*,
-make sure that folder `$PACK_DIR/bin` is
-on your path. In order for the Idris2 compiler managed by
-*pack* to take precedence over the one you might already
-have installed, this folder should appear *before* the
-`bin` folder where your other Idris2 installation resides.
-For instance:
+For detailed instructions and prerequisites, see [installation](INSTALL.md).
 
 ```sh
-export PATH="$HOME/.pack/bin:$HOME/.idris2/bin:..."
-```
-
-### Installation without an Idris2 Compiler
-
-If you don't yet have a recent (more recent than
-the version given in the `.idris-version` file) installation
-of the Idris2 compiler, you can use the *micropack* installer
-by running the following command (assuming the name
-of your chez scheme executable is `chez`):
-
-```sh
-make micropack SCHEME=chez
+make micropack SCHEME=chez DB=
 ```
 
 This will set *pack*'s root directory to `$HOME/.pack`
