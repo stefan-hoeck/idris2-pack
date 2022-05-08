@@ -6,6 +6,28 @@ find their way around the codebase and understand, how
 map and some details about the structure of the `$HOME/.pack`
 directory.
 
+## General Recommendations
+
+I'd like to have every aspect of *pack* reasonably well
+documented. Contributors are therefore kindly asked to
+consider the following guidelines:
+
+* When adding a new *pack* command, make sure it is
+  explained in the `README` as well as in the command line
+  help text (see `Pack.CmdLn.Opts.usageInfo`). In addition,
+  make sure to support tab completion for the command
+  (see `Pack.CmdLn.Completion).
+
+* When adding a new command line option, the same as
+  for new commands holds: It should be well documented and
+  support tab completion. In addition, consider to allow
+  users to permanently set this option in the
+  `$HOME/.pack/user/pack.toml` file.
+
+* When adding new user settings, *micropack* should include
+  these in its automatically generated `pack.toml` file
+  (annotated with a short explanation).
+
 ## Directory Layout
 
 The root directory *pack* works on is located at `$HOME/.pack`,
