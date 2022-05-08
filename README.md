@@ -14,118 +14,25 @@ There is a second GitHub repository containing the package collections:
 See instructions there if you want to make your own packages
 available to *pack*.
 
-## Installation
+## Quick Installation
 
-Pack will operate solely on the *pack root directory*,
-which defaults to `$HOME/.pack` and can be changed by
-setting environment variable `$PACK_DIR`. We will use
-`$PACK_DIR`, whenever we talk about this directory here.
-
-In order to make use of the binaries installed by *pack*,
-make sure that folder `$PACK_DIR/bin` is
-on your path. In order for the Idris2 compiler managed by
-*pack* to take precedence over the one you might already
-have installed, this folder should appear *before* the
-`bin` folder where your other Idris2 installation resides.
-For instance:
+For detailed instructions and prerequisites, see [installation](INSTALL.md).
+Assuming, you have already installed Chez Scheme (and its
+executable is called `chez`) and you want to start with
+the `nightly-220507` package collection, you can set up
+*pack* and the corresponding Idris2 compiler with the following
+command:
 
 ```sh
-export PATH="$HOME/.pack/bin:$HOME/.idris2/bin:..."
+make micropack SCHEME=chez DB=nightly-220507
 ```
-
-### Installation without an Idris2 Compiler
-
-If you don't yet have a recent (more recent than
-the version given in the `.idris-version` file) installation
-of the Idris2 compiler, you can use the *micropack* installer
-by running the following command (assuming the name
-of your chez scheme executable is `chez`):
-
-```sh
-make micropack SCHEME=chez
-```
-
-This will set *pack*'s root directory to `$HOME/.pack`
-and install the latest nightly package collection. If
-you want to use a different package collection, you
-can change it with the `$DB` variable. If you want to
-use a different directory as *pack*'s root directory,
-you can do so by setting the `$PACK_HOME` variable. As an
-example, the following will install package collection
-`nightly-220430` and use `$HOME/.foo` as *pack*'s root
-directory:
-
-```sh
-make micropack SCHEME=chez DB=nightly-220430 PACK_DIR="$HOME/.foo"
-```
-
-### Installation with an existing Idris2 Compiler
-
-For building *pack* the first time, you will require a recent
-installation of Idris2 plus the Idris2 API
-(for reading `.ipkg` files). To build, run
-
-```sh
-idris2 --build pack.ipkg
-```
-
-Afterwards, run the following two commands. If your chez scheme
-executable has another name than `scheme` or you want to specify
-its full path, you can give it explicitly by using the `-s`
-command-line option:
-
-```sh
-build/exec/pack update-db
-build/exec/pack --bootstrap -s chez switch unstable-220430
-```
-
-If run for the first time, this will build and install a recent
-version of the Idris2 compiler plus standard libraries and API,
-followed by the *pack* application, so this might take a couple of
-minutes.
-
-In order to speed things up a bit, you can try and use your existing
-Idris2 installation to build the package collection's version of
-the Idris2 compiler. In order to do so, remove the `--bootstrap`
-command-line option from the last command. For example (if the name
-of your *chez scheme* executable is `chez`):
-
-```sh
-build/exec/pack -s chez switch unstable-220430
-```
-
-### (Optional) Shell Auto-completion
-
-Idris2 supports tab auto-completion for Bash-like shells.
-
-#### For Bash Users
-
-From within bash, run the following command:
-
-```sh
-eval "$(pack completion-script pack)"
-```
-
-You can also add it to your `.bashrc` file.
-
-#### For ZSH Users
-
-From within ZSH, run the following commands:
-
-```sh
-autoload -U +X compinit && compinit
-autoload -U +X bashcompinit && bashcompinit
-eval "$(pack completion-script pack)"
-```
-
-You can also add them to your `.zshrc` file.
 
 ## Usage
 
 This assumes the `$PACK_DIR/bin` folder
 is on your path and you have installed
-*pack* as described above. To install a library from the
-package collection, run
+*pack* as described under [installation](INSTALL.md).
+To install a library from the package collection, run
 
 ```sh
 pack install hedgeog
@@ -143,6 +50,12 @@ run
 pack install-app katla
 ```
 
+If you no longer require *katla* and want to remove it, run
+
+```sh
+pack remove katla
+```
+
 It is also possible to work with local `.ipkg` files as long
 as they depend on packages known to *pack*:
 
@@ -150,79 +63,72 @@ as they depend on packages known to *pack*:
 pack install-app fix_whitespace.ipkg
 pack build json.ipkg
 pack typecheck elab-util.ipkg
-pack remove katla
 ```
 
 The build tool can run executables, both from local
-packages as well as from installed applications.
-Use `--args` to pass on command-line arguments (making sure
-to properly quote them):
+packages as well as from installed applications:
 
 ```sh
 pack exec test.ipkg -n 50
 pack exec katla --help
 ```
 
-## Customizing Data Collections
+## Customization
 
-User settings go to folder `$PACK_DIR/users`. There, you
-can define a custom package collection to be used together
-with one of the *official* package collections. For instance,
-if you are using `unstable-220430` at the moment, you can
-add custom packages to file `$PACK_DIR/users/unstable-220430.db`.
+User settings are stored in file `$PACK_DIR/user/pack.toml`.
+This file should have been generated automatically by pack
+when setting up the application for the first time. The
+different settings have been annotated with comments to
+make it more accessible.
 
-Package collections are still *very* basic. Only two types of
-packages are supported at the moment. The first
-are GitHub projects, consisting
-of a comma-separated name, url, commit hash, and `.ipkg` file.
-For instance:
+If you want to start using a new package collection,
+edit the `collection` field accordingly:
 
-```csv
-sop,https://github.com/stefan-hoeck/idris2-sop,af9224510f5c283f3b3c8293524e51c225617658,sop.ipkg
+```toml
+collection = "nightly-220507"
 ```
 
-The second are local projects, consisting of a comma-separated
-name, absolute directory path, and `.ipkg` file. For instance:
+It is also possible to add local projects as well as GitHub
+projects not yet managed by your package collection of choice
+to the set of packages known to pack. For instance, assuming you
+have a local project called `hello` located in directory
+`/data/me/idris/hello` with `.ipkg` file `hello.ipkg`,
+and you want to make this available to all package collections
+you work with, add the following lines to `pack.toml`:
 
-```csv
-hello,/path/to/hello/project,hello.ipkg
+```toml
+[custom.all.hello]
+type = "local"
+path = "/data/me/idris/hello"
+ipkg = "hello.ipkg"
 ```
 
-In addition, custom packages can also be globally added
-to file `$PACK_DIR/users/global.db`. This will be available
-with every package collection.
+If, on the other hand, you want to make this package only available
+to package collection `nightly-220506`, change the above to the
+following:
 
-Note, that you can use custom data collections to override
-packages listed in an official collection. Packages listed
-in `$PACK_DIR/users/global.db` take precedence over those
-listed in the official package collection, and custom packages
-listed for a specific package collection (for instance, those
-in `$PACK_DIR/users/unstable-220430.db`) take precedence
-even over global ones.
-
-### Full Example
-
-Assume you'd like to use local libraries `/home/me/hello` and
-`/home/me/foo` with all package collections. Here's what
-to add to `$PACK_DIR/users/global.db`:
-
-```csv
-hello,/home/me/hello,hello.ipkg
-foo,/home/me/foo,foo.ipkg
+```toml
+[custom.nightly-220506.hello]
+type = "local"
+path = "/data/me/idris/hello"
+ipkg = "hello.ipkg"
 ```
 
-In addition, you'd like to override the commit used for the
-`katla` project when working with the `unstable-220430`
-package collection. Here's what to add to
-`$PACK_DIR/users/unstable-220430`:
+Likewise, you could at a GitHub project not yet known to *pack*
+to one or all of the package collections:
 
-```csv
-katla,https://github.com/idris-community/katla,HEAD,katla.ipkg
+```toml
+[custom.nightly-220506.hashmap]
+type   = "github"
+url    = "https://github.com/Z-snails/idris2-hashmap"
+commit = "cb97afaa7c5d79dcb85901c6f5f87bed906fed81"
+ipkg   = "hashmap.ipkg"
 ```
 
-You could also use the same technique to make *pack* use
-a different GitHub repository (probably a fork of yours) for a
-certain package.
+Custom packages take precedence over official ones, so it is
+possible to override an officially supported package with
+a custom version of yours (either a local clone or perhaps
+a fork on GitHub).
 
 ## Stuff still Missing
 

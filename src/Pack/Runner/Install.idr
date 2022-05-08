@@ -3,8 +3,8 @@ module Pack.Runner.Install
 import Data.List1
 import Data.String
 import Idris.Package.Types
-import Pack.CmdLn.Env
-import Pack.CmdLn.Types
+import Pack.Config.Env
+import Pack.Config.Types
 import Pack.Core
 import Pack.Database.Types
 import Pack.Runner.Database
@@ -26,12 +26,16 @@ copyApp e = sys "cp -r build/exec/* \{show $ idrisBinDir e}"
 ||| Builds and installs the Idris commit given in the environment.
 export
 mkIdris : HasIO io => Env DBLoaded -> EitherT PackErr io (Env HasIdris)
-mkIdris e@(MkConfig pd v s c b db) = do
-  False <- exists (idrisInstallDir e) | True => pure $ MkConfig pd v s c b db
+mkIdris e = do
+  False <- exists (idrisInstallDir e)
+    | True => do
+        link (idrisBinDir e) (packBinDir e)
+        link (idrisPrefixDir e) (packIdrisDir e)
+        pure $ {db $= id} e
 
-  if b
+  if e.bootstrap
      then -- build with bootstrapping
-       withGit (tmpDir e) idrisRepo db.idrisCommit $ do
+       withGit (tmpDir e) idrisRepo e.db.idrisCommit $ do
          sys "make bootstrap \{prefixVar e} \{schemeVar e}"
          sys "make install \{prefixVar e}"
          sys "make clean"
@@ -41,19 +45,16 @@ mkIdris e@(MkConfig pd v s c b db) = do
          sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
 
      else -- build with existing Idris2 compiler
-       withGit (tmpDir e) idrisRepo db.idrisCommit $ do
+       withGit (tmpDir e) idrisRepo e.db.idrisCommit $ do
          sys "make all \{prefixVar e}"
          sys "make install \{prefixVar e}"
          sys "make install-with-src-libs \{prefixVar e}"
          sys "make clean"
          sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
 
-  pure $ MkConfig pd v s c b db
-
-||| Creates a packaging environment with Idris2 installed.
-export
-idrisEnv : HasIO io => Config Nothing -> EitherT PackErr io (Env HasIdris)
-idrisEnv c = env c >>= mkIdris
+  link (idrisBinDir e) (packBinDir e)
+  link (idrisPrefixDir e) (packIdrisDir e)
+  pure $ {db $= id} e
 
 installCmd : (withSrc : Bool) -> String
 installCmd True  = "--install-with-src"
@@ -62,22 +63,21 @@ installCmd False = "--install"
 ||| Install the given library with all its dependencies.
 export covering
 installLib :  HasIO io
-           => (withSrc : Bool)
-           -> Env HasIdris
+           => Env HasIdris
            -> PkgRep
            -> EitherT PackErr io ()
-installLib ws e n = do
+installLib e n = do
   rp <- resolve e n
-  traverse_ (installLib ws e) (dependencies rp)
+  traverse_ (installLib e) (dependencies rp)
   case rp of
     RGitHub pn url commit ipkg d => do
       False <- packageExists e rp | True => pure ()
       withGit (tmpDir e) url commit $ do
         let pf = patchFile e pn ipkg
         when !(exists pf) (patch ipkg pf)
-        idrisPkg e (installCmd ws) ipkg
-    RIpkg ipkg d => idrisPkg e (installCmd ws) ipkg
-    RLocal _ dir ipkg d => inDir dir $ idrisPkg e (installCmd ws) ipkg
+        idrisPkg e (installCmd e.withSrc) ipkg
+    RIpkg ipkg d => idrisPkg e (installCmd e.withSrc) ipkg
+    RLocal _ dir ipkg d => inDir dir $ idrisPkg e (installCmd e.withSrc) ipkg
     _             => do
       False <- packageExists e rp | True => pure ()
       throwE (MissingCorePackage (name rp) e.db.idrisVersion e.db.idrisCommit)
@@ -102,7 +102,7 @@ runIdrisOn :  HasIO io => (cmd : String)
            -> EitherT PackErr io ()
 runIdrisOn cmd p e = do
   RIpkg ipkg d <- resolve e (Ipkg p) | _ => throwE BuildMany
-  traverse_ (installLib True e) (dependencies $ RIpkg ipkg d)
+  traverse_ (installLib e) (dependencies $ RIpkg ipkg d)
   idrisPkg e cmd ipkg
 
 ||| Build a local library given as an `.ipkg` file.
@@ -125,7 +125,7 @@ installApp :  HasIO io
 installApp e n = do
   rp       <- resolve e n
   Just exe <- pure (executable rp) | Nothing => throwE (NoApp n)
-  traverse_ (installLib True e) (dependencies rp)
+  traverse_ (installLib e) (dependencies rp)
   case rp of
     RGitHub pn url commit ipkg d => do
       False <- executableExists e exe | True => pure ()
@@ -161,19 +161,18 @@ execApp p args e = do
   Just exe <- pure (executable rp) | Nothing => throwE (NoApp p)
   case rp of
     RIpkg ipkg d => do
-      traverse_ (installLib True e) (dependencies rp)
+      traverse_ (installLib e) (dependencies rp)
       idrisPkg e "--build" ipkg
       sys "build/exec/\{exe} \{unwords args}"
     _            => do
       installApp e p
       sys "\{show $ packageExec e exe} \{unwords args}"
 
-||| Switch the package collection, installing Idris2 and *pack*
-||| if necessary.
+||| Creates a packaging environment with Idris2 installed.
 export covering
-switchCollection : HasIO io => Env HasIdris -> EitherT PackErr io ()
-switchCollection e = do
-  installApp e "pack"
-  link (idrisBinDir e) (packBinDir e)
-  link (idrisPrefixDir e) (packIdrisDir e)
-  write (e.packDir /> ".db") e.dbVersion.value
+idrisEnv : HasIO io => Config Nothing -> EitherT PackErr io (Env HasIdris)
+idrisEnv c = do
+  e <- env c >>= mkIdris
+  traverse_ (installLib e) (map Pkg e.autoLibs)
+  traverse_ (installApp e) (map Pkg e.autoApps)
+  pure e

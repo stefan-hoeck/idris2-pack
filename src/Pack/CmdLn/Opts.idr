@@ -4,38 +4,33 @@ import Data.String
 import Libraries.Utils.Path
 import Pack.CmdLn.Types
 import Pack.Core.Types
+import Pack.Config.Types
 import System.Console.GetOpt
 
 %default total
 
-dir : String -> Config s -> Config s
-dir s = {packDir := parse s}
-
 bootstrap : Config s -> Config s
 bootstrap = {bootstrap := True}
 
+withSrc : Config s -> Config s
+withSrc = {withSrc := True}
+
 setDB : String -> Config s -> Config s
-setDB s = {dbVersion := MkDBName s}
+setDB s = {collection := MkDBName s}
 
 setScheme : String -> Config s -> Config s
 setScheme s = {scheme := parse s}
 
 -- command line options with description
 descs : List $ OptDescr (Config Nothing -> Config Nothing)
-descs = [ MkOpt [] ["pack-dir"]   (ReqArg dir "<dir>")
-            """
-            Directory where pack stores its database and
-            installed packages. This defaults to \"$PACK_DIR\"
-            (if set) or \"$HOME/.pack\" otherwise.
-            """
-        , MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
+descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             """
             Set the curated package set to use. At the
             moment, this defaults to `HEAD`, so the latest commits
             of all packages will be used. This is bound to change
             once we have a reasonably stable package set.
             """
-        , MkOpt ['s'] ["scheme"]   (ReqArg setScheme "<scheme executable>")
+        , MkOpt ['s'] ["scheme"]   (ReqArg setScheme "<exec>")
             """
             Sets the scheme executable for installing the Idris2 compiler.
             As a default, this is set to `scheme`.
@@ -46,6 +41,13 @@ descs = [ MkOpt [] ["pack-dir"]   (ReqArg dir "<dir>")
             This is for users who don't have a recent version of
             the Idris2 compiler on their `$PATH`. Compiling Idris2
             will take considerably longer with this option set.
+            """
+        , MkOpt [] ["with-src"]   (NoArg withSrc)
+            """
+            Include the source code of a library when installing
+            it. This allows some editor plugins to jump to the
+            definitions of functions and data types in other
+            modules.
             """
         ]
 
@@ -66,10 +68,8 @@ cmd ("exec" :: file :: args)   = Right $ Exec (fromString file) args
 cmd ["extract-from-head", p]   = Right $ FromHEAD (parse p)
 cmd ["build", file]            = Right $ Build (parse file)
 cmd ["typecheck", file]        = Right $ Typecheck (parse file)
-cmd ["switch", repo]           = Right $ SwitchRepo (MkDBName repo)
 cmd ("install" :: xs)          = Right $ Install (map fromString xs)
 cmd ("remove" :: xs)           = Right $ Remove (map fromString xs)
-cmd ("install-with-src" :: xs) = Right $ InstallWithSrc (map fromString xs)
 cmd ("install-app" :: xs)      = Right $ InstallApp (map fromString xs)
 cmd ["completion",a,b]         = Right $ Completion a b
 cmd ["completion-script",f]    = Right $ CompletionScript f
@@ -79,15 +79,14 @@ cmd xs                         = Left  $ UnknownCommand xs
 ||| generates the application
 ||| config from a list of command line arguments.
 export
-applyArgs :  (dir  : Path)
-          -> (db   : DBName)
+applyArgs :  (init : Config Nothing)
           -> (args : List String)
-          -> Either PackErr (Config Nothing)
-applyArgs dir db args =
+          -> Either PackErr (Config Nothing, Cmd)
+applyArgs init args =
   case getOpt RequireOrder descs args of
        MkResult opts n  []      []       =>
-         let conf = foldl (flip apply) (init dir db) opts
-          in map (\p => {cmd := p} conf) (cmd n)
+         let conf = foldl (flip apply) init opts
+          in map (conf,) (cmd n)
 
        MkResult _    _ (u :: _) _        => Left (UnknownArg u)
        MkResult _    _ _        (e :: _) => Left (ErroneousArg e)
@@ -130,14 +129,6 @@ usageInfo = """
 
     remove [package or .ipkg file...]
       Remove installed librarie(s).
-
-    switch <repositoy>
-      Change the repository `$PACK_DIR/bin` points
-      to. If `$PACK_DIR/bin` is on your path, all applications
-      installed for the given repository (including Idris2
-      itself) will be on your path as well.
-      Note: This will install Idris2 and *pack* form the
-      given repository so it may take some time.
 
     update-db
       Update the pack data base by downloading the package collections

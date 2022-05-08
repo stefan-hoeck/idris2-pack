@@ -1,9 +1,9 @@
 module Pack.Runner.Database
 
+import Data.SortedMap
 import Idris.Package.Types
-import Libraries.Data.SortedMap
 import Libraries.Utils.Path
-import Pack.CmdLn.Types
+import Pack.Config.Types
 import Pack.Core
 import Pack.Database.Types
 
@@ -11,10 +11,10 @@ import Pack.Database.Types
 
 covering
 commitOf : HasIO io => Package -> EitherT PackErr io Package
-commitOf (GitHub n url branch ipkg) = do
+commitOf (GitHub url branch ipkg) = do
   commit <- gitLatest url branch
-  pure $ GitHub n url commit ipkg
-commitOf p                     = pure p
+  pure $ GitHub url commit ipkg
+commitOf p                        = pure p
 
 ||| Converts a data base with a branch name for each
 ||| package to one holding the latest commit hash for each.
@@ -61,12 +61,12 @@ resolve _ (Pkg "network") = pure Network
 resolve _ (Pkg "prelude") = pure Prelude
 resolve _ (Pkg "test")    = pure Test
 resolve e (Ipkg path)     = RIpkg path <$> parseIpkgFile path
-resolve e (Pkg n)         = case lookup n e.db.packages of
+resolve e (Pkg n)         = case lookup n (allPackages e) of
   Nothing  => throwE (UnknownPkg n)
 
   -- this is a known package so we download its `.ipkg`
   -- file from GitHub and patch it, if necessary
-  Just (GitHub n url commit ipkg) =>
+  Just (GitHub url commit ipkg) =>
     let cache = ipkgPath e n commit ipkg
      in do
        b <- exists cache
@@ -77,5 +77,5 @@ resolve e (Pkg n)         = case lookup n e.db.packages of
            when !(exists pf) (patch ipkg pf)
            copyFile ipkg cache
            RGitHub n url commit ipkg <$> parseIpkgFile ipkg
-  Just (Local n dir ipkg) =>
+  Just (Local dir ipkg) =>
     inDir dir $ RLocal n dir ipkg <$> parseIpkgFile ipkg

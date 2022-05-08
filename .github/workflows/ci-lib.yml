@@ -36,9 +36,42 @@ jobs:
         id: read-ver
         run: sed 's/^/::set-output name=idris-ver::/' < "${IDRIS_VERSION_FILE}"
 
+  toml:
+    name: Build toml-idr with ${{ matrix.idris-version }}
+    needs: read-ver
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1 # We need sequential run!
+      matrix:
+        idris-version:
+          - ${{ needs.read-ver.outputs.idris-ver }}
+          - latest
+    container: snazzybucket/idris2api:${{ matrix.idris-version }}
+    steps:
+      - name: Checkout toml-idr
+        uses: actions/checkout@v2
+        with:
+          repository: cuddlefishie/toml-idr
+      - name: Download already installed dependencies
+        uses: actions/download-artifact@master
+        with:
+          name: dependencies-for-${{ matrix.idris-version }}
+          path: /root/.idris2/
+        continue-on-error: true
+      - name: Install toml-idr
+        run: make install
+      - name: Save installed lib
+        uses: actions/upload-artifact@master
+        with:
+          name: dependencies-for-${{ matrix.idris-version }}
+          path: /root/.idris2/idris2-*/toml*
+          if-no-files-found: error
+
   build:
     name: Build the lib with ${{ matrix.idris-version }}
-    needs: read-ver
+    needs:
+      - read-ver
+      - toml
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -50,5 +83,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Download installed dependencies
+        uses: actions/download-artifact@master
+        with:
+          name: dependencies-for-${{ matrix.idris-version }}
+          path: /root/.idris2/
       - name: Build lib
         run: idris2 --build pack.ipkg

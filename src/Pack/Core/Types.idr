@@ -94,6 +94,9 @@ export %inline
 Eq DBName where (==) = (==) `on` value
 
 export %inline
+Ord DBName where compare = compare `on` value
+
+export %inline
 Show DBName where show = value
 
 export %inline
@@ -130,6 +133,28 @@ FromString PkgRep where
 --------------------------------------------------------------------------------
 --          Errors
 --------------------------------------------------------------------------------
+
+public export
+data TOMLErr : Type where
+  ||| A mandatory key/value pair in a toml file is
+  ||| missing
+  MissingKey : (path : List String) -> TOMLErr
+
+  ||| A value in a toml file has the wrong type
+  WrongType : (path  : List String) -> (type  : String) -> TOMLErr
+
+tomlPath : List String -> String
+tomlPath = concat . intersperse "."
+
+printTOMLErr : TOMLErr -> String
+printTOMLErr (MissingKey path) = "Missing toml key: \{tomlPath path}."
+printTOMLErr (WrongType path type) =
+  "Wrong type at \{tomlPath path}. Expect \{type}."
+
+export
+prefixKey : String -> Either TOMLErr a -> Either TOMLErr a
+prefixKey k = mapFst $ \case MissingKey p => MissingKey (k :: p)
+                             WrongType p t => WrongType (k :: p) t
 
 ||| Errors that can occur when running *pack* programs.
 public export
@@ -174,6 +199,9 @@ data PackErr : Type where
   ||| Invalid package database header
   InvalidDBHeader : (s : String) -> PackErr
 
+  ||| Invalid package version
+  InvalidPkgVersion : (s : String) -> PackErr
+
   ||| Failed to parse an .ipkg file
   InvalidIpkgFile  : (path : Path) -> PackErr
 
@@ -204,6 +232,12 @@ data PackErr : Type where
   ||| Trying to clone a repository into an existing
   ||| directory.
   DirExists : Path -> PackErr
+
+  ||| Error in a toml file.
+  TOMLFile :  (file : Path) -> (err : TOMLErr) -> PackErr
+
+  ||| Error in a toml file.
+  TOMLParse : (file : Path) -> (err : String) -> PackErr
 
 ||| Prints an error that occured during program execution.
 export
@@ -247,6 +281,8 @@ printErr (InvalidDBHeader s) = """
   This should be of the format \"idris2 commit hash,idris2 version\".
   """
 
+printErr (InvalidPkgVersion s) = "Invalid package version: \"\{s}\"."
+
 printErr (UnknownPkg name) = "Unknown package: \{name}"
 
 printErr (NoApp rep) = "Package \{rep} is not an application"
@@ -274,3 +310,8 @@ printErr (DirExists path) = """
   Failed to clone GitHub repository into \{show path}.
   Directory already exists.
   """
+
+printErr (TOMLFile file err) =
+  "Error in file \{show file}: \{printTOMLErr err}."
+
+printErr (TOMLParse file err) = "Error in file \{show file}: \{err}."

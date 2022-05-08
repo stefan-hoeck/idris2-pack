@@ -1,9 +1,13 @@
-module Pack.CmdLn.Env
+module Pack.Config.Env
 
 import Data.String
 import Pack.CmdLn.Opts
 import Pack.CmdLn.Types
+import Pack.Config.TOML
+import Pack.Config.Types
 import Pack.Core
+import Pack.Core.TOML
+import Pack.Database.TOML
 import Pack.Database.Types
 import System
 
@@ -12,6 +16,9 @@ import System
 --------------------------------------------------------------------------------
 --          Environment
 --------------------------------------------------------------------------------
+
+configPath : Path -> Path
+configPath dir = dir /> "user" /> "pack.toml"
 
 ||| Return the path of the *pack* root directory,
 ||| either from environment variable `$PACK_DIR`, or
@@ -24,31 +31,31 @@ packDir = do
   throwE NoPackDir
 
 covering
-getConfig' : HasIO io => EitherT PackErr io (Config Nothing)
+getConfig' : HasIO io => EitherT PackErr io (Config Nothing,Cmd)
 getConfig' = do
   dir        <- packDir
-  db         <- readIfExists (dir /> ".db") "HEAD"
-  pn :: args <- getArgs | Nil => pure (init dir $ MkDBName db)
-  conf       <- liftEither $ applyArgs dir (MkDBName db) args
-  case conf.cmd of
-    SwitchRepo repo => pure $ {dbVersion := repo} conf
-    CheckDB    repo => pure $ {dbVersion := repo} conf
-    FromHEAD _      => pure $ {dbVersion := "HEAD"} conf
-    _               => pure conf
+  ini        <- readFromTOML (configPath dir) (config dir)
+  pn :: args <- getArgs | Nil => pure (ini, PrintHelp)
+  (conf,cmd) <- liftEither $ applyArgs ini args
+  let conf' : Config Nothing
+      conf' = case cmd of
+        CheckDB    repo => {collection := repo} conf
+        FromHEAD _      => {collection := "HEAD"} conf
+        _               => conf
+  pure (conf',cmd)
 
 ||| Read application config from command line arguments.
 export covering
-getConfig : HasIO io => EitherT PackErr io (Config Nothing)
-getConfig = getConfig' >>= \c => mkDir c.packDir $> c
+getConfig : HasIO io => EitherT PackErr io (Config Nothing,Cmd)
+getConfig = getConfig' >>= \p@(c,_) => mkDir c.packDir $> p
 
 ||| Update the package database.
 export
 updateDB : HasIO io => Config s -> EitherT PackErr io ()
 updateDB conf = do
   rmDir (dbDir conf)
-  mkDir (dbDir conf)
   withGit (tmpDir conf) dbRepo "main" $ do
-    sys "cp *.db \{show $ dbDir conf}"
+    copyDir (tmpDir conf /> "collections") (dbDir conf)
 
 --------------------------------------------------------------------------------
 --          Environment
@@ -59,14 +66,9 @@ loadDB : HasIO io => (conf : Config s) -> EitherT PackErr io DB
 loadDB conf = do
   dbDirExists <- exists (dbDir conf)
   when (not dbDirExists) (updateDB conf)
-  str  <- read (dbFile conf)
-  loc  <- readIfExists (userDB conf) ""
-  glob <- readIfExists (userGlobalDB conf) ""
-  case readDB (unlines [str,glob,loc]) of
-    Left err  => throwE err
-    Right res => pure res
+  readFromTOML (dbFile conf) (fromTOML)
 
-||| Load the package database and create package
+||| Load the package database and create a package
 ||| environment.
 export covering
 env : HasIO io => Config s -> EitherT PackErr io (Env DBLoaded)

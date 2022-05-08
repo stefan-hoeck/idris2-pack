@@ -119,6 +119,13 @@ export
 currentEntries : HasIO io => EitherT PackErr io (List String)
 currentEntries = entries (parse ".")
 
+||| Copy a directory.
+export
+copyDir : HasIO io => (from,to : Path) -> EitherT PackErr io ()
+copyDir from to = do
+  mkParentDir to
+  sys "cp -r \{show from} \{show to}"
+
 --------------------------------------------------------------------------------
 --         File Access
 --------------------------------------------------------------------------------

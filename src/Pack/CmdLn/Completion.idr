@@ -2,13 +2,12 @@ module Pack.CmdLn.Completion
 
 import Control.Monad.Trans
 import Data.List
+import Data.SortedMap
 import Data.String
 import Libraries.Data.List.Extra
-import Libraries.Data.SortedMap
 import Libraries.Utils.Path
-import Pack.CmdLn.Env
 import Pack.CmdLn.Opts
-import Pack.CmdLn.Types
+import Pack.Config.Types
 import Pack.Core
 import Pack.Database.Types
 import System.Directory
@@ -38,7 +37,7 @@ collections e = do
 -- list of packages in the currently selected data
 -- collection
 packages : Env s -> List String
-packages e = value <$> keys e.db.packages
+packages e = value <$> keys (allPackages e)
 
 -- Packages or `.ipkg` files in the current directory
 anyPackage : HasIO io => Env s -> io (List String)
@@ -70,7 +69,6 @@ optionFlags =
   , "switch"
   , "install"
   , "remove"
-  , "install-with-src"
   , "install-app"
   , "completion"
   , "completion-script"

@@ -5,18 +5,24 @@ langversion >= 0.5.1
 depends = base >= 0.5.1
         , contrib
         , idris2
+        , toml
 
 modules = Pack.CmdLn.Completion
-        , Pack.CmdLn.Env
         , Pack.CmdLn.Opts
         , Pack.CmdLn.Types
+
+        , Pack.Config.Env
+        , Pack.Config.TOML
+        , Pack.Config.Types
 
         , Pack.Core
         , Pack.Core.Git
         , Pack.Core.IO
         , Pack.Core.Ipkg
+        , Pack.Core.TOML
         , Pack.Core.Types
 
+        , Pack.Database.TOML
         , Pack.Database.Types
 
         , Pack.Report.Types

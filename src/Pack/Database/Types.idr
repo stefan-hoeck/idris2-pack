@@ -1,9 +1,9 @@
 module Pack.Database.Types
 
 import Data.List1
+import Data.SortedMap
 import Data.String
 import Idris.Package.Types
-import Libraries.Data.SortedMap
 import Libraries.Utils.Path
 import Pack.Core.Types
 
@@ -15,31 +15,23 @@ import Pack.Core.Types
 
 ||| Description of a GitHub or local Idris package in the
 ||| package database.
+|||
+||| Note: This does not contain the package name, as it
+||| will be paired with its name in a `SortedMap`.
 public export
 data Package : Type where
-  ||| A repository on GitHub, given as the package's name
-  ||| (should be the same as in the `.ipkg` file), URL,
+  ||| A repository on GitHub, given as the package's URL,
   ||| commit (hash or tag), and name of `.ipkg` file to use.
-  GitHub :  (name   : PkgName)
-         -> (url    : URL)
+  GitHub :  (url    : URL)
          -> (commit : Commit)
          -> (ipkg   : Path)
          -> Package
 
-  ||| A local Idris project given as a name (same as in
-  ||| `.ipkg` file), absolute path to package directory,
-  ||| and `.ipkg` file to use.
-  Local  :  (name   : PkgName)
-         -> (dir    : Path)
+  ||| A local Idris project given as an absolute path to a local
+  ||| directory, and `.ipkg` file to use.
+  Local  :  (dir    : Path)
          -> (ipkg   : Path)
          -> Package
-
-namespace Package
-  export
-  name : Package -> PkgName
-  name (GitHub n _ _ _) = n
-  name (Local n _ _)    = n
-
 
 ||| A resolved package, which was downloaded from GitHub
 ||| or looked up in the local file system. This comes with
@@ -132,20 +124,19 @@ export
 executable : ResolvedPackage -> Maybe String
 executable p = desc p >>= executable
 
-namespace ResolvedPackage
-  ||| Extracts the package name from a resolved package.
-  export
-  name : ResolvedPackage -> PkgName
-  name (RGitHub n _ _ _ _) = n
-  name (RIpkg _ d)         = MkPkgName d.name
-  name (RLocal n _ _ _)    = n
-  name Base                = "base"
-  name Contrib             = "contrib"
-  name Idris2              = "idris2"
-  name Linear              = "linear"
-  name Network             = "network"
-  name Prelude             = "prelude"
-  name Test                = "test"
+||| Extracts the package name from a resolved package.
+export
+name : ResolvedPackage -> PkgName
+name (RGitHub n _ _ _ _) = n
+name (RIpkg _ d)         = MkPkgName d.name
+name (RLocal n _ _ _)    = n
+name Base                = "base"
+name Contrib             = "contrib"
+name Idris2              = "idris2"
+name Linear              = "linear"
+name Network             = "network"
+name Prelude             = "prelude"
+name Test                = "test"
 
 --------------------------------------------------------------------------------
 --          Package Database
@@ -161,50 +152,32 @@ record DB where
   idrisVersion : PkgVersion
   packages     : SortedMap PkgName Package
 
---------------------------------------------------------------------------------
---          Reading a Database
---------------------------------------------------------------------------------
+printPair : (PkgName,Package) -> String
+printPair (x, GitHub url commit ipkg) =
+  """
 
-commaSep : String -> List String
-commaSep = forget . split (',' ==)
+  [db.\{x}]
+  type   = "github"
+  url    = "\{url}"
+  commit = "\{commit}"
+  ipkg   = "\{show ipkg}"
+  """
 
-||| Encode a package from the data collection as a comma
-||| separated list.
-export
-printPkg : Package -> String
-printPkg (Local n d p) = "\{n},\{show d},\{show p}"
-printPkg (GitHub n u c p) = "\{n},\{u},\{c},\{show p}"
+printPair (x, Local dir ipkg) =
+  """
 
-||| Tries to read a line in a package collection.
-export
-readPkg : String -> Either PackErr Package
-readPkg s  = case commaSep s of
-  [n,url,hash,pkg] =>
-    Right $ GitHub (MkPkgName n) (MkURL url) (MkCommit hash) (parse pkg)
-  [n,dir,pkg]      =>
-    Right $ Local (MkPkgName n) (parse dir) (parse pkg)
-  _                => Left (InvalidPackageDesc s)
-
-export
-readPkgs : List String -> Either PackErr (SortedMap PkgName Package)
-readPkgs = map toPackageMap . traverse readPkg . filter (/= "")
-  where toPackageMap : List Package -> SortedMap PkgName Package
-        toPackageMap = SortedMap.fromList . map (\p => (name p,p))
-
-readVersion : String -> Maybe PkgVersion
-readVersion = map MkPkgVersion . traverse parsePositive . split ('.' ==)
-
-export
-readDB : String -> Either PackErr DB
-readDB s = case lines s of
-  []       => Left EmptyPkgDB
-  (h :: t) => case commaSep h of
-    [c,v] => case readVersion v of
-      Just v' => MkDB (MkCommit c) v' <$> readPkgs t
-      Nothing => Left (InvalidDBHeader h)
-    _     => Left (InvalidDBHeader h)
+  [db.\{x}]
+  type   = "local"
+  path   = "\{show dir}"
+  ipkg   = "\{show ipkg}"
+  """
 
 export
 printDB : DB -> String
-printDB (MkDB c v ps) =
-    unlines $ "\{c},\{show v}" :: map printPkg (values ps)
+printDB (MkDB c v db) =
+  let header = """
+        [idris2]
+        version = "\{show v}"
+        commit  = "\{c}"
+        """
+   in unlines $ header :: map printPair (SortedMap.toList db)
