@@ -33,24 +33,29 @@ mkIdris e = do
         link (idrisPrefixDir e) (packIdrisDir e)
         pure $ {db $= id} e
 
+  let cgBootPrefix = "\{idrisCGVar e} \{idrisBootVar e} \{prefixVar e}"
+      btstrp       = case show e.scheme of
+        "racket" => "bootstrap-racket \{prefixVar e}"
+        _        => "bootstrap \{idrisCGVar e} \{prefixVar e} \{schemeVar e}"
+
   if e.bootstrap
      then -- build with bootstrapping
        withGit (tmpDir e) idrisRepo e.db.idrisCommit $ do
-         sys "make bootstrap \{prefixVar e} \{schemeVar e}"
-         sys "make install \{prefixVar e}"
+         sys "make \{btstrp}"
+         sys "make install \{idrisCGVar e} \{prefixVar e}"
          sys "make clean"
-         sys "make all \{idrisBootVar e} \{prefixVar e}"
-         sys "make install \{idrisBootVar e} \{prefixVar e}"
-         sys "make install-with-src-libs \{idrisBootVar e} \{prefixVar e}"
-         sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
+         sys "make all \{cgBootPrefix}"
+         sys "make install \{cgBootPrefix}"
+         sys "make install-with-src-libs \{cgBootPrefix}"
+         sys "make install-with-src-api \{cgBootPrefix}"
 
      else -- build with existing Idris2 compiler
        withGit (tmpDir e) idrisRepo e.db.idrisCommit $ do
-         sys "make all \{prefixVar e}"
-         sys "make install \{prefixVar e}"
-         sys "make install-with-src-libs \{prefixVar e}"
+         sys "make all \{idrisCGVar e} \{prefixVar e}"
+         sys "make install \{idrisCGVar e} \{prefixVar e}"
+         sys "make install-with-src-libs \{idrisCGVar e} \{prefixVar e}"
          sys "make clean"
-         sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
+         sys "make install-with-src-api \{cgBootPrefix}"
 
   link (idrisBinDir e) (packBinDir e)
   link (idrisPrefixDir e) (packIdrisDir e)

@@ -181,6 +181,13 @@ export
 prefixVar : Config s -> String
 prefixVar c = "PREFIX=\"\{show $ idrisPrefixDir c}\""
 
+||| `$IDRIS2_CG` variable during Idris2 installation
+export
+idrisCGVar : Config s -> String
+idrisCGVar c = case (show c.scheme) of
+  "racket" => "IDRIS2_CG=\"racket\""
+  _        => ""
+
 ||| `$PREFIX` variable during Idris2 installation
 export
 idrisBootVar : Config s -> String
