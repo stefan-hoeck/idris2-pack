@@ -13,12 +13,12 @@ documented. Contributors are therefore kindly asked to
 consider the following guidelines:
 
 * When adding a new *pack* command, make sure it is
-  explained in the `README` as well as in the command line
+  explained in the `README` as well as in the command-line
   help text (see `Pack.CmdLn.Opts.usageInfo`). In addition,
   make sure to support tab completion for the command
   (see `Pack.CmdLn.Completion).
 
-* When adding a new command line option, the same as
+* When adding a new command-line option, the same as
   for new commands holds: It should be well documented and
   support tab completion. In addition, consider to allow
   users to permanently set this option in the
