@@ -16,9 +16,6 @@ before you continue:
   If you install Chez Scheme from source files, building it locally,
   make sure you run ./configure --threads to build multithreading support in.
 
-  Note: Racket support has not yet been built into *pack*. This
-  is an open issue.
-
 * `bash`, `GNU make`, `sha256sum`, and `GMP`. On Linux, you probably
   already have these. On macOS and major BSD flavours, you can install them
   using a package manager: for instance, on macOS, you can install with the
@@ -60,11 +57,11 @@ directory. To make things easier, there is a pre-built, minimalistic
 version of *pack* called *micropack* bundled with this repository.
 
 Here's the installation command to get you started. This assumes
-you decided on using package collection `nightly-220507`, and the
+you decided on using package collection `nightly-220508`, and the
 name of your Chez Scheme executable is `scheme`:
 
 ```sh
-make micropack SCHEME=scheme DB=nightly-220507
+make micropack SCHEME=scheme DB=nightly-220508
 ```
 
 Wait a couple of seconds. If *micropack* starts writing non-stop
@@ -72,6 +69,13 @@ to standard out, this means that bootstrapping of the Idris2
 compiler has successfully started. This will take a couple of
 minutes, so it's probably a good idea to go and have a cup of
 coffee.
+
+If, as an alternative, you want to use Racket instead of Chez Scheme,
+you can to so by setting `SCHEME` accordingly:
+
+```sh
+make micropack SCHEME=racket DB=nightly-220508
+```
 
 ## 4. Verifying the Installation
 
