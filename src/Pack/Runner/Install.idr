@@ -27,7 +27,11 @@ copyApp e = sys "cp -r build/exec/* \{show $ idrisBinDir e}"
 export
 mkIdris : HasIO io => Env DBLoaded -> EitherT PackErr io (Env HasIdris)
 mkIdris e = do
-  False <- exists (idrisInstallDir e) | True => pure $ {db $= id} e
+  False <- exists (idrisInstallDir e)
+    | True => do
+        link (idrisBinDir e) (packBinDir e)
+        link (idrisPrefixDir e) (packIdrisDir e)
+        pure $ {db $= id} e
 
   if e.bootstrap
      then -- build with bootstrapping
