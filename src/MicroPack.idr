@@ -26,6 +26,7 @@ microInit dir scheme db = MkConfig {
   , scheme        = parse scheme
   , bootstrap     = True
   , withSrc       = True
+  , safetyPrompt  = True
   , autoLibs      = []
   , autoApps      = ["pack"]
   , custom        = empty
@@ -44,6 +45,11 @@ packToml scheme db = """
   # who have set their editor up with some *go to definition*
   # functionality (for instance by using idris2-lsp with neovim).
   with-src   = true
+
+  # Whether to prompt the user before building or installing
+  # packages or applications with custom build hooks in their
+  # `.ipkg` file.
+  safety-prompt = true
 
   # Must-have libraries. These will be installed automatically
   # when using a new package collection.

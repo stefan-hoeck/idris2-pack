@@ -18,6 +18,9 @@ withSrc = {withSrc := True}
 setDB : String -> Config s -> Config s
 setDB s = {collection := MkDBName s}
 
+setPrompt : Bool -> Config s -> Config s
+setPrompt b = {safetyPrompt := b}
+
 setScheme : String -> Config s -> Config s
 setScheme s = {scheme := parse s}
 
@@ -41,6 +44,16 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             This is for users who don't have a recent version of
             the Idris2 compiler on their `$PATH`. Compiling Idris2
             will take considerably longer with this option set.
+            """
+        , MkOpt [] ["prompt"]   (NoArg $ setPrompt True)
+            """
+            Prompt before installing a potentially unsafe package
+            with custom build hooks.
+            """
+        , MkOpt [] ["no-prompt"]   (NoArg $ setPrompt False)
+            """
+            Don't prompt before installing a potentially unsafe package
+            with custom build hooks.
             """
         , MkOpt [] ["with-src"]   (NoArg withSrc)
             """
