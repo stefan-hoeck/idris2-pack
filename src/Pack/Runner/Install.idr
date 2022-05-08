@@ -1,6 +1,8 @@
 module Pack.Runner.Install
 
+import Core.FC
 import Data.List1
+import Data.Maybe
 import Data.String
 import Idris.Package.Types
 import Pack.Config.Env
@@ -60,6 +62,30 @@ installCmd : (withSrc : Bool) -> String
 installCmd True  = "--install-with-src"
 installCmd False = "--install"
 
+-- check if a package has special build- or install hooks
+-- defined, and if yes, prompt the user
+-- before continuing (unless `safetyPrompt` in the
+-- `Config` is set set to `False`).
+prompt : HasIO io => PkgName -> Config s -> PkgDesc -> io Bool
+prompt n c d =
+  if c.safetyPrompt && isJust (
+       d.prebuild <|> d.postbuild <|>
+       d.preinstall <|> d.postinstall
+     )
+     then do
+       putStrLn "Package \{n} uses custom build hooks. Continue (yes/*no)?"
+       "yes" <- trim <$> getLine | _ => putStrLn "Aborting..." $> False
+       pure True
+     else pure True
+
+promptDesc :  HasIO io
+           => ResolvedPackage
+           -> Config s
+           -> PkgDesc
+           -> io Bool
+promptDesc = prompt . name
+
+
 ||| Install the given library with all its dependencies.
 export covering
 installLib :  HasIO io
@@ -72,12 +98,17 @@ installLib e n = do
   case rp of
     RGitHub pn url commit ipkg d => do
       False <- packageExists e rp | True => pure ()
-      withGit (tmpDir e) url commit $ do
-        let pf = patchFile e pn ipkg
-        when !(exists pf) (patch ipkg pf)
+      when !(promptDesc rp e d) $
+        withGit (tmpDir e) url commit $ do
+          let pf = patchFile e pn ipkg
+          when !(exists pf) (patch ipkg pf)
+          idrisPkg e (installCmd e.withSrc) ipkg
+    RIpkg ipkg d =>
+      when !(promptDesc rp e d) $
         idrisPkg e (installCmd e.withSrc) ipkg
-    RIpkg ipkg d => idrisPkg e (installCmd e.withSrc) ipkg
-    RLocal _ dir ipkg d => inDir dir $ idrisPkg e (installCmd e.withSrc) ipkg
+    RLocal _ dir ipkg d =>
+      when !(promptDesc rp e d) $
+        inDir dir $ idrisPkg e (installCmd e.withSrc) ipkg
     _             => do
       False <- packageExists e rp | True => pure ()
       throwE (MissingCorePackage (name rp) e.db.idrisVersion e.db.idrisCommit)
@@ -129,18 +160,19 @@ installApp e n = do
   case rp of
     RGitHub pn url commit ipkg d => do
       False <- executableExists e exe | True => pure ()
-      withGit (tmpDir e) url commit $ do
-        let pf = patchFile e pn ipkg
-        when !(exists pf) (patch ipkg pf)
-        idrisPkg e "--build" ipkg
-        copyApp e
+      when !(promptDesc rp e d) $
+        withGit (tmpDir e) url commit $ do
+          let pf = patchFile e pn ipkg
+          when !(exists pf) (patch ipkg pf)
+          idrisPkg e "--build" ipkg
+          copyApp e
 
-    RIpkg ipkg d => do
+    RIpkg ipkg d => when !(promptDesc rp e d) $ do
       removeExec e exe
       idrisPkg e "--build" ipkg
       copyApp e
 
-    RLocal _ dir ipkg d => do
+    RLocal _ dir ipkg d => when !(promptDesc rp e d) $ do
       removeExec e exe
       inDir dir $ do
         idrisPkg e "--build" ipkg

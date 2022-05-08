@@ -38,51 +38,41 @@ record Config (s : Maybe State) where
   constructor MkConfig
   ||| Directory where the *pack* DB and installed
   ||| libraries and executables reside
-  packDir   : Path
+  packDir      : Path
 
   ||| Package collection to use
-  collection : DBName
+  collection   : DBName
 
   ||| Scheme executable to use
-  scheme    : Path
+  scheme       : Path
 
   ||| Whether to use bootstrapping when building Idris2
-  bootstrap : Bool
+  bootstrap    : Bool
+
+  ||| Whether to prompt for a confirmation when
+  ||| building or installing a package with custom
+  ||| build or install hooks.
+  safetyPrompt : Bool
 
   ||| Whether to install the library sources as well
-  withSrc   : Bool
+  withSrc      : Bool
 
   ||| Libraries to install automatically
-  autoLibs  : List PkgName
+  autoLibs     : List PkgName
 
   ||| Applications to install automatically
-  autoApps  : List PkgName
+  autoApps     : List PkgName
 
   ||| Customizations to the package data base
-  custom    : SortedMap DBName (SortedMap PkgName Package)
+  custom       : SortedMap DBName (SortedMap PkgName Package)
 
   ||| The package collection
-  db        : DBType s
+  db           : DBType s
 
 ||| Program configuration with data collection
 public export
 0 Env : State -> Type
 Env = Config . Just
-
-||| Initial configuration.
-export
-init : (dir : Path) -> (db : DBName) -> Config Nothing
-init dir db = MkConfig {
-    packDir       = dir
-  , collection    = db
-  , scheme        = parse "scheme"
-  , bootstrap     = False
-  , withSrc       = False
-  , autoLibs      = []
-  , autoApps      = []
-  , custom        = empty
-  , db            = ()
-  }
 
 infixl 8 `mergeRight`
 

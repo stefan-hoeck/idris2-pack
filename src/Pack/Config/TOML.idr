@@ -22,6 +22,7 @@ config dir v =
               (optValAt "idris2.scheme" (parse "scheme") v)
               (optValAt "idris2.bootstrap" False v)
               (optValAt "install.with-src" False v)
+              (optValAt "install.safety-prompt" True v)
               (optValAt "install.libs" [] v)
               (optValAt "install.apps" [] v)
               (optValAt "custom" empty v)
