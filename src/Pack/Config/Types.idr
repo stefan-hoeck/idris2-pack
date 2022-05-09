@@ -32,6 +32,18 @@ public export
 DBType (Just _) = DB
 DBType Nothing  = ()
 
+||| Results to show when querying the data base
+public export
+data QueryType : Type where
+  ||| Display only the matching packages' names
+  NameOnly     : QueryType
+
+  ||| Display names and short descriptions
+  ShortDesc    : QueryType
+
+  ||| List direct dependencies
+  Dependencies : QueryType
+
 ||| Program configuration
 public export
 record Config (s : Maybe State) where
@@ -65,6 +77,9 @@ record Config (s : Maybe State) where
 
   ||| Customizations to the package data base
   custom       : SortedMap DBName (SortedMap PkgName Package)
+
+  ||| Type of query to run
+  queryType    : QueryType
 
   ||| The package collection
   db           : DBType s

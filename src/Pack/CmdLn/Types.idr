@@ -23,6 +23,7 @@ data Cmd : Type where
   FromHEAD         : Path -> Cmd
   UpdateDB         : Cmd
 
+  Query            : String -> Cmd
   Completion       : String -> String -> Cmd
   CompletionScript : String -> Cmd
 
