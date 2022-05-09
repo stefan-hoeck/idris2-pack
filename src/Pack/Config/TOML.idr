@@ -26,5 +26,6 @@ config dir v =
               (optValAt "install.libs" [] v)
               (optValAt "install.apps" [] v)
               (optValAt "custom" empty v)
+              (pure NameOnly)
               (pure ())
   |]

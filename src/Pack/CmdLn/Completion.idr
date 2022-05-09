@@ -61,6 +61,7 @@ optionFlags : List String
 optionFlags =
   [ "help"
   , "update-db"
+  , "query"
   , "check-db"
   , "exec"
   , "extract-from-head"
@@ -88,6 +89,7 @@ opts x "-p"               e = prefixOnlyIfNonEmpty x <$> collections e
 
 -- actions
 opts x "build"            e = prefixOnlyIfNonEmpty x <$> ipkgFiles
+opts x "query"            e = prefixOnlyIfNonEmpty x <$> pure (packages e)
 opts x "check-db"         e = prefixOnlyIfNonEmpty x <$> collections e
 opts x "exec"             e = prefixOnlyIfNonEmpty x <$> anyPackage e
 opts x "install"          e = prefixOnlyIfNonEmpty x <$> anyPackage e

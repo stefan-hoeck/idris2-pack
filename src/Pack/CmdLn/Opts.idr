@@ -18,6 +18,9 @@ withSrc = {withSrc := True}
 setDB : String -> Config s -> Config s
 setDB s = {collection := MkDBName s}
 
+setQuery : QueryType -> Config s -> Config s
+setQuery s = {queryType := s}
+
 setPrompt : Bool -> Config s -> Config s
 setPrompt b = {safetyPrompt := b}
 
@@ -38,6 +41,13 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             Sets the scheme executable for installing the Idris2 compiler.
             As a default, this is set to `scheme`.
             """
+        , MkOpt ['S'] ["short-desc"]   (NoArg $ setQuery ShortDesc)
+            """
+            Print the short description stored in an `.ipkg` file for
+            each query result.
+            """
+        , MkOpt ['d'] ["dependencies"]   (NoArg $ setQuery Dependencies)
+            "Print the dependencies of each query result."
         , MkOpt [] ["bootstrap"]   (NoArg bootstrap)
             """
             Use bootstrapping when building the Idris2 compiler.
@@ -76,6 +86,7 @@ cmd : List String -> Either PackErr Cmd
 cmd []                         = Right PrintHelp
 cmd ["help"]                   = Right PrintHelp
 cmd ["update-db"]              = Right UpdateDB
+cmd ["query", s]               = Right $ Query s
 cmd ["check-db", db]           = Right $ CheckDB (MkDBName db)
 cmd ("exec" :: file :: args)   = Right $ Exec (fromString file) args
 cmd ["extract-from-head", p]   = Right $ FromHEAD (parse p)
@@ -151,6 +162,11 @@ usageInfo = """
       Build and run an executable given either as
       an `.ipkg` file or a known package from the
       database passing it the given command line arguments.
+
+    query <substring>
+      Query the package collection for the given name.
+      Several command line options exist to define the type
+      of information printed.
 
     check-db <repository>
       Check the given package collection by freshly

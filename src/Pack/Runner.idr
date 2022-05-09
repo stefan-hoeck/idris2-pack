@@ -8,6 +8,7 @@ import Pack.Config.Types
 import public Pack.Core
 import Pack.Runner.Check
 import Pack.Runner.Database
+import Pack.Runner.Query
 import Pack.Runner.Install
 
 export covering
@@ -17,6 +18,7 @@ runCmd = do
   case cmd of
     Completion a b     => env c >>= complete a b
     CompletionScript f => putStrLn (completionScript f)
+    Query s            => env c >>= query s
     UpdateDB           => updateDB c
     Exec p args        => idrisEnv c >>= execApp p args
     Build p            => idrisEnv c >>= build p

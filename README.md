@@ -141,6 +141,6 @@ non-comprehensive list:
 - [x] Command for typechecking an Idris package
 - [x] Command for building a local Idris2 package
 - [x] Command for running an application
-- [ ] Command for querying a data collection
+- [x] Command for querying a data collection
 - [ ] Command for listing current version of data collection
 - [ ] Support for running tests

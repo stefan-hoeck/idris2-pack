@@ -31,11 +31,9 @@ modules = Pack.CmdLn.Completion
         , Pack.Runner.Check
         , Pack.Runner.Database
         , Pack.Runner.Install
+        , Pack.Runner.Query
 
--- main file (i.e. file to load at REPL)
-main = Main
+main       = Main
 
--- name of executable
 executable = pack
--- opts =
-sourcedir = "src"
+sourcedir  = "src"
