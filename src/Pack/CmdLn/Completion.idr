@@ -24,7 +24,7 @@ ipkgFiles = do
 
 toDBName : String -> Maybe String
 toDBName s =
-  if Just "db" == extension s
+  if Just "toml" == extension s
      then fileStem s
      else Nothing
 
