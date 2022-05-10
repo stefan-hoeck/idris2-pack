@@ -38,7 +38,7 @@ before you continue:
   For instance:
 
   ```sh
-  export PATH="$HOME/.pack/bin:$HOME/.idris2/bin:..."
+  export PATH="$HOME/.pack/bin:$HOME/.idris2/bin:$PATH"
   ```
 
 ## 2. Decide on a Package Collection to use
