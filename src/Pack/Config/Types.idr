@@ -69,6 +69,12 @@ record Config (s : Maybe State) where
   ||| Whether to install the library sources as well
   withSrc      : Bool
 
+  ||| The `.ipkg` file to use when starting a REPL session
+  withIpkg     : Maybe Path
+
+  ||| Whether to use `rlwrap` to run a REPL session
+  rlwrap       : Bool
+
   ||| Libraries to install automatically
   autoLibs     : List PkgName
 

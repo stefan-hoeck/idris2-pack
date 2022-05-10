@@ -52,14 +52,14 @@ trefine : FromTOML a => (a -> Either TOMLErr b) -> Value -> Either TOMLErr b
 trefine f v = fromTOML v >>= f
 
 -- Try to extract a value from a toml `Value`.
-valAt' :  FromTOML a
-       => (path : String)
+valAt' :  (get  : Value -> Either TOMLErr a)
+       -> (path : String)
        -> (dflt : Maybe a)
        -> (val  : Value)
        -> Either TOMLErr a
-valAt' path dflt = go (forget $ split ('.' ==) path)
+valAt' get path dflt = go (forget $ split ('.' ==) path)
   where go : List String -> Value -> Either TOMLErr a
-        go []        v          = fromTOML v
+        go []        v          = get v
         go (x :: xs) (VTable y) = case lookup x y of
           Nothing => case dflt of
             Nothing => Left $ MissingKey [x]
@@ -72,7 +72,7 @@ valAt' path dflt = go (forget $ split ('.' ==) path)
 ||| key names.
 export %inline
 valAt : FromTOML a => (path : String) -> (val : Value) -> Either TOMLErr a
-valAt path = valAt' path Nothing
+valAt path = valAt' fromTOML path Nothing
 
 ||| Extract and convert an optional value from a TOML
 ||| value. The `path` string can contain several dot-separated
@@ -83,7 +83,17 @@ optValAt :  FromTOML a
          -> (dflt : a)
          -> (val  : Value)
          -> Either TOMLErr a
-optValAt path = valAt' path . Just
+optValAt path = valAt' fromTOML path . Just
+
+||| Extract and convert an optional value from a TOML
+||| value. The `path` string can contain several dot-separated
+||| key names.
+export
+maybeValAt :  FromTOML a
+           => (path : String)
+           -> (val  : Value)
+           -> Either TOMLErr (Maybe a)
+maybeValAt path = valAt' (map Just . fromTOML) path (Just Nothing)
 
 --------------------------------------------------------------------------------
 --          Implementations

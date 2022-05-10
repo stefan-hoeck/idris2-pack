@@ -14,6 +14,7 @@ data Cmd : Type where
   Build            : Path -> Cmd
   Typecheck        : Path -> Cmd
   Exec             : PkgRep -> List String -> Cmd
+  Repl             : Maybe Path -> Cmd
 
   Install          : List PkgRep -> Cmd
   InstallApp       : List PkgRep -> Cmd
