@@ -27,15 +27,16 @@ setPrompt b = {safetyPrompt := b}
 setScheme : String -> Config s -> Config s
 setScheme s = {scheme := parse s}
 
+setRlwrap : Bool -> Config s -> Config s
+setRlwrap b = {rlwrap := b }
+
+setIpkg : String -> Config s -> Config s
+setIpkg s = {withIpkg := Just (parse s) }
+
 -- command line options with description
 descs : List $ OptDescr (Config Nothing -> Config Nothing)
 descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
-            """
-            Set the curated package set to use. At the
-            moment, this defaults to `HEAD`, so the latest commits
-            of all packages will be used. This is bound to change
-            once we have a reasonably stable package set.
-            """
+            "Set the curated package set to use."
         , MkOpt ['s'] ["scheme"]   (ReqArg setScheme "<exec>")
             """
             Sets the scheme executable for installing the Idris2 compiler.
@@ -72,6 +73,13 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             definitions of functions and data types in other
             modules.
             """
+        , MkOpt [] ["with-ipkg"]   (ReqArg setIpkg "<.ipkg>")
+            """
+            Use settings and packages from the given `.ipkg` file when
+            starting a REPL session.
+            """
+        , MkOpt [] ["rlwrap"]   (NoArg $ setRlwrap True)
+            "Run a REPL session in `rlwrap`."
         ]
 
 export
@@ -87,6 +95,8 @@ cmd []                         = Right PrintHelp
 cmd ["help"]                   = Right PrintHelp
 cmd ["update-db"]              = Right UpdateDB
 cmd ["query", s]               = Right $ Query s
+cmd ["repl"]                   = Right $ Repl Nothing
+cmd ["repl", s]                = Right $ Repl (Just $ parse s)
 cmd ["check-db", db]           = Right $ CheckDB (MkDBName db)
 cmd ("exec" :: file :: args)   = Right $ Exec (fromString file) args
 cmd ["extract-from-head", p]   = Right $ FromHEAD (parse p)
@@ -140,6 +150,14 @@ usageInfo = """
 
     typecheck <.ipkg file>
       Typecheck a local package given as an `.ipkg` file.
+
+    repl [.idr file]
+      Start a REPL session loading an optional `.idr` file.
+      Use command line option `--with-ipkg` to load setings
+      and packages from an `.ipkg` file. In order to start
+      the REPL session with `rlwrap`, use the `--rlwrap`
+      option or set flag `repl.rlwrap` in file
+      `$HOME./pack/user/pack.toml` to `true`.
 
     install [package or .ipkg file...]
       Install the given package(s) and/or local .ipkg files.

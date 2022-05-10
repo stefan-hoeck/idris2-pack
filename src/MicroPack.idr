@@ -25,11 +25,14 @@ microInit dir scheme db = MkConfig {
   , collection    = db
   , scheme        = parse scheme
   , bootstrap     = True
-  , withSrc       = True
   , safetyPrompt  = True
+  , withSrc       = True
+  , withIpkg      = Nothing
+  , rlwrap        = False
   , autoLibs      = []
   , autoApps      = ["pack"]
   , custom        = empty
+  , queryType     = NameOnly
   , db            = ()
   }
 

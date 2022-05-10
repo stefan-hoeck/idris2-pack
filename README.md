@@ -73,6 +73,16 @@ pack exec test.ipkg -n 50
 pack exec katla --help
 ```
 
+You can use *pack* to start an Idris REPL session, optionally
+with making dependencies listed in an `.ipkg` file available
+(these will first be built and installed if necessary):
+
+```sh
+pack repl
+pack repl Test.idr
+pack --with-ipkg rhone.ipkg repl src/Data/MSF.idr
+```
+
 ## Customization
 
 User settings are stored in file `$PACK_DIR/user/pack.toml`.
@@ -136,7 +146,7 @@ There is a lot of functionality still missing. Here's a
 non-comprehensive list:
 
 - [x] Support for local package collections
-- [ ] Command for starting a REPL
+- [x] Command for starting a REPL session
 - [ ] Support for custom build directories
 - [x] Command for typechecking an Idris package
 - [x] Command for building a local Idris2 package

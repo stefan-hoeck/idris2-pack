@@ -70,6 +70,7 @@ optionFlags =
   , "switch"
   , "install"
   , "remove"
+  , "repl"
   , "install-app"
   , "completion"
   , "completion-script"
@@ -85,6 +86,7 @@ opts "--" "pack"  e = pure optionFlags
 
 -- options
 opts x "--package-set"    e = prefixOnlyIfNonEmpty x <$> collections e
+opts x "--with-ipkg"      e = prefixOnlyIfNonEmpty x <$> ipkgFiles
 opts x "-p"               e = prefixOnlyIfNonEmpty x <$> collections e
 
 -- actions
