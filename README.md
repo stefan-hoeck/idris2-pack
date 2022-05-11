@@ -35,7 +35,7 @@ is on your path and you have installed
 To install a library from the package collection, run
 
 ```sh
-pack install hedgeog
+pack install hedgehog
 ```
 
 This will download and build the
@@ -66,7 +66,9 @@ pack typecheck elab-util.ipkg
 ```
 
 The build tool can run executables, both from local
-packages as well as from installed applications:
+packages as well as from installed applications. Command
+line arguments to be passed on to the executable can be
+listed after the package name or `.ipkg` file:
 
 ```sh
 pack exec test.ipkg -n 50
@@ -100,7 +102,7 @@ collection = "nightly-220507"
 
 It is also possible to add local projects as well as GitHub
 projects not yet managed by your package collection of choice
-to the set of packages known to pack. For instance, assuming you
+to the set of packages known to *pack*. For instance, assuming you
 have a local project called `hello` located in directory
 `/data/me/idris/hello` with `.ipkg` file `hello.ipkg`,
 and you want to make this available to all package collections
