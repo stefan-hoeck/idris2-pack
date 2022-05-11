@@ -71,7 +71,12 @@ packToml scheme db = """
   bootstrap  = false
 
   # Name or path to the scheme executable to use.
-  scheme     = "\{scheme}"
+  scheme      = "\{scheme}"
+
+  # Set this to `true` in order to run REPL sessions from within
+  # `rlwrap`. This will give you additional features such as a
+  # command history.
+  repl.rlwrap = false
 
   # Below are some examples for custom packages
 
