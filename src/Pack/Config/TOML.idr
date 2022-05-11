@@ -24,7 +24,7 @@ config dir v =
               (optValAt "install.safety-prompt" True v)
               (optValAt "install.with-src" False v)
               (pure Nothing)
-              (optValAt "repl.rlwrap" False v)
+              (optValAt "irdis2.repl.rlwrap" False v)
               (optValAt "install.libs" [] v)
               (optValAt "install.apps" [] v)
               (optValAt "custom" empty v)
