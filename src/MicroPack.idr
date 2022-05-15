@@ -26,6 +26,7 @@ microInit dir scheme db = MkConfig {
   , scheme        = parse scheme
   , bootstrap     = True
   , safetyPrompt  = True
+  , switchDB      = True
   , withSrc       = True
   , withIpkg      = Nothing
   , rlwrap        = False

@@ -27,6 +27,9 @@ setPrompt b = {safetyPrompt := b}
 setScheme : String -> Config s -> Config s
 setScheme s = {scheme := parse s}
 
+switch : Config s -> Config s
+switch = {switchDB := True}
+
 setRlwrap : Bool -> Config s -> Config s
 setRlwrap b = {rlwrap := b }
 
@@ -65,6 +68,11 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             """
             Don't prompt before installing a potentially unsafe package
             with custom build hooks.
+            """
+        , MkOpt [] ["switch"]   (NoArg switch)
+            """
+            Add symlinks to point to the currently used data collection's
+            installation directory.
             """
         , MkOpt [] ["with-src"]   (NoArg withSrc)
             """
