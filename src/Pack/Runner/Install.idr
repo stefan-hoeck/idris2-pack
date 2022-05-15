@@ -25,15 +25,18 @@ idrisPkg e cmd ipkg = sys "\{show $ idrisExec e} \{cmd} \{show ipkg}"
 copyApp : HasIO io => Env HasIdris -> EitherT PackErr io ()
 copyApp e = sys "cp -r build/exec/* \{show $ idrisBinDir e}"
 
+links : HasIO io => Env DBLoaded -> EitherT PackErr io (Env HasIdris)
+links e = do
+  when e.switchDB $ do
+    link (idrisBinDir e) (packBinDir e)
+    link (idrisPrefixDir e) (packIdrisDir e)
+  pure $ {db $= id} e
+
 ||| Builds and installs the Idris commit given in the environment.
 export
 mkIdris : HasIO io => Env DBLoaded -> EitherT PackErr io (Env HasIdris)
 mkIdris e = do
-  False <- exists (idrisInstallDir e)
-    | True => do
-        link (idrisBinDir e) (packBinDir e)
-        link (idrisPrefixDir e) (packIdrisDir e)
-        pure $ {db $= id} e
+  False <- exists (idrisInstallDir e) | True => links e
 
   if e.bootstrap
      then -- build with bootstrapping
@@ -54,9 +57,7 @@ mkIdris e = do
          sys "make clean"
          sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
 
-  link (idrisBinDir e) (packBinDir e)
-  link (idrisPrefixDir e) (packIdrisDir e)
-  pure $ {db $= id} e
+  links e
 
 installCmd : (withSrc : Bool) -> String
 installCmd True  = "--install-with-src"

@@ -66,6 +66,11 @@ record Config (s : Maybe State) where
   ||| build or install hooks.
   safetyPrompt : Bool
 
+  ||| True if symlinks in the `$HOME/.pack` dir should
+  ||| be made to point to the currently used data collection's
+  ||| installation directory
+  switchDB     : Bool
+
   ||| Whether to install the library sources as well
   withSrc      : Bool
 
