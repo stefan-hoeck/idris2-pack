@@ -3,6 +3,7 @@ module Pack.Runner.Database
 import Data.SortedMap
 import Idris.Package.Types
 import Libraries.Utils.Path
+import Pack.Config.Env
 import Pack.Config.Types
 import Pack.Core
 import Pack.Database.Types
@@ -40,28 +41,33 @@ packageExists :  HasIO io
               => (env : Env s)
               -> ResolvedPackage
               -> EitherT PackErr io Bool
-packageExists env p = exists (packageInstallDir env p)
+packageExists env p =
+  let dir = packageInstallDir env p
+   in do
+       debug env "Looking for package \{name p} at \{show dir}"
+       exists dir
 
 ||| Check if the executable of a package has already been
 ||| built and installed
 export
 executableExists : HasIO io => Config s -> String -> EitherT PackErr io Bool
-executableExists c p = exists (packageExec c p)
+executableExists c p =
+  let pth = packageExec c p
+   in do
+       debug c "Looking for executable \{p} at \{show pth}"
+       exists pth
 
-||| Lookup a package name in the package data base,
-||| then download and extract its `.ipkg` file from
-||| its GitHub repository.
-export covering
-resolve : HasIO io => (e : Env s) -> PkgRep -> EitherT PackErr io ResolvedPackage
-resolve _ (Pkg "base")    = pure Base
-resolve _ (Pkg "contrib") = pure Contrib
-resolve _ (Pkg "linear")  = pure Linear
-resolve _ (Pkg "idris2")  = pure Idris2
-resolve _ (Pkg "network") = pure Network
-resolve _ (Pkg "prelude") = pure Prelude
-resolve _ (Pkg "test")    = pure Test
-resolve e (Ipkg path)     = RIpkg path <$> parseIpkgFile path
-resolve e (Pkg n)         = case lookup n (allPackages e) of
+covering
+resolveImpl : HasIO io => (e : Env s) -> PkgRep -> EitherT PackErr io ResolvedPackage
+resolveImpl _ (Pkg "base")    = pure Base
+resolveImpl _ (Pkg "contrib") = pure Contrib
+resolveImpl _ (Pkg "linear")  = pure Linear
+resolveImpl _ (Pkg "idris2")  = pure Idris2
+resolveImpl _ (Pkg "network") = pure Network
+resolveImpl _ (Pkg "prelude") = pure Prelude
+resolveImpl _ (Pkg "test")    = pure Test
+resolveImpl e (Ipkg path)     = RIpkg path <$> parseIpkgFile path
+resolveImpl e (Pkg n)         = case lookup n (allPackages e) of
   Nothing  => throwE (UnknownPkg n)
 
   -- this is a known package so we download its `.ipkg`
@@ -79,3 +85,24 @@ resolve e (Pkg n)         = case lookup n (allPackages e) of
            RGitHub n url commit ipkg <$> parseIpkgFile ipkg
   Just (Local dir ipkg) =>
     inDir dir $ RLocal n dir ipkg <$> parseIpkgFile ipkg
+
+execStr : PkgDesc -> String
+execStr d = maybe "library" (const "application") d.executable
+
+descStr : ResolvedPackage -> String
+descStr (RGitHub name url commit ipkg desc) =
+  "GitHub \{execStr desc} (\{url}:\{commit})"
+descStr (RIpkg path desc) = ".ipkg \{execStr desc}"
+descStr (RLocal name dir ipkg desc) = "local \{execStr desc}"
+descStr _ = "core package"
+
+||| Lookup a package name in the package data base,
+||| then download and extract its `.ipkg` file from
+||| its GitHub repository.
+export covering
+resolve : HasIO io => (e : Env s) -> PkgRep -> EitherT PackErr io ResolvedPackage
+resolve e pr = do
+  debug e "Trying to resolve package \{pr}"
+  res <- resolveImpl e pr
+  debug e "Found \{descStr res} \{name res}"
+  pure res

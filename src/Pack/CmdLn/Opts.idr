@@ -9,6 +9,9 @@ import System.Console.GetOpt
 
 %default total
 
+debug : Config s -> Config s
+debug = {logLevel := Debug}
+
 bootstrap : Config s -> Config s
 bootstrap = {bootstrap := True}
 
@@ -88,6 +91,8 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             """
         , MkOpt [] ["rlwrap"]   (NoArg $ setRlwrap True)
             "Run a REPL session in `rlwrap`."
+        , MkOpt ['v'] ["verbose"]   (NoArg debug)
+            "Print debugging information"
         ]
 
 export

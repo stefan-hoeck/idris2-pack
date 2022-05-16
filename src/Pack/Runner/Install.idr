@@ -20,14 +20,19 @@ idrisPkg :  HasIO io
          -> (cmd : String)
          -> Path
          -> EitherT PackErr io ()
-idrisPkg e cmd ipkg = sys "\{show $ idrisExec e} \{cmd} \{show ipkg}"
+idrisPkg e cmd ipkg =
+  let str = "\{show $ idrisExec e} \{cmd} \{show ipkg}"
+   in debug e "About to run: \{str}" >> sys str
 
 copyApp : HasIO io => Env HasIdris -> EitherT PackErr io ()
-copyApp e = sys "cp -r build/exec/* \{show $ idrisBinDir e}"
+copyApp e =
+  debug e "Copying application" >>
+  sys "cp -r build/exec/* \{show $ idrisBinDir e}"
 
 links : HasIO io => Env DBLoaded -> EitherT PackErr io (Env HasIdris)
 links e = do
   when e.switchDB $ do
+    debug e "Creating sym links"
     link (idrisBinDir e) (packBinDir e)
     link (idrisPrefixDir e) (packIdrisDir e)
   pure $ {db $= id} e
@@ -36,8 +41,10 @@ links e = do
 export
 mkIdris : HasIO io => Env DBLoaded -> EitherT PackErr io (Env HasIdris)
 mkIdris e = do
+  debug e "Checking Idris installation"
   False <- exists (idrisInstallDir e) | True => links e
 
+  debug e "No Idris compiler found. Installing..."
   if e.bootstrap
      then -- build with bootstrapping
        withGit (tmpDir e) idrisRepo e.db.idrisCommit $ do
@@ -94,6 +101,7 @@ installLib :  HasIO io
            -> PkgRep
            -> EitherT PackErr io ()
 installLib e n = do
+  debug e "Installing library \{n}..."
   rp <- resolve e n
   traverse_ (installLib e) (dependencies rp)
   case rp of
@@ -123,6 +131,7 @@ removeExec e n = do
 export covering
 remove : HasIO io => Env s -> PkgRep -> EitherT PackErr io ()
 remove env n = do
+  debug env "Removing library or application \{n}..."
   rp <- resolve env n
   rmDir (packageInstallDir env rp)
   whenJust (executable rp) (removeExec env)
@@ -187,6 +196,7 @@ installApp :  HasIO io
            -> PkgRep
            -> EitherT PackErr io ()
 installApp e n = do
+  debug e "Installing application \{n}..."
   rp       <- resolve e n
   Just exe <- pure (executable rp) | Nothing => throwE (NoApp n)
   traverse_ (installLib e) (dependencies rp)
@@ -238,6 +248,7 @@ export covering
 idrisEnv : HasIO io => Config Nothing -> EitherT PackErr io (Env HasIdris)
 idrisEnv c = do
   e <- env c >>= mkIdris
-  traverse_ (installLib e) (map Pkg e.autoLibs)
-  traverse_ (installApp e) (map Pkg e.autoApps)
+  when e.switchDB $ do
+    traverse_ (installLib e) (map Pkg e.autoLibs)
+    traverse_ (installApp e) (map Pkg e.autoApps)
   pure e

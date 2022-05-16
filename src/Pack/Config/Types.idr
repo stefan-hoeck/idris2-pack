@@ -92,6 +92,9 @@ record Config (s : Maybe State) where
   ||| Type of query to run
   queryType    : QueryType
 
+  ||| Verbosity of the Log
+  logLevel     : LogLevel
+
   ||| The package collection
   db           : DBType s
 

@@ -34,6 +34,7 @@ microInit dir scheme db = MkConfig {
   , autoApps      = ["pack"]
   , custom        = empty
   , queryType     = NameOnly
+  , logLevel      = Info
   , db            = ()
   }
 
