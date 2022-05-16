@@ -8,3 +8,7 @@ DB ?= nightly-220507
 
 micropack:
 	${SCHEME} --script micropack/micropack.ss ${DB}
+
+.PHONY: install-lib
+install-lib:
+	idris2 --install pack.ipkg
