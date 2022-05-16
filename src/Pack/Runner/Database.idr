@@ -10,31 +10,6 @@ import Pack.Database.Types
 
 %default total
 
-covering
-commitOf : HasIO io => Package -> EitherT PackErr io Package
-commitOf (GitHub url branch ipkg) = do
-  commit <- gitLatest url branch
-  pure $ GitHub url commit ipkg
-commitOf p                        = pure p
-
-||| Converts a data base with a branch name for each
-||| package to one holding the latest commit hash for each.
-export covering
-dbOf : HasIO io => DB -> EitherT PackErr io DB
-dbOf (MkDB commit v ps) = do
-  nc  <- gitLatest idrisRepo "main"
-  nps <- traverse commitOf ps
-  pure $ MkDB nc v nps
-
-||| Converts a data base with a branch name for each
-||| package to one holding the latest commit hash for each
-||| and writes the resulting DB to the given file.
-export covering
-writeLatestDB : HasIO io => Path -> Env s -> EitherT PackErr io ()
-writeLatestDB path e = do
-  ndb <- dbOf e.db
-  write path (printDB ndb)
-
 ||| Check if a package has already been built and installed
 export
 packageExists :  HasIO io

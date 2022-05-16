@@ -221,10 +221,6 @@ package collection) to a `ResolvedPackage`, which comes
 with a parsed `.ipkg` file of type
 `Idris.Package.Types.PkgDesc`.
 
-Module `Pack.Runner.Check` provides functionality for
-running sanity checks on a package collection and printing
-a report with the results.
-
 Module `Pack.Runner.Install` implements actions for
 installing libraries and applications, as well as
 building and type checking local projects.

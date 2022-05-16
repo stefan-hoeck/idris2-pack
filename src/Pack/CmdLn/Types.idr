@@ -20,8 +20,6 @@ data Cmd : Type where
   InstallApp       : List PkgRep -> Cmd
   Remove           : List PkgRep -> Cmd
 
-  CheckDB          : DBName -> Cmd
-  FromHEAD         : Path -> Cmd
   UpdateDB         : Cmd
 
   Query            : String -> Cmd
