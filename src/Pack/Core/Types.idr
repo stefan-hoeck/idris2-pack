@@ -315,3 +315,27 @@ printErr (TOMLFile file err) =
   "Error in file \{show file}: \{printTOMLErr err}."
 
 printErr (TOMLParse file err) = "Error in file \{show file}: \{err}."
+
+--------------------------------------------------------------------------------
+--          Logging
+--------------------------------------------------------------------------------
+
+public export
+data LogLevel = Debug | Info | Warning
+
+llToNat : LogLevel -> Nat
+llToNat Debug   = 0
+llToNat Info    = 1
+llToNat Warning = 2
+
+export
+Eq LogLevel where (==) = (==) `on` llToNat
+
+export
+Ord LogLevel where compare = compare `on` llToNat
+
+export
+Show LogLevel where
+  show Debug   = "debug"
+  show Info    = "info"
+  show Warning = "warning"

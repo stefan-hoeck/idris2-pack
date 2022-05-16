@@ -2,6 +2,7 @@ module Pack.Runner.Check
 
 import Control.Monad.State
 import Data.SortedMap
+import Pack.Config.Env
 import Pack.Config.Types
 import Pack.Core
 import Pack.Database.Types
@@ -35,6 +36,7 @@ checkPkg :  HasIO io
          -> PkgName
          -> StateT ReportDB io Report
 checkPkg e p = do
+  info e "Checking \{p}"
   Nothing  <- lookup p <$> get | Just rep => pure rep
   Right rp <- toState $ resolve e (Pkg p)
     | Left err => updateRep p (Error p err)

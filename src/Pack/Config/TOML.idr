@@ -30,5 +30,6 @@ config dir v =
               (optValAt "install.apps" [] v)
               (optValAt "custom" empty v)
               (pure NameOnly)
+              (pure Info)
               (pure ())
   |]

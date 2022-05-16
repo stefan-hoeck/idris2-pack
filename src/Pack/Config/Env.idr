@@ -17,6 +17,26 @@ import System
 --          Environment
 --------------------------------------------------------------------------------
 
+export
+log :  HasIO io
+    => (conf : Config s)
+    -> (lvl  : LogLevel)
+    -> (msg  : Lazy String)
+    -> io ()
+log c lvl msg = when (lvl >= c.logLevel) (putStrLn "[ \{show lvl} ] \{msg}")
+
+export
+debug : HasIO io => (conf : Config s) -> (msg  : Lazy String) -> io ()
+debug c = log c Debug
+
+export
+info : HasIO io => (conf : Config s) -> (msg  : Lazy String) -> io ()
+info c = log c Info
+
+export
+warn : HasIO io => (conf : Config s) -> (msg  : Lazy String) -> io ()
+warn c = log c Warning
+
 configPath : Path -> Path
 configPath dir = dir /> "user" /> "pack.toml"
 
@@ -42,6 +62,7 @@ getConfig' = do
         CheckDB    repo => {collection := repo} conf
         FromHEAD _      => {collection := "HEAD"} conf
         _               => conf
+  debug conf' "Config loaded"
   pure (conf',cmd)
 
 ||| Read application config from command line arguments.
@@ -53,8 +74,10 @@ getConfig = getConfig' >>= \p@(c,_) => mkDir c.packDir $> p
 export
 updateDB : HasIO io => Config s -> EitherT PackErr io ()
 updateDB conf = do
+  debug conf "removing db dir"
   rmDir (dbDir conf)
   withGit (tmpDir conf) dbRepo "main" $ do
+    debug conf "copying data collections"
     copyDir (tmpDir conf /> "collections") (dbDir conf)
 
 --------------------------------------------------------------------------------
@@ -66,6 +89,7 @@ loadDB : HasIO io => (conf : Config s) -> EitherT PackErr io DB
 loadDB conf = do
   dbDirExists <- exists (dbDir conf)
   when (not dbDirExists) (updateDB conf)
+  debug conf "reading package collection"
   readFromTOML (dbFile conf) (fromTOML)
 
 ||| Load the package database and create a package
