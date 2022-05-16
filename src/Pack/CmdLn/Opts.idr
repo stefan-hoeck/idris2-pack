@@ -103,6 +103,7 @@ optionNames = foldMap names descs
           map (\c => "-\{String.singleton c}") sns ++ map ("--" ++) lns
 
 
+export
 cmd : List String -> Either PackErr Cmd
 cmd []                         = Right PrintHelp
 cmd ["help"]                   = Right PrintHelp
@@ -110,9 +111,7 @@ cmd ["update-db"]              = Right UpdateDB
 cmd ["query", s]               = Right $ Query s
 cmd ["repl"]                   = Right $ Repl Nothing
 cmd ["repl", s]                = Right $ Repl (Just $ parse s)
-cmd ["check-db", db]           = Right $ CheckDB (MkDBName db)
 cmd ("exec" :: file :: args)   = Right $ Exec (fromString file) args
-cmd ["extract-from-head", p]   = Right $ FromHEAD (parse p)
 cmd ["build", file]            = Right $ Build (parse file)
 cmd ["typecheck", file]        = Right $ Typecheck (parse file)
 cmd ("install" :: xs)          = Right $ Install (map fromString xs)
@@ -126,14 +125,15 @@ cmd xs                         = Left  $ UnknownCommand xs
 ||| generates the application
 ||| config from a list of command line arguments.
 export
-applyArgs :  (init : Config Nothing)
-          -> (args : List String)
-          -> Either PackErr (Config Nothing, Cmd)
-applyArgs init args =
+applyArgs :  (init    : Config Nothing)
+          -> (args    : List String)
+          -> (readCmd : List String -> Either PackErr a)
+          -> Either PackErr (Config Nothing, a)
+applyArgs init args readCmd =
   case getOpt RequireOrder descs args of
        MkResult opts n  []      []       =>
          let conf = foldl (flip apply) init opts
-          in map (conf,) (cmd n)
+          in map (conf,) (readCmd n)
 
        MkResult _    _ (u :: _) _        => Left (UnknownArg u)
        MkResult _    _ _        (e :: _) => Left (ErroneousArg e)
@@ -198,15 +198,4 @@ usageInfo = """
       Query the package collection for the given name.
       Several command line options exist to define the type
       of information printed.
-
-    check-db <repository>
-      Check the given package collection by freshly
-      building and installing its designated Idris2 executable
-      followed by installing all listed packages.
-
-    extract-from-head <output file>
-      Extracts a new unstable data collection from the HEAD
-      colletion by querying the GitHub repository of every
-      package for the latest commit and writing everything in
-      a new file and stores it in the given file.
   """

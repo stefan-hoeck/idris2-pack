@@ -25,10 +25,7 @@ modules = Pack.CmdLn.Completion
         , Pack.Database.TOML
         , Pack.Database.Types
 
-        , Pack.Report.Types
-
         , Pack.Runner
-        , Pack.Runner.Check
         , Pack.Runner.Database
         , Pack.Runner.Install
         , Pack.Runner.Query

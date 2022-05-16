@@ -50,25 +50,20 @@ packDir = do
   Nothing <- getEnv "HOME"     | Just v => pure (parse v /> ".pack")
   throwE NoPackDir
 
-covering
-getConfig' : HasIO io => EitherT PackErr io (Config Nothing,Cmd)
-getConfig' = do
-  dir        <- packDir
-  ini        <- readFromTOML (configPath dir) (config dir)
-  pn :: args <- getArgs | Nil => pure (ini, PrintHelp)
-  (conf,cmd) <- liftEither $ applyArgs ini args
-  let conf' : Config Nothing
-      conf' = case cmd of
-        CheckDB    repo => {collection := repo} conf
-        FromHEAD _      => {collection := "HEAD"} conf
-        _               => conf
-  debug conf' "Config loaded"
-  pure (conf',cmd)
-
 ||| Read application config from command line arguments.
 export covering
-getConfig : HasIO io => EitherT PackErr io (Config Nothing,Cmd)
-getConfig = getConfig' >>= \p@(c,_) => mkDir c.packDir $> p
+getConfig :  HasIO io
+          => (readCmd : List String -> Either PackErr a)
+          -> (dflt    : a)
+          -> EitherT PackErr io (Config Nothing,a)
+getConfig readCmd dflt = do
+  dir        <- packDir
+  ini        <- readFromTOML (configPath dir) (config dir)
+  pn :: args <- getArgs | Nil => pure (ini, dflt)
+  (conf,cmd) <- liftEither $ applyArgs ini args readCmd
+  debug conf "Config loaded"
+  mkDir conf.packDir
+  pure (conf,cmd)
 
 ||| Update the package database.
 export
