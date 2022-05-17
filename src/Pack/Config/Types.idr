@@ -4,9 +4,10 @@ import Data.Maybe
 import Data.SortedMap
 import Data.String
 import Idris.Package.Types
+import Libraries.Data.List.Extra
+import Libraries.Utils.Path
 import Pack.Core.Types
 import Pack.Database.Types
-import Libraries.Utils.Path
 
 %default total
 
@@ -44,59 +45,81 @@ data QueryType : Type where
   ||| List direct dependencies
   Dependencies : QueryType
 
-||| Program configuration
+  ||| List detailed information about a package
+  Details      : QueryType
+
+||| Type-level identity
 public export
-record Config (s : Maybe State) where
+0 I : Type -> Type
+I t = t
+
+||| Program configuration
+|||
+||| Parameter `f` is used to represent the context of values.
+||| When we use the config as an environment for running *pack*
+||| programs is, the context will be set to `I`. For updating
+||| the configuration from user config file, we use context
+||| `Maybe`, because all values will be optional.
+public export
+record Config_ (f : Type -> Type) (s : Maybe State) where
   constructor MkConfig
   ||| Directory where the *pack* DB and installed
   ||| libraries and executables reside
-  packDir      : Path
+  packDir      : f Path
 
   ||| Package collection to use
-  collection   : DBName
+  collection   : f DBName
 
   ||| Scheme executable to use
-  scheme       : Path
+  scheme       : f Path
 
   ||| Whether to use bootstrapping when building Idris2
-  bootstrap    : Bool
+  bootstrap    : f Bool
 
   ||| Whether to prompt for a confirmation when
   ||| building or installing a package with custom
   ||| build or install hooks.
-  safetyPrompt : Bool
+  safetyPrompt : f Bool
 
   ||| True if symlinks in the `$HOME/.pack` dir should
   ||| be made to point to the currently used data collection's
   ||| installation directory
-  switchDB     : Bool
+  switchDB     : f Bool
 
   ||| Whether to install the library sources as well
-  withSrc      : Bool
+  withSrc      : f Bool
 
   ||| The `.ipkg` file to use when starting a REPL session
-  withIpkg     : Maybe Path
+  withIpkg     : f (Maybe Path)
 
   ||| Whether to use `rlwrap` to run a REPL session
-  rlwrap       : Bool
+  rlwrap       : f Bool
 
   ||| Libraries to install automatically
-  autoLibs     : List PkgName
+  autoLibs     : f (List PkgName)
 
   ||| Applications to install automatically
-  autoApps     : List PkgName
+  autoApps     : f (List PkgName)
 
   ||| Customizations to the package data base
-  custom       : SortedMap DBName (SortedMap PkgName Package)
+  custom       : f (SortedMap DBName (SortedMap PkgName Package))
 
   ||| Type of query to run
-  queryType    : QueryType
+  queryType    : f (QueryType)
 
   ||| Verbosity of the Log
-  logLevel     : LogLevel
+  logLevel     : f (LogLevel)
 
   ||| The package collection
-  db           : DBType s
+  db           : f (DBType s)
+
+--------------------------------------------------------------------------------
+--          Updating the Config
+--------------------------------------------------------------------------------
+
+public export
+0 Config : Maybe State -> Type
+Config = Config_ I
 
 ||| Program configuration with data collection
 public export
@@ -117,15 +140,73 @@ allPackages e =
       loc = fromMaybe empty $ lookup e.collection e.custom
    in e.db.packages `mergeRight` all `mergeRight` loc
 
+||| Initial config
+export
+init : (dir : Path) -> (coll : DBName) -> Config_ I Nothing
+init dir coll = MkConfig {
+    packDir      = dir
+  , collection   = coll
+  , scheme       = parse "scheme"
+  , bootstrap    = False
+  , safetyPrompt = True
+  , switchDB     = False
+  , withSrc      = False
+  , withIpkg     = Nothing
+  , rlwrap       = False
+  , autoLibs     = []
+  , autoApps     = []
+  , custom       = empty
+  , queryType    = NameOnly
+  , logLevel     = Info
+  , db           = ()
+  }
+
+infixl 7 `update`
+
+||| Update a config with optional settings
+export
+update : Config_ I Nothing -> Config_ Maybe Nothing -> Config_ I Nothing
+update ci cm = MkConfig {
+    packDir      = fromMaybe ci.packDir cm.packDir
+  , collection   = fromMaybe ci.collection cm.collection
+  , scheme       = fromMaybe ci.scheme cm.scheme
+  , bootstrap    = fromMaybe ci.bootstrap cm.bootstrap
+  , safetyPrompt = fromMaybe ci.safetyPrompt cm.safetyPrompt
+  , switchDB     = fromMaybe ci.switchDB cm.switchDB
+  , withSrc      = fromMaybe ci.withSrc cm.withSrc
+  , withIpkg     = fromMaybe ci.withIpkg cm.withIpkg
+  , rlwrap       = fromMaybe ci.rlwrap cm.rlwrap
+  , autoLibs     = sortedNub (ci.autoLibs ++ concat cm.autoLibs)
+  , autoApps     = sortedNub (ci.autoApps ++ concat cm.autoApps)
+  , custom       = mergeWith mergeRight ci.custom (fromMaybe empty cm.custom)
+  , queryType    = fromMaybe ci.queryType cm.queryType
+  , logLevel     = fromMaybe ci.logLevel cm.logLevel
+  , db           = ()
+  }
+
+--------------------------------------------------------------------------------
+--          Files and Directories
+--------------------------------------------------------------------------------
+
+||| Temporary directory used for building packages.
+export
+tmpDir_ : (packDir : Path) -> Path
+tmpDir_ packDir = packDir /> "tmp"
+
 ||| Temporary directory used for building packages.
 export
 tmpDir : Config s -> Path
-tmpDir c = c.packDir /> "tmp"
+tmpDir = tmpDir_ . packDir
+
+||| Directory where databases are stored.
+export
+dbDir_ : (packDir : Path) -> Path
+dbDir_ packDir = packDir /> "db"
 
 ||| Directory where databases are stored.
 export
 dbDir : Config s -> Path
-dbDir c = c.packDir /> "db"
+dbDir = dbDir_ . packDir
 
 ||| Directory where databases are stored.
 export

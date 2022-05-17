@@ -68,6 +68,11 @@ export
 exists : HasIO io => (dir : Path) -> io Bool
 exists = exists . show
 
+||| Checks if a file at the given location is missing.
+export
+missing : HasIO io => (dir : Path) -> io Bool
+missing = map not . exists
+
 ||| Tries to create a director (including parent directories)
 export
 mkDir : HasIO io => (dir : Path) -> EitherT PackErr io ()
@@ -113,6 +118,11 @@ inDir dir act =
 export
 entries : HasIO io => (dir : Path) -> EitherT PackErr io (List String)
 entries dir = eitherIO (DirEntries dir) (listDir $ show dir)
+
+||| Returns the names of entries in a directory
+export
+tomlFiles : HasIO io => (dir : Path) -> EitherT PackErr io (List String)
+tomlFiles dir = filter ((Just "toml" ==) . extension) <$> entries dir
 
 ||| Returns the names of entries in the current directory
 export

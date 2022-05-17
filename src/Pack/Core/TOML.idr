@@ -169,3 +169,15 @@ readFromTOML :  HasIO io
 readFromTOML path f = do
   v <- readTOML path
   liftEither $ mapFst (TOMLFile path) (f v)
+
+||| Reads a file, converts its content to a TOML value, and
+||| extracts an Idris value from this.
+export covering
+readOptionalFromTOML :  HasIO io
+                     => (path : Path)
+                     -> (Value -> Either TOMLErr a)
+                     -> EitherT PackErr io a
+readOptionalFromTOML path f = do
+  True <- exists path
+    | False => liftEither (mapFst (TOMLFile path) . f $ VTable empty)
+  readFromTOML path f

@@ -142,6 +142,22 @@ possible to override an officially supported package with
 a custom version of yours (either a local clone or perhaps
 a fork on GitHub).
 
+### Local `pack.toml` Files
+
+You can also add a `pack.toml` file locally to the root folder
+of a project. Just as with the global `pack.toml` file in directory
+`$HOME/.pack/user/`, you can specify the package collection to
+use for a project as well as define additional local dependencies
+and even override global package settings. Local settings take
+precedence over global once.
+
+A note of caution: At the moment, *pack* uses a single installation
+directory (located at `$HOME/.pack/collection-name/idris2-[idris-version]`)
+for all dependencies. If you override global dependencies with local
+ones, it may be hard to figure out, which version of a library is
+installed at the moment. I'll have to think carefully about how
+to resolve this, because this is a serious limitation.
+
 ## Stuff still Missing
 
 There is a lot of functionality still missing. Here's a
