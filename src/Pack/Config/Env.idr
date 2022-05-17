@@ -1,6 +1,8 @@
 module Pack.Config.Env
 
+import Data.Maybe
 import Data.String
+import Libraries.Utils.Path
 import Pack.CmdLn.Opts
 import Pack.CmdLn.Types
 import Pack.Config.TOML
@@ -50,6 +52,31 @@ packDir = do
   Nothing <- getEnv "HOME"     | Just v => pure (parse v /> ".pack")
   throwE NoPackDir
 
+||| Update the package database.
+export
+updateDB_ : HasIO io => (packDir : Path) -> EitherT PackErr io ()
+updateDB_ packDir = do
+  rmDir (dbDir_ packDir)
+  withGit (tmpDir_ packDir) dbRepo "main" $
+    copyDir (tmpDir_ packDir /> "collections") (dbDir_ packDir)
+
+||| Loads the name of the default collection (currently the latest
+||| nightly)
+export
+defaultColl : HasIO io => (packDir : Path) -> EitherT PackErr io DBName
+defaultColl packDir = do
+  when !(missing $ dbDir_ packDir) (updateDB_ packDir)
+  (x :: xs) <- filter ("HEAD.toml" /=) <$> tomlFiles (dbDir_ packDir)
+    | [] => pure $ MkDBName "HEAD"
+  pure . MkDBName . fromMaybe "HEAD" . fileStem $ foldl max x xs
+
+||| Update the package database.
+export
+updateDB : HasIO io => Config s -> EitherT PackErr io ()
+updateDB conf = do
+  debug conf "updating data collections"
+  updateDB_ conf.packDir
+
 ||| Read application config from command line arguments.
 export covering
 getConfig :  HasIO io
@@ -58,22 +85,17 @@ getConfig :  HasIO io
           -> EitherT PackErr io (Config Nothing,a)
 getConfig readCmd dflt = do
   dir        <- packDir
-  ini        <- readFromTOML (configPath dir) (config dir)
+  coll       <- defaultColl dir
+  global     <- readOptionalFromTOML (configPath dir) config
+  local      <- readOptionalFromTOML (parse "pack.toml") config
+
+  let ini = init dir coll `update` global `update` local
+
   pn :: args <- getArgs | Nil => pure (ini, dflt)
   (conf,cmd) <- liftEither $ applyArgs ini args readCmd
   debug conf "Config loaded"
   mkDir conf.packDir
   pure (conf,cmd)
-
-||| Update the package database.
-export
-updateDB : HasIO io => Config s -> EitherT PackErr io ()
-updateDB conf = do
-  debug conf "removing db dir"
-  rmDir (dbDir conf)
-  withGit (tmpDir conf) dbRepo "main" $ do
-    debug conf "copying data collections"
-    copyDir (tmpDir conf /> "collections") (dbDir conf)
 
 --------------------------------------------------------------------------------
 --          Environment
@@ -82,8 +104,7 @@ updateDB conf = do
 covering
 loadDB : HasIO io => (conf : Config s) -> EitherT PackErr io DB
 loadDB conf = do
-  dbDirExists <- exists (dbDir conf)
-  when (not dbDirExists) (updateDB conf)
+  when !(missing $ dbDir conf) (updateDB conf)
   debug conf "reading package collection"
   readFromTOML (dbFile conf) (fromTOML)
 

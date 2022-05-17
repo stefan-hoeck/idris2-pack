@@ -53,6 +53,8 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             Print the short description stored in an `.ipkg` file for
             each query result.
             """
+        , MkOpt ['l'] ["long-desc"]   (NoArg $ setQuery Details)
+            "Print a detailed description of a package known to pack"
         , MkOpt ['d'] ["dependencies"]   (NoArg $ setQuery Dependencies)
             "Print the dependencies of each query result."
         , MkOpt [] ["bootstrap"]   (NoArg bootstrap)
@@ -174,10 +176,6 @@ usageInfo = """
 
     install [package or .ipkg file...]
       Install the given package(s) and/or local .ipkg files.
-
-    install-with-src [package or .ipkg file...]
-      Install the given package(s) and/or local .ipkg files
-      together with their sources.
 
     install-app [package or .ipkg file...]
       Install the given application(s).
