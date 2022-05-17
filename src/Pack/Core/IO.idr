@@ -171,11 +171,12 @@ write path str = do
   eitherIO (WriteFile path) (writeFile (show path) str)
 
 ||| Creates a symbolic link from one path to another,
-||| remove an link at path `to` if there already is one.
+||| remove a link at path `to` if there already is one.
 export
 link : HasIO io => (from,to : Path) -> EitherT PackErr io ()
 link from to = do
   rmFile to
+  mkParentDir to
   sys "ln -s \{show from} \{show to}"
 
 ||| Copy a file.
