@@ -27,7 +27,6 @@ microInit dir scheme db = MkConfig {
   , scheme        = parse scheme
   , bootstrap     = True
   , safetyPrompt  = True
-  , switchDB      = True
   , withSrc       = True
   , withIpkg      = Nothing
   , rlwrap        = False
@@ -53,4 +52,5 @@ main = run $ do
   write (packToml dir) (initToml scheme db)
 
   updateDB conf
-  ignore $ idrisEnv conf
+  e <- idrisEnv conf
+  links e

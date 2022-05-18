@@ -30,9 +30,6 @@ setPrompt b = {safetyPrompt := b}
 setScheme : String -> Config s -> Config s
 setScheme s = {scheme := parse s}
 
-switch : Config s -> Config s
-switch = {switchDB := True}
-
 setRlwrap : Bool -> Config s -> Config s
 setRlwrap b = {rlwrap := b }
 
@@ -73,11 +70,6 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             """
             Don't prompt before installing a potentially unsafe package
             with custom build hooks.
-            """
-        , MkOpt [] ["switch"]   (NoArg switch)
-            """
-            Add symlinks to point to the currently used data collection's
-            installation directory.
             """
         , MkOpt [] ["with-src"]   (NoArg withSrc)
             """
@@ -189,6 +181,12 @@ usageInfo = """
     update-db
       Update the pack data base by downloading the package collections
       from https://github.com/stefan-hoeck/idris2-pack-db.
+
+    switch [collection name]
+      Switch to the given package collection. This will make all
+      binaries installed for this collection available in folder
+      `$HOME/.pack/bin`, which you can then include in your
+      `$PATH` variable.
 
     exec <package or .ipkg file> [args]
       Build and run an executable given either as

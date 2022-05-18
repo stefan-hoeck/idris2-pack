@@ -33,20 +33,19 @@ copyApp e rp =
         mkDir dir
         sys "cp -r build/exec/* \{show dir}"
 
-links : HasIO io => Env DBLoaded -> EitherT PackErr io (Env HasIdris)
+export
+links : HasIO io => Env HasIdris -> EitherT PackErr io ()
 links e = do
-  when e.switchDB $ do
-    rmDir (packBinDir e)
-    debug e "Creating sym links"
-    link (collectionBinDir e) (packBinDir e)
-  pure $ {db $= id} e
+  rmDir (packBinDir e)
+  debug e "Creating sym links"
+  link (collectionBinDir e) (packBinDir e)
 
 ||| Builds and installs the Idris commit given in the environment.
 export
 mkIdris : HasIO io => Env DBLoaded -> EitherT PackErr io (Env HasIdris)
 mkIdris e = do
   debug e "Checking Idris installation"
-  False <- exists (idrisInstallDir e) | True => links e
+  False <- exists (idrisInstallDir e) | True => pure $ {db $= id} e
 
   debug e "No Idris compiler found. Installing..."
   if e.bootstrap
@@ -69,7 +68,7 @@ mkIdris e = do
          sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
 
   link (idrisExec e) (collectionIdrisExec e)
-  links e
+  pure $ {db $= id} e
 
 installCmd : (withSrc : Bool) -> String
 installCmd True  = "--install-with-src"
@@ -264,7 +263,6 @@ export covering
 idrisEnv : HasIO io => Config Nothing -> EitherT PackErr io (Env HasIdris)
 idrisEnv c = do
   e <- env c >>= mkIdris
-  when e.switchDB $ do
-    traverse_ (installLib e) (map Pkg e.autoLibs)
-    traverse_ (installApp e) (map Pkg e.autoApps)
+  traverse_ (installLib e) (map Pkg e.autoLibs)
+  traverse_ (installApp e) (map Pkg e.autoApps)
   pure e

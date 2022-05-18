@@ -24,6 +24,7 @@ data Cmd : Type where
   LibsPath         : Cmd
   DataPath         : Cmd
 
+  Switch           : DBName -> Cmd
   UpdateDB         : Cmd
 
   Query            : String -> Cmd

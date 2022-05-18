@@ -82,11 +82,6 @@ record Config_ (f : Type -> Type) (s : Maybe State) where
   ||| build or install hooks.
   safetyPrompt : f Bool
 
-  ||| True if symlinks in the `$HOME/.pack` dir should
-  ||| be made to point to the currently used data collection's
-  ||| installation directory
-  switchDB     : f Bool
-
   ||| Whether to install the library sources as well
   withSrc      : f Bool
 
@@ -150,7 +145,6 @@ init dir coll = MkConfig {
   , scheme       = parse "scheme"
   , bootstrap    = False
   , safetyPrompt = True
-  , switchDB     = False
   , withSrc      = False
   , withIpkg     = Nothing
   , rlwrap       = False
@@ -173,7 +167,6 @@ update ci cm = MkConfig {
   , scheme       = fromMaybe ci.scheme cm.scheme
   , bootstrap    = fromMaybe ci.bootstrap cm.bootstrap
   , safetyPrompt = fromMaybe ci.safetyPrompt cm.safetyPrompt
-  , switchDB     = fromMaybe ci.switchDB cm.switchDB
   , withSrc      = fromMaybe ci.withSrc cm.withSrc
   , withIpkg     = fromMaybe ci.withIpkg cm.withIpkg
   , rlwrap       = fromMaybe ci.rlwrap cm.rlwrap
