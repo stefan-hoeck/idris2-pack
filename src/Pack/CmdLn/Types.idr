@@ -20,6 +20,10 @@ data Cmd : Type where
   InstallApp       : List PkgRep -> Cmd
   Remove           : List PkgRep -> Cmd
 
+  PackagePath      : Cmd
+  LibsPath         : Cmd
+  DataPath         : Cmd
+
   UpdateDB         : Cmd
 
   Query            : String -> Cmd

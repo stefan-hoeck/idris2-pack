@@ -121,6 +121,9 @@ cmd ("remove" :: xs)           = Right $ Remove (map fromString xs)
 cmd ("install-app" :: xs)      = Right $ InstallApp (map fromString xs)
 cmd ["completion",a,b]         = Right $ Completion a b
 cmd ["completion-script",f]    = Right $ CompletionScript f
+cmd ["package-path"]           = Right PackagePath
+cmd ["libs-path"]              = Right LibsPath
+cmd ["data-path"]              = Right DataPath
 cmd xs                         = Left  $ UnknownCommand xs
 
 ||| Given a root directory for *pack* and a db version,
@@ -196,4 +199,17 @@ usageInfo = """
       Query the package collection for the given name.
       Several command line options exist to define the type
       of information printed.
+
+    package-path
+      Return a colon-separated list of paths where packages are
+      installed. This is useful for programs like `idris2-lsp`,
+      which need to know where to look for installed packages.
+
+    libs-path
+      Return a colon-separated list of paths where libraries
+      for code generation are installed.
+
+    data-path
+      Return a colon-separated list of paths where data files
+      are installed.
   """

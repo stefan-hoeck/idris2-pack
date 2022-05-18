@@ -321,6 +321,16 @@ export
 idrisInstallDir : Env s -> Path
 idrisInstallDir e = idrisPrefixDir e /> idrisDir e
 
+||| The `lib` directory in the Idris2 installation folder
+export
+idrisLibDir : Env s -> Path
+idrisLibDir e = idrisInstallDir e /> "lib"
+
+||| The `support` directory in the Idris2 installation folder
+export
+idrisDataDir : Env s -> Path
+idrisDataDir e = idrisInstallDir e /> "support"
+
 export
 githubPkgPrefixDir : Env s -> PkgName -> Commit -> Path
 githubPkgPrefixDir e n c = commitDir e /> n.value /> c.value
@@ -389,15 +399,57 @@ packageAppDir : Env s -> ResolvedPackage -> String -> Path
 packageAppDir e rp n = packageBinDir e rp /> "\{n}_app"
 
 export
-pkgLibPathDir : Env s -> (PkgName, Package) -> Path
-pkgLibPathDir e (n, GitHub _ c _) = githubPkgPrefixDir e n c /> idrisDir e
-pkgLibPathDir e (n, Local _ _)    = localPkgPrefixDir e n /> idrisDir e
+pkgPathDir : Env s -> (PkgName, Package) -> Path
+pkgPathDir e (n, GitHub _ c _) = githubPkgPrefixDir e n c /> idrisDir e
+pkgPathDir e (n, Local _ _)    = localPkgPrefixDir e n /> idrisDir e
+
+export
+pkgLibDir : Env s -> (PkgName, Package) -> Path
+pkgLibDir e p = pkgPathDir e p /> "lib"
+
+export
+pkgDataDir : Env s -> (PkgName, Package) -> Path
+pkgDataDir e p = pkgPathDir e p /> "support"
+
+export
+packagePathDirs : Env s -> String
+packagePathDirs e =
+  let pth = fastConcat
+          . intersperse ":"
+          . map (show . pkgPathDir e)
+          $ SortedMap.toList (allPackages e)
+   in "\{show $ idrisInstallDir e}:\{pth}"
+
+export
+packageLibDirs : Env s -> String
+packageLibDirs e =
+  let pth = fastConcat
+          . intersperse ":"
+          . map (show . pkgLibDir e)
+          $ SortedMap.toList (allPackages e)
+   in "\{show $ idrisLibDir e}:\{pth}"
+
+export
+packageDataDirs : Env s -> String
+packageDataDirs e =
+  let pth = fastConcat
+          . intersperse ":"
+          . map (show . pkgDataDir e)
+          $ SortedMap.toList (allPackages e)
+   in "\{show $ idrisDataDir e}:\{pth}"
 
 export
 packagePath : Env s -> String
-packagePath e =
-  let pth = fastConcat
-          . intersperse ":"
-          . map (show . pkgLibPathDir e)
-          $ SortedMap.toList (allPackages e)
-   in "IDRIS2_PACKAGE_PATH=\"\{show $ idrisInstallDir e}:\{pth}\""
+packagePath e = "IDRIS2_PACKAGE_PATH=\"\{packagePathDirs e}\""
+
+export
+libPath : Env s -> String
+libPath e = "IDRIS2_LIBS=\"\{packageLibDirs e}\""
+
+export
+dataPath : Env s -> String
+dataPath e = "IDRIS2_DATA=\"\{packageDataDirs e}\""
+
+export
+buildEnv : Env s -> String
+buildEnv e = "\{packagePath e} \{libPath e} \{dataPath e}"

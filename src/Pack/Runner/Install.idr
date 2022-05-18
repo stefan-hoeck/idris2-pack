@@ -22,7 +22,7 @@ idrisPkg :  HasIO io
          -> Path
          -> EitherT PackErr io ()
 idrisPkg e env cmd ipkg =
-  let s = "\{env} \{packagePath e} \{show $ idrisExec e} \{cmd} \{show ipkg}"
+  let s = "\{env} \{buildEnv e} \{show $ idrisExec e} \{cmd} \{show ipkg}"
    in debug e "About to run: \{s}" >> sys s
 
 copyApp : HasIO io => Env HasIdris -> ResolvedPackage -> EitherT PackErr io ()

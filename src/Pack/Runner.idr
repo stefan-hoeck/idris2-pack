@@ -27,3 +27,6 @@ runCmd = do
     Install ps         => idrisEnv c >>= \e => traverse_ (installLib e) ps
     Remove ps          => idrisEnv c >>= \e => traverse_ (remove e) ps
     InstallApp ps      => idrisEnv c >>= \e => traverse_ (installApp e) ps
+    PackagePath        => env c >>= putStrLn . packagePathDirs
+    LibsPath           => env c >>= putStrLn . packageLibDirs
+    DataPath           => env c >>= putStrLn . packageDataDirs
