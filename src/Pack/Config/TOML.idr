@@ -22,7 +22,6 @@ config v =
               (maybeValAt "idris2.scheme" v)
               (maybeValAt "idris2.bootstrap" v)
               (maybeValAt "install.safety-prompt" v)
-              (pure Nothing)
               (maybeValAt "install.with-src" v)
               (pure Nothing)
               (maybeValAt "idris2.repl.rlwrap" v)

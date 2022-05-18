@@ -30,9 +30,6 @@ setPrompt b = {safetyPrompt := b}
 setScheme : String -> Config s -> Config s
 setScheme s = {scheme := parse s}
 
-switch : Config s -> Config s
-switch = {switchDB := True}
-
 setRlwrap : Bool -> Config s -> Config s
 setRlwrap b = {rlwrap := b }
 
@@ -73,11 +70,6 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             """
             Don't prompt before installing a potentially unsafe package
             with custom build hooks.
-            """
-        , MkOpt [] ["switch"]   (NoArg switch)
-            """
-            Add symlinks to point to the currently used data collection's
-            installation directory.
             """
         , MkOpt [] ["with-src"]   (NoArg withSrc)
             """
@@ -121,6 +113,9 @@ cmd ("remove" :: xs)           = Right $ Remove (map fromString xs)
 cmd ("install-app" :: xs)      = Right $ InstallApp (map fromString xs)
 cmd ["completion",a,b]         = Right $ Completion a b
 cmd ["completion-script",f]    = Right $ CompletionScript f
+cmd ["package-path"]           = Right PackagePath
+cmd ["libs-path"]              = Right LibsPath
+cmd ["data-path"]              = Right DataPath
 cmd xs                         = Left  $ UnknownCommand xs
 
 ||| Given a root directory for *pack* and a db version,
@@ -187,6 +182,12 @@ usageInfo = """
       Update the pack data base by downloading the package collections
       from https://github.com/stefan-hoeck/idris2-pack-db.
 
+    switch [collection name]
+      Switch to the given package collection. This will make all
+      binaries installed for this collection available in folder
+      `$HOME/.pack/bin`, which you can then include in your
+      `$PATH` variable.
+
     exec <package or .ipkg file> [args]
       Build and run an executable given either as
       an `.ipkg` file or a known package from the
@@ -196,4 +197,17 @@ usageInfo = """
       Query the package collection for the given name.
       Several command line options exist to define the type
       of information printed.
+
+    package-path
+      Return a colon-separated list of paths where packages are
+      installed. This is useful for programs like `idris2-lsp`,
+      which need to know where to look for installed packages.
+
+    libs-path
+      Return a colon-separated list of paths where libraries
+      for code generation are installed.
+
+    data-path
+      Return a colon-separated list of paths where data files
+      are installed.
   """

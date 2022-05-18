@@ -25,11 +25,15 @@ packageExists env p =
 ||| Check if the executable of a package has already been
 ||| built and installed
 export
-executableExists : HasIO io => Config s -> String -> EitherT PackErr io Bool
-executableExists c p =
-  let pth = packageExec c p
+executableExists :  HasIO io
+                 => Env s
+                 -> ResolvedPackage
+                 -> String
+                 -> EitherT PackErr io Bool
+executableExists c rp n =
+  let pth = packageExec c rp n
    in do
-       debug c "Looking for executable \{p} at \{show pth}"
+       debug c "Looking for executable \{n} at \{show pth}"
        exists pth
 
 covering
