@@ -133,9 +133,10 @@ removeExec :  HasIO io
            -> String
            -> EitherT PackErr io ()
 removeExec e rp n = do
+  debug e "Removing application \{n}"
+  rmFile (collectionAppExec e n)
   rmFile (packageExec e rp n)
   rmDir  (packageAppDir e rp n)
-  rmFile (collectionAppExec e n)
 
 ||| Remove a library or executable.
 export covering
