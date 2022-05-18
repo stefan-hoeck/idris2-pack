@@ -135,6 +135,7 @@ removeExec :  HasIO io
 removeExec e rp n = do
   rmFile (packageExec e rp n)
   rmDir  (packageAppDir e rp n)
+  rmFile (collectionAppExec e n)
 
 ||| Remove a library or executable.
 export covering
