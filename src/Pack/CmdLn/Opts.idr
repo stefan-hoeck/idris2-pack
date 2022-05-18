@@ -125,6 +125,7 @@ cmd ["completion-script",f]    = Right $ CompletionScript f
 cmd ["package-path"]           = Right PackagePath
 cmd ["libs-path"]              = Right LibsPath
 cmd ["data-path"]              = Right DataPath
+cmd ["switch",db]              = Right $ Switch (MkDBName db)
 cmd xs                         = Left  $ UnknownCommand xs
 
 ||| Given a root directory for *pack* and a db version,
