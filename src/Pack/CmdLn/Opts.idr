@@ -36,10 +36,19 @@ setRlwrap b = {rlwrap := b }
 setIpkg : String -> Config s -> Config s
 setIpkg s = {withIpkg := Just (parse s) }
 
+codegen : String -> Config s -> Config s
+codegen s = {codegen := fromString s}
+
 -- command line options with description
 descs : List $ OptDescr (Config Nothing -> Config Nothing)
 descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             "Set the curated package set to use."
+        , MkOpt [] ["cg"]   (ReqArg codegen "<codgen>")
+            """
+            Sets the backend to use when building Idris executables
+            or running the REPL. The default is to use the `chez`
+            code generator.
+            """
         , MkOpt ['s'] ["scheme"]   (ReqArg setScheme "<exec>")
             """
             Sets the scheme executable for installing the Idris2 compiler.

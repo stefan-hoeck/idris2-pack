@@ -49,6 +49,46 @@ data QueryType : Type where
   ||| List detailed information about a package
   Details      : QueryType
 
+||| Code generator to use
+public export
+data Codegen : Type where
+  Chez       : Codegen
+  ChezSep    : Codegen
+  Racket     : Codegen
+  Gambit     : Codegen
+  Node       : Codegen
+  JavaScript : Codegen
+  RefC       : Codegen
+  VMCode     : Codegen
+  Other      : String -> Codegen
+
+export
+Show Codegen where
+  show Chez       = "chez"
+  show ChezSep    = "chez-sep"
+  show Racket     = "racket"
+  show Gambit     = "gambit"
+  show Node       = "node"
+  show JavaScript = "javascript"
+  show RefC       = "refc"
+  show VMCode     = "vmcode-interp"
+  show (Other x)  = x
+
+export
+Interpolation Codegen where interpolate = show
+
+public export
+fromString : String -> Codegen
+fromString "chez"          = Chez
+fromString "chez-sep"      = ChezSep
+fromString "racket"        = Racket
+fromString "gambit"        = Gambit
+fromString "node"          = Node
+fromString "javascript"    = JavaScript
+fromString "refc"          = RefC
+fromString "vmcode-interp" = VMCode
+fromString x               = Other x
+
 ||| Type-level identity
 public export
 0 I : Type -> Type
@@ -106,6 +146,9 @@ record Config_ (f : Type -> Type) (s : Maybe State) where
   ||| Verbosity of the Log
   logLevel     : f (LogLevel)
 
+  ||| Codegen to use
+  codegen      : f (Codegen)
+
   ||| The package collection
   db           : f (DBType s)
 
@@ -153,6 +196,7 @@ init dir coll = MkConfig {
   , custom       = empty
   , queryType    = NameOnly
   , logLevel     = Info
+  , codegen      = Chez
   , db           = ()
   }
 
@@ -175,6 +219,7 @@ update ci cm = MkConfig {
   , custom       = mergeWith mergeRight ci.custom (fromMaybe empty cm.custom)
   , queryType    = fromMaybe ci.queryType cm.queryType
   , logLevel     = fromMaybe ci.logLevel cm.logLevel
+  , codegen      = fromMaybe ci.codegen cm.codegen
   , db           = ()
   }
 

@@ -35,6 +35,7 @@ microInit dir scheme db = MkConfig {
   , custom        = empty
   , queryType     = NameOnly
   , logLevel      = Info
+  , codegen       = Chez
   , db            = ()
   }
 

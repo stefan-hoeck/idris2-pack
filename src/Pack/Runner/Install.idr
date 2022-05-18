@@ -13,6 +13,12 @@ import Pack.Runner.Database
 
 %default total
 
+export
+idrisWithCG : Env HasIdris -> String
+idrisWithCG e = case e.codegen of
+  Chez => "\{show $ idrisExec e}"
+  cg   => "\{show $ idrisExec e} --cg \{cg}"
+
 ||| Use the installed Idris to run an operation on an `.ipkg` file.
 export
 idrisPkg :  HasIO io
@@ -22,7 +28,8 @@ idrisPkg :  HasIO io
          -> Path
          -> EitherT PackErr io ()
 idrisPkg e env cmd ipkg =
-  let s = "\{env} \{buildEnv e} \{show $ idrisExec e} \{cmd} \{show ipkg}"
+  let exe = idrisWithCG e
+      s = "\{env} \{buildEnv e} \{exe} \{cmd} \{show ipkg}"
    in debug e "About to run: \{s}" >> sys s
 
 copyApp : HasIO io => Env HasIdris -> ResolvedPackage -> EitherT PackErr io ()
@@ -147,7 +154,8 @@ remove env n = do
   whenJust (executable rp) (removeExec env rp)
 
 covering
-runIdrisOn :  HasIO io => (cmd : String)
+runIdrisOn :  HasIO io
+           => (cmd : String)
            -> Path
            -> Env HasIdris
            -> EitherT PackErr io ()
@@ -165,11 +173,12 @@ idrisRepl :  HasIO io
           -> EitherT PackErr io ()
 idrisRepl e args =
   let pth = packagePath e
+      exe = idrisWithCG e
    in do
         opts <- replOpts
         case e.rlwrap of
-          True  => sys "\{pth} rlwrap \{show $ idrisExec e} \{opts} \{args}"
-          False => sys "\{pth} \{show $ idrisExec e} \{opts} \{args}"
+          True  => sys "\{pth} rlwrap \{exe} \{opts} \{args}"
+          False => sys "\{pth} \{exe} \{opts} \{args}"
 
   where covering replOpts : EitherT PackErr io String
         replOpts = case e.withIpkg of

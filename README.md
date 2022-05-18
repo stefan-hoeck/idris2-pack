@@ -29,7 +29,13 @@ make micropack SCHEME=chez DB=nightly-220507
 
 ## Usage
 
-This assumes the `$PACK_DIR/bin` folder
+For a list of commands and command-line options, type
+
+```sh
+pack help
+```
+
+In the following sections, we assume the `$PACK_DIR/bin` folder
 is on your path and you have installed
 *pack* as described under [installation](INSTALL.md).
 To install a library from the package collection, run

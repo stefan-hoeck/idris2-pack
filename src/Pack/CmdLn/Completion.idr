@@ -57,6 +57,18 @@ prefixOnlyIfNonEmpty : String -> List String -> List String
 prefixOnlyIfNonEmpty "--" = id
 prefixOnlyIfNonEmpty s    = prefixOnly s
 
+codegens : List String
+codegens =
+  [ "chez"
+  , "chez-sep"
+  , "racket"
+  , "gambit"
+  , "node"
+  , "javascript"
+  , "refc"
+  , "vmcode-interp"
+  ]
+
 optionFlags : List String
 optionFlags =
   [ "help"
@@ -89,6 +101,7 @@ opts "--" "pack"  e = pure optionFlags
 opts x "--package-set"    e = prefixOnlyIfNonEmpty x <$> collections e
 opts x "--with-ipkg"      e = prefixOnlyIfNonEmpty x <$> ipkgFiles
 opts x "-p"               e = prefixOnlyIfNonEmpty x <$> collections e
+opts x "--cg"             e = prefixOnlyIfNonEmpty x <$> pure codegens
 
 -- actions
 opts x "build"            e = prefixOnlyIfNonEmpty x <$> ipkgFiles

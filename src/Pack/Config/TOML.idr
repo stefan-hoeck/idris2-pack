@@ -13,6 +13,10 @@ import Pack.Database.Types
 
 %default total
 
+export
+FromTOML Codegen where
+  fromTOML = tmap Types.fromString
+
 ||| Adj configuration.
 export
 config : Value -> Either TOMLErr (Config_ Maybe Nothing)
@@ -30,6 +34,7 @@ config v =
               (maybeValAt "custom" v)
               (pure Nothing)
               (pure Nothing)
+              (maybeValAt "idris2.codegen" v)
               (pure Nothing)
   |]
 
@@ -70,6 +75,9 @@ initToml scheme db = """
 
   # Name or path to the scheme executable to use.
   scheme      = "\{scheme}"
+
+  # Default code generator to us
+  codegen     = "chez"
 
   # Set this to `true` in order to run REPL sessions from within
   # `rlwrap`. This will give you additional features such as a
