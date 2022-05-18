@@ -62,8 +62,9 @@ ipkg   = "collie.ipkg"
 
 ### User Settings
 
-These are stored at `$HOME/.pack/user/pack.toml`. This file
-not only contains general settings like the name of the Scheme
+Global settings stored at `$HOME/.pack/user/pack.toml`, local
+settings can also be located at the current working directory.
+These files not only contain general settings like the name of the Scheme
 executable to use or whether to install libraries together with
 their sources, but also custom packages (local or on GitHub)
 and package overrides (see the [README](README.md)) for
@@ -100,11 +101,8 @@ $HOME/.pack/.cache/[package name]/[commit hash]/[name].ipkg
 ### Installed Binaries and Libraries
 
 *pack* installs the Idris2 compiler and libraries in
-directory `$HOME/.pack/[collection name]`. With
-`pack switch [collection name]`, two sym links are created:
-
-`$HOME/.pack/bin` pointing at `$HOME/.pack/[collection name]/bin`,
-and `$HOME/.pack/idris2`, pointing at `$HOME/.pack/[collection name]`.
+directories prefixed with the commit hashes use. Seed the
+README for the details.
 
 ## Map of the Source Code
 

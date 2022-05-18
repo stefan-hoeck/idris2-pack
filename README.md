@@ -151,12 +151,119 @@ use for a project as well as define additional local dependencies
 and even override global package settings. Local settings take
 precedence over global once.
 
-A note of caution: At the moment, *pack* uses a single installation
-directory (located at `$HOME/.pack/collection-name/idris2-[idris-version]`)
-for all dependencies. If you override global dependencies with local
-ones, it may be hard to figure out, which version of a library is
-installed at the moment. I'll have to think carefully about how
-to resolve this, because this is a serious limitation.
+## Directory Structure
+
+It is important to understand, how *pack* keeps track of the
+libraries it installed, where it looks for user settings
+and package collections, and how it reuses existing
+versions of the Idris2 compiler and libraries.
+
+### Package Collections
+
+These are stored as `.toml` files in folder `$HOME/.pack/db`.
+If you want to download the latest package collections, you
+can do so with the following command:
+
+```sh
+pack update-db
+```
+
+### Idris Compiler and Libraries
+
+All packages, applications, and different versions of the Idris
+compiler can bin found in the subdirectories of
+`$HOME./pack/install`. The path to a library or application
+includes the commit hash of the Idris compiler it was built with,
+as well as the commit hash used for the library or application itself.
+
+For instance, if you installed commit `46bff04` of library
+[collie](https://github.com/ohad/collie) after building it
+with commit `7a8635` of the Idris compiler, the library will
+be found in folder
+
+```sh
+$HOME/.pack/install/7a8635/collie/46bff04/
+```
+
+The corresponding Idris compiler plus its standard libraries
+can be found in directory
+
+```sh
+ $HOME/.pack/install/7a8635/idris2
+```
+
+Local packages listed in one of your `pack.toml` files will
+be installed in a subfolder called `local`. For instance,
+I have a local package called `chem`, which - after being
+built with the Idris compiler mentioned above - will
+be installed in folder
+
+```sh
+$HOME/.pack/install/7a8635/local/chem
+```
+
+### Application Binaries
+
+These will be installed in subfolder `bin` of the directories
+listed above. In addition, a symlink will be added to the
+package collection's `bin` folder, which can be found at
+
+```sh
+$HOME/.pack/[collection]/bin
+```
+
+This will be enough for executing an application via *pack*,
+for instance by running
+
+```sh
+pack exec katla
+```
+
+However, if you want to make these binaries available on your
+command line, you need to do two things: First, invoke
+`pack` with the `switch` command:
+
+```sh
+pack switch nightly-220518
+```
+
+And second, add directory `$HOME/.pack/bin` to your `$PATH`
+variable.
+
+### Package Path
+
+Since *pack* installs its libraries not in the default locations,
+vanilla Idris will not be able to find them (nor will other
+applications like
+[idris2-lsp](https://github.com/idris-community/idris2-lsp)).
+As an additional complication, the locations of libraries
+will depend both on the global and local versions of
+the `pack.toml` file. It is therefore necessary, to make the
+package path available to these tools before you start hacking
+on an Idris2 project.
+
+For instance, on my Linux box I use `neovim` with `idris2-lsp` and
+the [idris2-nvim](https://github.com/ShinKage/idris2-nvim) plugin.
+The `idris2-lsp` application will look for libraries based on
+an `.ipkg` file in the project I work on, but these libraries
+are scattered all over the place. In order to find them, we
+have to add their locations to the `$IDRIS2_PACKAGE_PATH`
+environment variable. This can be done as follows:
+
+```sh
+IDRIS2_PACKAGE_PATH=$(pack package-path) nvim
+```
+
+Likewise, you can invoke the Idris2 compiler in a similar
+manner:
+
+```sh
+IDRIS2_PACKAGE_PATH=$(pack package-path) idris2
+```
+
+If you find these commands to be cumbersome to use, consider
+defining an alias for them in the configuration files
+of your shell.
 
 ## Stuff still Missing
 
