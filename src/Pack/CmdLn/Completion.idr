@@ -10,6 +10,7 @@ import Pack.CmdLn.Opts
 import Pack.Config.Types
 import Pack.Core
 import Pack.Database.Types
+import Pack.Runner.Query
 import System.Directory
 
 --------------------------------------------------------------------------------
@@ -43,9 +44,9 @@ packages e = value <$> keys (allPackages e)
 anyPackage : HasIO io => Env s -> io (List String)
 anyPackage e = (++ packages e) <$> ipkgFiles
 
--- TODO: This should list only installed packages
+-- Lists only installed packages
 installedPackages : HasIO io => Env s -> io (List String)
-installedPackages = anyPackage
+installedPackages e = map (value . name) <$> installed e
 
 -- keep only those Strings, of which `x` is a prefix
 prefixOnly : String -> List String -> List String
@@ -83,6 +84,7 @@ optionFlags =
   , "libs-path"
   , "data-path"
   , "remove"
+  , "info"
   , "repl"
   , "install-app"
   , "completion"

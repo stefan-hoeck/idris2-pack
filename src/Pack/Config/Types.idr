@@ -436,9 +436,17 @@ packageAppDir : Env s -> ResolvedPackage -> String -> Path
 packageAppDir e rp n = packageBinDir e rp /> "\{n}_app"
 
 export
+pkgPrefixDir : Env s -> (PkgName, Package) -> Path
+pkgPrefixDir e (n, GitHub _ c _) = githubPkgPrefixDir e n c
+pkgPrefixDir e (n, Local _ _)    = localPkgPrefixDir e n
+
+export
 pkgPathDir : Env s -> (PkgName, Package) -> Path
-pkgPathDir e (n, GitHub _ c _) = githubPkgPrefixDir e n c /> idrisDir e
-pkgPathDir e (n, Local _ _)    = localPkgPrefixDir e n /> idrisDir e
+pkgPathDir e p = pkgPrefixDir e p /> idrisDir e
+
+export
+pkgBinDir : Env s -> (PkgName, Package) -> Path
+pkgBinDir e p = pkgPrefixDir e p /> "bin"
 
 export
 pkgLibDir : Env s -> (PkgName, Package) -> Path

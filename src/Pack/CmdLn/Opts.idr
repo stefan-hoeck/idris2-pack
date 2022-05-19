@@ -110,6 +110,7 @@ export
 cmd : List String -> Either PackErr Cmd
 cmd []                         = Right PrintHelp
 cmd ["help"]                   = Right PrintHelp
+cmd ["info"]                   = Right Info
 cmd ["update-db"]              = Right UpdateDB
 cmd ["query", s]               = Right $ Query s
 cmd ["repl"]                   = Right $ Repl Nothing
@@ -202,6 +203,10 @@ usageInfo = """
       Build and run an executable given either as
       an `.ipkg` file or a known package from the
       database passing it the given command line arguments.
+
+    info
+      Print general information about the current package
+      collection and list installed applications and libraries.
 
     query <substring>
       Query the package collection for the given name.
