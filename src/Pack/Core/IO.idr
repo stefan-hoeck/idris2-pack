@@ -88,7 +88,7 @@ mkParentDir dir = whenJust (parent $ show dir) (mkDir . parse)
 ||| Forcefully deletes a directory with all its content
 export
 rmDir : HasIO io => (dir : Path) -> EitherT PackErr io ()
-rmDir dir = when !(exists dir) $ sys "rm -rf \{show dir}"
+rmDir dir = when !(exists dir) $ sys "rm -rf \{dir}"
 
 ||| Returns the current directory's path.
 export
@@ -134,7 +134,7 @@ export
 copyDir : HasIO io => (from,to : Path) -> EitherT PackErr io ()
 copyDir from to = do
   mkParentDir to
-  sys "cp -r \{show from} \{show to}"
+  sys "cp -r \{from} \{to}"
 
 --------------------------------------------------------------------------------
 --         File Access
@@ -143,7 +143,7 @@ copyDir from to = do
 ||| Delete a file.
 export
 rmFile : HasIO io => (f : Path) -> EitherT PackErr io ()
-rmFile f = when !(exists f) $ sys "rm \{show f}"
+rmFile f = when !(exists f) $ sys "rm \{f}"
 
 ||| Tries to read the content of a file
 export covering
@@ -177,14 +177,14 @@ link : HasIO io => (from,to : Path) -> EitherT PackErr io ()
 link from to = do
   rmFile to
   mkParentDir to
-  sys "ln -s \{show from} \{show to}"
+  sys "ln -s \{from} \{to}"
 
 ||| Copy a file.
 export
 copyFile : HasIO io => (from,to : Path) -> EitherT PackErr io ()
 copyFile from to = do
   mkParentDir to
-  sys "cp \{show from} \{show to}"
+  sys "cp \{from} \{to}"
 
 ||| Patch a file
 export
@@ -192,4 +192,4 @@ patch :  HasIO io
       => (original : Path)
       -> (patch    : Path)
       -> EitherT PackErr io ()
-patch o p = do sys "patch \{show o} \{show p}"
+patch o p = do sys "patch \{o} \{p}"

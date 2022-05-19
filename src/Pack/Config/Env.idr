@@ -25,7 +25,7 @@ log :  HasIO io
     -> (lvl  : LogLevel)
     -> (msg  : Lazy String)
     -> io ()
-log c lvl msg = when (lvl >= c.logLevel) (putStrLn "[ \{show lvl} ] \{msg}")
+log c lvl msg = when (lvl >= c.logLevel) (putStrLn "[ \{lvl} ] \{msg}")
 
 export
 debug : HasIO io => (conf : Config s) -> (msg  : Lazy String) -> io ()

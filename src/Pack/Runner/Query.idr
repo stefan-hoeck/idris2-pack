@@ -56,18 +56,18 @@ details (RGitHub name url commit ipkg desc) = [
     "Type         : GitHub project"
   , "URL          : \{url}"
   , "Commit       : \{commit}"
-  , "ipkg File    : \{show ipkg}"
+  , "ipkg File    : \{ipkg}"
   ]
 
 details (RIpkg path desc) = [
     "Type         : Local ipkg file"
-  , "Path         : \{show path}"
+  , "Path         : \{path}"
   ]
 
 details (RLocal name dir ipkg desc) = [
     "Type         : Local Idris project"
-  , "Location     : \{show dir}"
-  , "ipkg File    : \{show ipkg}"
+  , "Location     : \{dir}"
+  , "ipkg File    : \{ipkg}"
   ]
 
 details Base    = [ "Type           : Idris core package" ]

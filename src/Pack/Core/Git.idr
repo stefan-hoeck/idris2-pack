@@ -24,7 +24,7 @@ gitClone :  HasIO io
          => (url  : URL)
          -> (dest : Path)
          -> EitherT PackErr io ()
-gitClone url dest = sys "git clone -q \{url} \{show dest}"
+gitClone url dest = sys "git clone -q \{url} \{dest}"
 
 ||| Checkout to the given commit
 export
