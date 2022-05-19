@@ -2,6 +2,8 @@
 
 set -eux
 
+SCHEME=chezscheme
+
 if [ -d ~/.pack ]; then
     echo "There is already a ~/.pack directory."
     echo "Please remove it with 'rm -fr ~/.pack' and rerun this script."
@@ -13,8 +15,8 @@ if [ ! command -v git &> /dev/null ]; then
     exit 1
 fi
 
-if [ ! command -v chezscheme &> /dev/null ]; then
-    echo "Please install chezscheme"
+if [ ! command -v $SCHEME &> /dev/null ]; then
+    echo "Please install $SCHEME"
     exit 1
 fi
 
@@ -23,18 +25,27 @@ if [ ! command -v make &> /dev/null ]; then
     exit 1
 fi
 
+if [ ! command -v python3 &> /dev/null ]; then
+    echo "Please install python3"
+    exit 1
+fi
+
 mkdir ~/.pack
 mkdir ~/.pack/clones
 mkdir ~/.pack/db
+
+# install toml-cli because we need a way of parsing toml files from bash
+python3 -m venv ~/.pack/python/venv
+~/.pack/python/venv/bin/pip install toml-cli
 
 git clone https://github.com/stefan-hoeck/idris2-pack-db.git ~/.pack/clones/idris2-pack-db
 cp ~/.pack/clones/idris2-pack-db/collections/* ~/.pack/db
 
 # commented out for development so that we can stick to one db
-# LATEST_DB="$(ls ~/.pack/db/nightly-* | tail -1)"
-LATEST_DB="~/.pack/db/nightly-220517.toml"
+LATEST_DB="$(ls ~/.pack/db/nightly-* | tail -1)"
+PACKAGE_COLLECTION="$(basename --suffix .toml $LATEST_DB)"
 # TODO how to extract idris commit from toml file in bash?
-IDRIS2_COMMIT='fdbd858d97fbf1a529715451a0c784f3fc1f488f'
+IDRIS2_COMMIT="$(~/.pack/python/venv/bin/toml get --toml-path ~/.pack/db/$PACKAGE_COLLECTION.toml idris2.commit)"
 
 git clone https://github.com/idris-lang/Idris2.git ~/.pack/clones/Idris2
 pushd ~/.pack/clones/Idris2
@@ -44,7 +55,7 @@ git checkout $IDRIS2_COMMIT
 PREFIX_PATH="$HOME/.pack/install/$IDRIS2_COMMIT/idris2"
 BOOT_PATH="$HOME/.pack/install/$IDRIS2_COMMIT/idris2/bin/idris2"
 
-make bootstrap PREFIX="$PREFIX_PATH" SCHEME=chezscheme
+make bootstrap PREFIX="$PREFIX_PATH" SCHEME="$SCHEME"
 make install PREFIX="$PREFIX_PATH"
 make clean
 make all IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH"
@@ -53,14 +64,14 @@ make install-with-src-libs IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH"
 make install-with-src-api IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH"
 popd
 
-TOML_COMMIT='b4f5a4bd874fa32f20d02311a62a1910dc48123f'
+TOML_COMMIT="$(~/.pack/python/venv/bin/toml get --toml-path ~/.pack/db/$PACKAGE_COLLECTION.toml db.toml.commit)"
 git clone https://github.com/cuddlefishie/toml-idr ~/.pack/clones/toml-idr
 pushd ~/.pack/clones/toml-idr
 git checkout $TOML_COMMIT
 "$BOOT_PATH" --install toml.ipkg
 popd
 
-PACK_COMMIT='345ca0a260fbc9748f39286d1d6caab4f8b2c203'
+PACK_COMMIT="$(~/.pack/python/venv/bin/toml get --toml-path ~/.pack/db/$PACKAGE_COLLECTION.toml db.pack.commit)"
 git clone https://github.com/stefan-hoeck/idris2-pack.git ~/.pack/clones/idris2-pack
 pushd ~/.pack/clones/idris2-pack
 git checkout $PACK_COMMIT
@@ -70,15 +81,12 @@ mkdir -p ~/.pack/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin
 cp -r build/exec/* ~/.pack/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin
 popd
 
-mkdir -p ~/.pack/nightly-220517/bin
-pushd ~/.pack/nightly-220517/bin
+mkdir -p ~/.pack/$PACKAGE_COLLECTION/bin
+pushd ~/.pack/$PACKAGE_COLLECTION/bin
 ln -s ~/.pack/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin/pack pack
 popd
 
-ln -s ~/.pack/nightly-220517/bin ~/.pack/bin
-
-PACKAGE_COLLECTION='nightly-220517'
-SCHEME=chezscheme
+ln -s ~/.pack/$PACKAGE_COLLECTION/bin ~/.pack/bin
 
 mkdir ~/.pack/user
 cat <<EOF >> ~/.pack/user/pack.toml
