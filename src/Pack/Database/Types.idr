@@ -160,7 +160,7 @@ printPair (x, GitHub url commit ipkg) =
   type   = "github"
   url    = "\{url}"
   commit = "\{commit}"
-  ipkg   = "\{show ipkg}"
+  ipkg   = "\{ipkg}"
   """
 
 printPair (x, Local dir ipkg) =
@@ -168,8 +168,8 @@ printPair (x, Local dir ipkg) =
 
   [db.\{x}]
   type   = "local"
-  path   = "\{show dir}"
-  ipkg   = "\{show ipkg}"
+  path   = "\{dir}"
+  ipkg   = "\{ipkg}"
   """
 
 export
@@ -177,7 +177,7 @@ printDB : DB -> String
 printDB (MkDB c v db) =
   let header = """
         [idris2]
-        version = "\{show v}"
+        version = "\{v}"
         commit  = "\{c}"
         """
    in unlines $ header :: map printPair (SortedMap.toList db)

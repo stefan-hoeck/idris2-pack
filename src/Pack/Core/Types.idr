@@ -13,6 +13,25 @@ import System.File
 %default total
 
 --------------------------------------------------------------------------------
+--          Interpolation
+--------------------------------------------------------------------------------
+
+||| Convenience implementation for using paths in string
+||| interpolation
+export
+Interpolation Path where interpolate = show
+
+||| Convenience implementation for printing file errors in string
+||| interpolation
+export
+Interpolation FileError where interpolate = show
+
+||| Convenience implementation for printing package versions in string
+||| interpolation
+export
+Interpolation PkgVersion where interpolate = show
+
+--------------------------------------------------------------------------------
 --          URL
 --------------------------------------------------------------------------------
 
@@ -23,9 +42,6 @@ record URL where
 
 export %inline
 Eq URL where (==) = (==) `on` value
-
-export %inline
-Show URL where show = value
 
 export %inline
 FromString URL where fromString = MkURL
@@ -45,9 +61,6 @@ record Commit where
 
 export %inline
 Eq Commit where (==) = (==) `on` value
-
-export %inline
-Show Commit where show = value
 
 export %inline
 FromString Commit where fromString = MkCommit
@@ -72,9 +85,6 @@ export %inline
 Ord PkgName where compare = compare `on` value
 
 export %inline
-Show PkgName where show = value
-
-export %inline
 FromString PkgName where fromString = MkPkgName
 
 export %inline
@@ -97,9 +107,6 @@ export %inline
 Ord DBName where compare = compare `on` value
 
 export %inline
-Show DBName where show = value
-
-export %inline
 FromString DBName where fromString = MkDBName
 
 export %inline
@@ -120,7 +127,7 @@ data PkgRep : Type where
 export
 Interpolation PkgRep where
   interpolate (Pkg n)  = n.value
-  interpolate (Ipkg p) = show p
+  interpolate (Ipkg p) = interpolate p
 
 export
 isIpkgFile : String -> Bool
@@ -251,16 +258,16 @@ printErr NoPackDir = """
   """
 
 printErr (MkDir path err) =
-  "Error when creating directory \"\{show path}\": \{show err}."
+  "Error when creating directory \"\{path}\": \{err}."
 
 printErr (ReadFile path err) =
-  "Error when reading file \"\{show path}\": \{show err}."
+  "Error when reading file \"\{path}\": \{err}."
 
 printErr (WriteFile path err) =
-  "Error when writing to file \"\{show path}\": \{show err}."
+  "Error when writing to file \"\{path}\": \{err}."
 
 printErr (DirEntries path err) =
-  "Error when reading directory \"\{show path}\": \{show err}."
+  "Error when reading directory \"\{path}\": \{err}."
 
 printErr (Sys cmd err) = """
   Error when executing system command.
@@ -269,7 +276,7 @@ printErr (Sys cmd err) = """
   """
 
 printErr (ChangeDir path) =
-  "Failed to change to directory \"\{show path}\"."
+  "Failed to change to directory \"\{path}\"."
 
 printErr (InvalidPackageDesc s) = """
   Invalid package description: \"\{s}\".
@@ -290,10 +297,10 @@ printErr (NoApp rep) = "Package \{rep} is not an application"
 printErr EmptyPkgDB = "Empty package data base"
 
 printErr (InvalidIpkgFile path) =
-  "Failed to parse .ipkg file: \{show path}"
+  "Failed to parse .ipkg file: \{path}"
 
 printErr (MissingCorePackage nm v c) =
-  "Core package \"\{nm}\" missing for Idris2 version \{show v} (commit: \{c})"
+  "Core package \"\{nm}\" missing for Idris2 version \{v} (commit: \{c})"
 
 printErr (UnknownArg arg) = "Unknown command line arg: \{arg}"
 
@@ -307,14 +314,14 @@ printErr BuildMany =
   "Can only build or typecheck a single Idris2 package given as an `.ipkg` file."
 
 printErr (DirExists path) = """
-  Failed to clone GitHub repository into \{show path}.
+  Failed to clone GitHub repository into \{path}.
   Directory already exists.
   """
 
 printErr (TOMLFile file err) =
-  "Error in file \{show file}: \{printTOMLErr err}."
+  "Error in file \{file}: \{printTOMLErr err}."
 
-printErr (TOMLParse file err) = "Error in file \{show file}: \{err}."
+printErr (TOMLParse file err) = "Error in file \{file}: \{err}."
 
 --------------------------------------------------------------------------------
 --          Logging
@@ -335,7 +342,7 @@ export
 Ord LogLevel where compare = compare `on` llToNat
 
 export
-Show LogLevel where
-  show Debug   = "debug"
-  show Info    = "info"
-  show Warning = "warning"
+Interpolation LogLevel where
+  interpolate Debug   = "debug"
+  interpolate Info    = "info"
+  interpolate Warning = "warning"

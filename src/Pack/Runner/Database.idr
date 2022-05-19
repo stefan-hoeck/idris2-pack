@@ -19,7 +19,7 @@ packageExists :  HasIO io
 packageExists env p =
   let dir = packageInstallDir env p
    in do
-       debug env "Looking for package \{name p} at \{show dir}"
+       debug env "Looking for package \{name p} at \{dir}"
        exists dir
 
 ||| Check if the executable of a package has already been
@@ -33,7 +33,7 @@ executableExists :  HasIO io
 executableExists c rp n =
   let pth = packageExec c rp n
    in do
-       debug c "Looking for executable \{n} at \{show pth}"
+       debug c "Looking for executable \{n} at \{pth}"
        exists pth
 
 covering

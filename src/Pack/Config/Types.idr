@@ -300,7 +300,7 @@ collectionAppExec c s = collectionBinDir c /> s
 ||| `$SCHEME` variable during Idris2 installation
 export
 schemeVar : Config s -> String
-schemeVar c = "SCHEME=\"\{show c.scheme}\""
+schemeVar c = "SCHEME=\"\{c.scheme}\""
 
 ||| Directory where `.ipkg` patches are stored.
 export
@@ -311,7 +311,7 @@ patchesDir c = dbDir c /> "patches"
 export
 patchFile : Config s -> PkgName -> Path -> Path
 patchFile c n ipkg =
-  patchesDir c /> c.collection.value /> n.value /> "\{show ipkg}.patch"
+  patchesDir c /> c.collection.value /> n.value /> "\{ipkg}.patch"
 
 --------------------------------------------------------------------------------
 --          Environment
@@ -342,16 +342,16 @@ idrisExec c = idrisBinDir c /> "idris2"
 ||| `$PREFIX` variable during Idris2 installation
 export
 prefixVar : Env s -> String
-prefixVar c = "PREFIX=\"\{show $ idrisPrefixDir c}\""
+prefixVar c = "PREFIX=\"\{idrisPrefixDir c}\""
 
 ||| `$IDRIS2_BOOT` variable during Idris2 installation
 export
 idrisBootVar : Env s -> String
-idrisBootVar c = "IDRIS2_BOOT=\"\{show $ idrisExec c}\""
+idrisBootVar c = "IDRIS2_BOOT=\"\{idrisExec c}\""
 
 
 idrisDir : Env e -> String
-idrisDir e = "idris2-\{show e.db.idrisVersion}"
+idrisDir e = "idris2-\{e.db.idrisVersion}"
 
 ||| The directory where Idris2 packages will be installed.
 export
@@ -393,14 +393,14 @@ packagePrefixDir e Test                = idrisPrefixDir e
 
 export
 packageInstallPrefix : Env s -> ResolvedPackage -> String
-packageInstallPrefix e rp = "IDRIS2_PREFIX=\"\{show $ packagePrefixDir e rp}\""
+packageInstallPrefix e rp = "IDRIS2_PREFIX=\"\{packagePrefixDir e rp}\""
 
 ||| Returns the directory where a package for the current
 ||| package collection is installed.
 export
 packageInstallDir : Env s -> ResolvedPackage -> Path
 packageInstallDir e p =
-  let vers = show $ e.db.idrisVersion
+  let vers = e.db.idrisVersion
       dir  = packagePrefixDir e p /> idrisDir e
    in case p of
         Base     => dir /> "base-\{vers}"
@@ -455,7 +455,7 @@ packagePathDirs e =
           . intersperse ":"
           . map (show . pkgPathDir e)
           $ SortedMap.toList (allPackages e)
-   in "\{show $ idrisInstallDir e}:\{pth}"
+   in "\{idrisInstallDir e}:\{pth}"
 
 export
 packageLibDirs : Env s -> String
@@ -464,7 +464,7 @@ packageLibDirs e =
           . intersperse ":"
           . map (show . pkgLibDir e)
           $ SortedMap.toList (allPackages e)
-   in "\{show $ idrisLibDir e}:\{pth}"
+   in "\{idrisLibDir e}:\{pth}"
 
 export
 packageDataDirs : Env s -> String
@@ -473,7 +473,7 @@ packageDataDirs e =
           . intersperse ":"
           . map (show . pkgDataDir e)
           $ SortedMap.toList (allPackages e)
-   in "\{show $ idrisDataDir e}:\{pth}"
+   in "\{idrisDataDir e}:\{pth}"
 
 export
 packagePath : Env s -> String

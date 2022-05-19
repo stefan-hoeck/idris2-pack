@@ -18,8 +18,8 @@ import Pack.Runner.Database
 export
 idrisWithCG : Env HasIdris -> String
 idrisWithCG e = case e.codegen of
-  Default => "\{show $ idrisExec e}"
-  cg      => "\{show $ idrisExec e} --cg \{cg}"
+  Default => "\{idrisExec e}"
+  cg      => "\{idrisExec e} --cg \{cg}"
 
 ||| Use the installed Idris to run an operation on an `.ipkg` file.
 export
@@ -31,16 +31,16 @@ idrisPkg :  HasIO io
          -> EitherT PackErr io ()
 idrisPkg e env cmd ipkg =
   let exe = idrisWithCG e
-      s = "\{env} \{buildEnv e} \{exe} \{cmd} \{show ipkg}"
+      s = "\{env} \{buildEnv e} \{exe} \{cmd} \{ipkg}"
    in debug e "About to run: \{s}" >> sys s
 
 copyApp : HasIO io => Env HasIdris -> ResolvedPackage -> EitherT PackErr io ()
 copyApp e rp =
   let dir = packageBinDir e rp
    in do
-        debug e "Copying application to \{show dir}" >>
+        debug e "Copying application to \{dir}" >>
         mkDir dir
-        sys "cp -r build/exec/* \{show dir}"
+        sys "cp -r build/exec/* \{dir}"
 
 export
 links : HasIO io => Env HasIdris -> EitherT PackErr io ()
@@ -265,7 +265,7 @@ execApp p args e = do
       sys "build/exec/\{exe} \{unwords args}"
     _            => do
       installApp e p
-      sys "\{show $ packageExec e rp exe} \{unwords args}"
+      sys "\{packageExec e rp exe} \{unwords args}"
 
 ||| Creates a packaging environment with Idris2 installed.
 export covering
