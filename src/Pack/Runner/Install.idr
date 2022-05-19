@@ -230,21 +230,19 @@ installApp e n = do
           when !(exists pf) (patch ipkg pf)
           idrisPkg e "" "--build" ipkg
           copyApp e rp
-          link (packageExec e rp exe) (collectionAppExec e exe)
 
     RIpkg ipkg d => when !(promptDesc rp e d) $ do
       removeExec e rp exe
       idrisPkg e "" "--build" ipkg
       copyApp e rp
-      link (packageExec e rp exe) (collectionAppExec e exe)
 
     RLocal _ dir ipkg d => when !(promptDesc rp e d) $ do
       removeExec e rp exe
       inDir dir $ do
         idrisPkg e "" "--build" ipkg
         copyApp e rp
-        link (packageExec e rp exe) (collectionAppExec e exe)
     _ => throwE (NoApp n)
+  link (packageExec e rp exe) (collectionAppExec e exe)
 
 ||| Build and run an executable given either
 ||| as an `.ipkg` file or an application from the
