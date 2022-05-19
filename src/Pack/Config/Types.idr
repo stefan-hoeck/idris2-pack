@@ -52,6 +52,7 @@ data QueryType : Type where
 ||| Code generator to use
 public export
 data Codegen : Type where
+  Default    : Codegen
   Chez       : Codegen
   ChezSep    : Codegen
   Racket     : Codegen
@@ -63,19 +64,17 @@ data Codegen : Type where
   Other      : String -> Codegen
 
 export
-Show Codegen where
-  show Chez       = "chez"
-  show ChezSep    = "chez-sep"
-  show Racket     = "racket"
-  show Gambit     = "gambit"
-  show Node       = "node"
-  show JavaScript = "javascript"
-  show RefC       = "refc"
-  show VMCode     = "vmcode-interp"
-  show (Other x)  = x
-
-export
-Interpolation Codegen where interpolate = show
+Interpolation Codegen where
+  interpolate Default    = ""
+  interpolate Chez       = "chez"
+  interpolate ChezSep    = "chez-sep"
+  interpolate Racket     = "racket"
+  interpolate Gambit     = "gambit"
+  interpolate Node       = "node"
+  interpolate JavaScript = "javascript"
+  interpolate RefC       = "refc"
+  interpolate VMCode     = "vmcode-interp"
+  interpolate (Other x)  = x
 
 public export
 fromString : String -> Codegen
@@ -196,7 +195,7 @@ init dir coll = MkConfig {
   , custom       = empty
   , queryType    = NameOnly
   , logLevel     = Info
-  , codegen      = Chez
+  , codegen      = Default
   , db           = ()
   }
 

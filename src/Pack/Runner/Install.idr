@@ -13,11 +13,13 @@ import Pack.Runner.Database
 
 %default total
 
+||| Idris executable to use together with the
+||| `--cg` (codegen) command line option.
 export
 idrisWithCG : Env HasIdris -> String
 idrisWithCG e = case e.codegen of
-  Chez => "\{show $ idrisExec e}"
-  cg   => "\{show $ idrisExec e} --cg \{cg}"
+  Default => "\{show $ idrisExec e}"
+  cg      => "\{show $ idrisExec e} --cg \{cg}"
 
 ||| Use the installed Idris to run an operation on an `.ipkg` file.
 export
