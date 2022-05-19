@@ -54,27 +54,26 @@ export
 mkIdris : HasIO io => Env DBLoaded -> EitherT PackErr io (Env HasIdris)
 mkIdris e = do
   debug e "Checking Idris installation"
-  False <- exists (idrisInstallDir e) | True => pure $ {db $= id} e
+  when !(missing $ idrisInstallDir e) $ do
+    debug e "No Idris compiler found. Installing..."
+    if e.bootstrap
+       then -- build with bootstrapping
+         withGit (tmpDir e) idrisRepo e.db.idrisCommit $ do
+           sys "make bootstrap \{prefixVar e} \{schemeVar e}"
+           sys "make install \{prefixVar e}"
+           sys "make clean"
+           sys "make all \{idrisBootVar e} \{prefixVar e}"
+           sys "make install \{idrisBootVar e} \{prefixVar e}"
+           sys "make install-with-src-libs \{idrisBootVar e} \{prefixVar e}"
+           sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
 
-  debug e "No Idris compiler found. Installing..."
-  if e.bootstrap
-     then -- build with bootstrapping
-       withGit (tmpDir e) idrisRepo e.db.idrisCommit $ do
-         sys "make bootstrap \{prefixVar e} \{schemeVar e}"
-         sys "make install \{prefixVar e}"
-         sys "make clean"
-         sys "make all \{idrisBootVar e} \{prefixVar e}"
-         sys "make install \{idrisBootVar e} \{prefixVar e}"
-         sys "make install-with-src-libs \{idrisBootVar e} \{prefixVar e}"
-         sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
-
-     else -- build with existing Idris2 compiler
-       withGit (tmpDir e) idrisRepo e.db.idrisCommit $ do
-         sys "make all \{prefixVar e}"
-         sys "make install \{prefixVar e}"
-         sys "make install-with-src-libs \{prefixVar e}"
-         sys "make clean"
-         sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
+       else -- build with existing Idris2 compiler
+         withGit (tmpDir e) idrisRepo e.db.idrisCommit $ do
+           sys "make all \{prefixVar e}"
+           sys "make install \{prefixVar e}"
+           sys "make install-with-src-libs \{prefixVar e}"
+           sys "make clean"
+           sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
 
   link (idrisExec e) (collectionIdrisExec e)
   pure $ {db $= id} e
