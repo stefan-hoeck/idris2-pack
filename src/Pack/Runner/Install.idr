@@ -142,8 +142,7 @@ removeExec :  HasIO io
 removeExec e rp n = do
   debug e "Removing application \{n}"
   rmFile (collectionAppExec e n)
-  rmFile (packageExec e rp n)
-  rmDir  (packageAppDir e rp n)
+  rmDir (packageBinDir e rp)
 
 ||| Remove a library or executable.
 export covering
@@ -151,8 +150,9 @@ remove : HasIO io => Env s -> PkgRep -> EitherT PackErr io ()
 remove env n = do
   debug env "Removing library or application \{n}..."
   rp <- resolve env n
-  rmDir (packageInstallDir env rp)
-  whenJust (executable rp) (removeExec env rp)
+  case executable rp of
+    Just exe => removeExec env rp exe
+    Nothing  => rmDir (packagePrefixDir env rp)
 
 covering
 runIdrisOn :  HasIO io

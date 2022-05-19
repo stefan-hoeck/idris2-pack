@@ -101,3 +101,72 @@ query : HasIO io => String -> (e : Env s) -> EitherT PackErr io ()
 query n e = do
   ss <- query_ e $ \p => toMaybe (isInfixOf n p.value) (fromTpe e.queryType p)
   putStrLn $ unlines ss
+
+--------------------------------------------------------------------------------
+--          General Info
+--------------------------------------------------------------------------------
+
+public export
+data InstallType = App | AppAndLib | Lib
+
+public export
+isApp : InstallType -> Bool
+isApp App       = True
+isApp AppAndLib = True
+isApp Lib       = False
+
+public export
+isLib : InstallType -> Bool
+isLib App       = False
+isLib AppAndLib = True
+isLib Lib       = True
+
+public export
+record PkgInfo where
+  constructor MkPkgInfo
+  name    : PkgName
+  type    : InstallType
+  details : Package
+
+toInfo : HasIO io => Env e -> (PkgName,Package) -> io (Maybe PkgInfo)
+toInfo e p = do
+  isLib <- exists (pkgPathDir e p)
+  isApp <- exists (pkgBinDir e p)
+  pure $ case (isLib,isApp) of
+    (True,True)   => Just $ MkPkgInfo (fst p) AppAndLib (snd p)
+    (False,True)  => Just $ MkPkgInfo (fst p) App (snd p)
+    (True,False)  => Just $ MkPkgInfo (fst p) Lib (snd p)
+    (False,False) => Nothing
+
+export
+installed : HasIO io => Env s -> io (List PkgInfo)
+installed e = mapMaybeM (toInfo e) (SortedMap.toList $ allPackages e)
+
+apps : List PkgInfo -> String
+apps ps = case filter (isApp . type) ps of
+  []      => ""
+  x :: xs => unlines $
+    "\n\nInstalled Apps      : \{x.name}" ::
+    map (indent 22 . value . name) xs
+
+libs : List PkgInfo -> String
+libs ps = case filter (isLib . type) ps of
+  []      => ""
+  x :: xs => unlines $
+    "\nInstalled Libraries : \{x.name}" ::
+    map (indent 22 . value . name) xs
+
+export
+infoString : Env s -> List PkgInfo -> String
+infoString e ps = """
+  Package Collection  : \{e.collection}
+  Idris2 Version      : \{e.db.idrisVersion}
+  Idris2 Commit       : \{e.db.idrisCommit}
+  Scheme Executable   : \{e.scheme}
+  """ ++ apps ps ++ libs ps
+
+export
+printInfo : HasIO io => Env s -> io ()
+printInfo e = do
+  ps <- installed e
+  putStrLn $ infoString e ps

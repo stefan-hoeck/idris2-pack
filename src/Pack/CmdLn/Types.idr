@@ -27,6 +27,7 @@ data Cmd : Type where
   Switch           : DBName -> Cmd
   UpdateDB         : Cmd
 
+  Info             : Cmd
   Query            : String -> Cmd
   Completion       : String -> String -> Cmd
   CompletionScript : String -> Cmd

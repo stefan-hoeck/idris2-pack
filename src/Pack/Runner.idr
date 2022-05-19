@@ -31,3 +31,4 @@ runCmd = do
     LibsPath           => env c >>= putStrLn . packageLibDirs
     DataPath           => env c >>= putStrLn . packageDataDirs
     Switch db          => idrisEnv ({collection := db} c) >>= links
+    Info               => env c >>= printInfo

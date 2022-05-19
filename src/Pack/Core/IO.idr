@@ -13,6 +13,14 @@ import System.File
 --          Utilities
 --------------------------------------------------------------------------------
 
+export
+mapMaybeM : Monad m => (a -> m (Maybe b)) -> List a -> m (List b)
+mapMaybeM f []        = pure []
+mapMaybeM f (x :: xs) = do
+  Just vb <- f x | Nothing => mapMaybeM f xs
+  (vb ::) <$> mapMaybeM f xs
+
+
 ||| Convert an IO action with the potential of failure
 ||| to an `EitherT PackErr`.
 export
