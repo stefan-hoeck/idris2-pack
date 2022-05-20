@@ -34,18 +34,13 @@ mkdir ~/.pack
 mkdir ~/.pack/clones
 mkdir ~/.pack/db
 
-# install toml-cli because we need a way of parsing toml files from bash
-python3 -m venv ~/.pack/python/venv
-~/.pack/python/venv/bin/pip install toml-cli
-
 git clone https://github.com/stefan-hoeck/idris2-pack-db.git ~/.pack/clones/idris2-pack-db
 cp ~/.pack/clones/idris2-pack-db/collections/* ~/.pack/db
 
-# commented out for development so that we can stick to one db
 LATEST_DB="$(ls ~/.pack/db/nightly-* | tail -1)"
 PACKAGE_COLLECTION="$(basename --suffix .toml $LATEST_DB)"
-# TODO how to extract idris commit from toml file in bash?
-IDRIS2_COMMIT="$(~/.pack/python/venv/bin/toml get --toml-path ~/.pack/db/$PACKAGE_COLLECTION.toml idris2.commit)"
+IDRIS2_COMMIT=$(sed -ne '/^\[idris2\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p}' ~/.pack/db/$PACKAGE_COLLECTION.toml)
+
 
 git clone https://github.com/idris-lang/Idris2.git ~/.pack/clones/Idris2
 pushd ~/.pack/clones/Idris2
@@ -64,14 +59,14 @@ make install-with-src-libs IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH"
 make install-with-src-api IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH"
 popd
 
-TOML_COMMIT="$(~/.pack/python/venv/bin/toml get --toml-path ~/.pack/db/$PACKAGE_COLLECTION.toml db.toml.commit)"
+TOML_COMMIT=$(sed -ne '/^\[db.toml\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p}' ~/.pack/db/$PACKAGE_COLLECTION.toml)
 git clone https://github.com/cuddlefishie/toml-idr ~/.pack/clones/toml-idr
 pushd ~/.pack/clones/toml-idr
 git checkout $TOML_COMMIT
 "$BOOT_PATH" --install toml.ipkg
 popd
 
-PACK_COMMIT="$(~/.pack/python/venv/bin/toml get --toml-path ~/.pack/db/$PACKAGE_COLLECTION.toml db.pack.commit)"
+PACK_COMMIT=$(sed -ne '/^\[db.pack\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p}' ~/.pack/db/$PACKAGE_COLLECTION.toml)
 git clone https://github.com/stefan-hoeck/idris2-pack.git ~/.pack/clones/idris2-pack
 pushd ~/.pack/clones/idris2-pack
 git checkout $PACK_COMMIT
