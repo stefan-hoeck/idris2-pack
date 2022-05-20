@@ -10,22 +10,22 @@ if [ -d ~/.pack ]; then
     exit 1
 fi
 
-if [ ! command -v git &> /dev/null ]; then
+if ! command -v git &> /dev/null; then
     echo "Please install git"
     exit 1
 fi
 
-if [ ! command -v $SCHEME &> /dev/null ]; then
+if ! command -v $SCHEME &> /dev/null; then
     echo "Please install $SCHEME"
     exit 1
 fi
 
-if [ ! command -v make &> /dev/null ]; then
+if ! command -v make &> /dev/null; then
     echo "Please install make"
     exit 1
 fi
 
-if [ ! command -v python3 &> /dev/null ]; then
+if ! command -v python3 &> /dev/null; then
     echo "Please install python3"
     exit 1
 fi
