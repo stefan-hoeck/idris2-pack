@@ -2,7 +2,21 @@
 
 set -eux
 
-SCHEME=chezscheme
+if command -v chezscheme &>/dev/null; then
+	DETECTED_SCHEME=chezscheme
+elif command -v scheme &>/dev/null; then
+	DETECTED_SCHEME=scheme
+else
+	DETECTED_SCHEME=''
+fi
+
+read -r -p "Enter the name of your chez scheme binary [$DETECTED_SCHEME]: " SCHEME
+SCHEME=${SCHEME:-$DETECTED_SCHEME}
+
+if [ -z "$SCHEME" ]; then
+	echo 'scheme binary was not set'
+	exit 1
+fi
 
 if [ -d ~/.pack ]; then
 	echo "There is already a ~/.pack directory."
