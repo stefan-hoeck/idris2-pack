@@ -55,7 +55,6 @@ LATEST_DB="$(ls ~/.pack/db/nightly-* | tail -1)"
 PACKAGE_COLLECTION="$(basename --suffix .toml $LATEST_DB)"
 IDRIS2_COMMIT=$(sed -ne '/^\[idris2\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p}' ~/.pack/db/$PACKAGE_COLLECTION.toml)
 
-
 git clone https://github.com/idris-lang/Idris2.git ~/.pack/clones/Idris2
 pushd ~/.pack/clones/Idris2
 git checkout $IDRIS2_COMMIT
