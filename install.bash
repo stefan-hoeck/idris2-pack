@@ -5,29 +5,29 @@ set -eux
 SCHEME=chezscheme
 
 if [ -d ~/.pack ]; then
-    echo "There is already a ~/.pack directory."
-    echo "Please remove it with 'rm -fr ~/.pack' and rerun this script."
-    exit 1
+	echo "There is already a ~/.pack directory."
+	echo "Please remove it with 'rm -fr ~/.pack' and rerun this script."
+	exit 1
 fi
 
-if ! command -v git &> /dev/null; then
-    echo "Please install git"
-    exit 1
+if ! command -v git &>/dev/null; then
+	echo "Please install git"
+	exit 1
 fi
 
-if ! command -v $SCHEME &> /dev/null; then
-    echo "Please install $SCHEME"
-    exit 1
+if ! command -v $SCHEME &>/dev/null; then
+	echo "Please install $SCHEME"
+	exit 1
 fi
 
-if ! command -v make &> /dev/null; then
-    echo "Please install make"
-    exit 1
+if ! command -v make &>/dev/null; then
+	echo "Please install make"
+	exit 1
 fi
 
-if ! command -v python3 &> /dev/null; then
-    echo "Please install python3"
-    exit 1
+if ! command -v python3 &>/dev/null; then
+	echo "Please install python3"
+	exit 1
 fi
 
 mkdir ~/.pack
@@ -89,7 +89,7 @@ popd
 ln -s ~/.pack/$PACKAGE_COLLECTION/bin ~/.pack/bin
 
 mkdir ~/.pack/user
-cat <<EOF >> ~/.pack/user/pack.toml
+cat <<EOF >>~/.pack/user/pack.toml
 # The package collection to use
 collection = "$PACKAGE_COLLECTION"
 
