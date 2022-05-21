@@ -2,6 +2,10 @@
 
 set -eux
 
+DEFAULT_PACK_DIR="$HOME/.pack"
+read -r -p "Enter the path of your pack directory [$DEFAULT_PACK_DIR]: " PACK_DIR
+PACK_DIR="${PACK_DIR:-$DEFAULT_PACK_DIR}"
+
 if command -v chezscheme &>/dev/null; then
 	DETECTED_SCHEME=chezscheme
 elif command -v scheme &>/dev/null; then
@@ -18,9 +22,9 @@ if [ -z "$SCHEME" ]; then
 	exit 1
 fi
 
-if [ -d ~/.pack ]; then
-	echo "There is already a ~/.pack directory."
-	echo "Please remove it with 'rm -fr ~/.pack' and rerun this script."
+if [ -d "$PACK_DIR" ]; then
+	echo "There is already a $PACK_DIR directory."
+	echo "Please remove it with 'rm -fr $PACK_DIR' and rerun this script."
 	exit 1
 fi
 
@@ -44,24 +48,24 @@ if ! command -v python3 &>/dev/null; then
 	exit 1
 fi
 
-mkdir ~/.pack
-mkdir ~/.pack/clones
-mkdir ~/.pack/db
+mkdir "$PACK_DIR"
+mkdir "$PACK_DIR/clones"
+mkdir "$PACK_DIR/db"
 
-git clone https://github.com/stefan-hoeck/idris2-pack-db.git ~/.pack/clones/idris2-pack-db
-cp ~/.pack/clones/idris2-pack-db/collections/* ~/.pack/db
+git clone https://github.com/stefan-hoeck/idris2-pack-db.git "$PACK_DIR/clones/idris2-pack-db"
+cp "$PACK_DIR/clones/idris2-pack-db/collections/"* "$PACK_DIR/db"
 
-LATEST_DB="$(find "$HOME/.pack/db" -name 'nightly-*' | sort | tail -1)"
+LATEST_DB="$(find "$PACK_DIR/db" -name 'nightly-*' | sort | tail -1)"
 PACKAGE_COLLECTION="$(basename --suffix .toml "$LATEST_DB")"
-IDRIS2_COMMIT=$(sed -ne '/^\[idris2\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p}' "$HOME/.pack/db/$PACKAGE_COLLECTION.toml")
+IDRIS2_COMMIT=$(sed -ne '/^\[idris2\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
 
-git clone https://github.com/idris-lang/Idris2.git ~/.pack/clones/Idris2
-pushd ~/.pack/clones/Idris2
+git clone https://github.com/idris-lang/Idris2.git "$PACK_DIR/clones/Idris2"
+pushd "$PACK_DIR/clones/Idris2"
 git checkout "$IDRIS2_COMMIT"
 
 # NOTE tilde (~) does not work here so use HOME instead
-PREFIX_PATH="$HOME/.pack/install/$IDRIS2_COMMIT/idris2"
-BOOT_PATH="$HOME/.pack/install/$IDRIS2_COMMIT/idris2/bin/idris2"
+PREFIX_PATH="$PACK_DIR/install/$IDRIS2_COMMIT/idris2"
+BOOT_PATH="$PACK_DIR/install/$IDRIS2_COMMIT/idris2/bin/idris2"
 
 make bootstrap PREFIX="$PREFIX_PATH" SCHEME="$SCHEME"
 make install PREFIX="$PREFIX_PATH"
@@ -72,32 +76,32 @@ make install-with-src-libs IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH"
 make install-with-src-api IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH"
 popd
 
-TOML_COMMIT=$(sed -ne '/^\[db.toml\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p}' "$HOME/.pack/db/$PACKAGE_COLLECTION.toml")
-git clone https://github.com/cuddlefishie/toml-idr ~/.pack/clones/toml-idr
-pushd ~/.pack/clones/toml-idr
+TOML_COMMIT=$(sed -ne '/^\[db.toml\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
+git clone https://github.com/cuddlefishie/toml-idr "$PACK_DIR/clones/toml-idr"
+pushd "$PACK_DIR/clones/toml-idr"
 git checkout "$TOML_COMMIT"
 "$BOOT_PATH" --install toml.ipkg
 popd
 
-PACK_COMMIT=$(sed -ne '/^\[db.pack\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p}' "$HOME/.pack/db/$PACKAGE_COLLECTION.toml")
-git clone https://github.com/stefan-hoeck/idris2-pack.git ~/.pack/clones/idris2-pack
-pushd ~/.pack/clones/idris2-pack
+PACK_COMMIT=$(sed -ne '/^\[db.pack\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
+git clone https://github.com/stefan-hoeck/idris2-pack.git "$PACK_DIR/clones/idris2-pack"
+pushd "$PACK_DIR/clones/idris2-pack"
 git checkout "$PACK_COMMIT"
 "$BOOT_PATH" --build pack.ipkg
 
-mkdir -p "$HOME/.pack/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin"
-cp -r build/exec/* "$HOME/.pack/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin"
+mkdir -p "$PACK_DIR/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin"
+cp -r build/exec/* "$PACK_DIR/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin"
 popd
 
-mkdir -p "$HOME/.pack/$PACKAGE_COLLECTION/bin"
-pushd "$HOME/.pack/$PACKAGE_COLLECTION/bin"
-ln -s "$HOME/.pack/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin/pack" pack
+mkdir -p "$PACK_DIR/$PACKAGE_COLLECTION/bin"
+pushd "$PACK_DIR/$PACKAGE_COLLECTION/bin"
+ln -s "$PACK_DIR/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin/pack" pack
 popd
 
-ln -s "$HOME/.pack/$PACKAGE_COLLECTION/bin" ~/.pack/bin
+ln -s "$PACK_DIR/$PACKAGE_COLLECTION/bin" "$PACK_DIR/bin"
 
-mkdir ~/.pack/user
-cat <<EOF >>~/.pack/user/pack.toml
+mkdir "$PACK_DIR/user"
+cat <<EOF >>"$PACK_DIR/user/pack.toml"
 # The package collection to use
 collection = "$PACKAGE_COLLECTION"
 
