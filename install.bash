@@ -51,7 +51,7 @@ mkdir ~/.pack/db
 git clone https://github.com/stefan-hoeck/idris2-pack-db.git ~/.pack/clones/idris2-pack-db
 cp ~/.pack/clones/idris2-pack-db/collections/* ~/.pack/db
 
-LATEST_DB="$(find "$HOME/.pack/db" -name 'nightly-*' | tail -1)"
+LATEST_DB="$(find "$HOME/.pack/db" -name 'nightly-*' | sort | tail -1)"
 PACKAGE_COLLECTION="$(basename --suffix .toml "$LATEST_DB")"
 IDRIS2_COMMIT=$(sed -ne '/^\[idris2\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p}' "$HOME/.pack/db/$PACKAGE_COLLECTION.toml")
 
