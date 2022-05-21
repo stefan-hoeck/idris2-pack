@@ -43,11 +43,6 @@ if ! command -v make &>/dev/null; then
 	exit 1
 fi
 
-if ! command -v python3 &>/dev/null; then
-	echo "Please install python3"
-	exit 1
-fi
-
 mkdir "$PACK_DIR"
 mkdir "$PACK_DIR/clones"
 mkdir "$PACK_DIR/db"
