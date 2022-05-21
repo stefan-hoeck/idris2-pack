@@ -2,6 +2,17 @@
 
 set -eux
 
+# common functions
+
+function check_installed {
+	if ! command -v "$1" &>/dev/null; then
+		echo "Please install $1"
+		exit 1
+	fi
+}
+
+# end common functions
+
 DEFAULT_PACK_DIR="$HOME/.pack"
 read -r -p "Enter the path of your pack directory [$DEFAULT_PACK_DIR]: " PACK_DIR
 PACK_DIR="${PACK_DIR:-$DEFAULT_PACK_DIR}"
@@ -28,20 +39,9 @@ if [ -d "$PACK_DIR" ]; then
 	exit 1
 fi
 
-if ! command -v git &>/dev/null; then
-	echo "Please install git"
-	exit 1
-fi
-
-if ! command -v "$SCHEME" &>/dev/null; then
-	echo "Please install $SCHEME"
-	exit 1
-fi
-
-if ! command -v make &>/dev/null; then
-	echo "Please install make"
-	exit 1
-fi
+check_installed git
+check_installed "$SCHEME"
+check_installed make
 
 mkdir "$PACK_DIR"
 mkdir "$PACK_DIR/clones"
