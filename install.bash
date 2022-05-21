@@ -58,7 +58,6 @@ git clone https://github.com/idris-lang/Idris2.git "$PACK_DIR/clones/Idris2"
 pushd "$PACK_DIR/clones/Idris2"
 git checkout "$IDRIS2_COMMIT"
 
-# NOTE tilde (~) does not work here so use HOME instead
 PREFIX_PATH="$PACK_DIR/install/$IDRIS2_COMMIT/idris2"
 BOOT_PATH="$PACK_DIR/install/$IDRIS2_COMMIT/idris2/bin/idris2"
 
