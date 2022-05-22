@@ -25,8 +25,14 @@ export %inline
 FromTOML Package where
   fromTOML = package
 
+||| URL of the Idris repository
+export
+idrisRepo : URL
+idrisRepo = "https://github.com/idris-lang/Idris2.git"
+
 export
 FromTOML DB where
-  fromTOML v = [| MkDB (valAt "idris2.commit" v)
+  fromTOML v = [| MkDB (optValAt "idris2.url" idrisRepo v)
+                       (valAt "idris2.commit" v)
                        (valAt "idris2.version" v)
                        (valAt "db" v) |]

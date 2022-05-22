@@ -148,6 +148,7 @@ name Test                = "test"
 public export
 record DB where
   constructor MkDB
+  idrisURL     : URL
   idrisCommit  : Commit
   idrisVersion : PkgVersion
   packages     : SortedMap PkgName Package
@@ -174,9 +175,10 @@ printPair (x, Local dir ipkg) =
 
 export
 printDB : DB -> String
-printDB (MkDB c v db) =
+printDB (MkDB u c v db) =
   let header = """
         [idris2]
+        url     = "\{u}"
         version = "\{v}"
         commit  = "\{c}"
         """

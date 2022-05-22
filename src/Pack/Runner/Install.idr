@@ -58,7 +58,7 @@ mkIdris e = do
     debug e "No Idris compiler found. Installing..."
     if e.bootstrap
        then -- build with bootstrapping
-         withGit (tmpDir e) idrisRepo e.db.idrisCommit $ do
+         withGit (tmpDir e) e.db.idrisURL e.db.idrisCommit $ do
            sys "make bootstrap \{prefixVar e} \{schemeVar e}"
            sys "make install \{prefixVar e}"
            sys "make clean"
@@ -68,7 +68,7 @@ mkIdris e = do
            sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
 
        else -- build with existing Idris2 compiler
-         withGit (tmpDir e) idrisRepo e.db.idrisCommit $ do
+         withGit (tmpDir e) e.db.idrisURL e.db.idrisCommit $ do
            sys "make all \{prefixVar e}"
            sys "make install \{prefixVar e}"
            sys "make install-with-src-libs \{prefixVar e}"
