@@ -163,3 +163,5 @@ repl.rlwrap = false
 # commit = "eb7a146f565276f82ebf30cb6d5502e9f65dcc3c"
 # ipkg   = "toml.ipkg"
 EOF
+
+rm -rf "$PACK_DIR/clones"
