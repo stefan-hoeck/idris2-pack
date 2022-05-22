@@ -6,11 +6,6 @@ import Pack.Core.Types
 
 %default total
 
-||| URL of the Idris repository
-export
-idrisRepo : URL
-idrisRepo = "https://github.com/idris-lang/Idris2.git"
-
 ||| URL of package collections repository
 |||
 ||| TODO: This should become a command line argument
