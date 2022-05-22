@@ -160,6 +160,7 @@ export
 infoString : Env s -> List PkgInfo -> String
 infoString e ps = """
   Package Collection  : \{e.collection}
+  Idris2 URL          : \{e.db.idrisURL}
   Idris2 Version      : \{e.db.idrisVersion}
   Idris2 Commit       : \{e.db.idrisCommit}
   Scheme Executable   : \{e.scheme}
