@@ -13,9 +13,7 @@ function check_installed {
 
 # end common functions
 
-DEFAULT_PACK_DIR="$HOME/.pack"
-read -r -p "Enter the path of your pack directory [$DEFAULT_PACK_DIR]: " PACK_DIR
-PACK_DIR="${PACK_DIR:-$DEFAULT_PACK_DIR}"
+PACK_DIR="${PACK_DIR:-$HOME/.pack}"
 
 if command -v chezscheme &>/dev/null; then
 	DETECTED_SCHEME=chezscheme
