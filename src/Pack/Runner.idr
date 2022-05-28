@@ -9,6 +9,7 @@ import public Pack.Core
 import Pack.Runner.Database
 import Pack.Runner.Query
 import Pack.Runner.Install
+import Pack.Runner.New
 
 export covering
 runCmd : HasIO io => EitherT PackErr io ()
@@ -32,3 +33,4 @@ runCmd = do
     DataPath           => env c >>= putStrLn . packageDataDirs
     Switch db          => idrisEnv ({collection := db} c) >>= links
     Info               => env c >>= printInfo
+    New pty p          => idrisEnv c >>= new pty p

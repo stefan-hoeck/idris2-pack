@@ -32,4 +32,6 @@ data Cmd : Type where
   Completion       : String -> String -> Cmd
   CompletionScript : String -> Cmd
 
+  New              : PkgType -> String -> Cmd
+
   PrintHelp        : Cmd

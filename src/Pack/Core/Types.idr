@@ -91,6 +91,30 @@ export %inline
 Interpolation PkgName where interpolate = value
 
 --------------------------------------------------------------------------------
+--          Package Type
+--------------------------------------------------------------------------------
+
+||| Type of an Idris package
+public export
+data PkgType = Lib | Bin
+
+export %inline
+FromString PkgType where
+  fromString "lib" = Lib
+  fromString "bin" = Bin
+  fromString _ = Lib
+
+export %inline
+Show PkgType where
+  show Lib = "lib"
+  show Bin = "bin"
+
+export %inline
+Interpolation PkgType where
+  interpolate Lib = "lib"
+  interpolate Bin = "bin"
+
+--------------------------------------------------------------------------------
 --          DBName
 --------------------------------------------------------------------------------
 

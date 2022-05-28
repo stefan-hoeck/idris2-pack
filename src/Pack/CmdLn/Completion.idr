@@ -58,6 +58,10 @@ prefixOnlyIfNonEmpty : String -> List String -> List String
 prefixOnlyIfNonEmpty "--" = id
 prefixOnlyIfNonEmpty s    = prefixOnly s
 
+-- list of package types when creating a new package
+packageTypes : List String
+packageTypes = map show [Lib, Bin]
+
 codegens : List String
 codegens =
   [ "chez"
@@ -89,6 +93,7 @@ optionFlags =
   , "install-app"
   , "completion"
   , "completion-script"
+  , "new"
   ] ++ optionNames
 
 ||| Given a pair of strings, the first representing the word
@@ -116,6 +121,7 @@ opts x "install-with-src" e = prefixOnlyIfNonEmpty x <$> anyPackage e
 opts x "remove"           e = prefixOnlyIfNonEmpty x <$> installedPackages e
 opts x "switch"           e = prefixOnlyIfNonEmpty x <$> collections e
 opts x "typecheck"        e = prefixOnlyIfNonEmpty x <$> ipkgFiles
+opts x "new"              e = prefixOnlyIfNonEmpty x <$> pure (packageTypes)
 
 -- options
 opts x _ e = pure $ if (x `elem` optionFlags)

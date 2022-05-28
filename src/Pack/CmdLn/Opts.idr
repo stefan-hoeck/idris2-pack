@@ -127,6 +127,7 @@ cmd ["package-path"]           = Right PackagePath
 cmd ["libs-path"]              = Right LibsPath
 cmd ["data-path"]              = Right DataPath
 cmd ["switch",db]              = Right $ Switch (MkDBName db)
+cmd ["new", pty, p]            = Right $ New (fromString pty) p 
 cmd xs                         = Left  $ UnknownCommand xs
 
 ||| Given a root directory for *pack* and a db version,
@@ -165,6 +166,9 @@ usageInfo = """
   Commands:
     help
       Print this help text.
+
+    new <lib | bin> <package name>
+      Creates a new package in the current directory.
 
     build <.ipkg file>
       Build a local package given as an `.ipkg` file.
