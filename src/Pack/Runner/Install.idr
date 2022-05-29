@@ -150,9 +150,10 @@ remove : HasIO io => Env s -> PkgRep -> EitherT PackErr io ()
 remove env n = do
   debug env "Removing library or application \{n}..."
   rp <- resolve env n
+  rmDir (packagePrefixDir env rp)
   case executable rp of
     Just exe => removeExec env rp exe
-    Nothing  => rmDir (packagePrefixDir env rp)
+    Nothing  => pure ()
 
 covering
 runIdrisOn :  HasIO io
