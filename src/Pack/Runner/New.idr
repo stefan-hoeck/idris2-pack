@@ -21,6 +21,7 @@ newPkgDesc name mod user = let ipkg = initPkgDesc name
                               in { authors := Just user, 
                                    version := Just (MkPkgVersion (0 ::: [0, 1])),
                                    mainmod := toMaybe (mod == "Main") (nsAsModuleIdent $ mkNamespace mod, ""),
+                                   executable := toMaybe (mod == "Main") name,
                                    sourcedir := Just "src" } ipkg
 
 -- Helper to capitalize the first letter of a given String
