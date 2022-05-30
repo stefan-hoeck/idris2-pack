@@ -19,7 +19,7 @@ import Libraries.Text.PrettyPrint.Prettyprinter.Render.String
 newPkgDesc : (name : String) -> (mod : String) -> (user: String) -> PkgDesc
 newPkgDesc name mod user = let ipkg = initPkgDesc name 
                               in { authors := Just user, 
-                                   version := Just (MkPkgVersion (0 ::: [0, 1])),
+                                   version := Just (MkPkgVersion (0 ::: [1, 0])),
                                    mainmod := toMaybe (mod == "Main") (nsAsModuleIdent $ mkNamespace mod, ""),
                                    executable := toMaybe (mod == "Main") name,
                                    sourcedir := Just "src" } ipkg
