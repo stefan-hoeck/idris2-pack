@@ -61,18 +61,23 @@ mkIdris e = do
          withGit (tmpDir e) e.db.idrisURL e.db.idrisCommit $ do
            sys "make bootstrap \{prefixVar e} \{schemeVar e}"
            sys "make install \{prefixVar e}"
-           sys "make clean"
-           sys "make all \{idrisBootVar e} \{prefixVar e}"
+           sys "make clean-libs"
+           sys "rm -r build/ttc build/exec"
+           sys "make idris2-exec \{idrisBootVar e} \{prefixVar e} IDRIS2_INC_CGS=\"\""
+           sys "make libs \{idrisBootVar e} \{prefixVar e}"
            sys "make install \{idrisBootVar e} \{prefixVar e}"
            sys "make install-with-src-libs \{idrisBootVar e} \{prefixVar e}"
+           sys "rm -r build/ttc build/exec"
            sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
 
        else -- build with existing Idris2 compiler
          withGit (tmpDir e) e.db.idrisURL e.db.idrisCommit $ do
-           sys "make all \{prefixVar e}"
+           sys "make support \{prefixVar e}"
+           sys "make idris2-exec \{prefixVar e} IDRIS2_INC_CGS=\"\""
+           sys "make libs \{prefixVar e}"
            sys "make install \{prefixVar e}"
            sys "make install-with-src-libs \{prefixVar e}"
-           sys "make clean"
+           sys "rm -r build/ttc build/exec"
            sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
 
   link (idrisExec e) (collectionIdrisExec e)
