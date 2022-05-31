@@ -17,8 +17,8 @@ import Libraries.Text.PrettyPrint.Prettyprinter.Render.String
 %default total
 
 newPkgDesc : (name : String) -> (mod : String) -> (user: String) -> PkgDesc
-newPkgDesc name mod user = let ipkg = initPkgDesc name 
-                              in { authors := Just user, 
+newPkgDesc name mod user = let ipkg = initPkgDesc name
+                              in { authors := Just user,
                                    version := Just (MkPkgVersion (0 ::: [1, 0])),
                                    mainmod := toMaybe (mod == "Main") (nsAsModuleIdent $ mkNamespace mod, ""),
                                    executable := toMaybe (mod == "Main") name,
@@ -30,22 +30,22 @@ capitalize s with (strM s)
   capitalize "" | StrNil = ""
   capitalize (strCons x xs) | (StrCons x xs) = strCons (toUpper x) xs
 
-mainModFile : String 
+mainModFile : String
 mainModFile = """
               module Main
-                 
+
               main : IO ()
               main = putStrLn "Hello from Idris2!"
- 
+
               """
 
-libModFile : String -> String 
+libModFile : String -> String
 libModFile name = """
                   module \{name}
 
                   test : String
                   test = "Hello from Idris2!"
-      
+
                   """
 
 ||| Create a new package at current location
@@ -56,7 +56,7 @@ new pty pkgName e = do
     debug e "Getting author name from git config"
     user <- map trim (sysRun "git config user.name")
     debug e "Creating PkgDesc"
-    let (mod, modFile) : (String, String) = case pty of 
+    let (mod, modFile) : (String, String) = case pty of
                                                  Lib => (capitalize pkgName, libModFile $ capitalize pkgName)
                                                  Bin => ("Main", mainModFile)
 
