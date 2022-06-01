@@ -26,3 +26,9 @@ jobs:
         run: sudo apt-get update && sudo apt-get install --yes gcc make chezscheme libgmp3-dev
       - name: Run installation script
         run: echo chezscheme | bash install.bash
+      - name: Install pack-admin
+        run: $HOME/.pack/bin/pack install-app pack-admin
+      - name: Extract DB from HEAD
+        run: $HOME/.pack/bin/pack-admin extract-from-head $HOME/.pack/db/testdb.toml
+      - name: Check DB
+        run: $HOME/.pack/bin/pack-admin check-collection testdb
