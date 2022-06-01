@@ -16,51 +16,12 @@ defaults:
 
 jobs:
 
-  toml:
-    name: Build toml-idr with latest Idris
-    runs-on: ubuntu-latest
-    container: snazzybucket/idris2api:latest
-    steps:
-      - name: Checkout toml-idr
-        uses: actions/checkout@v2
-        with:
-          repository: cuddlefishie/toml-idr
-      - name: Download already installed dependencies
-        uses: actions/download-artifact@master
-        with:
-          name: dependencies-for-latest
-          path: /root/.idris2/
-        continue-on-error: true
-      - name: Install toml-idr
-        run: make install
-      - name: Save installed lib
-        uses: actions/upload-artifact@master
-        with:
-          name: dependencies-for-latest
-          path: /root/.idris2/idris2-*/toml*
-          if-no-files-found: error
-
   build:
-    name: Build the lib with latest Idris
+    name: Run installation script
     needs:
-      - toml
     runs-on: ubuntu-latest
-    container: snazzybucket/idris2api:latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Download installed dependencies
-        uses: actions/download-artifact@master
-        with:
-          name: dependencies-for-latest
-          path: /root/.idris2/
-      - name: Build pack
-        run: idris2 --build pack.ipkg
-      - name: Build admin
-        run: idris2 --build pack-admin.ipkg
-      - name: Dowloand DBs
-        run: build/exec/pack update-db
-      - name: Extract from HEAD
-        run: build/exec/pack-admin extract-from-head /root/.pack/db/testdb.toml
-      - name: Check collection
-        run: build/exec/pack-admin check-collection testdb
+      - name: Run installation script
+        run: echo chez | bash install.bash
