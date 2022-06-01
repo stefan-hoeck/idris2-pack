@@ -48,17 +48,20 @@ libModFile name = """
 
                   """
 
+-- Returns module name and module file
+getModFile : PkgType -> String -> (String, String)
+getModFile Lib pkgName = let mod = capitalize pkgName in (mod, libModFile mod)
+getModFile Bin pkgName = ("Main", mainModFile)
+
 ||| Create a new package at current location
 export covering
 new : HasIO io => PkgType -> (pkgName : String) -> Env HasIdris -> EitherT PackErr io ()
 new pty pkgName e = do
     debug e "Creating new \{pty} package named \{pkgName}..."
     debug e "Getting author name from git config"
-    user <- map trim (sysRun "git config user.name")
+    user <- trim <$> (sysRun "git config user.name")
     debug e "Creating PkgDesc"
-    let (mod, modFile) : (String, String) = case pty of
-                                                 Lib => (capitalize pkgName, libModFile $ capitalize pkgName)
-                                                 Bin => ("Main", mainModFile)
+    let (mod, modFile) = getModFile pty pkgName
 
     ipkg <- pure $ newPkgDesc pkgName mod user
 
@@ -66,6 +69,9 @@ new pty pkgName e = do
     let pkgRootDir = parse "./\{pkgName}"
     let srcDir = pkgRootDir /> "src"
     mkDir (srcDir)
+
+    debug e "Initializing git repo"
+    catchE (sys "git init \{pkgRootDir}") (\err => warn e "Git repo creation failed: \{printErr err}")
 
     debug e "Writing ipkg file"
     write (pkgRootDir /> "\{pkgName}.ipkg") (renderString $ layoutUnbounded $ pretty ipkg)
