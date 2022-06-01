@@ -168,7 +168,9 @@ usageInfo = """
       Print this help text.
 
     new <lib | bin> <package name>
-      Creates a new package in the current directory.
+      Create a new package in the current directory
+      consisting of a source directory, default module and a .ipkg file.
+      A git repository will be initialized.
 
     build <.ipkg file>
       Build a local package given as an `.ipkg` file.

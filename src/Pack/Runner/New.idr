@@ -53,6 +53,12 @@ getModFile : PkgType -> String -> (String, String)
 getModFile Lib pkgName = let mod = capitalize pkgName in (mod, libModFile mod)
 getModFile Bin pkgName = ("Main", mainModFile)
 
+gitIgnoreFile : String
+gitIgnoreFile = """
+                build/
+                *.*~
+                """
+
 ||| Create a new package at current location
 export covering
 new : HasIO io => PkgType -> (pkgName : String) -> Env HasIdris -> EitherT PackErr io ()
@@ -71,7 +77,9 @@ new pty pkgName e = do
     mkDir (srcDir)
 
     debug e "Initializing git repo"
-    catchE (sys "git init \{pkgRootDir}") (\err => warn e "Git repo creation failed: \{printErr err}")
+    eitherT (\err => warn e "Git repo creation failed: \{printErr err}")
+            (\_ => write (pkgRootDir /> ".gitignore") gitIgnoreFile)
+            (sys "git init \{pkgRootDir}")
 
     debug e "Writing ipkg file"
     write (pkgRootDir /> "\{pkgName}.ipkg") (renderString $ layoutUnbounded $ pretty ipkg)
