@@ -18,10 +18,11 @@ jobs:
 
   build:
     name: Run installation script
-    needs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Install scheme
+        uses: apt-get update && apt-get install --yes gcc make chezscheme libgmp3-dev
       - name: Run installation script
         run: echo chez | bash install.bash
