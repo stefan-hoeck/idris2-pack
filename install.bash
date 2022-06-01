@@ -37,6 +37,11 @@ if [ -d "$PACK_DIR" ]; then
 	exit 1
 fi
 
+# Homebrew gmp on M1 macos
+if [ -d "/opt/homebrew/include" ]; then
+	export CPATH="/opt/homebrew/include"
+fi
+
 check_installed git
 check_installed "$SCHEME"
 check_installed make
@@ -49,8 +54,8 @@ git clone https://github.com/stefan-hoeck/idris2-pack-db.git "$PACK_DIR/clones/i
 cp "$PACK_DIR/clones/idris2-pack-db/collections/"* "$PACK_DIR/db"
 
 LATEST_DB="$(find "$PACK_DIR/db" -name 'nightly-*' | sort | tail -1)"
-PACKAGE_COLLECTION="$(basename --suffix .toml "$LATEST_DB")"
-IDRIS2_COMMIT=$(sed -ne '/^\[idris2\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
+PACKAGE_COLLECTION="$(basename -s .toml "$LATEST_DB")"
+IDRIS2_COMMIT=$(sed -ne '/^\[idris2\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p;}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
 
 git clone https://github.com/idris-lang/Idris2.git "$PACK_DIR/clones/Idris2"
 pushd "$PACK_DIR/clones/Idris2"
@@ -68,14 +73,14 @@ make install-with-src-libs IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH"
 make install-with-src-api IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH"
 popd
 
-TOML_COMMIT=$(sed -ne '/^\[db.toml\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
+TOML_COMMIT=$(sed -ne '/^\[db.toml\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p;}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
 git clone https://github.com/cuddlefishie/toml-idr "$PACK_DIR/clones/toml-idr"
 pushd "$PACK_DIR/clones/toml-idr"
 git checkout "$TOML_COMMIT"
 "$BOOT_PATH" --install toml.ipkg
 popd
 
-PACK_COMMIT=$(sed -ne '/^\[db.pack\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
+PACK_COMMIT=$(sed -ne '/^\[db.pack\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p;}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
 git clone https://github.com/stefan-hoeck/idris2-pack.git "$PACK_DIR/clones/idris2-pack"
 pushd "$PACK_DIR/clones/idris2-pack"
 git checkout "$PACK_COMMIT"
