@@ -90,3 +90,5 @@ jobs:
           path: /root/.idris2/
       - name: Build lib
         run: idris2 --build pack.ipkg
+      - name: Build admin
+        run: idris2 --build pack-admin.ipkg
