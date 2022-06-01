@@ -1,15 +1,15 @@
 name: Build
 
 on:
-  push:
-    branches:
-      - '**'
-    tags:
-      - '**'
-  pull_request:
-    branches:
-      - main
-      - master
+  #  push:
+  #    branches:
+  #      - '**'
+  #    tags:
+  #      - '**'
+  #  pull_request:
+  #    branches:
+  #      - main
+  #      - master
   schedule:
     # We want to run right after the `latest` image is published.
     # So, let's do it an hour right after. Look the schedule of publishing here:
