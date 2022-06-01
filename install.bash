@@ -39,7 +39,7 @@ fi
 
 # Homebrew gmp on M1 macos
 if [ -d "/opt/homebrew/include" ]; then
-    export CPATH="/opt/homebrew/include"
+	export CPATH="/opt/homebrew/include"
 fi
 
 check_installed git
