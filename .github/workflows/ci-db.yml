@@ -24,6 +24,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+          fetch-depth: 0
       - name: Install scheme
         run: sudo apt-get update && sudo apt-get install --yes gcc make chezscheme libgmp3-dev nodejs
           #      - name: Run installation script
@@ -41,11 +44,13 @@ jobs:
           # cp "$HOME/.pack/db/testdb.toml" "db/latest.toml"
           mkdir -p db
           echo "test" > "db/latest.toml"
-      - name: Release
-        uses: justjavac/action-gh-push@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          files: |
-            db/latest.toml
-            STATUS.md
+      - name: Commit files
+            run: |
+              git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+              git config --local user.name "github-actions[bot]"
+              git commit -am "[ DB ] update db"
+          - name: Push changes
+            uses: ad-m/github-push-action@master
+            with:
+              github_token: ${{ secrets.GITHUB_TOKEN }}
+              branch: ${{ github.ref }}
