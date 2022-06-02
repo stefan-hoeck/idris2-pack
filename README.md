@@ -1,5 +1,7 @@
 # An Idris2 Package Manager with Curated Package Collections
 
+![collection status](https://github.com/stefan-hoeck/idris2-pack/workflows/Check%20DB/badge.svg)
+
 This is a simple package manager taking a slightly different
 approach than other available options like
 [sirdi](https://github.com/eayus/sirdi) or
