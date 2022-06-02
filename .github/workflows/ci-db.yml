@@ -22,6 +22,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+          fetch-depth: 0
       - name: Install scheme
         run: sudo apt-get update && sudo apt-get install --yes gcc make chezscheme libgmp3-dev nodejs
           #      - name: Run installation script
@@ -42,4 +43,4 @@ jobs:
           git config --local user.email "hock@zhaw.ch"
           git add "db/latest.toml" STATUS.md
           git commit -m "[ AUTO ] latest package collection"
-          git push
+          git push origin main
