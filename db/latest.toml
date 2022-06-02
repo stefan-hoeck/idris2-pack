@@ -126,13 +126,13 @@ ipkg   = "lsp.ipkg"
 [db.pack]
 type   = "github"
 url    = "https://github.com/stefan-hoeck/idris2-pack"
-commit = "2c326998fc0d50d5e45f216328fc7f437301f7e1"
+commit = "02e129f6f120b46bf2e70ba1dd367acba87138b4"
 ipkg   = "pack.ipkg"
 
 [db.pack-admin]
 type   = "github"
-url    = "https://github.com/stefan-hoeck/idris2-pack-admin"
-commit = "eeb1ba2939fc3a4c079e7cbdef6a368364fe9699"
+url    = "https://github.com/stefan-hoeck/idris2-pack"
+commit = "02e129f6f120b46bf2e70ba1dd367acba87138b4"
 ipkg   = "pack-admin.ipkg"
 
 [db.pg-idris]
@@ -204,7 +204,7 @@ ipkg   = "toml.ipkg"
 [db.tyttp]
 type   = "github"
 url    = "https://github.com/kbertalan/tyttp"
-commit = "92113413b216a1866ffe2e8a99407a050f12f041"
+commit = "c1cc6d3b98ecdf61997ab3099c9b671d08da4bf9"
 ipkg   = "tyttp.ipkg"
 
 [db.tyttp-json]
