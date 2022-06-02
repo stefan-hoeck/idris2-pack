@@ -37,7 +37,6 @@ jobs:
       - name: Update repo
         run: |
           # cp "$HOME/.pack/db/testdb.toml" "db/latest.toml"
-          git checkout main
           mkdir -p db
           echo "test" > "db/latest.toml"
           git config user.name github-actions
