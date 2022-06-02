@@ -12,6 +12,8 @@ on:
     # https://github.com/alexhumphreys/idris2-dockerfile/blob/main/.github/workflows/docker-image.yml
     - cron: '0 1 * * *'
 
+permissions: write-all
+
 defaults:
   run:
     shell: bash
