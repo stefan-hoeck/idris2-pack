@@ -1,9 +1,6 @@
 name: Check DB
 
 on:
-  pull_request:
-    branches:
-      - main
   schedule:
     # We want to run right after the `latest` image is published.
     # So, let's do it an hour right after. Look the schedule of publishing here:
@@ -41,7 +38,6 @@ jobs:
           echo "test" > "db/latest.toml"
           git config user.name github-actions
           git config user.email github-actions@github.com
-          # git add "db/latest.toml" STATUS.md
-          git add "db/latest.toml"
+          git add "db/latest.toml" STATUS.md
           git commit -m "[ AUTO ] latest package collection"
           git push
