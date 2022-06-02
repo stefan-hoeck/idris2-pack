@@ -40,4 +40,4 @@ jobs:
           git config user.email github-actions@github.com
           git add "db/latest.toml" STATUS.md
           git commit -m "[ AUTO ] latest package collection"
-          git push
+          git push origin HEAD:main
