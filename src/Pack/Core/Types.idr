@@ -246,6 +246,9 @@ data PackErr : Type where
   ||| Error in a toml file.
   TOMLParse : (file : Path) -> (err : String) -> PackErr
 
+  ||| Number of failures when building packages.
+  BuildFailures : Nat -> PackErr
+
 ||| Prints an error that occured during program execution.
 export
 printErr : PackErr -> String
@@ -322,6 +325,10 @@ printErr (TOMLFile file err) =
   "Error in file \{file}: \{printTOMLErr err}."
 
 printErr (TOMLParse file err) = "Error in file \{file}: \{err}."
+
+printErr (BuildFailures 1) = "1 package failed to build."
+
+printErr (BuildFailures n) = "\{show n} packages failed to build."
 
 --------------------------------------------------------------------------------
 --          Logging
