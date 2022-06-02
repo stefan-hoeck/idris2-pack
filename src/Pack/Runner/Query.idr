@@ -70,13 +70,13 @@ details (RLocal name dir ipkg desc) = [
   , "ipkg File    : \{ipkg}"
   ]
 
-details Base    = [ "Type           : Idris core package" ]
-details Contrib = [ "Type           : Idris core package" ]
-details Idris2  = [ "Type           : Idris core package" ]
-details Linear  = [ "Type           : Idris core package" ]
-details Network = [ "Type           : Idris core package" ]
-details Prelude = [ "Type           : Idris core package" ]
-details Test    = [ "Type           : Idris core package" ]
+details Base    = [ "Type         : Idris core package" ]
+details Contrib = [ "Type         : Idris core package" ]
+details Idris2  = [ "Type         : Idris core package" ]
+details Linear  = [ "Type         : Idris core package" ]
+details Network = [ "Type         : Idris core package" ]
+details Prelude = [ "Type         : Idris core package" ]
+details Test    = [ "Type         : Idris core package" ]
 
 
 fromTpe : QueryType -> PkgName -> ResolvedPackage -> String
@@ -91,7 +91,7 @@ fromTpe Dependencies p rp =
    in unlines $  p.value :: map (indent 2) ds
 
 fromTpe Details p rp = unlines . (p.value ::) . map (indent 2) $ concat [
-    toList (("Brief       : " ++) <$> shortDesc rp)
+    toList (("Brief        : " ++) <$> shortDesc rp)
   , details rp
   , prettyDeps rp
   ]
