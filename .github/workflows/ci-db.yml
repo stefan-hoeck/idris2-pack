@@ -22,28 +22,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-        with:
-          persist-credentials: false
-          fetch-depth: 0
       - name: Install scheme
         run: sudo apt-get update && sudo apt-get install --yes gcc make chezscheme libgmp3-dev nodejs
-      - name: Run installation script
-        run: |
-          echo chezscheme | bash install.bash
-          echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
-      - name: Install pack-admin
-        run: pack install-app pack-admin
-      - name: Extract DB from HEAD
-        run: pack-admin extract-from-head "$HOME/.pack/db/testdb.toml"
-      - name: Check DB
-        run: pack-admin check-collection testdb STATUS.md
+          #      - name: Run installation script
+          #        run: |
+          #          echo chezscheme | bash install.bash
+          #          echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
+          #      - name: Install pack-admin
+          #        run: pack install-app pack-admin
+          #      - name: Extract DB from HEAD
+          #        run: pack-admin extract-from-head "$HOME/.pack/db/testdb.toml"
+          #      - name: Check DB
+          #        run: pack-admin check-collection testdb STATUS.md
       - name: Update repo
         run: |
-          cp "$HOME/.pack/db/testdb.toml" "db/latest.toml"
+          # cp "$HOME/.pack/db/testdb.toml" "db/latest.toml"
+          echo "test" > "db/latest.toml"
           git config --local user.name "stefan-hoeck"
+          git config --local user.email "hock@zhaw.ch"
           git add "db/latest.toml" STATUS.md
           git commit -m "[ AUTO ] latest package collection"
-      - name: Push changes
-        uses: ad-m/github-push-action@master
-        with:
-          branch: main
+          git push origin main
