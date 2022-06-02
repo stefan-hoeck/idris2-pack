@@ -23,14 +23,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Install scheme
-        run: sudo apt-get update && sudo apt-get install --yes gcc make chezscheme libgmp3-dev
+        run: sudo apt-get update && sudo apt-get install --yes gcc make chezscheme libgmp3-dev nodejs
       - name: Run installation script
         run: |
           echo chezscheme | bash install.bash
-          echo "$HOME/.pack/bin" >> $GITHUB_PATH
+          echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
       - name: Install pack-admin
         run: pack install-app pack-admin
       - name: Extract DB from HEAD
-        run: pack-admin extract-from-head $HOME/.pack/db/testdb.toml
+        run: pack-admin extract-from-head "$HOME/.pack/db/testdb.toml"
       - name: Check DB
         run: pack-admin check-collection testdb
+      - name: Update repo
+        run: |
+          cp "$HOME/.pack/db/testdb.toml" "db/latest.toml"
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add "db/latest.toml"
+          git commit -m "[ AUTO ] latest package collection"
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: main
