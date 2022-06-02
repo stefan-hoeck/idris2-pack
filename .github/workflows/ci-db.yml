@@ -23,6 +23,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
         with:
+          persist-credentials: false
           fetch-depth: 0
       - name: Install scheme
         run: sudo apt-get update && sudo apt-get install --yes gcc make chezscheme libgmp3-dev nodejs
