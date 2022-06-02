@@ -24,7 +24,7 @@ ipkg   = "collie.ipkg"
 [db.comonad]
 type   = "github"
 url    = "https://github.com/stefan-hoeck/idris2-comonad"
-commit = "4bfe255605a3e6604dc04d6e928a73be62160256"
+commit = "35a6e7c2243e73e9c63340e532adaf3197cea3d3"
 ipkg   = "comonad.ipkg"
 
 [db.dinwiddy]
@@ -36,13 +36,13 @@ ipkg   = "dinwiddy.ipkg"
 [db.dom]
 type   = "github"
 url    = "https://github.com/stefan-hoeck/idris2-dom"
-commit = "05ab6e1bbccf696ff4137c1392f11646d5e8bf04"
+commit = "c4e0084b94ebc90d7b47fb4bf6e88aa31a3b1262"
 ipkg   = "dom.ipkg"
 
 [db.eff]
 type   = "github"
 url    = "https://github.com/stefan-hoeck/idris2-eff"
-commit = "22f62ed3e5b2bae06d02e7a8b4e06f785d242718"
+commit = "5520bac8da3364bd3a02f4ac9bf318ce85479c6a"
 ipkg   = "eff.ipkg"
 
 [db.effect]
@@ -54,13 +54,13 @@ ipkg   = "effect.ipkg"
 [db.elab-util]
 type   = "github"
 url    = "https://github.com/stefan-hoeck/idris2-elab-util"
-commit = "29f8153c0c06a69a168f009823a31bae266c5306"
+commit = "036b6d693dffe6efb508bfa2346705d51f9d0b61"
 ipkg   = "elab-util.ipkg"
 
 [db.freer]
 type   = "github"
 url    = "https://github.com/stefan-hoeck/idris2-freer"
-commit = "ed81c9faf514bc4bd5c7fdd383d6199ac6dd22b5"
+commit = "87f6104ed438f89e0176dbc7e9ea3f57128e683d"
 ipkg   = "freer.ipkg"
 
 [db.fvect]
@@ -72,7 +72,7 @@ ipkg   = "fvect.ipkg"
 [db.graph]
 type   = "github"
 url    = "https://github.com/stefan-hoeck/idris2-graph"
-commit = "4556027eaa7bf35c2f0c3a1f4f9d5d88d55e08a6"
+commit = "46ad8cb827e180dc781e87c095c7dba17b2b9756"
 ipkg   = "graph.ipkg"
 
 [db.hashable]
@@ -90,7 +90,7 @@ ipkg   = "hashmap.ipkg"
 [db.hedgehog]
 type   = "github"
 url    = "https://github.com/stefan-hoeck/idris2-hedgehog"
-commit = "e9858609ea79f0d2e36e66bfb9a2dbceba7771cc"
+commit = "c6074ae2ad34480c2179b3dd45bb4e4605961445"
 ipkg   = "hedgehog.ipkg"
 
 [db.idrall]
@@ -108,7 +108,7 @@ ipkg   = "indexed.ipkg"
 [db.json]
 type   = "github"
 url    = "https://github.com/stefan-hoeck/idris2-json"
-commit = "2d0931546afd1152a55da9e6bf50d0fd8dd99dee"
+commit = "2b7b370ee0ffc5ed57437f2da548548dd0000e9d"
 ipkg   = "json.ipkg"
 
 [db.katla]
@@ -126,7 +126,7 @@ ipkg   = "lsp.ipkg"
 [db.pack]
 type   = "github"
 url    = "https://github.com/stefan-hoeck/idris2-pack"
-commit = "5f5563d5572e30d49f0577b10a4fd9f7a04d6f49"
+commit = "2c326998fc0d50d5e45f216328fc7f437301f7e1"
 ipkg   = "pack.ipkg"
 
 [db.pack-admin]
@@ -150,25 +150,25 @@ ipkg   = "prettier.ipkg"
 [db.pretty-show]
 type   = "github"
 url    = "https://github.com/stefan-hoeck/idris2-pretty-show"
-commit = "d31e1f5a191a78deea1170beee21401da063ed8d"
+commit = "09684725181ad4ba2ae8a49443bee358d7947c25"
 ipkg   = "pretty-show.ipkg"
 
 [db.prim]
 type   = "github"
 url    = "https://github.com/stefan-hoeck/idris2-prim"
-commit = "d342072f3b30f7930221bab620a836e0e67c2374"
+commit = "0ad39cd9b29336ce5cf5199af6754af1a085b0c6"
 ipkg   = "prim.ipkg"
 
 [db.rhone]
 type   = "github"
 url    = "https://github.com/stefan-hoeck/idris2-rhone"
-commit = "33441db6a0a26bb04ff16b72c0224eaa04b5fee8"
+commit = "cc48d755e2a56a646063ed07a44d6a452dd0e488"
 ipkg   = "rhone.ipkg"
 
 [db.rhone-js]
 type   = "github"
 url    = "https://github.com/stefan-hoeck/idris2-rhone-js"
-commit = "b5cfde2b35e483d1231619a741cfce8b3a8ea438"
+commit = "4f37a9379b7e19609100db8ae062e0f3fd6a98f1"
 ipkg   = "rhone-js.ipkg"
 
 [db.snocvect]
@@ -180,13 +180,13 @@ ipkg   = "snocvect.ipkg"
 [db.sop]
 type   = "github"
 url    = "https://github.com/stefan-hoeck/idris2-sop"
-commit = "45db4ca3705a063a44fa4e6d92229bdbaccea1cd"
+commit = "1d8029c2bda9749d7c4ffe74d75b0bd7f51815d2"
 ipkg   = "sop.ipkg"
 
 [db.tailrec]
 type   = "github"
 url    = "https://github.com/stefan-hoeck/idris2-tailrec"
-commit = "dd0bc6381b3a2e69aa37f9a8c1b165d4b1516ad7"
+commit = "ae27e2ed09ef3d880801899cfc26f470f5b71332"
 ipkg   = "tailrec.ipkg"
 
 [db.tester]
