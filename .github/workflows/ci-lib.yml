@@ -23,7 +23,6 @@ jobs:
 
   toml:
     name: Build toml-idr with Idris latest
-    needs: read-ver
     runs-on: ubuntu-latest
     container: snazzybucket/idris2api:latest
     steps:
