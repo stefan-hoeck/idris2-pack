@@ -14,7 +14,8 @@ that's a bug in the package collection). This is similar to what
 There is a second GitHub repository containing the package collections:
 [idris2-pack-db](https://github.com/stefan-hoeck/idris2-pack-db).
 See instructions there if you want to make your own packages
-available to *pack*.
+available to *pack*. The list of currently available packages plus
+their current build status can also be found [here](STATUS.md).
 
 ## Quick Installation
 
