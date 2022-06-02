@@ -9,7 +9,6 @@ on:
   pull_request:
     branches:
       - main
-      - master
   schedule:
     # We want to run right after the `latest` image is published.
     # So, let's do it an hour right after. Look the schedule of publishing here:
@@ -22,31 +21,11 @@ defaults:
 
 jobs:
 
-  read-ver:
-    name: Aquire compiler version
-    runs-on: ubuntu-latest
-    env:
-      IDRIS_VERSION_FILE: .idris-version
-    outputs:
-      idris-ver: ${{ steps.read-ver.outputs.idris-ver }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Read the version
-        id: read-ver
-        run: sed 's/^/::set-output name=idris-ver::/' < "${IDRIS_VERSION_FILE}"
-
   toml:
-    name: Build toml-idr with ${{ matrix.idris-version }}
+    name: Build toml-idr with Idris latest
     needs: read-ver
     runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 1 # We need sequential run!
-      matrix:
-        idris-version:
-          - ${{ needs.read-ver.outputs.idris-ver }}
-          - latest
-    container: snazzybucket/idris2api:${{ matrix.idris-version }}
+    container: snazzybucket/idris2api:latest
     steps:
       - name: Checkout toml-idr
         uses: actions/checkout@v2
@@ -55,7 +34,7 @@ jobs:
       - name: Download already installed dependencies
         uses: actions/download-artifact@master
         with:
-          name: dependencies-for-${{ matrix.idris-version }}
+          name: dependencies-for-latest
           path: /root/.idris2/
         continue-on-error: true
       - name: Install toml-idr
@@ -63,30 +42,23 @@ jobs:
       - name: Save installed lib
         uses: actions/upload-artifact@master
         with:
-          name: dependencies-for-${{ matrix.idris-version }}
+          name: dependencies-for-latest
           path: /root/.idris2/idris2-*/toml*
           if-no-files-found: error
 
   build:
-    name: Build the lib with ${{ matrix.idris-version }}
+    name: Build the lib with latest
     needs:
-      - read-ver
       - toml
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        idris-version:
-          - ${{ needs.read-ver.outputs.idris-ver }}
-          - latest
-    container: snazzybucket/idris2api:${{ matrix.idris-version }}
+    container: snazzybucket/idris2api:latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Download installed dependencies
         uses: actions/download-artifact@master
         with:
-          name: dependencies-for-${{ matrix.idris-version }}
+          name: dependencies-for-latest
           path: /root/.idris2/
       - name: Build lib
         run: idris2 --build pack.ipkg
