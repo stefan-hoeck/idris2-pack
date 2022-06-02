@@ -135,7 +135,7 @@ bootstrap  = false
 scheme      = "$SCHEME"
 
 # Default code generator to us
-codegen     = "chez"
+# codegen     = "chez"
 
 # Set this to \`true\` in order to run REPL sessions from within
 # \`rlwrap\`. This will give you additional features such as a
