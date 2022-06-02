@@ -45,4 +45,4 @@ jobs:
           # git add "db/latest.toml" STATUS.md
           git add "db/latest.toml"
           git commit -m "[ AUTO ] latest package collection"
-          git push origin main
+          git push
