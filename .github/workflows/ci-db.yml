@@ -44,6 +44,7 @@ jobs:
           echo "test" > "db/latest.toml"
           git config --local user.name "stefan-hoeck"
           git config --local user.email "hock@zhaw.ch"
-          git add "db/latest.toml" STATUS.md
+          # git add "db/latest.toml" STATUS.md
+          git add "db/latest.toml"
           git commit -m "[ AUTO ] latest package collection"
           git push origin main
