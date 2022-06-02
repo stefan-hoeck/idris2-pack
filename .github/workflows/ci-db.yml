@@ -2,7 +2,7 @@ name: Check DB
 
 on:
   schedule:
-    - cron: '0 14 * * *'
+    - cron: '0 18 * * *'
 
 permissions: write-all
 
