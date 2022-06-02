@@ -31,16 +31,16 @@ jobs:
           fetch-depth: 0
       - name: Install scheme
         run: sudo apt-get update && sudo apt-get install --yes gcc make chezscheme libgmp3-dev nodejs
-          - name: Run installation script
-            run: |
-              echo chezscheme | bash install.bash
-              echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
-          - name: Install pack-admin
-            run: pack install-app pack-admin
-          - name: Extract DB from HEAD
-            run: pack-admin extract-from-head "$HOME/.pack/db/testdb.toml"
-          - name: Check DB
-            run: pack-admin check-collection testdb STATUS.md
+      - name: Run installation script
+        run: |
+          echo chezscheme | bash install.bash
+          echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
+      - name: Install pack-admin
+        run: pack install-app pack-admin
+      - name: Extract DB from HEAD
+        run: pack-admin extract-from-head "$HOME/.pack/db/testdb.toml"
+      - name: Check DB
+        run: pack-admin check-collection testdb STATUS.md
       - name: Adjust status and DB
         run: |
           cp "$HOME/.pack/db/testdb.toml" "db/latest.toml"
