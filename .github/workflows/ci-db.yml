@@ -39,6 +39,7 @@ jobs:
       - name: Update repo
         run: |
           # cp "$HOME/.pack/db/testdb.toml" "db/latest.toml"
+          git checkout main
           echo "test" > "db/latest.toml"
           git config --local user.name "stefan-hoeck"
           git config --local user.email "hock@zhaw.ch"
