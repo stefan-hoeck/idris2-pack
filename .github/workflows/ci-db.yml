@@ -42,4 +42,4 @@ jobs:
           git config --local user.email "hock@zhaw.ch"
           git add "db/latest.toml" STATUS.md
           git commit -m "[ AUTO ] latest package collection"
-          git push origin main
+          git push
