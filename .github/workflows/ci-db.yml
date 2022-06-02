@@ -1,0 +1,43 @@
+name: Check DB
+
+on:
+  schedule:
+    # We want to run right after the `latest` image is published.
+    # So, let's do it an hour right after. Look the schedule of publishing here:
+    # https://github.com/alexhumphreys/idris2-dockerfile/blob/main/.github/workflows/docker-image.yml
+    - cron: '0 1 * * *'
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+
+  build:
+    name: Run installation script
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install scheme
+        run: sudo apt-get update && sudo apt-get install --yes gcc make chezscheme libgmp3-dev nodejs
+          #      - name: Run installation script
+          #        run: |
+          #          echo chezscheme | bash install.bash
+          #          echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
+          #      - name: Install pack-admin
+          #        run: pack install-app pack-admin
+          #      - name: Extract DB from HEAD
+          #        run: pack-admin extract-from-head "$HOME/.pack/db/testdb.toml"
+          #      - name: Check DB
+          #        run: pack-admin check-collection testdb STATUS.md
+      - name: Update repo
+        run: |
+          # cp "$HOME/.pack/db/testdb.toml" "db/latest.toml"
+          mkdir -p db
+          echo "test" > "db/latest.toml"
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add "db/latest.toml" STATUS.md
+          git commit -m "[ AUTO ] latest package collection"
+          git push

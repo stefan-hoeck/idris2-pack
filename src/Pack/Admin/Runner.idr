@@ -12,15 +12,15 @@ import Pack.Runner.Install
 import public Pack.Core
 
 data ACmd : Type where
-  CheckDB  : DBName -> ACmd
+  CheckDB  : DBName -> Path -> ACmd
   FromHEAD : (path : Path) -> ACmd
   Help     : ACmd
 
 readCmd : List String -> Either PackErr ACmd
-readCmd ["help"]                = Right Help
-readCmd ["extract-from-head",p] = Right (FromHEAD $ parse p)
-readCmd ["check-collection",n]  = Right (CheckDB $ MkDBName n)
-readCmd xs                      = Left $ UnknownCommand xs
+readCmd ["help"]                 = Right Help
+readCmd ["extract-from-head",p]  = Right (FromHEAD $ parse p)
+readCmd ["check-collection",n,p] = Right (CheckDB (MkDBName n) (parse p))
+readCmd xs                       = Left $ UnknownCommand xs
 
 covering
 commitOf : HasIO io => Package -> EitherT PackErr io Package
@@ -55,9 +55,9 @@ runCmd : HasIO io => EitherT PackErr io ()
 runCmd = do
   (c',cmd) <- getConfig readCmd Help
   case cmd of
-    CheckDB db         =>
+    CheckDB db p       =>
       let c = setColl db c'
-       in idrisEnv c >>= checkDB
+       in idrisEnv c >>= checkDB p
     FromHEAD p         =>
       let c = setColl "HEAD" c'
        in env c >>= writeLatestDB p

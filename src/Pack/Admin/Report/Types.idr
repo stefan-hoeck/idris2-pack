@@ -1,9 +1,12 @@
 module Pack.Admin.Report.Types
 
+import Data.Maybe
 import Data.SnocList
 import Data.SortedMap
 import Data.String
+import Idris.Package.Types
 import Pack.Core.Types
+import Pack.Config.Types
 import Pack.Database.Types
 
 %default total
@@ -31,9 +34,9 @@ failingDeps rs = nub $ rs >>=
 
 record RepLines where
   constructor MkRL
-  errs      : SnocList String
-  failures  : SnocList String
-  successes : SnocList String
+  errs      : SnocList (PkgName, PackErr)
+  failures  : SnocList (ResolvedPackage, List PkgName)
+  successes : SnocList ResolvedPackage
 
 Semigroup RepLines where
   MkRL e1 f1 s1 <+> MkRL e2 f2 s2 = MkRL (e1<+>e2) (f1<+>f2) (s1<+>s2)
@@ -41,37 +44,62 @@ Semigroup RepLines where
 Monoid RepLines where
   neutral = MkRL Lin Lin Lin
 
-report : RepLines -> String
-report (MkRL errs fails succs) = """
-  Packages failing to resolve:
+succLine : ResolvedPackage -> Maybe String
+succLine (RGitHub n u c _ d) =
+  let desc = fromMaybe "" d.brief
+   in Just "| (\{n})[\{u}] | \{desc} | \{c} |"
+succLine _ = Nothing
 
-  \{unlines $ errs <>> Nil}
+failLine : (ResolvedPackage, List PkgName) -> Maybe String
+failLine (RGitHub n u c _ _, ps) =
+  let deps = fastConcat . intersperse ", " $ map interpolate ps
+   in Just "| (\{n})[\{u}] | \{deps} | \{c} |"
+failLine _ = Nothing
 
-  Packages failing to build:
+errLine : (PkgName, PackErr) -> String
+errLine (p,err) = "| \{p} | \{printErr err} |"
 
-  \{unlines $ fails <>> Nil}
+report : Env e -> RepLines -> String
+report e (MkRL es fs ss) =
+  let succs = unlines $ mapMaybe succLine (ss <>> Nil)
+      fails = unlines $ mapMaybe failLine (fs <>> Nil)
+      errs  = unlines $ map errLine (es <>> Nil)
+   in """
+      # Package Status
 
-  Packages building successfully:
+      | Compiler | Version | Commit |
+      | --- | --- | --- |
+      | [Idris2](\{e.db.idrisURL}) | \{e.db.idrisVersion} | \{e.db.idrisCommit} |
 
-  \{unlines $ succs <>> Nil}
-  """
+      ## Building Packages
+
+      | Package | Description | Commit |
+      | --- | --- | --- |
+      \{succs}
+
+      ## Failing Packages
+
+      | Package | Dependencies | Commit |
+      | --- | --- | --- |
+      \{fails}
+
+      ## Unresolved Packages
+
+      | Package | Error |
+      | --- | --- |
+      \{errs}
+      """
 
 toRepLines : Report -> RepLines
 toRepLines (Success x) =
-  MkRL Lin Lin (Lin :< "  \{name x}")
-
-toRepLines (Failure x []) =
-  MkRL Lin (Lin :< "  \{name x}") Lin
+  MkRL Lin Lin [< x]
 
 toRepLines (Failure x ds) =
-  let fl   = "  \{name x}"
-      deps = concat $ intersperse ", " $ map value ds
-      sl   = "  failing dependencies: \{deps}"
-   in MkRL Lin [< fl,sl] Lin
-toRepLines (Error x y) =
-  MkRL [< "  \{x}: \{printErr y}"] Lin Lin
+  MkRL Lin [< (x,ds)] Lin
 
+toRepLines (Error x y) =
+  MkRL [< (x,y)] Lin Lin
 
 export
-printReport : ReportDB -> String
-printReport = report . foldMap toRepLines
+printReport : Env e -> ReportDB -> String
+printReport e = report e . foldMap toRepLines

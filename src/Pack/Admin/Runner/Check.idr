@@ -59,8 +59,8 @@ checkPkg e p = do
     _ => updateRep p (Success rp)
 
 export covering
-checkDB : HasIO io => Env HasIdris -> EitherT PackErr io ()
-checkDB e = do
+checkDB : HasIO io => Path -> Env HasIdris -> EitherT PackErr io ()
+checkDB p e = do
   rep <- liftIO $ execStateT empty
                 $ traverse_ (checkPkg e) (keys e.db.packages)
-  putStrLn $ printReport rep
+  write p (printReport e rep)
