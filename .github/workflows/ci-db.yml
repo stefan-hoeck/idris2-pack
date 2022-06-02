@@ -39,10 +39,9 @@ jobs:
       - name: Update repo
         run: |
           # cp "$HOME/.pack/db/testdb.toml" "db/latest.toml"
-          git checkout main
           echo "test" > "db/latest.toml"
           git config --local user.name "stefan-hoeck"
           git config --local user.email "hock@zhaw.ch"
           git add "db/latest.toml" STATUS.md
           git commit -m "[ AUTO ] latest package collection"
-          git push origin main
+          git push origin checkdb
