@@ -47,7 +47,7 @@ export
 run : EitherT PackErr IO () -> IO ()
 run (MkEitherT io) = do
   Left err <- io | Right () => pure ()
-  putStrLn (printErr err)
+  die (printErr err)
 
 --------------------------------------------------------------------------------
 --          System Commands

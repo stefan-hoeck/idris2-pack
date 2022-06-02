@@ -103,3 +103,11 @@ toRepLines (Error x y) =
 export
 printReport : Env e -> ReportDB -> String
 printReport e = report e . foldMap toRepLines
+
+export
+numberOfFailures : ReportDB -> Nat
+numberOfFailures = foldl count 0
+  where count : Nat -> Report -> Nat
+        count k (Success _)   = k
+        count k (Failure _ _) = S k
+        count k (Error _ _)   = S k

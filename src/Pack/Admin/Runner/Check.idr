@@ -64,3 +64,6 @@ checkDB p e = do
   rep <- liftIO $ execStateT empty
                 $ traverse_ (checkPkg e) (keys e.db.packages)
   write p (printReport e rep)
+  case numberOfFailures rep of
+    0 => pure ()
+    n => throwE (BuildFailures n)

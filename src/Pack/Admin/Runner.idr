@@ -71,9 +71,10 @@ runCmd = do
           the HEAD collection and store the resulting package collection
           at the given path.
 
-        check-collection <colname>
+        check-collection <colname> <path>
           Tries to build and install all packages from the given package
           collection and prints a basic report.
+          Writes the results to the given file.
 
         help
           Print this help text.

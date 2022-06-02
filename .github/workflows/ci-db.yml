@@ -33,15 +33,15 @@ jobs:
         run: pack-admin extract-from-head "$HOME/.pack/db/testdb.toml"
       - name: Check DB
         run: pack-admin check-collection testdb STATUS.md
-      - name: Adjust status and DB
+      - name: Commit files
+        if: always()
         run: |
           cp "$HOME/.pack/db/testdb.toml" "db/latest.toml"
-      - name: Commit files
-        run: |
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git commit -am "[ DB ] update db"
       - name: Push changes
+        if: always()
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
