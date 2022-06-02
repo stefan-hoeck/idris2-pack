@@ -15,7 +15,7 @@
 | [dinwiddy](https://github.com/bobbbay/dinwiddy) |  | 61a81c55e48e4b7b551fb7493d623cb7659a37ce |
 | [dom](https://github.com/stefan-hoeck/idris2-dom) |  | 05ab6e1bbccf696ff4137c1392f11646d5e8bf04 |
 | [eff](https://github.com/stefan-hoeck/idris2-eff) |  | 22f62ed3e5b2bae06d02e7a8b4e06f785d242718 |
-| [effect](https://github.com/Russoul/Idris2-Effect) |  |  |
+| [effect](https://github.com/Russoul/Idris2-Effect) |  | b76dce14b79a5f743243a294c3474c6f113f8e3a |
 | [elab-util](https://github.com/stefan-hoeck/idris2-elab-util) |  | 29f8153c0c06a69a168f009823a31bae266c5306 |
 | [freer](https://github.com/stefan-hoeck/idris2-freer) |  | ed81c9faf514bc4bd5c7fdd383d6199ac6dd22b5 |
 | [fvect](https://github.com/mattpolzin/idris-fvect) |  | d84969fce38ff8a10b9d261458f4d495e6e0f1ca |
@@ -28,7 +28,7 @@
 | [json](https://github.com/stefan-hoeck/idris2-json) |  | 2d0931546afd1152a55da9e6bf50d0fd8dd99dee |
 | [katla](https://github.com/idris-community/katla) |  | 9213675856413c587094e588c2758390f0020faf |
 | [lsp](https://github.com/idris-community/idris2-lsp) |  | 14a7786df970acc13a9d0b33e04fb9540d9cebb5 |
-| [pack](https://github.com/stefan-hoeck/idris2-pack) | A package manager for Idris2 with curated package collections | e5d3f961970e20aed900fa8abc25ae3611b386d1 |
+| [pack](https://github.com/stefan-hoeck/idris2-pack) | A package manager for Idris2 with curated package collections | 5f5563d5572e30d49f0577b10a4fd9f7a04d6f49 |
 | [pack-admin](https://github.com/stefan-hoeck/idris2-pack-admin) |  | eeb1ba2939fc3a4c079e7cbdef6a368364fe9699 |
 | [pg-idris](https://github.com/mattpolzin/pg-idris) |  | 6f7b2f6c96f963e5073c39613ccd394bc2f3ace5 |
 | [prettier](https://github.com/Z-snails/prettier) |  | 0222ada0be5f6abf5528c8513181f2f4ad117b4b |
@@ -37,11 +37,11 @@
 | [rhone](https://github.com/stefan-hoeck/idris2-rhone) |  | 33441db6a0a26bb04ff16b72c0224eaa04b5fee8 |
 | [rhone-js](https://github.com/stefan-hoeck/idris2-rhone-js) |  | b5cfde2b35e483d1231619a741cfce8b3a8ea438 |
 | [snocvect](https://github.com/mattpolzin/idris-snocvect) |  | f6148c3d06c7a9989062a2425f925fc844468215 |
-| [sop](https://github.com/stefan-hoeck/idris2-sop) |  | af9224510f5c283f3b3c8293524e51c225617658 |
+| [sop](https://github.com/stefan-hoeck/idris2-sop) |  | 45db4ca3705a063a44fa4e6d92229bdbaccea1cd |
 | [tailrec](https://github.com/stefan-hoeck/idris2-tailrec) |  | dd0bc6381b3a2e69aa37f9a8c1b165d4b1516ad7 |
 | [tester](https://github.com/cuddlefishie/tester-idr) |  | 3dcdb54ed578a14597a17cb93c926734a9da69ca |
 | [toml](https://github.com/cuddlefishie/toml-idr) |  | b4f5a4bd874fa32f20d02311a62a1910dc48123f |
-| [tyttp](https://github.com/kbertalan/tyttp) |  | eb3271dadf843fbac3be76b1f1a8e0d1a957726a |
+| [tyttp](https://github.com/kbertalan/tyttp) |  | 92113413b216a1866ffe2e8a99407a050f12f041 |
 | [tyttp-json](https://github.com/kbertalan/tyttp-json) |  | 956385e032243b04980b1f5dabf95411cce665ce |
 | [xml](https://github.com/madman-bob/idris2-xml) |  | 1292ccfcd58c551089ef699e4560343d5c473d64 |
 
