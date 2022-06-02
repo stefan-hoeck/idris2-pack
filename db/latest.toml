@@ -48,7 +48,7 @@ ipkg   = "eff.ipkg"
 [db.effect]
 type   = "github"
 url    = "https://github.com/Russoul/Idris2-Effect"
-commit = ""
+commit = "b76dce14b79a5f743243a294c3474c6f113f8e3a"
 ipkg   = "effect.ipkg"
 
 [db.elab-util]
@@ -126,7 +126,7 @@ ipkg   = "lsp.ipkg"
 [db.pack]
 type   = "github"
 url    = "https://github.com/stefan-hoeck/idris2-pack"
-commit = "e5d3f961970e20aed900fa8abc25ae3611b386d1"
+commit = "5f5563d5572e30d49f0577b10a4fd9f7a04d6f49"
 ipkg   = "pack.ipkg"
 
 [db.pack-admin]
@@ -180,7 +180,7 @@ ipkg   = "snocvect.ipkg"
 [db.sop]
 type   = "github"
 url    = "https://github.com/stefan-hoeck/idris2-sop"
-commit = "af9224510f5c283f3b3c8293524e51c225617658"
+commit = "45db4ca3705a063a44fa4e6d92229bdbaccea1cd"
 ipkg   = "sop.ipkg"
 
 [db.tailrec]
@@ -204,7 +204,7 @@ ipkg   = "toml.ipkg"
 [db.tyttp]
 type   = "github"
 url    = "https://github.com/kbertalan/tyttp"
-commit = "eb3271dadf843fbac3be76b1f1a8e0d1a957726a"
+commit = "92113413b216a1866ffe2e8a99407a050f12f041"
 ipkg   = "tyttp.ipkg"
 
 [db.tyttp-json]
