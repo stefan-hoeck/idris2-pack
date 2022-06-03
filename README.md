@@ -1,6 +1,6 @@
 # An Idris2 Package Manager with Curated Package Collections
 
-![collection status](https://github.com/stefan-hoeck/idris2-pack/workflows/Check%20DB/badge.svg)
+![Check Collection](https://github.com/stefan-hoeck/idris2-pack-db/actions/workflows/ci-db.yml/badge.svg)
 
 This is a simple package manager taking a slightly different
 approach than other available options like
@@ -15,7 +15,8 @@ There is a second GitHub repository containing the package collections:
 [idris2-pack-db](https://github.com/stefan-hoeck/idris2-pack-db).
 See instructions there if you want to make your own packages
 available to *pack*. The list of currently available packages plus
-their current build status can also be found [here](STATUS.md).
+their current build status can also be found
+[here](https://github.com/stefan-hoeck/idris2-pack-db/blob/main/STATUS.md).
 
 ## Quick Installation
 
