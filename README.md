@@ -20,15 +20,17 @@ their current build status can also be found [here](STATUS.md).
 ## Quick Installation
 
 For detailed instructions and prerequisites, see [installation](INSTALL.md).
-Assuming, you have already installed Chez Scheme (and its
-executable is called `chez`) and you want to start with
-the `nightly-220507` package collection, you can set up
-*pack* and the corresponding Idris2 compiler with the following
-command:
+Assuming, you have already installed Chez Scheme
+you can set up *pack* and the corresponding Idris2
+compiler with the following command:
 
 ```sh
-make micropack SCHEME=chez DB=nightly-220507
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/stefan-hoeck/idris2-pack/main/install.bash)"
 ```
+
+You will be asked about the name of your Chez Scheme executable during
+the installation procedure. If all goes well, make sure to add
+folder `$HOME/.pack/bin` to your `$PATH` variable.
 
 ## Usage
 
