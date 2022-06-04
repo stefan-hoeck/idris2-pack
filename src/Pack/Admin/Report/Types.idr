@@ -45,8 +45,9 @@ Monoid RepLines where
   neutral = MkRL Lin Lin Lin
 
 ghCommitLink : URL -> Commit -> String
-ghCommitLink u c  =
- "[\{c}](\{u}/commit/\{c})"
+ghCommitLink u c@(MkCommit commit)  =
+  let shortSha = substr 0 7 commit in
+ "[\{shortSha}](\{u}/commit/\{c})"
 
 succLine : ResolvedPackage -> Maybe String
 succLine (RGitHub n u c _ d) =
