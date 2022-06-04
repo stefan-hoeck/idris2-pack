@@ -44,16 +44,21 @@ Semigroup RepLines where
 Monoid RepLines where
   neutral = MkRL Lin Lin Lin
 
+ghCommitLink : URL -> Commit -> String
+ghCommitLink u c@(MkCommit commit)  =
+  let shortSha = substr 0 7 commit in
+ "[\{shortSha}](\{u}/commit/\{c})"
+
 succLine : ResolvedPackage -> Maybe String
 succLine (RGitHub n u c _ d) =
   let desc = fromMaybe "" d.brief
-   in Just "| [\{n}](\{u}) | \{desc} | \{c} |"
+   in Just "| [\{n}](\{u}) | \{desc} | \{ghCommitLink u c} |"
 succLine _ = Nothing
 
 failLine : (ResolvedPackage, List PkgName) -> Maybe String
 failLine (RGitHub n u c _ _, ps) =
   let deps = fastConcat . intersperse ", " $ map interpolate ps
-   in Just "| [\{n}](\{u}) | \{deps} | \{c} |"
+  in Just "| [\{n}](\{u}) | \{deps} | \{ghCommitLink u c} |"
 failLine _ = Nothing
 
 errLine : (PkgName, PackErr) -> String
