@@ -1,24 +1,23 @@
-FROM snazzybucket/idris2api AS build
+FROM ubuntu:22.04 AS build
 
 SHELL ["/bin/bash", "-c"]
 
-RUN apt-get update && apt-get install --yes make git && rm -rf /var/lib/apt/lists/*
-
 ENV PATH "/root/.pack/bin:/root/.idris2/bin:$PATH"
 
-WORKDIR /opt/idris2-pack
-
-RUN git clone https://github.com/cuddlefishie/toml-idr.git
-
-WORKDIR /opt/idris2-pack/toml-idr
-
-RUN make install
+RUN apt-get update && apt-get install --yes gcc make chezscheme libgmp3-dev git gnupg && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/idris2-pack
 
-ADD src ./src
+COPY Makefile .
+ADD src src
+ADD micropack micropack
 COPY pack.ipkg .
 COPY pack-admin.ipkg .
+RUN true
 
-RUN idris2 --build pack.ipkg
-RUN ./build/exec/pack -p nightly-220604
+ENV SCHEME=chezscheme
+
+ARG db
+RUN make micropack SCHEME=$SCHEME DB=$db
+
+WORKDIR /opt/idris2-pack
