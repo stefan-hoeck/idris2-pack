@@ -66,8 +66,6 @@ jobs:
 
   micropack:
     name: Bootstrap with micropack
-    needs:
-      - install-deps
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
