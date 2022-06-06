@@ -19,5 +19,6 @@ ENV SCHEME=chezscheme
 
 ARG db
 RUN make micropack SCHEME=$SCHEME DB=$db
+RUN pack install pack.ipkg
 
 WORKDIR /opt/idris2-pack
