@@ -76,16 +76,15 @@ bash -c pack/install.bash
 
 As an alternative to the installation script described above,
 you can use the pre-built *micropack* installer bundled with
-this repository. In this case, you will have to decide on
-a package collection to use, a list of which you can find
-[here](https://github.com/stefan-hoeck/idris2-pack-db/tree/main/collections).
+this repository. This will install the latest nightly package
+collection (the list of available package collections can be found
+[here](https://github.com/stefan-hoeck/idris2-pack-db/tree/main/collections)).
 
 Here's the installation command to get you started. This assumes
-you decided on using package collection `nightly-220603`, and the
-name of your Chez Scheme executable is `scheme`:
+the name of your Chez Scheme executable is `scheme`:
 
 ```sh
-make micropack SCHEME=scheme DB=nightly-220603
+make micropack SCHEME=scheme
 ```
 
 Wait a couple of seconds. If *micropack* starts writing non-stop
