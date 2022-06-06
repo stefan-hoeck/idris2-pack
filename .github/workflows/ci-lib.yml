@@ -78,7 +78,8 @@ jobs:
         run: |
           make micropack SCHEME=chezscheme
           echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
-          pack install graph
+      - name: Install application
+        run: pack install graph
 
   shellscript:
     name: Bootstrap with the shell script
@@ -94,4 +95,5 @@ jobs:
         run: |
           echo chezscheme | bash -c "$(curl -fsSL https://raw.githubusercontent.com/stefan-hoeck/idris2-pack/main/install.bash)"
           echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
-          pack install graph
+      - name: Install application
+        run: pack install graph
