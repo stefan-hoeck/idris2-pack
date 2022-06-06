@@ -12,14 +12,14 @@ WORKDIR /opt/idris2-pack
 COPY Makefile .
 COPY src src
 COPY micropack micropack
+COPY micropack.bash .
 COPY pack.ipkg .
 COPY pack-admin.ipkg .
 RUN true
 
 ENV SCHEME=chezscheme
 
-ARG db
-RUN make micropack SCHEME=$SCHEME DB=$db
+RUN make micropack SCHEME=$SCHEME
 
 # hadolint ignore=DL3059
 RUN pack install pack.ipkg

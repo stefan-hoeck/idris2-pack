@@ -53,5 +53,6 @@ jobs:
           # Strip git ref prefix from version
           echo IMAGE_ID="$IMAGE_ID"
           echo DB_VERSION="$DB_VERSION"
-          docker push "$IMAGE_ID:$DB_VERSION"
+          docker tag "$IMAGE_ID:latest" "$IMAGE_ID:$DB_VERSION"
           docker push "$IMAGE_ID:latest"
+          docker push "$IMAGE_ID:$DB_VERSION"

@@ -16,9 +16,8 @@ install-lib:
 
 .PHONY: docker-build
 docker-build:
-	docker build --build-arg db=${DB} -t ${DOCKER_IMAGE}:${DB} .
-	docker tag ${DOCKER_IMAGE}:${DB} ${DOCKER_IMAGE}:latest
+	docker build -t ${DOCKER_IMAGE}:latest .
 
 .PHONY: docker-run
 docker-run:
-	docker run --rm -it ${DOCKER_IMAGE} /bin/bash
+	docker run --rm -it ${DOCKER_IMAGE}:latest /bin/bash
