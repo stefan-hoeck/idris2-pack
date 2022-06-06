@@ -31,7 +31,7 @@ idrisPkg :  HasIO io
          -> EitherT PackErr io ()
 idrisPkg e env cmd ipkg =
   let exe = idrisWithCG e
-      s = "\{env} \{buildEnv e} \{exe} \{cmd} \{ipkg}"
+      s = "\{env} \{exe} \{cmd} \{ipkg}"
    in debug e "About to run: \{s}" >> sys s
 
 copyApp : HasIO io => Env HasIdris -> ResolvedPackage -> EitherT PackErr io ()
@@ -66,6 +66,8 @@ appLink exec target True  =
       #!/bin/sh
 
       export IDRIS2_PACKAGE_PATH="$(pack package-path)"
+      export IDRIS2_LIBS="$(pack libs-path)"
+      export IDRIS2_DATA="$(pack data-path)"
       "\{exec}" "$@"
       """
    in write target content >> sys "chmod +x \{target}"
