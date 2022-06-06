@@ -18,8 +18,8 @@ import Pack.Runner.Database
 export
 idrisWithCG : Env HasIdris -> String
 idrisWithCG e = case e.codegen of
-  Default => "\{idrisExec e}"
-  cg      => "\{idrisExec e} --cg \{cg}"
+  Default => "\{collectionIdrisExec e}"
+  cg      => "\{collectionIdrisExec e} --cg \{cg}"
 
 ||| Use the installed Idris to run an operation on an `.ipkg` file.
 export
