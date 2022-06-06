@@ -51,6 +51,6 @@ jobs:
           IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
           # Strip git ref prefix from version
           echo IMAGE_ID=$IMAGE_ID
-          echo VERSION=$DB_VERSION
+          echo DB_VERSION=$DB_VERSION
           docker push $IMAGE_ID:$DB_VERSION
           docker push $IMAGE_ID:latest
