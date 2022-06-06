@@ -380,16 +380,16 @@ localPkgPrefixDir e n = commitDir e /> "local" /> n.value
 ||| package collection is installed.
 export
 packagePrefixDir : Env s -> ResolvedPackage -> Path
-packagePrefixDir e (RGitHub n _ c _ _) = githubPkgPrefixDir e n c
-packagePrefixDir e (RIpkg _ d)         = idrisPrefixDir e
-packagePrefixDir e (RLocal n _ _ _)    = localPkgPrefixDir e n
-packagePrefixDir e Base                = idrisPrefixDir e
-packagePrefixDir e Contrib             = idrisPrefixDir e
-packagePrefixDir e Idris2              = idrisPrefixDir e
-packagePrefixDir e Linear              = idrisPrefixDir e
-packagePrefixDir e Network             = idrisPrefixDir e
-packagePrefixDir e Prelude             = idrisPrefixDir e
-packagePrefixDir e Test                = idrisPrefixDir e
+packagePrefixDir e (RGitHub n _ c _ _ _) = githubPkgPrefixDir e n c
+packagePrefixDir e (RIpkg _ d)           = idrisPrefixDir e
+packagePrefixDir e (RLocal n _ _ _ _)    = localPkgPrefixDir e n
+packagePrefixDir e Base                  = idrisPrefixDir e
+packagePrefixDir e Contrib               = idrisPrefixDir e
+packagePrefixDir e Idris2                = idrisPrefixDir e
+packagePrefixDir e Linear                = idrisPrefixDir e
+packagePrefixDir e Network               = idrisPrefixDir e
+packagePrefixDir e Prelude               = idrisPrefixDir e
+packagePrefixDir e Test                  = idrisPrefixDir e
 
 export
 packageInstallPrefix : Env s -> ResolvedPackage -> String
@@ -410,13 +410,13 @@ packageInstallDir e p =
         Prelude  => dir /> "prelude-\{vers}"
         Idris2   => dir /> "idris2-\{vers}"
         Test     => dir /> "test-\{vers}"
-        RGitHub _ _ _ _ d   =>
+        RGitHub _ _ _ _ _ d   =>
           let v = maybe "0" show d.version
            in dir /> "\{d.name}-\{v}"
         RIpkg p d =>
           let v = maybe "0" show d.version
            in dir /> "\{d.name}-\{v}"
-        RLocal _ _ _ d =>
+        RLocal _ _ _ _ d =>
           let v = maybe "0" show d.version
            in dir /> "\{d.name}-\{v}"
 
@@ -437,8 +437,8 @@ packageAppDir e rp n = packageBinDir e rp /> "\{n}_app"
 
 export
 pkgPrefixDir : Env s -> (PkgName, Package) -> Path
-pkgPrefixDir e (n, GitHub _ c _) = githubPkgPrefixDir e n c
-pkgPrefixDir e (n, Local _ _)    = localPkgPrefixDir e n
+pkgPrefixDir e (n, GitHub _ c _ _) = githubPkgPrefixDir e n c
+pkgPrefixDir e (n, Local _ _ _)    = localPkgPrefixDir e n
 
 export
 pkgPathDir : Env s -> (PkgName, Package) -> Path

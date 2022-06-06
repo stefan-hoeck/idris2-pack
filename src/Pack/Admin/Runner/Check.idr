@@ -43,7 +43,7 @@ checkPkg e p = do
   [] <- failingDeps <$> traverse (checkPkg e) (depNames rp)
     | rs => updateRep p (Failure rp rs)
   case rp of
-    RGitHub pn url commit ipkg d =>
+    RGitHub pn url commit ipkg _ d =>
       report p rp $ withGit (tmpDir e) url commit $ do
         let pf = patchFile e pn ipkg
         when !(exists pf) (patch ipkg pf)
@@ -52,7 +52,7 @@ checkPkg e p = do
     RIpkg ipkg d =>
       report p rp $ idrisPkg e (packageInstallPrefix e rp) "--install" ipkg
 
-    RLocal _ dir ipkg d => do
+    RLocal _ dir ipkg _ d => do
       report p rp $ inDir dir $
         idrisPkg e (packageInstallPrefix e rp) "--install" ipkg
 

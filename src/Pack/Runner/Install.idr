@@ -122,7 +122,7 @@ installLib e n = do
   rp <- resolve e n
   traverse_ (installLib e) (dependencies rp)
   case rp of
-    RGitHub pn url commit ipkg d => do
+    RGitHub pn url commit ipkg _ d => do
       False <- packageExists e rp | True => pure ()
       when !(promptDesc rp e d) $
         withGit (tmpDir e) url commit $ do
@@ -132,7 +132,7 @@ installLib e n = do
     RIpkg ipkg d =>
       when !(promptDesc rp e d) $
         idrisPkg e (packageInstallPrefix e rp) (installCmd e.withSrc) ipkg
-    RLocal _ dir ipkg d =>
+    RLocal _ dir ipkg _ d =>
       when !(promptDesc rp e d) $
         inDir dir $ idrisPkg e (packageInstallPrefix e rp) (installCmd e.withSrc) ipkg
     _             => do
@@ -229,7 +229,7 @@ installApp e n = do
   Just exe <- pure (executable rp) | Nothing => throwE (NoApp n)
   traverse_ (installLib e) (dependencies rp)
   case rp of
-    RGitHub pn url commit ipkg d => do
+    RGitHub pn url commit ipkg pp d => do
       False <- executableExists e rp exe | True => pure ()
       when !(promptDesc rp e d) $
         withGit (tmpDir e) url commit $ do
@@ -243,7 +243,7 @@ installApp e n = do
       idrisPkg e "" "--build" ipkg
       copyApp e rp
 
-    RLocal _ dir ipkg d => when !(promptDesc rp e d) $ do
+    RLocal _ dir ipkg pp d => when !(promptDesc rp e d) $ do
       removeExec e rp exe
       inDir dir $ do
         idrisPkg e "" "--build" ipkg

@@ -24,9 +24,9 @@ readCmd xs                       = Left $ UnknownCommand xs
 
 covering
 commitOf : HasIO io => Package -> EitherT PackErr io Package
-commitOf (GitHub url branch ipkg) = do
+commitOf (GitHub url branch ipkg pp) = do
   commit <- gitLatest url branch
-  pure $ GitHub url commit ipkg
+  pure $ GitHub url commit ipkg pp
 commitOf p                        = pure p
 
 -- Converts a data base with a branch name for each
