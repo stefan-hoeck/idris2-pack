@@ -66,6 +66,7 @@ jobs:
 
   install-deps:
     name: Install Ubuntu dependencies
+    runs-on: ubuntu-latest
     steps:
       - name: Install scheme
         run: sudo apt-get update && sudo apt-get install --yes gcc make chezscheme libgmp3-dev nodejs
