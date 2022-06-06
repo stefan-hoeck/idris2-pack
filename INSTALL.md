@@ -135,39 +135,3 @@ eval "$(pack completion-script pack)"
 ```
 
 You can also add them to your `.zshrc` file.
-
-## 5. Setting up your Environment
-
-It is a good idea to add pack's installation directory
-(the default is `$HOME/.pack/bin`) to your `$PATH`.
-
-In addition, if you plan to use the installed Idris compiler
-directly sometimes, it might be a good idea to define an
-alias for the executable, which will be invoked with the
-`IDRIS2_PACKAGE_PATH` variable set in advance. The reason
-is, that pack will install Idris packages in non-standard locations,
-so the Idris compiler will need some help finding them.
-
-The same goes for your editor settings, if you plan to use
-tools like `lsp` for editing Idris source code, which will also
-require access to the installed Idris libraries.
-
-Here here are the necessary excerpts for setting all of this up
-for `zsh` in file `$HOME/.zshrc` (I use neovim for hacking in Idris):
-
-```zsh
-# enable zsh to read bash completion specifications
-autoload -U +X bashcompinit
-bashcompinit
-
-# Add pack's bin dir to the $PATH if it exists
-[ -d ~/.pack/bin ] && path=(~/.pack/bin $path)
-
-# Setup idris and pack auto-completion
-[ -d ~/.pack/bin ] && eval "$(idris2 --bash-completion-script idris2)"
-[ -d ~/.pack/bin ] && eval "$(pack completion-script pack)"
-
-# Aliases for running idris2 and neovim using the correct package path
-alias idris2='IDRIS2_PACKAGE_PATH=$(pack package-path) idris2'
-alias nvim='IDRIS2_PACKAGE_PATH=$(pack package-path) nvim'
-```

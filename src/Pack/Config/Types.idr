@@ -494,7 +494,3 @@ libPath e = "IDRIS2_LIBS=\"\{packageLibDirs e}\""
 export
 dataPath : Env s -> String
 dataPath e = "IDRIS2_DATA=\"\{packageDataDirs e}\""
-
-export
-buildEnv : Env s -> String
-buildEnv e = "\{packagePath e} \{libPath e} \{dataPath e}"
