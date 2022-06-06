@@ -51,28 +51,28 @@ resolveImpl e (Pkg n)         = case lookup n (allPackages e) of
 
   -- this is a known package so we download its `.ipkg`
   -- file from GitHub and patch it, if necessary
-  Just (GitHub url commit ipkg) =>
+  Just (GitHub url commit ipkg pp) =>
     let cache = ipkgPath e n commit ipkg
      in do
        b <- exists cache
        case b of
-         True => RGitHub n url commit ipkg <$> parseIpkgFile cache
+         True => RGitHub n url commit ipkg pp <$> parseIpkgFile cache
          False => withGit (tmpDir e) url commit $ do
            let pf = patchFile e n ipkg
            when !(exists pf) (patch ipkg pf)
            copyFile ipkg cache
-           RGitHub n url commit ipkg <$> parseIpkgFile ipkg
-  Just (Local dir ipkg) =>
-    inDir dir $ RLocal n dir ipkg <$> parseIpkgFile ipkg
+           RGitHub n url commit ipkg pp <$> parseIpkgFile ipkg
+  Just (Local dir ipkg pp) =>
+    inDir dir $ RLocal n dir ipkg pp <$> parseIpkgFile ipkg
 
 execStr : PkgDesc -> String
 execStr d = maybe "library" (const "application") d.executable
 
 descStr : ResolvedPackage -> String
-descStr (RGitHub name url commit ipkg desc) =
+descStr (RGitHub name url commit ipkg _ desc) =
   "GitHub \{execStr desc} (\{url}:\{commit})"
 descStr (RIpkg path desc) = ".ipkg \{execStr desc}"
-descStr (RLocal name dir ipkg desc) = "local \{execStr desc}"
+descStr (RLocal name dir ipkg _ desc) = "local \{execStr desc}"
 descStr _ = "core package"
 
 ||| Lookup a package name in the package data base,

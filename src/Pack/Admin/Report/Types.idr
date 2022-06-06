@@ -50,13 +50,13 @@ ghCommitLink u c@(MkCommit commit)  =
  "[\{shortSha}](\{u}/commit/\{c})"
 
 succLine : ResolvedPackage -> Maybe String
-succLine (RGitHub n u c _ d) =
+succLine (RGitHub n u c _ _ d) =
   let desc = fromMaybe "" d.brief
    in Just "| [\{n}](\{u}) | \{desc} | \{ghCommitLink u c} |"
 succLine _ = Nothing
 
 failLine : (ResolvedPackage, List PkgName) -> Maybe String
-failLine (RGitHub n u c _ _, ps) =
+failLine (RGitHub n u c _ _ _, ps) =
   let deps = fastConcat . intersperse ", " $ map interpolate ps
   in Just "| [\{n}](\{u}) | \{deps} | \{ghCommitLink u c} |"
 failLine _ = Nothing

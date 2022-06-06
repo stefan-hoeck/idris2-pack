@@ -31,7 +31,7 @@ idrisPkg :  HasIO io
          -> EitherT PackErr io ()
 idrisPkg e env cmd ipkg =
   let exe = idrisWithCG e
-      s = "\{env} \{buildEnv e} \{exe} \{cmd} \{ipkg}"
+      s = "\{env} \{exe} \{cmd} \{ipkg}"
    in debug e "About to run: \{s}" >> sys s
 
 copyApp : HasIO io => Env HasIdris -> ResolvedPackage -> EitherT PackErr io ()
@@ -48,6 +48,29 @@ links e = do
   rmDir (packBinDir e)
   debug e "Creating sym links"
   link (collectionBinDir e) (packBinDir e)
+
+-- When linking to a binary from a package collection's
+-- `bin` directory, we distinguish between applications,
+-- which need acceess to the Idris package path and those,
+-- which don't. For the former, we create a wrapper script
+-- where we first set the `IDRIS2_PACKAGE_PATH` variable
+-- before invoking the binary, for the latter we create just
+-- a symlink.
+appLink :  HasIO io
+        => (exec,target : Path)
+        -> (usePackagePath : Bool)
+        -> EitherT PackErr io ()
+appLink exec target False = link exec target
+appLink exec target True  =
+  let content = """
+      #!/bin/sh
+
+      export IDRIS2_PACKAGE_PATH="$(pack package-path)"
+      export IDRIS2_LIBS="$(pack libs-path)"
+      export IDRIS2_DATA="$(pack data-path)"
+      "\{exec}" "$@"
+      """
+   in write target content >> sys "chmod +x \{target}"
 
 ||| Builds and installs the Idris commit given in the environment.
 export
@@ -80,7 +103,7 @@ mkIdris e = do
            sys "rm -r build/ttc build/exec"
            sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
 
-  link (idrisExec e) (collectionIdrisExec e)
+  appLink (idrisExec e) (collectionIdrisExec e) True
   pure $ {db $= id} e
 
 installCmd : (withSrc : Bool) -> String
@@ -122,7 +145,7 @@ installLib e n = do
   rp <- resolve e n
   traverse_ (installLib e) (dependencies rp)
   case rp of
-    RGitHub pn url commit ipkg d => do
+    RGitHub pn url commit ipkg _ d => do
       False <- packageExists e rp | True => pure ()
       when !(promptDesc rp e d) $
         withGit (tmpDir e) url commit $ do
@@ -132,7 +155,7 @@ installLib e n = do
     RIpkg ipkg d =>
       when !(promptDesc rp e d) $
         idrisPkg e (packageInstallPrefix e rp) (installCmd e.withSrc) ipkg
-    RLocal _ dir ipkg d =>
+    RLocal _ dir ipkg _ d =>
       when !(promptDesc rp e d) $
         inDir dir $ idrisPkg e (packageInstallPrefix e rp) (installCmd e.withSrc) ipkg
     _             => do
@@ -229,7 +252,7 @@ installApp e n = do
   Just exe <- pure (executable rp) | Nothing => throwE (NoApp n)
   traverse_ (installLib e) (dependencies rp)
   case rp of
-    RGitHub pn url commit ipkg d => do
+    RGitHub pn url commit ipkg pp d => do
       False <- executableExists e rp exe | True => pure ()
       when !(promptDesc rp e d) $
         withGit (tmpDir e) url commit $ do
@@ -243,13 +266,13 @@ installApp e n = do
       idrisPkg e "" "--build" ipkg
       copyApp e rp
 
-    RLocal _ dir ipkg d => when !(promptDesc rp e d) $ do
+    RLocal _ dir ipkg pp d => when !(promptDesc rp e d) $ do
       removeExec e rp exe
       inDir dir $ do
         idrisPkg e "" "--build" ipkg
         copyApp e rp
     _ => throwE (NoApp n)
-  link (packageExec e rp exe) (collectionAppExec e exe)
+  appLink (packageExec e rp exe) (collectionAppExec e exe) (usePackagePath rp)
 
 ||| Build and run an executable given either
 ||| as an `.ipkg` file or an application from the

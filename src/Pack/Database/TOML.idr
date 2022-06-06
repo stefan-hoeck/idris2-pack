@@ -10,10 +10,15 @@ import Pack.Database.Types
 %default total
 
 github : Value -> Either TOMLErr Package
-github v = [| GitHub (valAt "url" v) (valAt "commit" v) (valAt "ipkg" v) |]
+github v = [| GitHub (valAt "url" v)
+                     (valAt "commit" v)
+                     (valAt "ipkg" v)
+                     (optValAt "packagePath" False v) |]
 
 local : Value -> Either TOMLErr Package
-local v = [| Local (valAt "path" v) (valAt "ipkg" v) |]
+local v = [| Local (valAt "path" v)
+                   (valAt "ipkg" v)
+                   (optValAt "packagePath" False v) |]
 
 package : Value -> Either TOMLErr Package
 package v = valAt {a = String} "type" v >>=

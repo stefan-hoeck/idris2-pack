@@ -23,28 +23,28 @@ query_ e q = mapMaybe id <$> traverse run (keys $ allPackages e)
           Just f  => Just . f <$> resolve e (Pkg n)
 
 shortDesc : ResolvedPackage -> Maybe String
-shortDesc (RGitHub _ _ _ _ d) = d.brief
-shortDesc (RIpkg _ d)         = d.brief
-shortDesc (RLocal _ _ _ d)    = d.brief
-shortDesc Base                = Just "the Idris2 base library"
-shortDesc Contrib             = Just "the Idris2 contrib library"
-shortDesc Idris2              = Just "the Idris2 API"
-shortDesc Linear              = Nothing
-shortDesc Network             = Nothing
-shortDesc Prelude             = Just "the Idris2 Prelude"
-shortDesc Test                = Nothing
+shortDesc (RGitHub _ _ _ _ _ d) = d.brief
+shortDesc (RIpkg _ d)           = d.brief
+shortDesc (RLocal _ _ _ _ d)    = d.brief
+shortDesc Base                  = Just "the Idris2 base library"
+shortDesc Contrib               = Just "the Idris2 contrib library"
+shortDesc Idris2                = Just "the Idris2 API"
+shortDesc Linear                = Nothing
+shortDesc Network               = Nothing
+shortDesc Prelude               = Just "the Idris2 Prelude"
+shortDesc Test                  = Nothing
 
 deps : ResolvedPackage -> List String
-deps (RGitHub _ _ _ _ d) = map pkgname d.depends
-deps (RIpkg _ d)         = map pkgname d.depends
-deps (RLocal _ _ _ d)    = map pkgname d.depends
-deps Base                = []
-deps Contrib             = []
-deps Idris2              = []
-deps Linear              = []
-deps Network             = []
-deps Prelude             = []
-deps Test                = ["contrib"]
+deps (RGitHub _ _ _ _ _ d) = map pkgname d.depends
+deps (RIpkg _ d)           = map pkgname d.depends
+deps (RLocal _ _ _ _ d)    = map pkgname d.depends
+deps Base                  = []
+deps Contrib               = []
+deps Idris2                = []
+deps Linear                = []
+deps Network               = []
+deps Prelude               = []
+deps Test                  = ["contrib"]
 
 prettyDeps : ResolvedPackage -> List String
 prettyDeps rp = case deps rp of
@@ -52,7 +52,7 @@ prettyDeps rp = case deps rp of
   h :: t => "Dependencies : \{h}" :: map (indent 15) t
 
 details : ResolvedPackage -> List String
-details (RGitHub name url commit ipkg desc) = [
+details (RGitHub name url commit ipkg _ desc) = [
     "Type         : GitHub project"
   , "URL          : \{url}"
   , "Commit       : \{commit}"
@@ -64,7 +64,7 @@ details (RIpkg path desc) = [
   , "Path         : \{path}"
   ]
 
-details (RLocal name dir ipkg desc) = [
+details (RLocal name dir ipkg _ desc) = [
     "Type         : Local Idris project"
   , "Location     : \{dir}"
   , "ipkg File    : \{ipkg}"

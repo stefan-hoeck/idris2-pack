@@ -242,41 +242,6 @@ pack switch nightly-220518
 And second, add directory `$HOME/.pack/bin` to your `$PATH`
 variable.
 
-### Package Path
-
-Since *pack* installs its libraries not in the default locations,
-vanilla Idris will not be able to find them (nor will other
-applications like
-[idris2-lsp](https://github.com/idris-community/idris2-lsp)).
-As an additional complication, the locations of libraries
-will depend both on the global and local versions of
-the `pack.toml` file. It is therefore necessary, to make the
-package path available to these tools before you start hacking
-on an Idris2 project.
-
-For instance, on my Linux box I use `neovim` with `idris2-lsp` and
-the [idris2-nvim](https://github.com/ShinKage/idris2-nvim) plugin.
-The `idris2-lsp` application will look for libraries based on
-an `.ipkg` file in the project I work on, but these libraries
-are scattered all over the place. In order to find them, we
-have to add their locations to the `$IDRIS2_PACKAGE_PATH`
-environment variable. This can be done as follows:
-
-```sh
-IDRIS2_PACKAGE_PATH=$(pack package-path) nvim
-```
-
-Likewise, you can invoke the Idris2 compiler in a similar
-manner:
-
-```sh
-IDRIS2_PACKAGE_PATH=$(pack package-path) idris2
-```
-
-If you find these commands to be cumbersome to use, consider
-defining an alias for them in the configuration files
-of your shell.
-
 ## Stuff still Missing
 
 There is a lot of functionality still missing. Here's a

@@ -22,15 +22,23 @@ public export
 data Package : Type where
   ||| A repository on GitHub, given as the package's URL,
   ||| commit (hash or tag), and name of `.ipkg` file to use.
-  GitHub :  (url    : URL)
-         -> (commit : Commit)
-         -> (ipkg   : Path)
+  ||| `pkgPath` should be set to `True` for executable which need
+  ||| access to the `IDRIS2_PACKAGE_PATH`: The list of directories
+  ||| where Idris packages are installed.
+  GitHub :  (url     : URL)
+         -> (commit  : Commit)
+         -> (ipkg    : Path)
+         -> (pkgPath : Bool)
          -> Package
 
   ||| A local Idris project given as an absolute path to a local
   ||| directory, and `.ipkg` file to use.
-  Local  :  (dir    : Path)
-         -> (ipkg   : Path)
+  ||| `pkgPath` should be set to `True` for executable which need
+  ||| access to the `IDRIS2_PACKAGE_PATH`: The list of directories
+  ||| where Idris packages are installed.
+  Local  :  (dir     : Path)
+         -> (ipkg    : Path)
+         -> (pkgPath : Bool)
          -> Package
 
 ||| A resolved package, which was downloaded from GitHub
@@ -39,11 +47,15 @@ data Package : Type where
 public export
 data ResolvedPackage : Type where
   ||| A resolved GitHub project with parse `.ipkg` file.
-  RGitHub :  (name   : PkgName)
-          -> (url    : URL)
-          -> (commit : Commit)
-          -> (ipkg   : Path)
-          -> (desc   : PkgDesc)
+  ||| `pkgPath` should be set to `True` for executable which need
+  ||| access to the `IDRIS2_PACKAGE_PATH`: The list of directories
+  ||| where Idris packages are installed.
+  RGitHub :  (name    : PkgName)
+          -> (url     : URL)
+          -> (commit  : Commit)
+          -> (ipkg    : Path)
+          -> (pkgPath : Bool)
+          -> (desc    : PkgDesc)
           -> ResolvedPackage
 
   ||| A local (and parsed) `.ipkg` file.
@@ -53,10 +65,14 @@ data ResolvedPackage : Type where
 
   ||| A local project with (absolute) path to project's
   ||| directory and parsed `.ipkg` file.
-  RLocal  :  (name : PkgName)
-          -> (dir  : Path)
-          -> (ipkg : Path)
-          -> (desc : PkgDesc)
+  ||| `pkgPath` should be set to `True` for executable which need
+  ||| access to the `IDRIS2_PACKAGE_PATH`: The list of directories
+  ||| where Idris packages are installed.
+  RLocal  :  (name    : PkgName)
+          -> (dir     : Path)
+          -> (ipkg    : Path)
+          -> (pkgPath : Bool)
+          -> (desc    : PkgDesc)
           -> ResolvedPackage
 
   ||| The *base* library from the Idris2 project.
@@ -84,25 +100,25 @@ data ResolvedPackage : Type where
 ||| one of the core packages (`base`, `prelude`, etc.)
 export
 isCorePackage : ResolvedPackage -> Bool
-isCorePackage (RGitHub _ _ _ _ _) = False
-isCorePackage (RIpkg _ _)         = False
-isCorePackage (RLocal _ _ _ _)    = False
-isCorePackage Base                = True
-isCorePackage Contrib             = True
-isCorePackage Linear              = True
-isCorePackage Idris2              = True
-isCorePackage Network             = True
-isCorePackage Prelude             = True
-isCorePackage Test                = True
+isCorePackage (RGitHub _ _ _ _ _ _) = False
+isCorePackage (RIpkg _ _)           = False
+isCorePackage (RLocal _ _ _ _ _)    = False
+isCorePackage Base                  = True
+isCorePackage Contrib               = True
+isCorePackage Linear                = True
+isCorePackage Idris2                = True
+isCorePackage Network               = True
+isCorePackage Prelude               = True
+isCorePackage Test                  = True
 
 ||| Try to extract the package description from a
 ||| resolved package.
 export
 desc : ResolvedPackage -> Maybe PkgDesc
-desc (RGitHub _ _ _ _ d)  = Just d
-desc (RIpkg _ d)          = Just d
-desc (RLocal _ _ _ d)     = Just d
-desc _                    = Nothing
+desc (RGitHub _ _ _ _ _ d)  = Just d
+desc (RIpkg _ d)            = Just d
+desc (RLocal _ _ _ _ d)     = Just d
+desc _                      = Nothing
 
 ||| Extracts the dependencies of a resolved package.
 export
@@ -127,16 +143,24 @@ executable p = desc p >>= executable
 ||| Extracts the package name from a resolved package.
 export
 name : ResolvedPackage -> PkgName
-name (RGitHub n _ _ _ _) = n
-name (RIpkg _ d)         = MkPkgName d.name
-name (RLocal n _ _ _)    = n
-name Base                = "base"
-name Contrib             = "contrib"
-name Idris2              = "idris2"
-name Linear              = "linear"
-name Network             = "network"
-name Prelude             = "prelude"
-name Test                = "test"
+name (RGitHub n _ _ _ _ _) = n
+name (RIpkg _ d)           = MkPkgName d.name
+name (RLocal n _ _ _ _)    = n
+name Base                  = "base"
+name Contrib               = "contrib"
+name Idris2                = "idris2"
+name Linear                = "linear"
+name Network               = "network"
+name Prelude               = "prelude"
+name Test                  = "test"
+
+||| True, if the given application needs access to the
+||| folders where Idris package are installed.
+export
+usePackagePath : ResolvedPackage -> Bool
+usePackagePath (RGitHub _ _ _ _ pp _) = pp
+usePackagePath (RLocal _ _ _ pp _)    = pp
+usePackagePath _                      = False
 
 --------------------------------------------------------------------------------
 --          Package Database
@@ -153,24 +177,30 @@ record DB where
   idrisVersion : PkgVersion
   packages     : SortedMap PkgName Package
 
+tomlBool : Bool -> String
+tomlBool True  = "true"
+tomlBool False = "false"
+
 printPair : (PkgName,Package) -> String
-printPair (x, GitHub url commit ipkg) =
+printPair (x, GitHub url commit ipkg pp) =
   """
 
   [db.\{x}]
-  type   = "github"
-  url    = "\{url}"
-  commit = "\{commit}"
-  ipkg   = "\{ipkg}"
+  type        = "github"
+  url         = "\{url}"
+  commit      = "\{commit}"
+  ipkg        = "\{ipkg}"
+  packagePath = \{tomlBool pp}
   """
 
-printPair (x, Local dir ipkg) =
+printPair (x, Local dir ipkg pp) =
   """
 
   [db.\{x}]
-  type   = "local"
-  path   = "\{dir}"
-  ipkg   = "\{ipkg}"
+  type        = "local"
+  path        = "\{dir}"
+  ipkg        = "\{ipkg}"
+  packagePath = \{tomlBool pp}
   """
 
 export
