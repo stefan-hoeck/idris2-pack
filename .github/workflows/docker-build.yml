@@ -10,7 +10,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: '0 7 * * *'
+    - cron: '0 8 * * *'
 
 jobs:
   docker-build:
@@ -29,9 +29,9 @@ jobs:
         # Ignore the failure of a step and avoid terminating the job.
         continue-on-error: true
 
-      - name: Get yesterday's date for DB version
+      - name: Get date for DB version
         run: |
-          DB_VERSION="nightly-$(date -d "yesterday 13:00" '+%y%m%d')"
+          DB_VERSION="nightly-$(date '+%y%m%d')"
           export DB_VERSION
           echo "DB_VERSION=$DB_VERSION" >> "$GITHUB_ENV"
 
