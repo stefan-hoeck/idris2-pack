@@ -216,6 +216,32 @@ repl :  HasIO io
 repl Nothing e  = idrisRepl e ""
 repl (Just p) e = idrisRepl e (show p)
 
+-- When linking to a binary from a package collection's
+-- `bin` directory, we distinguish between applications,
+-- which need acceess to the Idris package path and those,
+-- which don't. For the former, we create a wrapper script
+-- where we first set the `IDRIS2_PACKAGE_PATH` variable
+-- before invoking the binary, for the latter we create just
+-- a symlink.
+appBinLink :  HasIO io
+           => Env HasIdris
+           -> ResolvedPackage
+           -> (exe : String)
+           -> EitherT PackErr io ()
+appBinLink e rp exe =
+  let appExec = packageExec e rp exe
+      target  = collectionAppExec e exe
+   in case usePackagePath rp of
+        False => link appExec target
+        True  =>
+          let content = """
+              #!/bin/sh
+
+              export IDRIS2_PACKAGE_PATH="$(pack package-path)"
+              "\{appExec}" "$@"
+              """
+           in write target content >> sys "chmod +x \{target}"
+
 ||| Install an Idris application given as a package name
 ||| or a path to a local `.ipkg` file.
 export covering
@@ -249,7 +275,7 @@ installApp e n = do
         idrisPkg e "" "--build" ipkg
         copyApp e rp
     _ => throwE (NoApp n)
-  link (packageExec e rp exe) (collectionAppExec e exe)
+  appBinLink e rp exe
 
 ||| Build and run an executable given either
 ||| as an `.ipkg` file or an application from the

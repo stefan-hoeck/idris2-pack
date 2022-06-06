@@ -154,6 +154,14 @@ name Network               = "network"
 name Prelude               = "prelude"
 name Test                  = "test"
 
+||| True, if the given application needs access to the
+||| folders where Idris package are installed.
+export
+usePackagePath : ResolvedPackage -> Bool
+usePackagePath (RGitHub _ _ _ _ pp _) = pp
+usePackagePath (RLocal _ _ _ pp _)    = pp
+usePackagePath _                      = False
+
 --------------------------------------------------------------------------------
 --          Package Database
 --------------------------------------------------------------------------------
@@ -182,7 +190,7 @@ printPair (x, GitHub url commit ipkg pp) =
   url         = "\{url}"
   commit      = "\{commit}"
   ipkg        = "\{ipkg}"
-  packagePath = "\{tomlBool pp}"
+  packagePath = \{tomlBool pp}
   """
 
 printPair (x, Local dir ipkg pp) =
@@ -192,7 +200,7 @@ printPair (x, Local dir ipkg pp) =
   type        = "local"
   path        = "\{dir}"
   ipkg        = "\{ipkg}"
-  packagePath = "\{tomlBool pp}"
+  packagePath = \{tomlBool pp}
   """
 
 export
