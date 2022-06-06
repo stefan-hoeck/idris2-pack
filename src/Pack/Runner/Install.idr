@@ -16,10 +16,18 @@ import Pack.Runner.Database
 ||| Idris executable to use together with the
 ||| `--cg` (codegen) command line option.
 export
-idrisWithCG : Env HasIdris -> String
-idrisWithCG e = case e.codegen of
+idrisWithCG : Env HasIdris -> (packInstalled : Bool) -> String
+idrisWithCG e True = case e.codegen of
   Default => "\{collectionIdrisExec e}"
   cg      => "\{collectionIdrisExec e} --cg \{cg}"
+idrisWithCG e False = case e.codegen of
+  Default => "\{idrisExec e}"
+  cg      => "\{idrisExec e} --cg \{cg}"
+
+packInstalled : HasIO io => Env e -> EitherT PackErr io Bool
+packInstalled e = do
+  rp <- resolve e (Pkg "pack")
+  exists (packageExec e rp "pack")
 
 ||| Use the installed Idris to run an operation on an `.ipkg` file.
 export
@@ -29,10 +37,17 @@ idrisPkg :  HasIO io
          -> (cmd : String)
          -> Path
          -> EitherT PackErr io ()
-idrisPkg e env cmd ipkg =
-  let exe = idrisWithCG e
-      s = "\{env} \{exe} \{cmd} \{ipkg}"
-   in debug e "About to run: \{s}" >> sys s
+idrisPkg e env cmd ipkg = do
+  b  <- packInstalled e
+  let exe = idrisWithCG e b
+
+      pre : String
+      pre = if b then "" else buildEnv e
+
+      s : String
+      s = "\{env} \{pre} \{exe} \{cmd} \{ipkg}"
+  debug e "About to run: \{s}"
+  sys s
 
 copyApp : HasIO io => Env HasIdris -> ResolvedPackage -> EitherT PackErr io ()
 copyApp e rp =
@@ -201,14 +216,14 @@ idrisRepl :  HasIO io
           => Env HasIdris
           -> (args : String)
           -> EitherT PackErr io ()
-idrisRepl e args =
+idrisRepl e args = do
+  b    <- packInstalled e
   let pth = packagePath e
-      exe = idrisWithCG e
-   in do
-        opts <- replOpts
-        case e.rlwrap of
-          True  => sys "\{pth} rlwrap \{exe} \{opts} \{args}"
-          False => sys "\{pth} \{exe} \{opts} \{args}"
+      exe = idrisWithCG e b
+  opts <- replOpts
+  case e.rlwrap of
+    True  => sys "\{pth} rlwrap \{exe} \{opts} \{args}"
+    False => sys "\{pth} \{exe} \{opts} \{args}"
 
   where covering replOpts : EitherT PackErr io String
         replOpts = case e.withIpkg of
