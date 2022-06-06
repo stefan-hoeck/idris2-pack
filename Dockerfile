@@ -21,4 +21,13 @@ ARG db
 RUN make micropack SCHEME=$SCHEME DB=$db
 RUN pack install pack.ipkg
 
-WORKDIR /opt/idris2-pack
+FROM ubuntu
+
+RUN apt-get update && apt-get install --yes gcc make chezscheme libgmp3-dev git && rm -rf /var/lib/apt/lists/*
+
+SHELL ["/bin/bash", "-c"]
+
+ENV HOME="/root"
+
+ENV PATH "/root/.pack/bin:$PATH"
+COPY --from=build $HOME/.pack $HOME/.pack
