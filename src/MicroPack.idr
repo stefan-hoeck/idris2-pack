@@ -43,15 +43,19 @@ covering
 main : IO ()
 main = run $ do
   dir     <- packDir
-  [_,db'] <- getArgs | as => throwE (InvalidArgs as)
+  mkDir dir
+  defCol  <- defaultColl dir
+  args    <- getArgs
   scheme  <- fromMaybe "scheme" <$> getEnv "SCHEME"
 
-  let db   = MkDBName db'
+  let db   = case args of
+        [_,n] => MkDBName n
+        _     => defCol
+
       conf = microInit dir scheme db
 
   -- initialize `$HOME/.pack/user/pack.toml`
   write (packToml dir) (initToml scheme db)
 
-  updateDB conf
   e <- idrisEnv conf
   links e
