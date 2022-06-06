@@ -49,6 +49,27 @@ links e = do
   debug e "Creating sym links"
   link (collectionBinDir e) (packBinDir e)
 
+-- When linking to a binary from a package collection's
+-- `bin` directory, we distinguish between applications,
+-- which need acceess to the Idris package path and those,
+-- which don't. For the former, we create a wrapper script
+-- where we first set the `IDRIS2_PACKAGE_PATH` variable
+-- before invoking the binary, for the latter we create just
+-- a symlink.
+appLink :  HasIO io
+        => (exec,target : Path)
+        -> (usePackagePath : Bool)
+        -> EitherT PackErr io ()
+appLink exec target False = link exec target
+appLink exec target True  =
+  let content = """
+      #!/bin/sh
+
+      export IDRIS2_PACKAGE_PATH="$(pack package-path)"
+      "\{exec}" "$@"
+      """
+   in write target content >> sys "chmod +x \{target}"
+
 ||| Builds and installs the Idris commit given in the environment.
 export
 mkIdris : HasIO io => Env DBLoaded -> EitherT PackErr io (Env HasIdris)
@@ -80,7 +101,7 @@ mkIdris e = do
            sys "rm -r build/ttc build/exec"
            sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
 
-  link (idrisExec e) (collectionIdrisExec e)
+  appLink (idrisExec e) (collectionIdrisExec e) True
   pure $ {db $= id} e
 
 installCmd : (withSrc : Bool) -> String
@@ -216,32 +237,6 @@ repl :  HasIO io
 repl Nothing e  = idrisRepl e ""
 repl (Just p) e = idrisRepl e (show p)
 
--- When linking to a binary from a package collection's
--- `bin` directory, we distinguish between applications,
--- which need acceess to the Idris package path and those,
--- which don't. For the former, we create a wrapper script
--- where we first set the `IDRIS2_PACKAGE_PATH` variable
--- before invoking the binary, for the latter we create just
--- a symlink.
-appBinLink :  HasIO io
-           => Env HasIdris
-           -> ResolvedPackage
-           -> (exe : String)
-           -> EitherT PackErr io ()
-appBinLink e rp exe =
-  let appExec = packageExec e rp exe
-      target  = collectionAppExec e exe
-   in case usePackagePath rp of
-        False => link appExec target
-        True  =>
-          let content = """
-              #!/bin/sh
-
-              export IDRIS2_PACKAGE_PATH="$(pack package-path)"
-              "\{appExec}" "$@"
-              """
-           in write target content >> sys "chmod +x \{target}"
-
 ||| Install an Idris application given as a package name
 ||| or a path to a local `.ipkg` file.
 export covering
@@ -275,7 +270,7 @@ installApp e n = do
         idrisPkg e "" "--build" ipkg
         copyApp e rp
     _ => throwE (NoApp n)
-  appBinLink e rp exe
+  appLink (packageExec e rp exe) (collectionAppExec e exe) (usePackagePath rp)
 
 ||| Build and run an executable given either
 ||| as an `.ipkg` file or an application from the
