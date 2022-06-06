@@ -64,14 +64,20 @@ jobs:
       - name: Build admin
         run: idris2 --build pack-admin.ipkg
 
+  install-deps:
+    name: Install Ubuntu dependencies
+    steps:
+      - name: Install scheme
+        run: sudo apt-get update && sudo apt-get install --yes gcc make chezscheme libgmp3-dev nodejs
+
   micropack:
     name: Bootstrap with micropack
+    needs:
+      - install-deps
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Install scheme
-        run: sudo apt-get update && sudo apt-get install --yes gcc make chezscheme libgmp3-dev nodejs
       - name: Run installation script
         run: |
           make micropack SCHEME=chezscheme
@@ -80,12 +86,12 @@ jobs:
 
   shellscript:
     name: Bootstrap with the shell script
+    needs:
+      - install-deps
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Install scheme
-        run: sudo apt-get update && sudo apt-get install --yes gcc make chezscheme libgmp3-dev nodejs
       - name: Run installation script
         run: |
           echo chezscheme | bash -c "$(curl -fsSL https://raw.githubusercontent.com/stefan-hoeck/idris2-pack/main/install.bash)"
