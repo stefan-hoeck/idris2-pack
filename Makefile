@@ -5,6 +5,7 @@ export LD_LIBRARY_PATH = micropack
 .PHONY: micropack
 
 micropack:
+	bash micropack.bash
 	${SCHEME} --script micropack/micropack.ss
 
 .PHONY: install-lib

@@ -1,2 +1,3 @@
 build/
 *.*~
+micropack/libidris2_support.so
