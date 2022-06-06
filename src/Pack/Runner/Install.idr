@@ -24,10 +24,13 @@ idrisWithCG e False = case e.codegen of
   Default => "\{idrisExec e}"
   cg      => "\{idrisExec e} --cg \{cg}"
 
-packInstalled : HasIO io => Env e -> EitherT PackErr io Bool
-packInstalled e = do
+packExec : HasIO io => Env e -> EitherT PackErr io Path
+packExec e = do
   rp <- resolve e (Pkg "pack")
-  exists (packageExec e rp "pack")
+  pure $ packageExec e rp "pack"
+
+packInstalled : HasIO io => Env e -> EitherT PackErr io Bool
+packInstalled e = packExec e >>= exists
 
 ||| Use the installed Idris to run an operation on an `.ipkg` file.
 export
@@ -73,16 +76,16 @@ links e = do
 -- a symlink.
 appLink :  HasIO io
         => (exec,target : Path)
-        -> (usePackagePath : Bool)
+        -> (packPath    : Maybe Path)
         -> EitherT PackErr io ()
-appLink exec target False = link exec target
-appLink exec target True  =
+appLink exec target Nothing  = link exec target
+appLink exec target (Just p) =
   let content = """
       #!/bin/sh
 
       export IDRIS2_PACKAGE_PATH="$(pack package-path)"
-      export IDRIS2_LIBS="$(pack libs-path)"
-      export IDRIS2_DATA="$(pack data-path)"
+      export IDRIS2_LIBS="$("\{p}" libs-path)"
+      export IDRIS2_DATA="$("\{p}" data-path)"
       "\{exec}" "$@"
       """
    in write target content >> sys "chmod +x \{target}"
@@ -118,7 +121,8 @@ mkIdris e = do
            sys "rm -r build/ttc build/exec"
            sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
 
-  appLink (idrisExec e) (collectionIdrisExec e) True
+  exepath <- packExec e
+  appLink (idrisExec e) (collectionIdrisExec e) (Just exepath)
   pure $ {db $= id} e
 
 installCmd : (withSrc : Bool) -> String
@@ -287,7 +291,10 @@ installApp e n = do
         idrisPkg e "" "--build" ipkg
         copyApp e rp
     _ => throwE (NoApp n)
-  appLink (packageExec e rp exe) (collectionAppExec e exe) (usePackagePath rp)
+
+  case usePackagePath rp of
+    True  => packExec e >>= appLink (packageExec e rp exe) (collectionAppExec e exe) . Just
+    False => appLink (packageExec e rp exe) (collectionAppExec e exe) Nothing
 
 ||| Build and run an executable given either
 ||| as an `.ipkg` file or an application from the
