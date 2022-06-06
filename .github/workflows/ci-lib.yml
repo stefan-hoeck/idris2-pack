@@ -63,3 +63,31 @@ jobs:
         run: idris2 --build pack.ipkg
       - name: Build admin
         run: idris2 --build pack-admin.ipkg
+
+  micropack:
+    name: Bootstrap with micropack
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install scheme
+        run: sudo apt-get update && sudo apt-get install --yes gcc make chezscheme libgmp3-dev nodejs
+      - name: Run installation script
+        run: |
+          make micropack SCHEME=chezscheme
+          echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
+          pack install graph
+
+  shellscript:
+    name: Bootstrap with the shell script
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install scheme
+        run: sudo apt-get update && sudo apt-get install --yes gcc make chezscheme libgmp3-dev nodejs
+      - name: Run installation script
+        run: |
+          echo chezscheme | bash -c "$(curl -fsSL https://raw.githubusercontent.com/stefan-hoeck/idris2-pack/main/install.bash)"
+          echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
+          pack install graph
