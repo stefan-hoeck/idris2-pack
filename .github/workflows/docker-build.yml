@@ -1,0 +1,58 @@
+name: Docker Build
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - '**'
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '0 8 * * *'
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+
+    timeout-minutes: 90
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2.4.0
+
+      - name: Cache Docker
+        uses: satackey/action-docker-layer-caching@v0.0.11
+        # Ignore the failure of a step and avoid terminating the job.
+        continue-on-error: true
+
+      - name: Get date for DB version
+        run: |
+          DB_VERSION="nightly-$(date '+%y%m%d')"
+          export DB_VERSION
+          echo "DB_VERSION=$DB_VERSION" >> "$GITHUB_ENV"
+
+      - name: Build Docker Image
+        run: |
+          DB="$DB_VERSION" make docker-build
+
+      - name: Log in to registry
+        if: github.ref == 'refs/heads/main'
+        # This is where you will update the PAT to GITHUB_TOKEN
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Push image
+        if: github.ref == 'refs/heads/main'
+        run: |
+          IMAGE_ID="ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME"
+          # Change all uppercase to lowercase
+          IMAGE_ID="$(echo "$IMAGE_ID" | tr '[:upper:]' '[:lower:]')"
+          # Strip git ref prefix from version
+          echo IMAGE_ID="$IMAGE_ID"
+          echo DB_VERSION="$DB_VERSION"
+          docker tag "$IMAGE_ID:latest" "$IMAGE_ID:$DB_VERSION"
+          docker push "$IMAGE_ID:latest"
+          docker push "$IMAGE_ID:$DB_VERSION"
