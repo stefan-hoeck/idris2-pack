@@ -86,6 +86,11 @@ getConfig :  HasIO io
 getConfig readCmd dflt = do
   dir        <- packDir
   coll       <- defaultColl dir
+
+  -- Initialize `pack.toml` if none exists
+  when !(missing $ configPath dir) $
+    write (configPath dir) (initToml "scheme" coll)
+
   global     <- readOptionalFromTOML (configPath dir) config
   local      <- readOptionalFromTOML (parse "pack.toml") config
 
