@@ -12,6 +12,7 @@ import Libraries.Utils.Path
 public export
 data Cmd : Type where
   Build            : Path -> Cmd
+  BuildDeps        : Path -> Cmd
   Typecheck        : Path -> Cmd
   Exec             : PkgRep -> List String -> Cmd
   Repl             : Maybe Path -> Cmd
