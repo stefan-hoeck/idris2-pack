@@ -47,7 +47,7 @@ jobs:
       - name: Push image
         if: github.ref == 'refs/heads/main'
         run: |
-          IMAGE_ID="ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME"
+          IMAGE_ID="ghcr.io/${{ github.repository_owner }}/idris2-pack"
           # Change all uppercase to lowercase
           IMAGE_ID="$(echo "$IMAGE_ID" | tr '[:upper:]' '[:lower:]')"
           # Strip git ref prefix from version
