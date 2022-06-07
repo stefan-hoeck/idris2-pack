@@ -66,15 +66,16 @@ errLine (p,err) = "| \{p} | \{printErr err} |"
 
 report : Env e -> RepLines -> String
 report e (MkRL es fs ss) =
-  let succs = unlines $ mapMaybe succLine (ss <>> Nil)
-      fails = unlines $ mapMaybe failLine (fs <>> Nil)
-      errs  = unlines $ map errLine (es <>> Nil)
+  let succs     = unlines $ mapMaybe succLine (ss <>> Nil)
+      fails     = unlines $ mapMaybe failLine (fs <>> Nil)
+      errs      = unlines $ map errLine (es <>> Nil)
+      idrisLink = ghCommitLink e.db.idrisURL e.db.idrisCommit
    in """
       # Package Status
 
       | Compiler | Version | Commit |
       | --- | --- | --- |
-      | [Idris2](\{e.db.idrisURL}) | \{e.db.idrisVersion} | \{e.db.idrisCommit} |
+      | [Idris2](\{e.db.idrisURL}) | \{e.db.idrisVersion} | \{idrisLink} |
 
       ## Building Packages
 
