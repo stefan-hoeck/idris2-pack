@@ -204,14 +204,16 @@ remove env n = do
 
 covering
 runIdrisOn :  HasIO io
-           => (cmd : String)
+           => (cmd : Maybe String)
            -> Path
            -> Env HasIdris
            -> EitherT PackErr io ()
 runIdrisOn cmd p e = do
   RIpkg ipkg d <- resolve e (Ipkg p) | _ => throwE BuildMany
   traverse_ (installLib e) (dependencies $ RIpkg ipkg d)
-  idrisPkg e "" cmd ipkg
+  case cmd of
+    Just c  => idrisPkg e "" c ipkg
+    Nothing => pure ()
 
 ||| Use the installed Idris to start a REPL session with the
 ||| given argument string.
@@ -242,12 +244,17 @@ idrisRepl e args = do
 ||| Build a local library given as an `.ipkg` file.
 export covering
 build : HasIO io => Path -> Env HasIdris -> EitherT PackErr io ()
-build = runIdrisOn "--build"
+build = runIdrisOn (Just "--build")
+
+||| Install dependencies of a local `.ipkg` file
+export covering
+buildDeps : HasIO io => Path -> Env HasIdris -> EitherT PackErr io ()
+buildDeps = runIdrisOn Nothing
 
 ||| Typecheck a local library given as an `.ipkg` file.
 export covering
 typecheck : HasIO io => Path -> Env HasIdris -> EitherT PackErr io ()
-typecheck = runIdrisOn "--typecheck"
+typecheck = runIdrisOn (Just "--typecheck")
 
 ||| Load an optional file into a REPL session
 export covering

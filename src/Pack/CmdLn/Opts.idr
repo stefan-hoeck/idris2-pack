@@ -117,6 +117,7 @@ cmd ["repl"]                   = Right $ Repl Nothing
 cmd ["repl", s]                = Right $ Repl (Just $ parse s)
 cmd ("exec" :: file :: args)   = Right $ Exec (fromString file) args
 cmd ["build", file]            = Right $ Build (parse file)
+cmd ["install-deps", file]     = Right $ BuildDeps (parse file)
 cmd ["typecheck", file]        = Right $ Typecheck (parse file)
 cmd ("install" :: xs)          = Right $ Install (map fromString xs)
 cmd ("remove" :: xs)           = Right $ Remove (map fromString xs)
@@ -168,6 +169,9 @@ usageInfo = """
 
     build <.ipkg file>
       Build a local package given as an `.ipkg` file.
+
+    install-deps <.ipkg file>
+      Install the dependencies of a local package given as an `.ipkg` file.
 
     typecheck <.ipkg file>
       Typecheck a local package given as an `.ipkg` file.

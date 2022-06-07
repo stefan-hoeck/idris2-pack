@@ -77,6 +77,7 @@ optionFlags =
   , "query"
   , "exec"
   , "build"
+  , "install-deps"
   , "typecheck"
   , "switch"
   , "install"
@@ -107,6 +108,7 @@ opts x "--cg"             e = prefixOnlyIfNonEmpty x <$> pure codegens
 
 -- actions
 opts x "build"            e = prefixOnlyIfNonEmpty x <$> ipkgFiles
+opts x "install-deps"     e = prefixOnlyIfNonEmpty x <$> ipkgFiles
 opts x "query"            e = prefixOnlyIfNonEmpty x <$> pure (packages e)
 opts x "check-db"         e = prefixOnlyIfNonEmpty x <$> collections e
 opts x "exec"             e = prefixOnlyIfNonEmpty x <$> anyPackage e

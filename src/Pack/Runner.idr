@@ -22,6 +22,7 @@ runCmd = do
     Exec p args        => idrisEnv c >>= execApp p args
     Repl p             => idrisEnv c >>= repl p
     Build p            => idrisEnv c >>= build p
+    BuildDeps p        => idrisEnv c >>= buildDeps p
     Typecheck p        => idrisEnv c >>= typecheck p
     PrintHelp          => putStrLn usageInfo
     Install ps         => idrisEnv c >>= \e => traverse_ (installLib e) ps
