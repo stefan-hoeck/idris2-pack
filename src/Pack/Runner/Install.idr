@@ -17,10 +17,14 @@ import Pack.Runner.Database
 ||| `--cg` (codegen) command line option.
 export
 idrisWithCG : Env HasIdris -> (packInstalled : Bool) -> String
-idrisWithCG e True = case e.codegen of
-  Default => "\{collectionIdrisExec e}"
-  cg      => "\{collectionIdrisExec e} --cg \{cg}"
-idrisWithCG e False = case e.codegen of
+-- TODO: This doesn't work as we need the *current* package path
+-- not the one produced by invoking another `pack` binary with the
+-- wrong command line settings. We need to think about a different
+-- way to get cleaner error messages.
+-- idrisWithCG e True = case e.codegen of
+--   Default => "\{collectionIdrisExec e}"
+--   cg      => "\{collectionIdrisExec e} --cg \{cg}"
+idrisWithCG e _ = case e.codegen of
   Default => "\{idrisExec e}"
   cg      => "\{idrisExec e} --cg \{cg}"
 
@@ -83,7 +87,7 @@ appLink exec target (Just p) =
   let content = """
       #!/bin/sh
 
-      export IDRIS2_PACKAGE_PATH="$(pack package-path)"
+      export IDRIS2_PACKAGE_PATH="$(\{p} package-path)"
       export IDRIS2_LIBS="$("\{p}" libs-path)"
       export IDRIS2_DATA="$("\{p}" data-path)"
       "\{exec}" "$@"
