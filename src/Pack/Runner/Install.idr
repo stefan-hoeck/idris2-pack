@@ -16,15 +16,8 @@ import Pack.Runner.Database
 ||| Idris executable to use together with the
 ||| `--cg` (codegen) command line option.
 export
-idrisWithCG : Env HasIdris -> (packInstalled : Bool) -> String
--- TODO: This doesn't work as we need the *current* package path
--- not the one produced by invoking another `pack` binary with the
--- wrong command line settings. We need to think about a different
--- way to get cleaner error messages.
--- idrisWithCG e True = case e.codegen of
---   Default => "\{collectionIdrisExec e}"
---   cg      => "\{collectionIdrisExec e} --cg \{cg}"
-idrisWithCG e _ = case e.codegen of
+idrisWithCG : Env HasIdris -> String
+idrisWithCG e = case e.codegen of
   Default => "\{idrisExec e}"
   cg      => "\{idrisExec e} --cg \{cg}"
 
@@ -44,17 +37,11 @@ idrisPkg :  HasIO io
          -> (cmd : String)
          -> Path
          -> EitherT PackErr io ()
-idrisPkg e env cmd ipkg = do
-  b  <- packInstalled e
-  let exe = idrisWithCG e b
-
-      pre : String
-      pre = if b then "" else buildEnv e
-
-      s : String
-      s = "\{env} \{pre} \{exe} \{cmd} \{ipkg}"
-  debug e "About to run: \{s}"
-  sys s
+idrisPkg e env cmd ipkg =
+  let exe := idrisWithCG e
+      pre := buildEnv e
+      s   := "\{env} \{pre} \{exe} \{cmd} \{ipkg}"
+   in debug e "About to run: \{s}" >> sys s
 
 copyApp : HasIO io => Env HasIdris -> ResolvedPackage -> EitherT PackErr io ()
 copyApp e rp =
@@ -227,9 +214,8 @@ idrisRepl :  HasIO io
           -> (args : String)
           -> EitherT PackErr io ()
 idrisRepl e args = do
-  b    <- packInstalled e
   let pth = packagePath e
-      exe = idrisWithCG e b
+      exe = idrisWithCG e
   opts <- replOpts
   case e.rlwrap of
     True  => sys "\{pth} rlwrap \{exe} \{opts} \{args}"
