@@ -208,5 +208,11 @@ parseIpkg path str =
      Right $ addFields n fs
 
 export covering
-parseIpkgFile :  HasIO io => (path : Path) -> EitherT PackErr io PkgDesc
-parseIpkgFile path = read path >>= liftEither . parseIpkg path
+parseIpkgFile :  HasIO io
+              => (path : Path)
+              -> (PkgDesc -> a)
+              -> EitherT PackErr io (String, a)
+parseIpkgFile path f = do
+  str  <- read path
+  desc <- liftEither (parseIpkg path str)
+  pure (str, f desc)

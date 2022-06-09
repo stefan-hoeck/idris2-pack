@@ -17,7 +17,7 @@ runCmd = do
   case cmd of
     Completion a b     => env c >>= complete a b
     CompletionScript f => putStrLn (completionScript f)
-    Query s            => env c >>= query s
+    Query m s          => env c >>= query m s
     UpdateDB           => updateDB c
     Exec p args        => idrisEnv c >>= execApp p args
     Repl p             => idrisEnv c >>= repl p

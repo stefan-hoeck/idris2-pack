@@ -46,6 +46,9 @@ data QueryType : Type where
   ||| List direct dependencies
   Dependencies : QueryType
 
+  ||| Print the full `.ipkg` file
+  Ipkg         : QueryType
+
   ||| List detailed information about a package
   Details      : QueryType
 
@@ -256,6 +259,45 @@ export
 ipkgPath : Config s -> PkgName -> Commit -> Path -> Path
 ipkgPath c p com ipkg = cacheDir c /> p.value /> com.value /> show ipkg
 
+-- path to cached core library `.ipkg` file
+coreCachePath : Env s -> (name : String) -> (ipkg : String) -> Path
+coreCachePath  e n i = cacheDir e /> n /> e.db.idrisCommit.value /> "\{i}.ipkg"
+
+||| Path to cached `prelude.ipkg` file.
+export
+preludePath : Env s -> Path
+preludePath e = coreCachePath e "prelude" "prelude"
+
+||| Path to cached `base.ipkg` file.
+export
+basePath : Env s -> Path
+basePath e = coreCachePath e "base" "base"
+
+||| Path to cached `contrib.ipkg` file.
+export
+contribPath : Env s -> Path
+contribPath e = coreCachePath e "contrib" "contrib"
+
+||| Path to cached `network.ipkg` file.
+export
+networkPath : Env s -> Path
+networkPath e = coreCachePath e "network" "network"
+
+||| Path to cached `test.ipkg` file.
+export
+testPath : Env s -> Path
+testPath e = coreCachePath e "test" "test"
+
+||| Path to cached `test.ipkg` file.
+export
+linearPath : Env s -> Path
+linearPath e = coreCachePath e "linear" "linear"
+
+||| Path to cached `idris2api.ipkg` file.
+export
+idrisApiPath : Env s -> Path
+idrisApiPath e = coreCachePath e "idris2" "idris2api"
+
 ||| Directory where user settings are stored.
 export
 userDir : Config s -> Path
@@ -383,13 +425,7 @@ packagePrefixDir : Env s -> ResolvedPackage -> Path
 packagePrefixDir e (RGitHub n _ c _ _ _) = githubPkgPrefixDir e n c
 packagePrefixDir e (RIpkg _ d)           = idrisPrefixDir e
 packagePrefixDir e (RLocal n _ _ _ _)    = localPkgPrefixDir e n
-packagePrefixDir e Base                  = idrisPrefixDir e
-packagePrefixDir e Contrib               = idrisPrefixDir e
-packagePrefixDir e Idris2                = idrisPrefixDir e
-packagePrefixDir e Linear                = idrisPrefixDir e
-packagePrefixDir e Network               = idrisPrefixDir e
-packagePrefixDir e Prelude               = idrisPrefixDir e
-packagePrefixDir e Test                  = idrisPrefixDir e
+packagePrefixDir e (Core _ _)            = idrisPrefixDir e
 
 export
 packageInstallPrefix : Env s -> ResolvedPackage -> String
@@ -403,20 +439,14 @@ packageInstallDir e p =
   let vers = e.db.idrisVersion
       dir  = packagePrefixDir e p /> idrisDir e
    in case p of
-        Base     => dir /> "base-\{vers}"
-        Contrib  => dir /> "contrib-\{vers}"
-        Linear   => dir /> "linear-\{vers}"
-        Network  => dir /> "network-\{vers}"
-        Prelude  => dir /> "prelude-\{vers}"
-        Idris2   => dir /> "idris2-\{vers}"
-        Test     => dir /> "test-\{vers}"
-        RGitHub _ _ _ _ _ d   =>
+        Core c _            => dir /> "\{c}-\{vers}"
+        RGitHub _ _ _ _ _ d =>
           let v = maybe "0" show d.version
            in dir /> "\{d.name}-\{v}"
-        RIpkg p d =>
+        RIpkg p d           =>
           let v = maybe "0" show d.version
            in dir /> "\{d.name}-\{v}"
-        RLocal _ _ _ _ d =>
+        RLocal _ _ _ _ d    =>
           let v = maybe "0" show d.version
            in dir /> "\{d.name}-\{v}"
 
