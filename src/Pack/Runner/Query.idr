@@ -74,7 +74,7 @@ fromTpe NameOnly  _ rp = nameStr rp
 
 fromTpe ShortDesc _ rp =
   let Just d := shortDesc rp | Nothing => nameStr rp
-   in "\{name rp}\n  \{d}"
+   in "\{name rp}\n  \{d}\n"
 
 fromTpe Dependencies _ rp =
   let ds@(_ :: _) := deps rp | [] => nameStr rp
