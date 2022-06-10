@@ -39,10 +39,18 @@ shortDesc = brief . desc
 deps : ResolvedPackage -> List String
 deps = map pkgname . depends . desc
 
+modules : ResolvedPackage -> List String
+modules = map (show . fst) . modules . desc
+
 prettyDeps : ResolvedPackage -> List String
 prettyDeps rp = case deps rp of
   []     => ["Dependencies :"]
   h :: t => "Dependencies : \{h}" :: map (indent 15) t
+
+prettyModules : String -> ResolvedPackage -> List String
+prettyModules s rp = case filter (isInfixOf s) (modules rp) of
+  []     => ["Modules :"]
+  h :: t => "Modules : \{h}" :: map (indent 10) t
 
 details : ResolvedPackage -> List String
 details (RGitHub name url commit ipkg _ desc) = [
@@ -65,39 +73,49 @@ details (RLocal name dir ipkg _ desc) = [
 
 details (Core _ _) = [ "Type         : Idris core package" ]
 
-
-fromTpe :  QueryType
-        -> (ipkg : String)
-        -> ResolvedPackage
-        -> String
-fromTpe NameOnly  _ rp = nameStr rp
-
-fromTpe ShortDesc _ rp =
-  let Just d := shortDesc rp | Nothing => nameStr rp
-   in "\{name rp}\n  \{d}\n"
-
-fromTpe Dependencies _ rp =
-  let ds@(_ :: _) := deps rp | [] => nameStr rp
-   in unlines $  nameStr rp :: map (indent 2) ds
-
-fromTpe Details _ rp = unlines . (nameStr rp ::) . map (indent 2) $ concat [
-    toList (("Brief        : " ++) <$> shortDesc rp)
-  , details rp
-  , prettyDeps rp
-  ]
-
-fromTpe Ipkg ipkg rp = unlines $ nameStr rp :: map (indent 2) (lines ipkg)
+namePlusModules : String -> ResolvedPackage -> String
+namePlusModules n rp =
+  unlines $  nameStr rp :: map (indent 2) (prettyModules n rp)
 
 keep : QueryMode -> String -> ResolvedPackage -> Bool
 keep PkgName    q p = isInfixOf q (nameStr p)
 keep Dependency q p = any ((q ==) . pkgname) (depends $ desc p)
-keep Module     q p = any ((q ==) . show . fst) (modules $ desc p)
+keep Module     q p = any (isInfixOf q . show . fst) (modules $ desc p)
 
+resultString :  Env s
+             -> (query : String)
+             -> QueryMode
+             -> (ipkg  : String)
+             -> ResolvedPackage
+             -> String
+resultString e q Module _    rp = namePlusModules q rp
+resultString e _ _      ipkg rp = case e.queryType of
+  NameOnly => nameStr rp
+
+  ShortDesc =>
+    let Just d := shortDesc rp | Nothing => nameStr rp
+     in "\{name rp}\n  \{d}\n"
+
+  Dependencies =>
+    let ds@(_ :: _) := deps rp | [] => nameStr rp
+     in unlines $  nameStr rp :: map (indent 2) ds
+
+  Details => unlines . (nameStr rp ::) . map (indent 2) $ concat [
+      toList (("Brief        : " ++) <$> shortDesc rp)
+    , details rp
+    , prettyDeps rp
+    ]
+
+  Ipkg => unlines $ nameStr rp :: map (indent 2) (lines ipkg)
 
 export
-query : HasIO io => QueryMode -> String -> (e : Env s) -> EitherT PackErr io ()
+query :  HasIO io
+      => QueryMode
+      -> String
+      -> (e : Env s)
+      -> EitherT PackErr io ()
 query m n e = do
-  ss <- query_ e $ \s,p => toMaybe (keep m n p) (fromTpe e.queryType s p)
+  ss <- query_ e $ \s,p => toMaybe (keep m n p) (resultString e n m s p)
   putStrLn $ unlines ss
 
 --------------------------------------------------------------------------------
