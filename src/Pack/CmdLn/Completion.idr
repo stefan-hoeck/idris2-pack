@@ -92,6 +92,9 @@ optionFlags =
   , "completion-script"
   ] ++ optionNames
 
+queries : Env s -> List String
+queries e = ["dep", "module"] ++ packages e
+
 ||| Given a pair of strings, the first representing the word
 ||| actually being edited, the second representing the word
 ||| before the one being edited, return a list of possible
@@ -109,7 +112,9 @@ opts x "--cg"             e = prefixOnlyIfNonEmpty x <$> pure codegens
 -- actions
 opts x "build"            e = prefixOnlyIfNonEmpty x <$> ipkgFiles
 opts x "install-deps"     e = prefixOnlyIfNonEmpty x <$> ipkgFiles
-opts x "query"            e = prefixOnlyIfNonEmpty x <$> pure (packages e)
+opts x "query"            e = prefixOnlyIfNonEmpty x <$> pure (queries e)
+opts x "dep"              e = prefixOnlyIfNonEmpty x <$> pure (packages e)
+opts x "modules"          e = prefixOnlyIfNonEmpty x <$> pure (packages e)
 opts x "check-db"         e = prefixOnlyIfNonEmpty x <$> collections e
 opts x "exec"             e = prefixOnlyIfNonEmpty x <$> anyPackage e
 opts x "install"          e = prefixOnlyIfNonEmpty x <$> anyPackage e
