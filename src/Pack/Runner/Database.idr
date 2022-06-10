@@ -36,16 +36,40 @@ executableExists c rp n =
        debug c "Looking for executable \{n} at \{pth}"
        exists pth
 
+export
+cacheCoreIpkgFiles : HasIO io => Env s -> EitherT PackErr io ()
+cacheCoreIpkgFiles e = do
+  copyFile (parse "libs/prelude/prelude.ipkg") (preludePath e)
+  copyFile (parse "libs/base/base.ipkg") (basePath e)
+  copyFile (parse "libs/contrib/contrib.ipkg") (contribPath e)
+  copyFile (parse "libs/network/network.ipkg") (networkPath e)
+  copyFile (parse "libs/linear/linear.ipkg") (linearPath e)
+  copyFile (parse "libs/test/test.ipkg") (testPath e)
+  copyFile (parse "idris2api.ipkg") (idrisApiPath e)
+
+resolveCore :  HasIO io
+            => Env s
+            -> Path
+            -> CorePkg
+            -> EitherT PackErr io (String, ResolvedPackage)
+resolveCore e pth c = do
+  when !(missing pth) $
+    withGit (tmpDir e) e.db.idrisURL e.db.idrisCommit (cacheCoreIpkgFiles e)
+  parseIpkgFile pth (Core c)
+
 covering
-resolveImpl : HasIO io => (e : Env s) -> PkgRep -> EitherT PackErr io ResolvedPackage
-resolveImpl _ (Pkg "base")    = pure Base
-resolveImpl _ (Pkg "contrib") = pure Contrib
-resolveImpl _ (Pkg "linear")  = pure Linear
-resolveImpl _ (Pkg "idris2")  = pure Idris2
-resolveImpl _ (Pkg "network") = pure Network
-resolveImpl _ (Pkg "prelude") = pure Prelude
-resolveImpl _ (Pkg "test")    = pure Test
-resolveImpl e (Ipkg path)     = RIpkg path <$> parseIpkgFile path
+resolveImpl :  HasIO io
+            => (e : Env s)
+            -> PkgRep
+            -> EitherT PackErr io (String, ResolvedPackage)
+resolveImpl e (Pkg "base")    = resolveCore e (basePath e) Base
+resolveImpl e (Pkg "contrib") = resolveCore e (contribPath e) Contrib
+resolveImpl e (Pkg "linear")  = resolveCore e (linearPath e) Linear
+resolveImpl e (Pkg "idris2")  = resolveCore e (idrisApiPath e) IdrisApi
+resolveImpl e (Pkg "network") = resolveCore e (networkPath e) Network
+resolveImpl e (Pkg "prelude") = resolveCore e (preludePath e) Prelude
+resolveImpl e (Pkg "test")    = resolveCore e (testPath e) Test
+resolveImpl e (Ipkg path)     = parseIpkgFile path (RIpkg path)
 resolveImpl e (Pkg n)         = case lookup n (allPackages e) of
   Nothing  => throwE (UnknownPkg n)
 
@@ -54,16 +78,14 @@ resolveImpl e (Pkg n)         = case lookup n (allPackages e) of
   Just (GitHub url commit ipkg pp) =>
     let cache = ipkgPath e n commit ipkg
      in do
-       b <- exists cache
-       case b of
-         True => RGitHub n url commit ipkg pp <$> parseIpkgFile cache
-         False => withGit (tmpDir e) url commit $ do
+       when !(missing cache) $
+         withGit (tmpDir e) url commit $ do
            let pf = patchFile e n ipkg
            when !(exists pf) (patch ipkg pf)
            copyFile ipkg cache
-           RGitHub n url commit ipkg pp <$> parseIpkgFile ipkg
+       parseIpkgFile cache (RGitHub n url commit ipkg pp)
   Just (Local dir ipkg pp) =>
-    inDir dir $ RLocal n dir ipkg pp <$> parseIpkgFile ipkg
+    inDir dir $ parseIpkgFile ipkg (RLocal n dir ipkg pp)
 
 execStr : PkgDesc -> String
 execStr d = maybe "library" (const "application") d.executable
@@ -77,11 +99,25 @@ descStr _ = "core package"
 
 ||| Lookup a package name in the package data base,
 ||| then download and extract its `.ipkg` file from
-||| its GitHub repository.
+||| its GitHub repository. The resulting pair contains also
+||| the unmodified content of the `.ipkg` file.
 export covering
-resolve : HasIO io => (e : Env s) -> PkgRep -> EitherT PackErr io ResolvedPackage
-resolve e pr = do
+resolvePair :  HasIO io
+            => (e : Env s)
+            -> PkgRep
+            -> EitherT PackErr io (String, ResolvedPackage)
+resolvePair e pr = do
   debug e "Trying to resolve package \{pr}"
   res <- resolveImpl e pr
-  debug e "Found \{descStr res} \{name res}"
+  debug e "Found \{descStr $ snd res} \{name $ snd res}"
   pure res
+
+||| Lookup a package name in the package data base,
+||| then download and extract its `.ipkg` file from
+||| its GitHub repository.
+export covering
+resolve :  HasIO io
+        => (e : Env s)
+        -> PkgRep
+        -> EitherT PackErr io ResolvedPackage
+resolve e pr = map snd (resolvePair e pr)

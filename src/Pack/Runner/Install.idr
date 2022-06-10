@@ -101,6 +101,7 @@ mkIdris e = do
            sys "make install-with-src-libs \{idrisBootVar e} \{prefixVar e}"
            sys "rm -r build/ttc build/exec"
            sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
+           cacheCoreIpkgFiles e
 
        else -- build with existing Idris2 compiler
          withGit (tmpDir e) e.db.idrisURL e.db.idrisCommit $ do
@@ -111,6 +112,7 @@ mkIdris e = do
            sys "make install-with-src-libs \{prefixVar e}"
            sys "rm -r build/ttc build/exec"
            sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
+           cacheCoreIpkgFiles e
 
   exepath <- packExec e
   appLink (idrisExec e) (collectionIdrisExec e) (Just exepath)
