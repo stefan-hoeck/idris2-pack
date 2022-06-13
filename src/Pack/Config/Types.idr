@@ -528,3 +528,23 @@ dataPath e = "IDRIS2_DATA=\"\{packageDataDirs e}\""
 export
 buildEnv : Env s -> String
 buildEnv e = "\{packagePath e} \{libPath e} \{dataPath e}"
+
+||| Idris executable to use together with the
+||| `--cg` (codegen) command line option.
+export
+idrisWithCG : Env HasIdris -> String
+idrisWithCG e = case e.codegen of
+  Default => "\{idrisExec e}"
+  cg      => "\{idrisExec e} --cg \{cg}"
+
+export
+idrisWithPkg : Env HasIdris -> ResolvedPackage -> String
+idrisWithPkg e rp =
+  "\{buildEnv e} \{idrisWithCG e} -p \{name rp}"
+
+export
+idrisWithPkgs : Env HasIdris -> List ResolvedPackage -> String
+idrisWithPkgs e [] = idrisWithCG e
+idrisWithPkgs e pkgs =
+  let ps = fastConcat $ map (\p => " -p \{name p}") pkgs
+   in "\{buildEnv e} \{idrisWithCG e}\{ps}"

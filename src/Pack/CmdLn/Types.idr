@@ -33,6 +33,7 @@ data Cmd : Type where
 
   Info             : Cmd
   Query            : QueryMode -> String -> Cmd
+  Fuzzy            : List PkgName -> String -> Cmd
   Completion       : String -> String -> Cmd
   CompletionScript : String -> Cmd
 

@@ -13,14 +13,6 @@ import Pack.Runner.Database
 
 %default total
 
-||| Idris executable to use together with the
-||| `--cg` (codegen) command line option.
-export
-idrisWithCG : Env HasIdris -> String
-idrisWithCG e = case e.codegen of
-  Default => "\{idrisExec e}"
-  cg      => "\{idrisExec e} --cg \{cg}"
-
 packExec : HasIO io => Env e -> EitherT PackErr io Path
 packExec e = do
   rp <- resolve e (Pkg "pack")
