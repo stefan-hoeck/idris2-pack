@@ -11,6 +11,7 @@ import Pack.Config.Types
 import Pack.Core
 import Pack.Database.Types
 import Pack.Runner.Database
+import Pack.Runner.Install
 
 %default total
 
@@ -187,3 +188,72 @@ printInfo : HasIO io => Env s -> io ()
 printInfo e = do
   ps <- installed e
   putStrLn $ infoString e ps
+
+--------------------------------------------------------------------------------
+--          Fuzzy Search
+--------------------------------------------------------------------------------
+
+installedPkgs :  HasIO io
+              => List PkgName
+              -> Env HasIdris
+              -> EitherT PackErr io (List ResolvedPackage, List ResolvedPackage)
+installedPkgs ns e = do
+  all <- mapMaybe id <$> traverse run (pkgNames e)
+  pure (all, filter inPkgs all)
+  where run : PkgName -> EitherT PackErr io (Maybe ResolvedPackage)
+        run n = do
+          rp <- resolve e (Pkg n)
+          b  <- exists (packageInstallDir e rp)
+          pure (toMaybe b rp)
+
+        inPkgs : ResolvedPackage -> Bool
+        inPkgs rp = isNil ns || elem (name rp) ns
+
+imports : ResolvedPackage -> String
+imports = unlines . map ("import " ++) . modules
+
+pre : String
+pre = "Main> "
+
+noOut : String
+noOut = "Main> \nMain> \n"
+
+removePre : String -> String
+removePre s = case isPrefixOf pre s of
+  True  => pack . drop (length pre) $ unpack s
+  False => s
+
+fuzzyTrim : String -> String
+fuzzyTrim = unlines
+          . map removePre
+          . filter (pre /=)
+          . lines
+
+fuzzyPkg :  HasIO io
+         => String
+         -> Env HasIdris
+         -> (allPkgs   : List ResolvedPackage)
+         -> ResolvedPackage
+         -> EitherT PackErr io ()
+fuzzyPkg q e allPkgs rp =
+  let dir = tmpDir e
+   in do
+     mkDir dir
+     finally (rmDir dir) $ inDir dir $ do
+       putStrLn "\{name rp}:\n"
+       write (parse "test.idr") (imports rp)
+       write (parse "input") ":fs \{q}\n"
+       str <- sysRun "\{idrisWithPkgs e allPkgs} --quiet --no-prelude --no-banner test.idr < input"
+       case noOut == str of
+         True  => pure ()
+         False => putStrLn (fuzzyTrim str)
+
+export
+fuzzy :  HasIO io
+      => List PkgName
+      -> String
+      -> Env HasIdris
+      -> EitherT PackErr io ()
+fuzzy m q e = do
+  (allPkgs,rps) <- installedPkgs m e
+  traverse_ (fuzzyPkg q e allPkgs) rps

@@ -2,6 +2,7 @@ module Pack.CmdLn.Completion
 
 import Control.Monad.Trans
 import Data.List
+import Data.List1
 import Data.SortedMap
 import Data.String
 import Libraries.Data.List.Extra
@@ -58,6 +59,11 @@ prefixOnlyIfNonEmpty : String -> List String -> List String
 prefixOnlyIfNonEmpty "--" = id
 prefixOnlyIfNonEmpty s    = prefixOnly s
 
+packageList : String -> List String -> List String
+packageList "--" xs = xs
+packageList s    xs = case reverse $ split (',' ==) s of
+  h ::: _ => prefixOnly h xs
+
 codegens : List String
 codegens =
   [ "chez"
@@ -76,6 +82,7 @@ optionFlags =
   , "update-db"
   , "query"
   , "exec"
+  , "fuzzy"
   , "build"
   , "install-deps"
   , "typecheck"
@@ -113,6 +120,7 @@ opts x "--cg"             e = prefixOnlyIfNonEmpty x <$> pure codegens
 opts x "build"            e = prefixOnlyIfNonEmpty x <$> ipkgFiles
 opts x "install-deps"     e = prefixOnlyIfNonEmpty x <$> ipkgFiles
 opts x "query"            e = prefixOnlyIfNonEmpty x <$> pure (queries e)
+opts x "fuzzy"            e = packageList          x <$> installedPackages e
 opts x "dep"              e = prefixOnlyIfNonEmpty x <$> pure (packages e)
 opts x "modules"          e = prefixOnlyIfNonEmpty x <$> pure (packages e)
 opts x "check-db"         e = prefixOnlyIfNonEmpty x <$> collections e

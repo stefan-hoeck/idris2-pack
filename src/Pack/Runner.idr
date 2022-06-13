@@ -18,6 +18,7 @@ runCmd = do
     Completion a b     => env c >>= complete a b
     CompletionScript f => putStrLn (completionScript f)
     Query m s          => env c >>= query m s
+    Fuzzy m s          => idrisEnv c >>= fuzzy m s
     UpdateDB           => updateDB c
     Exec p args        => idrisEnv c >>= execApp p args
     Repl p             => idrisEnv c >>= repl p

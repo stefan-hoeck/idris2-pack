@@ -1,5 +1,6 @@
 module Pack.CmdLn.Opts
 
+import Data.List1
 import Data.String
 import Libraries.Utils.Path
 import Pack.CmdLn.Types
@@ -114,6 +115,8 @@ cmd []                         = Right PrintHelp
 cmd ["help"]                   = Right PrintHelp
 cmd ["info"]                   = Right Info
 cmd ["update-db"]              = Right UpdateDB
+cmd ["fuzzy", s]               = Right $ Fuzzy [] s
+cmd ["fuzzy", p, s]            = Right $ Fuzzy (forget $ map MkPkgName $ split (',' ==) p) s
 cmd ["query", s]               = Right $ Query PkgName s
 cmd ["query", "dep", s]        = Right $ Query Dependency s
 cmd ["query", "module", s]     = Right $ Query Module s
@@ -229,6 +232,14 @@ usageInfo = """
           instance, `pack query module Data.List` will list all packages,
           which export module `Data.List`. Only exact matches will
           be listed.
+
+    fuzzy [packages] <query>
+      Run a fuzzy search by type over a comma-separated list of packages.
+      If no packages are given, all installed packages will be queried
+      (which might take several minutes).
+
+      Examples: fuzzy base "HasIO -> Bool", will find functions taking
+      an argument of type `HasIO` and returning a boolean result.
 
 
     package-path
