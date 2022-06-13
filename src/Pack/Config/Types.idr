@@ -104,7 +104,7 @@ I t = t
 ||| the configuration from user config file, we use context
 ||| `Maybe`, because all values will be optional.
 public export
-record Config_ (f : Type -> Type) (s : Maybe State) where
+record Config_ (c : Type) (f : Type -> Type) (s : Maybe State) where
   constructor MkConfig
   ||| Directory where the *pack* DB and installed
   ||| libraries and executables reside
@@ -140,7 +140,7 @@ record Config_ (f : Type -> Type) (s : Maybe State) where
   autoApps     : f (List PkgName)
 
   ||| Customizations to the package data base
-  custom       : f (SortedMap DBName (SortedMap PkgName Package))
+  custom       : f (SortedMap DBName (SortedMap PkgName $ Package_ c))
 
   ||| Type of query to run
   queryType    : f (QueryType)
@@ -154,13 +154,22 @@ record Config_ (f : Type -> Type) (s : Maybe State) where
   ||| The package collection
   db           : f (DBType s)
 
+export
+traverse :  Applicative f
+         => (Package_ a -> f (Package_ b))
+         -> Config_ a Maybe s
+         -> f (Config_ b Maybe s)
+traverse f cfg =
+  let cst = traverse (traverse (traverse f)) cfg.custom
+   in map (\c => {custom := c} cfg) cst
+
 --------------------------------------------------------------------------------
 --          Updating the Config
 --------------------------------------------------------------------------------
 
 public export
 0 Config : Maybe State -> Type
-Config = Config_ I
+Config = Config_ Commit I
 
 ||| Program configuration with data collection
 public export
@@ -183,7 +192,7 @@ allPackages e =
 
 ||| Initial config
 export
-init : (dir : Path) -> (coll : DBName) -> Config_ I Nothing
+init : (dir : Path) -> (coll : DBName) -> Config_ Commit I Nothing
 init dir coll = MkConfig {
     packDir      = dir
   , collection   = coll
@@ -206,7 +215,7 @@ infixl 7 `update`
 
 ||| Update a config with optional settings
 export
-update : Config_ I Nothing -> Config_ Maybe Nothing -> Config_ I Nothing
+update : Config_ c I Nothing -> Config_ c Maybe Nothing -> Config_ c I Nothing
 update ci cm = MkConfig {
     packDir      = fromMaybe ci.packDir cm.packDir
   , collection   = fromMaybe ci.collection cm.collection
