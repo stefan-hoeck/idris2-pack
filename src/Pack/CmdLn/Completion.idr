@@ -61,8 +61,8 @@ prefixOnlyIfNonEmpty s    = prefixOnly s
 
 packageList : String -> List String -> List String
 packageList "--" xs = xs
-packageList s    xs = case split (',' ==) s of
-  h ::: t => prefixOnly (last $ h :: t) xs
+packageList s    xs = case reverse $ split (',' ==) s of
+  h ::: _ => prefixOnly h xs
 
 codegens : List String
 codegens =
