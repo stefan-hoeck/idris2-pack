@@ -10,6 +10,27 @@ import Pack.Core.Types
 %default total
 
 --------------------------------------------------------------------------------
+--          MetaCommits
+--------------------------------------------------------------------------------
+
+||| A git commit hash or tag, or a meta commit: The latest commit of a branch.
+public export
+data MetaCommit : Type where
+  MC     : Commit -> MetaCommit
+  Latest : String -> MetaCommit
+
+public export
+FromString MetaCommit where
+  fromString s = case forget $ split (':' ==) s of
+    ["latest",branch] => Latest branch
+    _                 => MC $ MkCommit s
+
+export
+Interpolation MetaCommit where
+  interpolate (Latest b) = "latest:\{b}"
+  interpolate (MC c)     = "\{c}"
+
+--------------------------------------------------------------------------------
 --          Packages
 --------------------------------------------------------------------------------
 
@@ -19,17 +40,17 @@ import Pack.Core.Types
 ||| Note: This does not contain the package name, as it
 ||| will be paired with its name in a `SortedMap`.
 public export
-data Package : Type where
+data Package_ : (c : Type) -> Type where
   ||| A repository on GitHub, given as the package's URL,
   ||| commit (hash or tag), and name of `.ipkg` file to use.
   ||| `pkgPath` should be set to `True` for executable which need
   ||| access to the `IDRIS2_PACKAGE_PATH`: The list of directories
   ||| where Idris packages are installed.
   GitHub :  (url     : URL)
-         -> (commit  : Commit)
+         -> (commit  : c)
          -> (ipkg    : Path)
          -> (pkgPath : Bool)
-         -> Package
+         -> Package_ c
 
   ||| A local Idris project given as an absolute path to a local
   ||| directory, and `.ipkg` file to use.
@@ -39,7 +60,15 @@ data Package : Type where
   Local  :  (dir     : Path)
          -> (ipkg    : Path)
          -> (pkgPath : Bool)
-         -> Package
+         -> Package_ c
+
+public export
+0 Package : Type
+Package = Package_ Commit
+
+public export
+0 UserPackage : Type
+UserPackage = Package_ MetaCommit
 
 ||| Core packages bundled with the Idris compiler
 public export

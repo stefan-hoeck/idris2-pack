@@ -77,6 +77,12 @@ updateDB conf = do
   debug conf "updating data collections"
   updateDB_ conf.packDir
 
+resolveMeta : HasIO io => UserPackage -> EitherT PackErr io Package
+resolveMeta (GitHub u (MC x) i p) = pure $ GitHub u x i p
+resolveMeta (GitHub u (Latest x) i p) =
+  map (\c => GitHub u c i p) $ gitLatest u (MkCommit x)
+resolveMeta (Local d i p) = pure $ Local d i p
+
 ||| Read application config from command line arguments.
 export covering
 getConfig :  HasIO io
@@ -91,8 +97,10 @@ getConfig readCmd dflt = do
   when !(missing $ configPath dir) $
     write (configPath dir) (initToml "scheme" coll)
 
-  global     <- readOptionalFromTOML (configPath dir) config
-  local      <- readOptionalFromTOML (parse "pack.toml") config
+  global'     <- readOptionalFromTOML (configPath dir) config
+  local'      <- readOptionalFromTOML (parse "pack.toml") config
+  global      <- traverse resolveMeta global'
+  local       <- traverse resolveMeta local'
 
   let ini = init dir coll `update` global `update` local
 
