@@ -212,8 +212,22 @@ installedPkgs ns e = do
 imports : ResolvedPackage -> String
 imports = unlines . map ("import " ++) . modules
 
+pre : String
+pre = "Main> "
+
 noOut : String
 noOut = "Main> \nMain> \n"
+
+removePre : String -> String
+removePre s = case isPrefixOf pre s of
+  True  => pack . drop (length pre) $ unpack s
+  False => s
+
+fuzzyTrim : String -> String
+fuzzyTrim = unlines
+          . map removePre
+          . filter (pre /=)
+          . lines
 
 fuzzyPkg :  HasIO io
          => String
@@ -232,7 +246,7 @@ fuzzyPkg q e allPkgs rp =
        str <- sysRun "\{idrisWithPkgs e allPkgs} --quiet --no-prelude --no-banner test.idr < input"
        case noOut == str of
          True  => pure ()
-         False => putStrLn str
+         False => putStrLn (fuzzyTrim str)
 
 export
 fuzzy :  HasIO io
