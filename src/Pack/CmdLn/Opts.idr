@@ -233,6 +233,14 @@ usageInfo = """
           which export module `Data.List`. Only exact matches will
           be listed.
 
+    fuzzy [packages] <query>
+      Run a fuzzy search by type over a comma-separated list of packages.
+      If no packages are given, all installed packages will be queried
+      (which might take several minutes).
+
+      Examples: fuzzy base "HasIO -> Bool", will find functions taking
+      an argument of type `HasIO` and returning a boolean result.
+
 
     package-path
       Return a colon-separated list of paths where packages are
