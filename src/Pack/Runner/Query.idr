@@ -1,55 +1,57 @@
 module Pack.Runner.Query
 
+import Core.Name.Namespace
 import Data.List
 import Data.Maybe
 import Data.SortedMap
 import Data.String
 import Idris.Package.Types
+import Pack.CmdLn.Types
 import Pack.Config.Types
 import Pack.Core
 import Pack.Database.Types
 import Pack.Runner.Database
+import Pack.Runner.Install
 
 %default total
 
+pkgNames : Env s -> List PkgName
+pkgNames e = sort
+           $ [ "prelude"
+             , "base"
+             , "contrib"
+             , "idris2"
+             , "network"
+             , "test"
+             , "linear"
+             ] ++ keys (allPackages e)
+
 query_ :  HasIO io
        => (e : Env s)
-       -> (q : PkgName -> Maybe (ResolvedPackage -> b))
+       -> (q : String -> ResolvedPackage -> Maybe b)
        -> EitherT PackErr io (List b)
-query_ e q = mapMaybe id <$> traverse run (keys $ allPackages e)
+query_ e q = mapMaybe id <$> traverse run (pkgNames e)
   where run : PkgName -> EitherT PackErr io (Maybe b)
-        run n = case q n of
-          Nothing => pure Nothing
-          Just f  => Just . f <$> resolve e (Pkg n)
+        run n = (\(s,rp) => q s rp) <$> resolvePair e (Pkg n)
 
 shortDesc : ResolvedPackage -> Maybe String
-shortDesc (RGitHub _ _ _ _ _ d) = d.brief
-shortDesc (RIpkg _ d)           = d.brief
-shortDesc (RLocal _ _ _ _ d)    = d.brief
-shortDesc Base                  = Just "the Idris2 base library"
-shortDesc Contrib               = Just "the Idris2 contrib library"
-shortDesc Idris2                = Just "the Idris2 API"
-shortDesc Linear                = Nothing
-shortDesc Network               = Nothing
-shortDesc Prelude               = Just "the Idris2 Prelude"
-shortDesc Test                  = Nothing
+shortDesc = brief . desc
 
 deps : ResolvedPackage -> List String
-deps (RGitHub _ _ _ _ _ d) = map pkgname d.depends
-deps (RIpkg _ d)           = map pkgname d.depends
-deps (RLocal _ _ _ _ d)    = map pkgname d.depends
-deps Base                  = []
-deps Contrib               = []
-deps Idris2                = []
-deps Linear                = []
-deps Network               = []
-deps Prelude               = []
-deps Test                  = ["contrib"]
+deps = map pkgname . depends . desc
+
+modules : ResolvedPackage -> List String
+modules = map (show . fst) . modules . desc
 
 prettyDeps : ResolvedPackage -> List String
 prettyDeps rp = case deps rp of
   []     => ["Dependencies :"]
   h :: t => "Dependencies : \{h}" :: map (indent 15) t
+
+prettyModules : String -> ResolvedPackage -> List String
+prettyModules s rp = case filter (isInfixOf s) (modules rp) of
+  []     => ["Modules :"]
+  h :: t => "Modules : \{h}" :: map (indent 10) t
 
 details : ResolvedPackage -> List String
 details (RGitHub name url commit ipkg _ desc) = [
@@ -70,36 +72,51 @@ details (RLocal name dir ipkg _ desc) = [
   , "ipkg File    : \{ipkg}"
   ]
 
-details Base    = [ "Type         : Idris core package" ]
-details Contrib = [ "Type         : Idris core package" ]
-details Idris2  = [ "Type         : Idris core package" ]
-details Linear  = [ "Type         : Idris core package" ]
-details Network = [ "Type         : Idris core package" ]
-details Prelude = [ "Type         : Idris core package" ]
-details Test    = [ "Type         : Idris core package" ]
+details (Core _ _) = [ "Type         : Idris core package" ]
 
+namePlusModules : String -> ResolvedPackage -> String
+namePlusModules n rp =
+  unlines $  nameStr rp :: map (indent 2) (prettyModules n rp)
 
-fromTpe : QueryType -> PkgName -> ResolvedPackage -> String
-fromTpe NameOnly     p rp = p.value
+keep : QueryMode -> String -> ResolvedPackage -> Bool
+keep PkgName    q p = isInfixOf q (nameStr p)
+keep Dependency q p = any ((q ==) . pkgname) (depends $ desc p)
+keep Module     q p = any (isInfixOf q . show . fst) (modules $ desc p)
 
-fromTpe ShortDesc    p rp =
-  let Just d := shortDesc rp | Nothing => p.value
-   in "\{p}\n  \{d}"
+resultString :  Env s
+             -> (query : String)
+             -> QueryMode
+             -> (ipkg  : String)
+             -> ResolvedPackage
+             -> String
+resultString e q Module _    rp = namePlusModules q rp
+resultString e _ _      ipkg rp = case e.queryType of
+  NameOnly => nameStr rp
 
-fromTpe Dependencies p rp =
-  let ds@(_ :: _) := deps rp | [] => p.value
-   in unlines $  p.value :: map (indent 2) ds
+  ShortDesc =>
+    let Just d := shortDesc rp | Nothing => nameStr rp
+     in "\{name rp}\n  \{d}\n"
 
-fromTpe Details p rp = unlines . (p.value ::) . map (indent 2) $ concat [
-    toList (("Brief        : " ++) <$> shortDesc rp)
-  , details rp
-  , prettyDeps rp
-  ]
+  Dependencies =>
+    let ds@(_ :: _) := deps rp | [] => nameStr rp
+     in unlines $  nameStr rp :: map (indent 2) ds
+
+  Details => unlines . (nameStr rp ::) . map (indent 2) $ concat [
+      toList (("Brief        : " ++) <$> shortDesc rp)
+    , details rp
+    , prettyDeps rp
+    ]
+
+  Ipkg => unlines $ nameStr rp :: map (indent 2) (lines ipkg)
 
 export
-query : HasIO io => String -> (e : Env s) -> EitherT PackErr io ()
-query n e = do
-  ss <- query_ e $ \p => toMaybe (isInfixOf n p.value) (fromTpe e.queryType p)
+query :  HasIO io
+      => QueryMode
+      -> String
+      -> (e : Env s)
+      -> EitherT PackErr io ()
+query m n e = do
+  ss <- query_ e $ \s,p => toMaybe (keep m n p) (resultString e n m s p)
   putStrLn $ unlines ss
 
 --------------------------------------------------------------------------------
@@ -171,3 +188,72 @@ printInfo : HasIO io => Env s -> io ()
 printInfo e = do
   ps <- installed e
   putStrLn $ infoString e ps
+
+--------------------------------------------------------------------------------
+--          Fuzzy Search
+--------------------------------------------------------------------------------
+
+installedPkgs :  HasIO io
+              => List PkgName
+              -> Env HasIdris
+              -> EitherT PackErr io (List ResolvedPackage, List ResolvedPackage)
+installedPkgs ns e = do
+  all <- mapMaybe id <$> traverse run (pkgNames e)
+  pure (all, filter inPkgs all)
+  where run : PkgName -> EitherT PackErr io (Maybe ResolvedPackage)
+        run n = do
+          rp <- resolve e (Pkg n)
+          b  <- exists (packageInstallDir e rp)
+          pure (toMaybe b rp)
+
+        inPkgs : ResolvedPackage -> Bool
+        inPkgs rp = isNil ns || elem (name rp) ns
+
+imports : ResolvedPackage -> String
+imports = unlines . map ("import " ++) . modules
+
+pre : String
+pre = "Main> "
+
+noOut : String
+noOut = "Main> \nMain> \n"
+
+removePre : String -> String
+removePre s = case isPrefixOf pre s of
+  True  => pack . drop (length pre) $ unpack s
+  False => s
+
+fuzzyTrim : String -> String
+fuzzyTrim = unlines
+          . map removePre
+          . filter (pre /=)
+          . lines
+
+fuzzyPkg :  HasIO io
+         => String
+         -> Env HasIdris
+         -> (allPkgs   : List ResolvedPackage)
+         -> ResolvedPackage
+         -> EitherT PackErr io ()
+fuzzyPkg q e allPkgs rp =
+  let dir = tmpDir e
+   in do
+     mkDir dir
+     finally (rmDir dir) $ inDir dir $ do
+       putStrLn "\{name rp}:\n"
+       write (parse "test.idr") (imports rp)
+       write (parse "input") ":fs \{q}\n"
+       str <- sysRun "\{idrisWithPkgs e allPkgs} --quiet --no-prelude --no-banner test.idr < input"
+       case noOut == str of
+         True  => pure ()
+         False => putStrLn (fuzzyTrim str)
+
+export
+fuzzy :  HasIO io
+      => List PkgName
+      -> String
+      -> Env HasIdris
+      -> EitherT PackErr io ()
+fuzzy m q e = do
+  (allPkgs,rps) <- installedPkgs m e
+  traverse_ (fuzzyPkg q e allPkgs) rps

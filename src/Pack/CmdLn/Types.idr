@@ -6,6 +6,9 @@ import Libraries.Utils.Path
 
 %default total
 
+public export
+data QueryMode = PkgName | Dependency | Module
+
 ||| Commands accepted by *pack*. Most of these
 ||| operate on a list of packages and/or
 ||| projects with an `.ipkg` file.
@@ -29,7 +32,8 @@ data Cmd : Type where
   UpdateDB         : Cmd
 
   Info             : Cmd
-  Query            : String -> Cmd
+  Query            : QueryMode -> String -> Cmd
+  Fuzzy            : List PkgName -> String -> Cmd
   Completion       : String -> String -> Cmd
   CompletionScript : String -> Cmd
 

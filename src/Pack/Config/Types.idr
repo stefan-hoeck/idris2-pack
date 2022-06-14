@@ -46,6 +46,9 @@ data QueryType : Type where
   ||| List direct dependencies
   Dependencies : QueryType
 
+  ||| Print the full `.ipkg` file
+  Ipkg         : QueryType
+
   ||| List detailed information about a package
   Details      : QueryType
 
@@ -101,7 +104,7 @@ I t = t
 ||| the configuration from user config file, we use context
 ||| `Maybe`, because all values will be optional.
 public export
-record Config_ (f : Type -> Type) (s : Maybe State) where
+record Config_ (c : Type) (f : Type -> Type) (s : Maybe State) where
   constructor MkConfig
   ||| Directory where the *pack* DB and installed
   ||| libraries and executables reside
@@ -137,7 +140,7 @@ record Config_ (f : Type -> Type) (s : Maybe State) where
   autoApps     : f (List PkgName)
 
   ||| Customizations to the package data base
-  custom       : f (SortedMap DBName (SortedMap PkgName Package))
+  custom       : f (SortedMap DBName (SortedMap PkgName $ Package_ c))
 
   ||| Type of query to run
   queryType    : f (QueryType)
@@ -151,13 +154,22 @@ record Config_ (f : Type -> Type) (s : Maybe State) where
   ||| The package collection
   db           : f (DBType s)
 
+export
+traverse :  Applicative f
+         => (Package_ a -> f (Package_ b))
+         -> Config_ a Maybe s
+         -> f (Config_ b Maybe s)
+traverse f cfg =
+  let cst = traverse (traverse (traverse f)) cfg.custom
+   in map (\c => {custom := c} cfg) cst
+
 --------------------------------------------------------------------------------
 --          Updating the Config
 --------------------------------------------------------------------------------
 
 public export
 0 Config : Maybe State -> Type
-Config = Config_ I
+Config = Config_ Commit I
 
 ||| Program configuration with data collection
 public export
@@ -180,7 +192,7 @@ allPackages e =
 
 ||| Initial config
 export
-init : (dir : Path) -> (coll : DBName) -> Config_ I Nothing
+init : (dir : Path) -> (coll : DBName) -> Config_ Commit I Nothing
 init dir coll = MkConfig {
     packDir      = dir
   , collection   = coll
@@ -203,7 +215,7 @@ infixl 7 `update`
 
 ||| Update a config with optional settings
 export
-update : Config_ I Nothing -> Config_ Maybe Nothing -> Config_ I Nothing
+update : Config_ c I Nothing -> Config_ c Maybe Nothing -> Config_ c I Nothing
 update ci cm = MkConfig {
     packDir      = fromMaybe ci.packDir cm.packDir
   , collection   = fromMaybe ci.collection cm.collection
@@ -255,6 +267,45 @@ cacheDir c = c.packDir /> ".cache"
 export
 ipkgPath : Config s -> PkgName -> Commit -> Path -> Path
 ipkgPath c p com ipkg = cacheDir c /> p.value /> com.value /> show ipkg
+
+-- path to cached core library `.ipkg` file
+coreCachePath : Env s -> (name : String) -> (ipkg : String) -> Path
+coreCachePath  e n i = cacheDir e /> n /> e.db.idrisCommit.value /> "\{i}.ipkg"
+
+||| Path to cached `prelude.ipkg` file.
+export
+preludePath : Env s -> Path
+preludePath e = coreCachePath e "prelude" "prelude"
+
+||| Path to cached `base.ipkg` file.
+export
+basePath : Env s -> Path
+basePath e = coreCachePath e "base" "base"
+
+||| Path to cached `contrib.ipkg` file.
+export
+contribPath : Env s -> Path
+contribPath e = coreCachePath e "contrib" "contrib"
+
+||| Path to cached `network.ipkg` file.
+export
+networkPath : Env s -> Path
+networkPath e = coreCachePath e "network" "network"
+
+||| Path to cached `test.ipkg` file.
+export
+testPath : Env s -> Path
+testPath e = coreCachePath e "test" "test"
+
+||| Path to cached `test.ipkg` file.
+export
+linearPath : Env s -> Path
+linearPath e = coreCachePath e "linear" "linear"
+
+||| Path to cached `idris2api.ipkg` file.
+export
+idrisApiPath : Env s -> Path
+idrisApiPath e = coreCachePath e "idris2" "idris2api"
 
 ||| Directory where user settings are stored.
 export
@@ -383,13 +434,7 @@ packagePrefixDir : Env s -> ResolvedPackage -> Path
 packagePrefixDir e (RGitHub n _ c _ _ _) = githubPkgPrefixDir e n c
 packagePrefixDir e (RIpkg _ d)           = idrisPrefixDir e
 packagePrefixDir e (RLocal n _ _ _ _)    = localPkgPrefixDir e n
-packagePrefixDir e Base                  = idrisPrefixDir e
-packagePrefixDir e Contrib               = idrisPrefixDir e
-packagePrefixDir e Idris2                = idrisPrefixDir e
-packagePrefixDir e Linear                = idrisPrefixDir e
-packagePrefixDir e Network               = idrisPrefixDir e
-packagePrefixDir e Prelude               = idrisPrefixDir e
-packagePrefixDir e Test                  = idrisPrefixDir e
+packagePrefixDir e (Core _ _)            = idrisPrefixDir e
 
 export
 packageInstallPrefix : Env s -> ResolvedPackage -> String
@@ -403,20 +448,14 @@ packageInstallDir e p =
   let vers = e.db.idrisVersion
       dir  = packagePrefixDir e p /> idrisDir e
    in case p of
-        Base     => dir /> "base-\{vers}"
-        Contrib  => dir /> "contrib-\{vers}"
-        Linear   => dir /> "linear-\{vers}"
-        Network  => dir /> "network-\{vers}"
-        Prelude  => dir /> "prelude-\{vers}"
-        Idris2   => dir /> "idris2-\{vers}"
-        Test     => dir /> "test-\{vers}"
-        RGitHub _ _ _ _ _ d   =>
+        Core c _            => dir /> "\{c}-\{vers}"
+        RGitHub _ _ _ _ _ d =>
           let v = maybe "0" show d.version
            in dir /> "\{d.name}-\{v}"
-        RIpkg p d =>
+        RIpkg p d           =>
           let v = maybe "0" show d.version
            in dir /> "\{d.name}-\{v}"
-        RLocal _ _ _ _ d =>
+        RLocal _ _ _ _ d    =>
           let v = maybe "0" show d.version
            in dir /> "\{d.name}-\{v}"
 
@@ -498,3 +537,23 @@ dataPath e = "IDRIS2_DATA=\"\{packageDataDirs e}\""
 export
 buildEnv : Env s -> String
 buildEnv e = "\{packagePath e} \{libPath e} \{dataPath e}"
+
+||| Idris executable to use together with the
+||| `--cg` (codegen) command line option.
+export
+idrisWithCG : Env HasIdris -> String
+idrisWithCG e = case e.codegen of
+  Default => "\{idrisExec e}"
+  cg      => "\{idrisExec e} --cg \{cg}"
+
+export
+idrisWithPkg : Env HasIdris -> ResolvedPackage -> String
+idrisWithPkg e rp =
+  "\{buildEnv e} \{idrisWithCG e} -p \{name rp}"
+
+export
+idrisWithPkgs : Env HasIdris -> List ResolvedPackage -> String
+idrisWithPkgs e [] = idrisWithCG e
+idrisWithPkgs e pkgs =
+  let ps = fastConcat $ map (\p => " -p \{name p}") pkgs
+   in "\{buildEnv e} \{idrisWithCG e}\{ps}"

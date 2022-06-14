@@ -19,7 +19,7 @@ FromTOML Codegen where
 
 ||| Adj configuration.
 export
-config : Value -> Either TOMLErr (Config_ Maybe Nothing)
+config : Value -> Either TOMLErr (Config_ MetaCommit Maybe Nothing)
 config v =
   [| MkConfig (pure Nothing)
               (maybeValAt "collection" v)

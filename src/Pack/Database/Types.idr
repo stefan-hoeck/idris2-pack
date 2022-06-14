@@ -10,6 +10,27 @@ import Pack.Core.Types
 %default total
 
 --------------------------------------------------------------------------------
+--          MetaCommits
+--------------------------------------------------------------------------------
+
+||| A git commit hash or tag, or a meta commit: The latest commit of a branch.
+public export
+data MetaCommit : Type where
+  MC     : Commit -> MetaCommit
+  Latest : String -> MetaCommit
+
+public export
+FromString MetaCommit where
+  fromString s = case forget $ split (':' ==) s of
+    ["latest",branch] => Latest branch
+    _                 => MC $ MkCommit s
+
+export
+Interpolation MetaCommit where
+  interpolate (Latest b) = "latest:\{b}"
+  interpolate (MC c)     = "\{c}"
+
+--------------------------------------------------------------------------------
 --          Packages
 --------------------------------------------------------------------------------
 
@@ -19,17 +40,17 @@ import Pack.Core.Types
 ||| Note: This does not contain the package name, as it
 ||| will be paired with its name in a `SortedMap`.
 public export
-data Package : Type where
+data Package_ : (c : Type) -> Type where
   ||| A repository on GitHub, given as the package's URL,
   ||| commit (hash or tag), and name of `.ipkg` file to use.
   ||| `pkgPath` should be set to `True` for executable which need
   ||| access to the `IDRIS2_PACKAGE_PATH`: The list of directories
   ||| where Idris packages are installed.
   GitHub :  (url     : URL)
-         -> (commit  : Commit)
+         -> (commit  : c)
          -> (ipkg    : Path)
          -> (pkgPath : Bool)
-         -> Package
+         -> Package_ c
 
   ||| A local Idris project given as an absolute path to a local
   ||| directory, and `.ipkg` file to use.
@@ -39,7 +60,37 @@ data Package : Type where
   Local  :  (dir     : Path)
          -> (ipkg    : Path)
          -> (pkgPath : Bool)
-         -> Package
+         -> Package_ c
+
+public export
+0 Package : Type
+Package = Package_ Commit
+
+public export
+0 UserPackage : Type
+UserPackage = Package_ MetaCommit
+
+||| Core packages bundled with the Idris compiler
+public export
+data CorePkg =
+    Prelude
+  | Base
+  | Contrib
+  | Linear
+  | Network
+  | Test
+  | IdrisApi
+
+export
+Interpolation CorePkg where
+  interpolate Prelude  = "prelude"
+  interpolate Base     = "base"
+  interpolate Contrib  = "contrib"
+  interpolate Linear   = "linear"
+  interpolate Network  = "network"
+  interpolate Test     = "test"
+  interpolate IdrisApi = "idris2"
+
 
 ||| A resolved package, which was downloaded from GitHub
 ||| or looked up in the local file system. This comes with
@@ -76,25 +127,7 @@ data ResolvedPackage : Type where
           -> ResolvedPackage
 
   ||| The *base* library from the Idris2 project.
-  Base    : ResolvedPackage
-
-  ||| The *contrib* library from the Idris2 project.
-  Contrib : ResolvedPackage
-
-  ||| The *idris2* (API) library from the Idris2 project.
-  Idris2  : ResolvedPackage
-
-  ||| The *linear* library from the Idris2 project.
-  Linear  : ResolvedPackage
-
-  ||| The *network* library from the Idris2 project.
-  Network : ResolvedPackage
-
-  ||| The *prelude* from the Idris2 project.
-  Prelude : ResolvedPackage
-
-  ||| The *test* library from the Idris2 project.
-  Test    : ResolvedPackage
+  Core    : CorePkg -> PkgDesc -> ResolvedPackage
 
 ||| True, if the given resolved package represents
 ||| one of the core packages (`base`, `prelude`, etc.)
@@ -103,42 +136,32 @@ isCorePackage : ResolvedPackage -> Bool
 isCorePackage (RGitHub _ _ _ _ _ _) = False
 isCorePackage (RIpkg _ _)           = False
 isCorePackage (RLocal _ _ _ _ _)    = False
-isCorePackage Base                  = True
-isCorePackage Contrib               = True
-isCorePackage Linear                = True
-isCorePackage Idris2                = True
-isCorePackage Network               = True
-isCorePackage Prelude               = True
-isCorePackage Test                  = True
+isCorePackage (Core _ _)            = True
 
 ||| Try to extract the package description from a
 ||| resolved package.
 export
-desc : ResolvedPackage -> Maybe PkgDesc
-desc (RGitHub _ _ _ _ _ d)  = Just d
-desc (RIpkg _ d)            = Just d
-desc (RLocal _ _ _ _ d)     = Just d
-desc _                      = Nothing
+desc : ResolvedPackage -> PkgDesc
+desc (RGitHub _ _ _ _ _ d) = d
+desc (RIpkg _ d)           = d
+desc (RLocal _ _ _ _ d)    = d
+desc (Core _ d)            = d
 
 ||| Extracts the dependencies of a resolved package.
 export
 dependencies : ResolvedPackage -> List PkgRep
-dependencies rp = case desc rp of
-  Just d  => map (Pkg . MkPkgName . pkgname) d.depends
-  Nothing => []
+dependencies rp = map (Pkg . MkPkgName . pkgname) (desc rp).depends
 
 ||| Extracts the names of dependencies of a resolved package.
 export
 depNames : ResolvedPackage -> List PkgName
-depNames rp = case desc rp of
-  Just d  => map (MkPkgName . pkgname) d.depends
-  Nothing => []
+depNames rp = map (MkPkgName . pkgname) (desc rp).depends
 
 ||| Extracts the name of the executable (if any) from
 ||| a resolved package.
 export
 executable : ResolvedPackage -> Maybe String
-executable p = desc p >>= executable
+executable = executable . desc
 
 ||| Extracts the package name from a resolved package.
 export
@@ -146,13 +169,12 @@ name : ResolvedPackage -> PkgName
 name (RGitHub n _ _ _ _ _) = n
 name (RIpkg _ d)           = MkPkgName d.name
 name (RLocal n _ _ _ _)    = n
-name Base                  = "base"
-name Contrib               = "contrib"
-name Idris2                = "idris2"
-name Linear                = "linear"
-name Network               = "network"
-name Prelude               = "prelude"
-name Test                  = "test"
+name (Core c _)            = MkPkgName "\{c}"
+
+||| Extracts the package name from a resolved package.
+export
+nameStr : ResolvedPackage -> String
+nameStr = value . name
 
 ||| True, if the given application needs access to the
 ||| folders where Idris package are installed.

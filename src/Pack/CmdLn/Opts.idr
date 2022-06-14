@@ -1,5 +1,6 @@
 module Pack.CmdLn.Opts
 
+import Data.List1
 import Data.String
 import Libraries.Utils.Path
 import Pack.CmdLn.Types
@@ -49,12 +50,12 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             or running the REPL. The default is to use the `chez`
             code generator.
             """
-        , MkOpt ['s'] ["scheme"]   (ReqArg setScheme "<exec>")
+        , MkOpt [] ["scheme"]   (ReqArg setScheme "<exec>")
             """
             Sets the scheme executable for installing the Idris2 compiler.
             As a default, this is set to `scheme`.
             """
-        , MkOpt ['S'] ["short-desc"]   (NoArg $ setQuery ShortDesc)
+        , MkOpt ['s'] ["short-desc"]   (NoArg $ setQuery ShortDesc)
             """
             Print the short description stored in an `.ipkg` file for
             each query result.
@@ -63,6 +64,8 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             "Print a detailed description of a package known to pack"
         , MkOpt ['d'] ["dependencies"]   (NoArg $ setQuery Dependencies)
             "Print the dependencies of each query result."
+        , MkOpt [] ["ipkg"]   (NoArg $ setQuery Ipkg)
+            "Print the full `.ipkg` file of each query result."
         , MkOpt [] ["bootstrap"]   (NoArg bootstrap)
             """
             Use bootstrapping when building the Idris2 compiler.
@@ -112,7 +115,11 @@ cmd []                         = Right PrintHelp
 cmd ["help"]                   = Right PrintHelp
 cmd ["info"]                   = Right Info
 cmd ["update-db"]              = Right UpdateDB
-cmd ["query", s]               = Right $ Query s
+cmd ["fuzzy", s]               = Right $ Fuzzy [] s
+cmd ["fuzzy", p, s]            = Right $ Fuzzy (forget $ map MkPkgName $ split (',' ==) p) s
+cmd ["query", s]               = Right $ Query PkgName s
+cmd ["query", "dep", s]        = Right $ Query Dependency s
+cmd ["query", "module", s]     = Right $ Query Module s
 cmd ["repl"]                   = Right $ Repl Nothing
 cmd ["repl", s]                = Right $ Repl (Just $ parse s)
 cmd ("exec" :: file :: args)   = Right $ Exec (fromString file) args
@@ -212,10 +219,28 @@ usageInfo = """
       Print general information about the current package
       collection and list installed applications and libraries.
 
-    query <substring>
+    query [mode] <substring>
       Query the package collection for the given name.
       Several command line options exist to define the type
-      of information printed.
+      of information printed. The optional [mode] argument
+      defines what piece of a package we are looking for:
+        * `dep`    : Search a package by its dependencies. For
+          instance, `pack query dep sop` will list all packages,
+          which have a dependency on the sop library. Only exact
+          matches will be listed.
+        * `module` : Search a package by its modules. For
+          instance, `pack query module Data.List` will list all packages,
+          which export module `Data.List`. Only exact matches will
+          be listed.
+
+    fuzzy [packages] <query>
+      Run a fuzzy search by type over a comma-separated list of packages.
+      If no packages are given, all installed packages will be queried
+      (which might take several minutes).
+
+      Examples: fuzzy base "HasIO -> Bool", will find functions taking
+      an argument of type `HasIO` and returning a boolean result.
+
 
     package-path
       Return a colon-separated list of paths where packages are

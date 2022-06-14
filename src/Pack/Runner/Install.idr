@@ -13,14 +13,6 @@ import Pack.Runner.Database
 
 %default total
 
-||| Idris executable to use together with the
-||| `--cg` (codegen) command line option.
-export
-idrisWithCG : Env HasIdris -> String
-idrisWithCG e = case e.codegen of
-  Default => "\{idrisExec e}"
-  cg      => "\{idrisExec e} --cg \{cg}"
-
 packExec : HasIO io => Env e -> EitherT PackErr io Path
 packExec e = do
   rp <- resolve e (Pkg "pack")
@@ -101,6 +93,7 @@ mkIdris e = do
            sys "make install-with-src-libs \{idrisBootVar e} \{prefixVar e}"
            sys "rm -r build/ttc build/exec"
            sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
+           cacheCoreIpkgFiles e
 
        else -- build with existing Idris2 compiler
          withGit (tmpDir e) e.db.idrisURL e.db.idrisCommit $ do
@@ -111,6 +104,7 @@ mkIdris e = do
            sys "make install-with-src-libs \{prefixVar e}"
            sys "rm -r build/ttc build/exec"
            sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
+           cacheCoreIpkgFiles e
 
   exepath <- packExec e
   appLink (idrisExec e) (collectionIdrisExec e) (Just exepath)
