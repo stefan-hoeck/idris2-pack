@@ -7,9 +7,10 @@ pushd idris2
 make support
 libidris=libidris2_support
 if test -F "support/c/${libidris}.so"; then
-  cp -v support/c/libidris2_support.so ../micropack/${libidris}.so
+  libidris_full=${libidris}.so
 else
-  cp -v support/c/${libidris}.dylib ../micropack/${libidris}.so
+  libidris_full=${libidris}.dylib
 fi
+cp -v support/c/${libidris_full} ../micropack/${libidris}.so
 popd
 rm -rf idris2
