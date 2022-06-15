@@ -1,6 +1,7 @@
 export PACK_DIR ?= ${HOME}/.pack
 export SCHEME ?= scheme
 export LD_LIBRARY_PATH = micropack
+export DYLD_LIBRARY_PATH = micropack
 
 DOCKER_IMAGE = ghcr.io/stefan-hoeck/idris2-pack
 
