@@ -13,7 +13,6 @@ function check_installed {
 
 # end common functions
 
-
 # Detect Chez executable
 
 PACK_DIR="${PACK_DIR:-$HOME/.pack}"
@@ -43,6 +42,7 @@ if [ -d "$PACK_DIR" ]; then
 fi
 
 # Homebrew gmp on M1 macos
+
 if [ -d "/opt/homebrew/include" ]; then
 	export CPATH="/opt/homebrew/include"
 fi
@@ -50,7 +50,6 @@ fi
 check_installed git
 check_installed "$SCHEME"
 check_installed make
-
 
 # Install package collection
 
@@ -64,8 +63,6 @@ cp "$PACK_DIR/clones/idris2-pack-db/collections/"* "$PACK_DIR/db"
 LATEST_DB="$(find "$PACK_DIR/db" -name 'nightly-*' | sort | tail -1)"
 PACKAGE_COLLECTION="$(basename -s .toml "$LATEST_DB")"
 IDRIS2_COMMIT=$(sed -ne '/^\[idris2\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p;}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
-
-
 
 # Bootstrap the Idris compiler
 
@@ -85,7 +82,6 @@ make install-with-src-libs IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH"
 make install-with-src-api IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH"
 popd
 
-
 # Install toml-idr
 
 TOML_COMMIT=$(sed -ne '/^\[db.toml\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p;}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
@@ -94,7 +90,6 @@ pushd "$PACK_DIR/clones/toml-idr"
 git checkout "$TOML_COMMIT"
 "$BOOT_PATH" --install toml.ipkg
 popd
-
 
 # Install pack
 
@@ -107,7 +102,6 @@ git checkout "$PACK_COMMIT"
 mkdir -p "$PACK_DIR/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin"
 cp -r build/exec/* "$PACK_DIR/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin"
 popd
-
 
 # Setup symlinks to binaries
 
@@ -128,7 +122,6 @@ chmod +x idris2
 popd
 
 ln -s "$PACK_DIR/$PACKAGE_COLLECTION/bin" "$PACK_DIR/bin"
-
 
 # Initialize `pack.toml`
 
@@ -201,7 +194,6 @@ repl.rlwrap = false
 # commit = "eb7a146f565276f82ebf30cb6d5502e9f65dcc3c"
 # ipkg   = "toml.ipkg"
 EOF
-
 
 # Cleanup
 
