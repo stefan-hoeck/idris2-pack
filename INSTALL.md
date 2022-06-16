@@ -14,12 +14,17 @@ The following libraries and applications are required
 for working with Idris2. Make sure you have them installed
 before you continue:
 
-* A Scheme compiler; either Chez Scheme (default), or Racket.
+* A Scheme compiler; either [Chez Scheme](https://cisco.github.io/ChezScheme/)
+  (default), or Racket.
   If you install Chez Scheme from source files, building it locally,
   make sure you run ./configure --threads to build multithreading support in.
 
-  Note: Racket support has not yet been built into *pack*. This
+  Note 1: Racket support has not yet been built into *pack*. This
   is an open issue.
+
+  Note 2: For Apple M1 user, at the moment, the easiest way to get Chez Scheme
+  is to use its [Racket fork](https://github.com/racket/ChezScheme).
+  See the [Apple M1 User](#apple-m1-user) appendix for more info.
 
 * `bash`, `GNU make`, `sha256sum`, and `GMP`. On Linux, you probably
   already have these. On macOS and major BSD flavours, you can install them
@@ -134,3 +139,25 @@ eval "$(pack completion-script pack)"
 ```
 
 You can also add them to your `.zshrc` file.
+
+
+## Apple M1 user
+
+A the moment, Chez Scheme is hard to build on M1 processors.
+The best option may be to build the
+[Racket fork](https://github.com/racket/ChezScheme)
+of Chez Scheme from source.
+
+1. Clone the repository: `git clone git@github.com:racket/ChezScheme.git`
+2. In the ChezScheme repository, run the following set of instruction
+   (as found on [this reddit thread](https://www.reddit.com/r/Idris/comments/pc5lib/success_building_native_idris2_on_an_m1_mac/)):
+
+   ```sh
+   arch=tarm64osx
+   ./configure --pb
+   make ${arch}.bootquick
+   ./configure --threads
+   make
+   sudo make install
+   sudo chown $(whoami) ${arch}/petite.1 ${arch}/scheme.1
+   ```
