@@ -41,10 +41,6 @@ collections e = do
 packages : Env s -> List String
 packages e = value <$> keys (allPackages e)
 
--- Packages or `.ipkg` files in the current directory
-anyPackage : HasIO io => Env s -> io (List String)
-anyPackage e = (++ packages e) <$> ipkgFiles
-
 -- Lists only installed packages
 installedPackages : HasIO io => Env s -> io (List String)
 installedPackages e = map (value . name) <$> installed e
@@ -82,6 +78,7 @@ optionFlags =
   , "update-db"
   , "query"
   , "exec"
+  , "run"
   , "fuzzy"
   , "build"
   , "install-deps"
@@ -124,10 +121,11 @@ opts x "fuzzy"            e = packageList          x <$> installedPackages e
 opts x "dep"              e = prefixOnlyIfNonEmpty x <$> pure (packages e)
 opts x "modules"          e = prefixOnlyIfNonEmpty x <$> pure (packages e)
 opts x "check-db"         e = prefixOnlyIfNonEmpty x <$> collections e
-opts x "exec"             e = prefixOnlyIfNonEmpty x <$> anyPackage e
-opts x "install"          e = prefixOnlyIfNonEmpty x <$> anyPackage e
-opts x "install-app"      e = prefixOnlyIfNonEmpty x <$> anyPackage e
-opts x "install-with-src" e = prefixOnlyIfNonEmpty x <$> anyPackage e
+opts x "exec"             e = prefixOnlyIfNonEmpty x <$> ipkgFiles
+opts x "run"              e = prefixOnlyIfNonEmpty x <$> pure (packages e)
+opts x "install"          e = prefixOnlyIfNonEmpty x <$> pure (packages e)
+opts x "install-app"      e = prefixOnlyIfNonEmpty x <$> pure (packages e)
+opts x "install-with-src" e = prefixOnlyIfNonEmpty x <$> pure (packages e)
 opts x "remove"           e = prefixOnlyIfNonEmpty x <$> installedPackages e
 opts x "switch"           e = prefixOnlyIfNonEmpty x <$> collections e
 opts x "typecheck"        e = prefixOnlyIfNonEmpty x <$> ipkgFiles

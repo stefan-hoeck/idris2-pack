@@ -60,17 +60,16 @@ resolveCore e pth c = do
 covering
 resolveImpl :  HasIO io
             => (e : Env s)
-            -> PkgRep
+            -> PkgName
             -> EitherT PackErr io (String, ResolvedPackage)
-resolveImpl e (Pkg "base")    = resolveCore e (basePath e) Base
-resolveImpl e (Pkg "contrib") = resolveCore e (contribPath e) Contrib
-resolveImpl e (Pkg "linear")  = resolveCore e (linearPath e) Linear
-resolveImpl e (Pkg "idris2")  = resolveCore e (idrisApiPath e) IdrisApi
-resolveImpl e (Pkg "network") = resolveCore e (networkPath e) Network
-resolveImpl e (Pkg "prelude") = resolveCore e (preludePath e) Prelude
-resolveImpl e (Pkg "test")    = resolveCore e (testPath e) Test
-resolveImpl e (Ipkg path)     = parseIpkgFile path (RIpkg path)
-resolveImpl e (Pkg n)         = case lookup n (allPackages e) of
+resolveImpl e "base"    = resolveCore e (basePath e) Base
+resolveImpl e "contrib" = resolveCore e (contribPath e) Contrib
+resolveImpl e "linear"  = resolveCore e (linearPath e) Linear
+resolveImpl e "idris2"  = resolveCore e (idrisApiPath e) IdrisApi
+resolveImpl e "network" = resolveCore e (networkPath e) Network
+resolveImpl e "prelude" = resolveCore e (preludePath e) Prelude
+resolveImpl e "test"    = resolveCore e (testPath e) Test
+resolveImpl e n         = case lookup n (allPackages e) of
   Nothing  => throwE (UnknownPkg n)
 
   -- this is a known package so we download its `.ipkg`
@@ -93,7 +92,6 @@ execStr d = maybe "library" (const "application") d.executable
 descStr : ResolvedPackage -> String
 descStr (RGitHub name url commit ipkg _ desc) =
   "GitHub \{execStr desc} (\{url}:\{commit})"
-descStr (RIpkg path desc) = ".ipkg \{execStr desc}"
 descStr (RLocal name dir ipkg _ desc) = "local \{execStr desc}"
 descStr _ = "core package"
 
@@ -104,7 +102,7 @@ descStr _ = "core package"
 export covering
 resolvePair :  HasIO io
             => (e : Env s)
-            -> PkgRep
+            -> PkgName
             -> EitherT PackErr io (String, ResolvedPackage)
 resolvePair e pr = do
   debug e "Trying to resolve package \{pr}"
@@ -118,6 +116,6 @@ resolvePair e pr = do
 export covering
 resolve :  HasIO io
         => (e : Env s)
-        -> PkgRep
+        -> PkgName
         -> EitherT PackErr io ResolvedPackage
 resolve e pr = map snd (resolvePair e pr)

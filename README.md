@@ -72,19 +72,19 @@ It is also possible to work with local `.ipkg` files as long
 as they depend on packages known to *pack*:
 
 ```sh
-pack install-app fix_whitespace.ipkg
 pack build json.ipkg
 pack typecheck elab-util.ipkg
 ```
 
 The build tool can run executables, both from local
-packages as well as from installed applications. Command
+`.ipkg` files (command `pack exec`) as well as from
+installed applications (command `pack run`). Command
 line arguments to be passed on to the executable can be
 listed after the package name or `.ipkg` file:
 
 ```sh
 pack exec test.ipkg -n 50
-pack exec katla --help
+pack run katla --help
 ```
 
 You can use *pack* to start an Idris REPL session, optionally
@@ -249,10 +249,10 @@ non-comprehensive list:
 
 - [x] Support for local package collections
 - [x] Command for starting a REPL session
-- [ ] Support for custom build directories
+- [x] Support for custom build directories
 - [x] Command for typechecking an Idris package
 - [x] Command for building a local Idris2 package
 - [x] Command for running an application
 - [x] Command for querying a data collection
-- [ ] Command for listing current version of data collection
+- [x] Command for listing current version of data collection
 - [ ] Support for running tests

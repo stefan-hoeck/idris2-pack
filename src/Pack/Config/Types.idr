@@ -432,7 +432,6 @@ localPkgPrefixDir e n = commitDir e /> "local" /> n.value
 export
 packagePrefixDir : Env s -> ResolvedPackage -> Path
 packagePrefixDir e (RGitHub n _ c _ _ _) = githubPkgPrefixDir e n c
-packagePrefixDir e (RIpkg _ d)           = idrisPrefixDir e
 packagePrefixDir e (RLocal n _ _ _ _)    = localPkgPrefixDir e n
 packagePrefixDir e (Core _ _)            = idrisPrefixDir e
 
@@ -450,9 +449,6 @@ packageInstallDir e p =
    in case p of
         Core c _            => dir /> "\{c}-\{vers}"
         RGitHub _ _ _ _ _ d =>
-          let v = maybe "0" show d.version
-           in dir /> "\{d.name}-\{v}"
-        RIpkg p d           =>
           let v = maybe "0" show d.version
            in dir /> "\{d.name}-\{v}"
         RLocal _ _ _ _ d    =>
