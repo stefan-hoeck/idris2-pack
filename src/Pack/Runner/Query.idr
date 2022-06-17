@@ -32,7 +32,7 @@ query_ :  HasIO io
        -> EitherT PackErr io (List b)
 query_ e q = mapMaybe id <$> traverse run (pkgNames e)
   where run : PkgName -> EitherT PackErr io (Maybe b)
-        run n = (\(s,rp) => q s rp) <$> resolvePair e (Pkg n)
+        run n = (\(s,rp) => q s rp) <$> resolvePair e n
 
 shortDesc : ResolvedPackage -> Maybe String
 shortDesc = brief . desc
@@ -59,11 +59,6 @@ details (RGitHub name url commit ipkg _ desc) = [
   , "URL          : \{url}"
   , "Commit       : \{commit}"
   , "ipkg File    : \{ipkg}"
-  ]
-
-details (RIpkg path desc) = [
-    "Type         : Local ipkg file"
-  , "Path         : \{path}"
   ]
 
 details (RLocal name dir ipkg _ desc) = [
@@ -202,7 +197,7 @@ installedPkgs ns e = do
   pure (all, filter inPkgs all)
   where run : PkgName -> EitherT PackErr io (Maybe ResolvedPackage)
         run n = do
-          rp <- resolve e (Pkg n)
+          rp <- resolve e n
           b  <- exists (packageInstallDir e rp)
           pure (toMaybe b rp)
 

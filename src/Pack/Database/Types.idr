@@ -109,11 +109,6 @@ data ResolvedPackage : Type where
           -> (desc    : PkgDesc)
           -> ResolvedPackage
 
-  ||| A local (and parsed) `.ipkg` file.
-  RIpkg   :  (path : Path)
-          -> (desc : PkgDesc)
-          -> ResolvedPackage
-
   ||| A local project with (absolute) path to project's
   ||| directory and parsed `.ipkg` file.
   ||| `pkgPath` should be set to `True` for executable which need
@@ -134,7 +129,6 @@ data ResolvedPackage : Type where
 export
 isCorePackage : ResolvedPackage -> Bool
 isCorePackage (RGitHub _ _ _ _ _ _) = False
-isCorePackage (RIpkg _ _)           = False
 isCorePackage (RLocal _ _ _ _ _)    = False
 isCorePackage (Core _ _)            = True
 
@@ -143,19 +137,18 @@ isCorePackage (Core _ _)            = True
 export
 desc : ResolvedPackage -> PkgDesc
 desc (RGitHub _ _ _ _ _ d) = d
-desc (RIpkg _ d)           = d
 desc (RLocal _ _ _ _ d)    = d
 desc (Core _ d)            = d
 
+namespace PkgDesc
+  export
+  dependencies : PkgDesc -> List PkgName
+  dependencies = map (MkPkgName . pkgname) . depends
+
 ||| Extracts the dependencies of a resolved package.
 export
-dependencies : ResolvedPackage -> List PkgRep
-dependencies rp = map (Pkg . MkPkgName . pkgname) (desc rp).depends
-
-||| Extracts the names of dependencies of a resolved package.
-export
-depNames : ResolvedPackage -> List PkgName
-depNames rp = map (MkPkgName . pkgname) (desc rp).depends
+dependencies : ResolvedPackage -> List PkgName
+dependencies = dependencies . desc
 
 ||| Extracts the name of the executable (if any) from
 ||| a resolved package.
@@ -167,7 +160,6 @@ executable = executable . desc
 export
 name : ResolvedPackage -> PkgName
 name (RGitHub n _ _ _ _ _) = n
-name (RIpkg _ d)           = MkPkgName d.name
 name (RLocal n _ _ _ _)    = n
 name (Core c _)            = MkPkgName "\{c}"
 

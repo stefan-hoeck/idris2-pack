@@ -12,6 +12,11 @@ import System.File
 
 %default total
 
+||| True if the given file path ends on `.ipkg`
+export
+isIpkgFile : String -> Bool
+isIpkgFile = (Just "ipkg" ==) . extension
+
 --------------------------------------------------------------------------------
 --          Interpolation
 --------------------------------------------------------------------------------
@@ -113,31 +118,6 @@ export %inline
 Interpolation DBName where interpolate = value
 
 --------------------------------------------------------------------------------
---          PkgRep
---------------------------------------------------------------------------------
-
-||| Package representation at the command line.
-||| This is either a path to an `.ipkg` file or the
-||| name of a package in the package collection.
-public export
-data PkgRep : Type where
-  Pkg  : PkgName -> PkgRep
-  Ipkg : Path    -> PkgRep
-
-export
-Interpolation PkgRep where
-  interpolate (Pkg n)  = n.value
-  interpolate (Ipkg p) = interpolate p
-
-export
-isIpkgFile : String -> Bool
-isIpkgFile = (Just "ipkg" ==) . extension
-
-export
-FromString PkgRep where
-  fromString s = if isIpkgFile s then Ipkg (parse s) else Pkg (MkPkgName s)
-
---------------------------------------------------------------------------------
 --          Errors
 --------------------------------------------------------------------------------
 
@@ -195,7 +175,11 @@ data PackErr : Type where
 
   ||| The given package is not an applicatio
   ||| (No executable name set in the `.ipkg` file)
-  NoApp      : (rep : PkgRep) -> PackErr
+  NoApp      : (rep : PkgName) -> PackErr
+
+  ||| The given package is not an applicatio
+  ||| (No executable name set in the `.ipkg` file)
+  NoAppIpkg  : (path : Path) -> PackErr
 
   ||| An erroneous package description in a package DB file
   InvalidPackageDesc : (s : String) -> PackErr
@@ -296,6 +280,8 @@ printErr (InvalidPkgVersion s) = "Invalid package version: \"\{s}\"."
 printErr (UnknownPkg name) = "Unknown package: \{name}"
 
 printErr (NoApp rep) = "Package \{rep} is not an application"
+
+printErr (NoAppIpkg p) = "Package \{p} is not an application"
 
 printErr EmptyPkgDB = "Empty package data base"
 

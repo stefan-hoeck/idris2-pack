@@ -20,7 +20,8 @@ runCmd = do
     Query m s          => env c >>= query m s
     Fuzzy m s          => idrisEnv c >>= fuzzy m s
     UpdateDB           => updateDB c
-    Exec p args        => idrisEnv c >>= execApp p args
+    Exec p args        => idrisEnv c >>= runIpkg p args
+    Run p args         => idrisEnv c >>= execApp p args
     Repl p             => idrisEnv c >>= repl p
     Build p            => idrisEnv c >>= build p
     BuildDeps p        => idrisEnv c >>= buildDeps p

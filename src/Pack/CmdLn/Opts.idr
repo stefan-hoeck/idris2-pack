@@ -122,7 +122,8 @@ cmd ["query", "dep", s]        = Right $ Query Dependency s
 cmd ["query", "module", s]     = Right $ Query Module s
 cmd ["repl"]                   = Right $ Repl Nothing
 cmd ["repl", s]                = Right $ Repl (Just $ parse s)
-cmd ("exec" :: file :: args)   = Right $ Exec (fromString file) args
+cmd ("exec" :: file :: args)   = Right $ Exec (parse file) args
+cmd ("run" :: p :: args)       = Right $ Run (MkPkgName p) args
 cmd ["build", file]            = Right $ Build (parse file)
 cmd ["install-deps", file]     = Right $ BuildDeps (parse file)
 cmd ["typecheck", file]        = Right $ Typecheck (parse file)
@@ -183,6 +184,9 @@ usageInfo = """
     typecheck <.ipkg file>
       Typecheck a local package given as an `.ipkg` file.
 
+    exec <.ipkg file> [args]
+      Build and run a local application given as an `.ipkg` file.
+
     repl [.idr file]
       Start a REPL session loading an optional `.idr` file.
       Use command line option `--with-ipkg` to load setings
@@ -191,14 +195,18 @@ usageInfo = """
       option or set flag `repl.rlwrap` in file
       `$HOME./pack/user/pack.toml` to `true`.
 
-    install [package or .ipkg file...]
-      Install the given package(s) and/or local .ipkg files.
+    install [package...]
+      Install the given packages.
 
-    install-app [package or .ipkg file...]
-      Install the given application(s).
+    install-app [package...]
+      Install the given applications.
 
-    remove [package or .ipkg file...]
-      Remove installed librarie(s).
+    run <package> [args]
+      Install and run an application from the package
+      collection passing it the given command line arguments.
+
+    remove [package...]
+      Remove installed libraries and applications.
 
     update-db
       Update the pack data base by downloading the package collections
@@ -210,11 +218,6 @@ usageInfo = """
       `$HOME/.pack/bin`, which you can then include in your
       `$PATH` variable.
 
-    exec <package or .ipkg file> [args]
-      Build and run an executable given either as
-      an `.ipkg` file or a known package from the
-      database passing it the given command line arguments.
-
     info
       Print general information about the current package
       collection and list installed applications and libraries.
@@ -223,15 +226,20 @@ usageInfo = """
       Query the package collection for the given name.
       Several command line options exist to define the type
       of information printed. The optional [mode] argument
-      defines what piece of a package we are looking for:
+      defines the type of query to use:
+
         * `dep`    : Search a package by its dependencies. For
           instance, `pack query dep sop` will list all packages,
           which have a dependency on the sop library. Only exact
           matches will be listed.
+
         * `module` : Search a package by its modules. For
           instance, `pack query module Data.List` will list all packages,
           which export module `Data.List`. Only exact matches will
           be listed.
+
+        * none     : List packages whose names have the query
+          string as a substring.
 
     fuzzy [packages] <query>
       Run a fuzzy search by type over a comma-separated list of packages.
