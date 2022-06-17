@@ -18,14 +18,13 @@ data Cmd : Type where
   Build            : Path -> Cmd
   BuildDeps        : Path -> Cmd
   Typecheck        : Path -> Cmd
-  Exec             : Path -> List String -> Cmd
   Repl             : Maybe Path -> Cmd
 
   -- Package management
   Install          : List PkgName -> Cmd
   InstallApp       : List PkgName -> Cmd
   Remove           : List PkgName -> Cmd
-  Run              : PkgName -> List String -> Cmd
+  Run              : Either Path PkgName -> List String -> Cmd
 
   -- Idris environment
   PackagePath      : Cmd
