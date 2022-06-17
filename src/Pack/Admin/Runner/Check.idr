@@ -38,9 +38,9 @@ checkPkg :  HasIO io
 checkPkg e p = do
   info e "Checking \{p}"
   Nothing  <- lookup p <$> get | Just rep => pure rep
-  Right rp <- toState $ resolve e (Pkg p)
+  Right rp <- toState $ resolve e p
     | Left err => updateRep p (Error p err)
-  [] <- failingDeps <$> traverse (checkPkg e) (depNames rp)
+  [] <- failingDeps <$> traverse (checkPkg e) (dependencies rp)
     | rs => updateRep p (Failure rp rs)
   case rp of
     RGitHub pn url commit ipkg _ d =>
@@ -48,9 +48,6 @@ checkPkg e p = do
         let pf = patchFile e pn ipkg
         when !(exists pf) (patch ipkg pf)
         idrisPkg e (packageInstallPrefix e rp) "--install-with-src" ipkg
-
-    RIpkg ipkg d =>
-      report p rp $ idrisPkg e (packageInstallPrefix e rp) "--install" ipkg
 
     RLocal _ dir ipkg _ d => do
       report p rp $ inDir dir $
