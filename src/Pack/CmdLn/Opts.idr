@@ -122,8 +122,9 @@ cmd ["query", "dep", s]        = Right $ Query Dependency s
 cmd ["query", "module", s]     = Right $ Query Module s
 cmd ["repl"]                   = Right $ Repl Nothing
 cmd ["repl", s]                = Right $ Repl (Just $ parse s)
-cmd ("exec" :: file :: args)   = Right $ Exec (parse file) args
-cmd ("run" :: p :: args)       = Right $ Run (MkPkgName p) args
+cmd ("run" :: p :: args)       = case isIpkgFile p of
+  True  => Right $ Run (Left $ parse p) args
+  False => Right $ Run (Right $ MkPkgName p) args
 cmd ["build", file]            = Right $ Build (parse file)
 cmd ["install-deps", file]     = Right $ BuildDeps (parse file)
 cmd ["typecheck", file]        = Right $ Typecheck (parse file)
@@ -184,9 +185,6 @@ usageInfo = """
     typecheck <.ipkg file>
       Typecheck a local package given as an `.ipkg` file.
 
-    exec <.ipkg file> [args]
-      Build and run a local application given as an `.ipkg` file.
-
     repl [.idr file]
       Start a REPL session loading an optional `.idr` file.
       Use command line option `--with-ipkg` to load setings
@@ -201,9 +199,14 @@ usageInfo = """
     install-app [package...]
       Install the given applications.
 
-    run <package> [args]
-      Install and run an application from the package
-      collection passing it the given command line arguments.
+    run <package or .ipkg file> [args]
+      Run an application from the package
+      collection or a local `.ipkg` file passing it the
+      given command line arguments.
+
+      Note: This will install remote apps before running them.
+      Local apps and applications specified as mere `.ipkg` files
+      will be built and run locally without installing them.
 
     remove [package...]
       Remove installed libraries and applications.

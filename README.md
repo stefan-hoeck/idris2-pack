@@ -77,13 +77,12 @@ pack typecheck elab-util.ipkg
 ```
 
 The build tool can run executables, both from local
-`.ipkg` files (command `pack exec`) as well as from
-installed applications (command `pack run`). Command
+`.ipkg` files as well as from installed applications. Command
 line arguments to be passed on to the executable can be
 listed after the package name or `.ipkg` file:
 
 ```sh
-pack exec test.ipkg -n 50
+pack run test.ipkg -n 50
 pack run katla --help
 ```
 

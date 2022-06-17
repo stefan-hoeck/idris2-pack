@@ -5,6 +5,7 @@ import Data.List1
 import Data.Maybe
 import Data.String
 import Idris.Package.Types
+import Libraries.Utils.Path
 import Pack.Config.Env
 import Pack.Config.Types
 import Pack.Core
@@ -307,7 +308,9 @@ execApp :  HasIO io
         -> Env HasIdris
         -> EitherT PackErr io ()
 execApp p args e = do
-  rp       <- resolve e p
+  rp@(RGitHub {}) <- resolve e p
+    | RLocal _ d p _ _ => runIpkg (d /> show p) args e
+    | Core {}          => throwE (NoApp p)
   Just exe <- pure (executable rp) | Nothing => throwE (NoApp p)
   installApp e p
   sys "\{packageExec e rp exe} \{unwords args}"
