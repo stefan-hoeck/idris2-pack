@@ -160,7 +160,10 @@ of a project. Just as with the global `pack.toml` file in directory
 `$HOME/.pack/user/`, you can specify the package collection to
 use for a project as well as define additional local dependencies
 and even override global package settings. Local settings take
-precedence over global once.
+precedence over global once. Pack will look for local `pack.toml`
+files in all parent directories of the current working directory
+(including the current working directory itself) and will stop
+at the first one it finds.
 
 ## Directory Structure
 
