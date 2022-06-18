@@ -21,9 +21,6 @@ ENV SCHEME=chezscheme
 
 RUN make micropack SCHEME=$SCHEME
 
-# hadolint ignore=DL3059
-RUN pack install pack.ipkg
-
 FROM ubuntu:22.04
 
 # hadolint ignore=DL3008,DL3015
