@@ -83,6 +83,20 @@ resolveMeta (GitHub u (Latest x) i p) =
   map (\c => GitHub u c i p) $ gitLatest u (MkCommit x)
 resolveMeta (Local d i p) = pure $ Local d i p
 
+-- tries to fiend a `pack.toml` file in the given directory
+-- or one of its parent directories (to a maximal depth of 100 dirs).
+findPackToml : HasIO io => String -> io (Maybe Path)
+findPackToml = go 100
+  where go : Nat -> String -> io (Maybe Path)
+        go 0     _   = pure Nothing
+        go (S k) str =
+          let pth = parse $ str </> "pack.toml"
+           in do
+             False <- exists pth | True => pure (Just pth)
+             case parent str of
+               Just p  => go k p
+               Nothing => pure Nothing
+
 ||| Read application config from command line arguments.
 export covering
 getConfig :  HasIO io
@@ -97,8 +111,11 @@ getConfig readCmd dflt = do
   when !(missing $ configPath dir) $
     write (configPath dir) (initToml "scheme" coll)
 
+  localToml   <- curDir >>= findPackToml . show
   global'     <- readOptionalFromTOML (configPath dir) config
-  local'      <- readOptionalFromTOML (parse "pack.toml") config
+  local'      <- case localToml of
+    Just pth => readFromTOML pth config
+    Nothing  => readOptionalFromTOML (parse "pack.toml") config
   global      <- traverse resolveMeta global'
   local       <- traverse resolveMeta local'
 
