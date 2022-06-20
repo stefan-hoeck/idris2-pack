@@ -112,10 +112,10 @@ ln -s "$PACK_DIR/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin/pack" pack
 cat <<EOF >>idris2
 #!/bin/sh
 
-export IDRIS2_PACKAGE_PATH="\$($PACK_DIR/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin/pack package-path)"
-export IDRIS2_LIBS="\$("$PACK_DIR/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin/pack" libs-path)"
-export IDRIS2_DATA="\$("$PACK_DIR/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin/pack" data-path)"
-"$PACK_DIR/$IDRIS2_COMMIT/idris2/bin/idris2" "\$@"
+export IDRIS2_PACKAGE_PATH="\$($PACK_DIR/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin/pack package-path)"
+export IDRIS2_LIBS="\$("$PACK_DIR/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin/pack" libs-path)"
+export IDRIS2_DATA="\$("$PACK_DIR/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin/pack" data-path)"
+"$PACK_DIR/install/$IDRIS2_COMMIT/idris2/bin/idris2" "\$@"
 EOF
 
 chmod +x idris2
