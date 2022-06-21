@@ -2,6 +2,7 @@ module Pack.Core.IO
 
 import public Control.Monad.Either
 import public Libraries.Utils.Path
+import Data.String
 import Pack.Core.Types
 import System
 import System.Directory
@@ -53,6 +54,10 @@ run (MkEitherT io) = do
 --          System Commands
 --------------------------------------------------------------------------------
 
+export
+dispEnv : List (String,String) -> String
+dispEnv = unwords . map (\(e,v) => "\{e}=\"\{v}\"")
+
 ||| Tries to run a system command.
 export
 sys : HasIO io => (cmd : String) -> EitherT PackErr io ()
@@ -60,11 +65,49 @@ sys cmd = do
   0 <- system cmd | n => throwE (Sys cmd n)
   pure ()
 
+cmdWithEnv : String -> List (String,String) -> String
+cmdWithEnv cmd []  = cmd
+cmdWithEnv cmd env = "\{dispEnv env} \{cmd}"
+
+||| Tries to run a system command prefixed with the given
+||| environment variables.
+|||
+||| Note: In case of an error, the environment will not be part
+||| of the command listed in the error message. This is a
+||| deliberate choice to declutter Idris output in case of a
+||| failed build. If the environment should be included in the
+||| error message, just prefix `cmd` accordingly and use `sys`.
+export
+sysWithEnv :  HasIO io
+           => (cmd : String)
+           -> (env : List (String,String))
+           -> EitherT PackErr io ()
+sysWithEnv cmd env = do
+  0 <- system (cmdWithEnv cmd env) | n => throwE (Sys cmd n)
+  pure ()
+
 ||| Tries to run a system command returning its output.
 export covering
 sysRun : HasIO io => (cmd : String) -> EitherT PackErr io String
 sysRun cmd = do
   (res,0) <- System.run cmd | (_,n) => throwE (Sys cmd n)
+  pure res
+
+||| Tries to run a system command prefixed with the given
+||| environment variables returning its output.
+|||
+||| Note: In case of an error, the environment will not be part
+||| of the command listed in the error message. This is a
+||| deliberate choice to declutter Idris output in case of a
+||| failed build. If the environment should be included in the
+||| error message, just prefix `cmd` accordingly and use `sys`.
+export covering
+sysRunWithEnv :  HasIO io
+              => (cmd : String)
+              -> (env : List (String,String))
+              -> EitherT PackErr io String
+sysRunWithEnv cmd env = do
+  (res,0) <- System.run (cmdWithEnv cmd env) | (_,n) => throwE (Sys cmd n)
   pure res
 
 --------------------------------------------------------------------------------

@@ -436,8 +436,8 @@ packagePrefixDir e (RLocal n _ _ _ _)    = localPkgPrefixDir e n
 packagePrefixDir e (Core _ _)            = idrisPrefixDir e
 
 export
-packageInstallPrefix : Env s -> ResolvedPackage -> String
-packageInstallPrefix e rp = "IDRIS2_PREFIX=\"\{packagePrefixDir e rp}\""
+packageInstallPrefix : Env s -> ResolvedPackage -> List (String,String)
+packageInstallPrefix e rp = [("IDRIS2_PREFIX", show $ packagePrefixDir e rp)]
 
 ||| Returns the directory where a package for the current
 ||| package collection is installed.
@@ -519,20 +519,20 @@ packageDataDirs e =
    in "\{idrisDataDir e}:\{pth}"
 
 export
-packagePath : Env s -> String
-packagePath e = "IDRIS2_PACKAGE_PATH=\"\{packagePathDirs e}\""
+packagePath : Env s -> (String, String)
+packagePath e = ("IDRIS2_PACKAGE_PATH", packagePathDirs e)
 
 export
-libPath : Env s -> String
-libPath e = "IDRIS2_LIBS=\"\{packageLibDirs e}\""
+libPath : Env s -> (String, String)
+libPath e = ("IDRIS2_LIBS", packageLibDirs e)
 
 export
-dataPath : Env s -> String
-dataPath e = "IDRIS2_DATA=\"\{packageDataDirs e}\""
+dataPath : Env s -> (String, String)
+dataPath e = ("IDRIS2_DATA", packageDataDirs e)
 
 export
-buildEnv : Env s -> String
-buildEnv e = "\{packagePath e} \{libPath e} \{dataPath e}"
+buildEnv : Env s -> List (String,String)
+buildEnv e = [packagePath e, libPath e, dataPath e]
 
 ||| Idris executable to use together with the
 ||| `--cg` (codegen) command line option.
@@ -542,14 +542,22 @@ idrisWithCG e = case e.codegen of
   Default => "\{idrisExec e}"
   cg      => "\{idrisExec e} --cg \{cg}"
 
+||| Idris executable loading the given package plus the
+||| environment variables needed to run it.
 export
-idrisWithPkg : Env HasIdris -> ResolvedPackage -> String
+idrisWithPkg :  Env HasIdris
+             -> ResolvedPackage
+             -> (String, List (String,String))
 idrisWithPkg e rp =
-  "\{buildEnv e} \{idrisWithCG e} -p \{name rp}"
+  ("\{idrisWithCG e} -p \{name rp}", buildEnv e)
 
+||| Idris executable loading the given packages plus the
+||| environment variables needed to run it.
 export
-idrisWithPkgs : Env HasIdris -> List ResolvedPackage -> String
-idrisWithPkgs e [] = idrisWithCG e
+idrisWithPkgs :  Env HasIdris
+              -> List ResolvedPackage
+              -> (String, List (String,String))
+idrisWithPkgs e [] = (idrisWithCG e, [])
 idrisWithPkgs e pkgs =
   let ps = fastConcat $ map (\p => " -p \{name p}") pkgs
-   in "\{buildEnv e} \{idrisWithCG e}\{ps}"
+   in ("\{idrisWithCG e}\{ps}", buildEnv e)
