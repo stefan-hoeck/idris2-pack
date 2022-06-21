@@ -26,15 +26,17 @@ packInstalled e = packExec e >>= exists
 export
 idrisPkg :  HasIO io
          => Env HasIdris
-         -> (env : String)
+         -> (env : List (String,String))
          -> (cmd : String)
          -> Path
          -> EitherT PackErr io ()
 idrisPkg e env cmd ipkg =
   let exe := idrisWithCG e
-      pre := buildEnv e
-      s   := "\{env} \{pre} \{exe} \{cmd} \{ipkg}"
-   in debug e "About to run: \{s}" >> sys s
+      pre := env ++ buildEnv e
+      s   := "\{exe} \{cmd} \{ipkg}"
+   in do
+     debug e "About to run: \{s}"
+     sysWithEnv s pre
 
 buildDir : PkgDesc -> String
 buildDir d = fromMaybe "build" d.builddir
@@ -198,7 +200,7 @@ runIdrisOn cmd p e = do
   (_,d) <- parseIpkgFile p id
   traverse_ (installLib e) (dependencies d)
   case cmd of
-    Just c  => idrisPkg e "" c p
+    Just c  => idrisPkg e [] c p
     Nothing => pure ()
 
 ||| Use the installed Idris to start a REPL session with the
@@ -213,8 +215,8 @@ idrisRepl e args = do
       exe = idrisWithCG e
   opts <- replOpts
   case e.rlwrap of
-    True  => sys "\{pth} rlwrap \{exe} \{opts} \{args}"
-    False => sys "\{pth} \{exe} \{opts} \{args}"
+    True  => sysWithEnv "rlwrap \{exe} \{opts} \{args}" [pth]
+    False => sysWithEnv "\{exe} \{opts} \{args}" [pth]
 
   where covering replOpts : EitherT PackErr io String
         replOpts = case e.withIpkg of
@@ -268,13 +270,13 @@ installApp e n = do
         withGit (tmpDir e) url commit $ do
           let pf = patchFile e pn ipkg
           when !(exists pf) (patch ipkg pf)
-          idrisPkg e "" "--build" ipkg
+          idrisPkg e [] "--build" ipkg
           copyApp e rp
 
     RLocal _ dir ipkg pp d => when !(promptDesc rp e d) $ do
       removeExec e rp exe
       inDir dir $ do
-        idrisPkg e "" "--build" ipkg
+        idrisPkg e [] "--build" ipkg
         copyApp e rp
     _ => throwE (NoApp n)
 

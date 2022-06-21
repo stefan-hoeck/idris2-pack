@@ -238,7 +238,10 @@ fuzzyPkg q e allPkgs rp =
        putStrLn "\{name rp}:\n"
        write (parse "test.idr") (imports rp)
        write (parse "input") ":fs \{q}\n"
-       str <- sysRun "\{idrisWithPkgs e allPkgs} --quiet --no-prelude --no-banner test.idr < input"
+
+       let (cmd,env) := idrisWithPkgs e allPkgs
+
+       str <- sysRunWithEnv "\{cmd} --quiet --no-prelude --no-banner test.idr < input" env
        case noOut == str of
          True  => pure ()
          False => putStrLn (fuzzyTrim str)
