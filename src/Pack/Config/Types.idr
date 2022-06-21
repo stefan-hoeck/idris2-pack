@@ -400,6 +400,12 @@ packagePrefixDir e (RLocal n _ _ _ _)    = localPkgPrefixDir e n
 packagePrefixDir e (Core _ _)            = idrisPrefixDir e
 
 export
+packageTimestamp : Env s -> ResolvedPackage -> Maybe Path
+packageTimestamp e p@(RLocal {}) = Just $ packagePrefixDir e p /> ".timestamp"
+packageTimestamp e _             = Nothing
+
+
+export
 packageInstallPrefix : Env s -> ResolvedPackage -> List (String,String)
 packageInstallPrefix e rp = [("IDRIS2_PREFIX", "\{packagePrefixDir e rp}")]
 

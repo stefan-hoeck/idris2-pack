@@ -9,6 +9,11 @@ import Pack.Database.Types
 
 %default total
 
+localUpToDate :  HasIO io
+              => (env : Env s)
+              -> ResolvedPackage
+              -> EitherT PackErr io Bool
+
 ||| Check if a package has already been built and installed
 export
 packageExists :  HasIO io
