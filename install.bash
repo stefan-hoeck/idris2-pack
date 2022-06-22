@@ -21,6 +21,8 @@ if command -v chezscheme &>/dev/null; then
 	DETECTED_SCHEME=chezscheme
 elif command -v scheme &>/dev/null; then
 	DETECTED_SCHEME=scheme
+elif command -v chez &>/dev/null; then
+	DETECTED_SCHEME=chez
 else
 	DETECTED_SCHEME=''
 fi
