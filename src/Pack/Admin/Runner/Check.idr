@@ -44,19 +44,20 @@ checkPkg e p = do
     | rs => updateRep p (Failure rp rs)
   case rp of
     RGitHub pn url commit ipkg _ d =>
-      report p rp $ withGit (tmpDir e) url commit $ do
-        let pf = patchFile e pn ipkg
-        when !(exists pf) (patch ipkg pf)
-        idrisPkg e (packageInstallPrefix e rp) "--install-with-src" ipkg
+      report p rp $ withGit (tmpDir e) url commit $ \dir => do
+        let ipkgAbs := dir </> ipkg
+            pf      := patchFile e pn ipkg
+        when !(exists pf) (patch ipkgAbs pf)
+        idrisPkg e (packageInstallPrefix e rp) "--install-with-src" ipkgAbs
 
     RLocal _ dir ipkg _ d => do
-      report p rp $ inDir dir $
-        idrisPkg e (packageInstallPrefix e rp) "--install" ipkg
+      report p rp $
+      idrisPkg e (packageInstallPrefix e rp) "--install" (dir </> ipkg)
 
     _ => updateRep p (Success rp)
 
 export covering
-checkDB : HasIO io => Path -> Env HasIdris -> EitherT PackErr io ()
+checkDB : HasIO io => Path Abs -> Env HasIdris -> EitherT PackErr io ()
 checkDB p e = do
   rep <- liftIO $ execStateT empty
                 $ traverse_ (checkPkg e) (keys e.db.packages)

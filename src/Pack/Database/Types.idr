@@ -1,10 +1,10 @@
 module Pack.Database.Types
 
 import Data.List1
+import Data.List.Elem
 import Data.SortedMap
 import Data.String
 import Idris.Package.Types
-import Libraries.Utils.Path
 import Pack.Core.Types
 
 %default total
@@ -48,7 +48,7 @@ data Package_ : (c : Type) -> Type where
   ||| where Idris packages are installed.
   GitHub :  (url     : URL)
          -> (commit  : c)
-         -> (ipkg    : Path)
+         -> (ipkg    : Path Rel)
          -> (pkgPath : Bool)
          -> Package_ c
 
@@ -57,8 +57,8 @@ data Package_ : (c : Type) -> Type where
   ||| `pkgPath` should be set to `True` for executable which need
   ||| access to the `IDRIS2_PACKAGE_PATH`: The list of directories
   ||| where Idris packages are installed.
-  Local  :  (dir     : Path)
-         -> (ipkg    : Path)
+  Local  :  (dir     : Path Abs)
+         -> (ipkg    : Path Rel)
          -> (pkgPath : Bool)
          -> Package_ c
 
@@ -81,6 +81,10 @@ data CorePkg =
   | Test
   | IdrisApi
 
+public export
+corePkgs : List CorePkg
+corePkgs = [Prelude, Base, Contrib, Linear, Network, Test, IdrisApi]
+
 export
 Interpolation CorePkg where
   interpolate Prelude  = "prelude"
@@ -91,6 +95,29 @@ Interpolation CorePkg where
   interpolate Test     = "test"
   interpolate IdrisApi = "idris2"
 
+export
+ToBody CorePkg where
+  toBody Prelude  = "prelude"
+  toBody Base     = "base"
+  toBody Contrib  = "contrib"
+  toBody Linear   = "linear"
+  toBody Network  = "network"
+  toBody Test     = "test"
+  toBody IdrisApi = "idris2"
+
+export %inline
+ToRelPath CorePkg where
+  relPath c = PRel [< toBody c]
+
+export
+coreIpkgFile : CorePkg -> Body
+coreIpkgFile IdrisApi = "idris2api.ipkg"
+coreIpkgFile c        = toBody c <+> ".ipkg"
+
+export
+coreIpkgPath : CorePkg -> Path Rel
+coreIpkgPath IdrisApi = "idris2api.ipkg"
+coreIpkgPath c        = neutral /> "libs" /> toBody c /> coreIpkgFile c
 
 ||| A resolved package, which was downloaded from GitHub
 ||| or looked up in the local file system. This comes with
@@ -104,7 +131,7 @@ data ResolvedPackage : Type where
   RGitHub :  (name    : PkgName)
           -> (url     : URL)
           -> (commit  : Commit)
-          -> (ipkg    : Path)
+          -> (ipkg    : Path Rel)
           -> (pkgPath : Bool)
           -> (desc    : PkgDesc)
           -> ResolvedPackage
@@ -115,8 +142,8 @@ data ResolvedPackage : Type where
   ||| access to the `IDRIS2_PACKAGE_PATH`: The list of directories
   ||| where Idris packages are installed.
   RLocal  :  (name    : PkgName)
-          -> (dir     : Path)
-          -> (ipkg    : Path)
+          -> (dir     : Path Abs)
+          -> (ipkg    : Path Rel)
           -> (pkgPath : Bool)
           -> (desc    : PkgDesc)
           -> ResolvedPackage
@@ -227,3 +254,17 @@ printDB (MkDB u c v db) =
         commit  = "\{c}"
         """
    in unlines $ header :: map printPair (SortedMap.toList db)
+
+--------------------------------------------------------------------------------
+--          Tests
+--------------------------------------------------------------------------------
+
+-- make sure no core package was forgotten
+0 corePkgsTest : (c : CorePkg) -> Elem c Types.corePkgs
+corePkgsTest Prelude  = %search
+corePkgsTest Base     = %search
+corePkgsTest Contrib  = %search
+corePkgsTest Linear   = %search
+corePkgsTest Network  = %search
+corePkgsTest Test     = %search
+corePkgsTest IdrisApi = %search

@@ -1,8 +1,5 @@
 module Pack.CmdLn.Opts
 
-import Data.List1
-import Data.String
-import Libraries.Utils.Path
 import Pack.CmdLn.Types
 import Pack.Core.Types
 import Pack.Config.Types
@@ -10,38 +7,38 @@ import System.Console.GetOpt
 
 %default total
 
-debug : Config s -> Config s
-debug = {logLevel := Debug}
+debug : Path Abs -> Config s -> Config s
+debug _ = {logLevel := Debug}
 
-bootstrap : Config s -> Config s
-bootstrap = {bootstrap := True}
+bootstrap : Path Abs -> Config s -> Config s
+bootstrap _ = {bootstrap := True}
 
-withSrc : Config s -> Config s
-withSrc = {withSrc := True}
+withSrc : Path Abs -> Config s -> Config s
+withSrc _ = {withSrc := True}
 
-setDB : String -> Config s -> Config s
-setDB s = {collection := MkDBName s}
+setDB : String -> Path Abs -> Config s -> Config s
+setDB s _ = {collection := MkDBName s}
 
-setQuery : QueryType -> Config s -> Config s
-setQuery s = {queryType := s}
+setQuery : QueryType -> Path Abs -> Config s -> Config s
+setQuery s _ = {queryType := s}
 
-setPrompt : Bool -> Config s -> Config s
-setPrompt b = {safetyPrompt := b}
+setPrompt : Bool -> Path Abs -> Config s -> Config s
+setPrompt b _ = {safetyPrompt := b}
 
-setScheme : String -> Config s -> Config s
-setScheme s = {scheme := parse s}
+setScheme : String -> Path Abs -> Config s -> Config s
+setScheme s _ = {scheme := fromString s}
 
-setRlwrap : Bool -> Config s -> Config s
-setRlwrap b = {rlwrap := b }
+setRlwrap : Bool -> Path Abs -> Config s -> Config s
+setRlwrap b _ = {rlwrap := b }
 
-setIpkg : String -> Config s -> Config s
-setIpkg s = {withIpkg := Just (parse s) }
+setIpkg : String -> Path Abs -> Config s -> Config s
+setIpkg v dir = {withIpkg := Just (toAbsPath dir $ fromString v)}
 
-codegen : String -> Config s -> Config s
-codegen s = {codegen := fromString s}
+codegen : String -> Path Abs -> Config s -> Config s
+codegen v _ = {codegen := fromString v}
 
 -- command line options with description
-descs : List $ OptDescr (Config Nothing -> Config Nothing)
+descs : List $ OptDescr (Path Abs -> Config Nothing -> Config Nothing)
 descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             "Set the curated package set to use."
         , MkOpt [] ["cg"]   (ReqArg codegen "<codgen>")
@@ -110,47 +107,50 @@ optionNames = foldMap names descs
 
 
 export
-cmd : List String -> Either PackErr Cmd
-cmd []                         = Right PrintHelp
-cmd ["help"]                   = Right PrintHelp
-cmd ["info"]                   = Right Info
-cmd ["update-db"]              = Right UpdateDB
-cmd ["fuzzy", s]               = Right $ Fuzzy [] s
-cmd ["fuzzy", p, s]            = Right $ Fuzzy (forget $ map MkPkgName $ split (',' ==) p) s
-cmd ["query", s]               = Right $ Query PkgName s
-cmd ["query", "dep", s]        = Right $ Query Dependency s
-cmd ["query", "module", s]     = Right $ Query Module s
-cmd ["repl"]                   = Right $ Repl Nothing
-cmd ["repl", s]                = Right $ Repl (Just $ parse s)
-cmd ("run" :: p :: args)       = case isIpkgFile p of
-  True  => Right $ Run (Left $ parse p) args
-  False => Right $ Run (Right $ MkPkgName p) args
-cmd ["build", file]            = Right $ Build (parse file)
-cmd ["install-deps", file]     = Right $ BuildDeps (parse file)
-cmd ["typecheck", file]        = Right $ Typecheck (parse file)
-cmd ("install" :: xs)          = Right $ Install (map fromString xs)
-cmd ("remove" :: xs)           = Right $ Remove (map fromString xs)
-cmd ("install-app" :: xs)      = Right $ InstallApp (map fromString xs)
-cmd ["completion",a,b]         = Right $ Completion a b
-cmd ["completion-script",f]    = Right $ CompletionScript f
-cmd ["package-path"]           = Right PackagePath
-cmd ["libs-path"]              = Right LibsPath
-cmd ["data-path"]              = Right DataPath
-cmd ["switch",db]              = Right $ Switch (MkDBName db)
-cmd xs                         = Left  $ UnknownCommand xs
+cmd : Path Abs -> List String -> Either PackErr Cmd
+cmd _   []                         = Right PrintHelp
+cmd _   ["help"]                   = Right PrintHelp
+cmd _   ["info"]                   = Right Info
+cmd _   ["update-db"]              = Right UpdateDB
+cmd _   ["fuzzy", s]               = Right $ Fuzzy [] s
+cmd _   ["fuzzy", p, s]            = Right $ Fuzzy (forget $ map MkPkgName $ split (',' ==) p) s
+cmd _   ["query", s]               = Right $ Query PkgName s
+cmd _   ["query", "dep", s]        = Right $ Query Dependency s
+cmd _   ["query", "module", s]     = Right $ Query Module s
+cmd _   ["repl"]                   = Right $ Repl Nothing
+cmd dir ["repl", s]                = Right $ Repl (Just $ parse s dir)
+cmd dir ("run" :: p :: args)       =
+  let pth = parse p dir
+   in case isIpkgFile pth of
+     True  => Right $ Run (Left $ pth) args
+     False => Right $ Run (Right $ MkPkgName p) args
+cmd dir ["build", file]            = Right $ Build (parse file dir)
+cmd dir ["install-deps", file]     = Right $ BuildDeps (parse file dir)
+cmd dir ["typecheck", file]        = Right $ Typecheck (parse file dir)
+cmd _   ("install" :: xs)          = Right $ Install (map fromString xs)
+cmd _   ("remove" :: xs)           = Right $ Remove (map fromString xs)
+cmd _   ("install-app" :: xs)      = Right $ InstallApp (map fromString xs)
+cmd _   ["completion",a,b]         = Right $ Completion a b
+cmd _   ["completion-script",f]    = Right $ CompletionScript f
+cmd _   ["package-path"]           = Right PackagePath
+cmd _   ["libs-path"]              = Right LibsPath
+cmd _   ["data-path"]              = Right DataPath
+cmd _   ["switch",db]              = Right $ Switch (MkDBName db)
+cmd _  xs                         = Left  $ UnknownCommand xs
 
 ||| Given a root directory for *pack* and a db version,
 ||| generates the application
 ||| config from a list of command line arguments.
 export
-applyArgs :  (init    : Config Nothing)
+applyArgs :  (curDir  : Path Abs)
+          -> (init    : Config Nothing)
           -> (args    : List String)
           -> (readCmd : List String -> Either PackErr a)
           -> Either PackErr (Config Nothing, a)
-applyArgs init args readCmd =
+applyArgs dir init args readCmd =
   case getOpt RequireOrder descs args of
        MkResult opts n  []      []       =>
-         let conf = foldl (flip apply) init opts
+         let conf = foldl (\c,f => f dir c) init opts
           in map (conf,) (readCmd n)
 
        MkResult _    _ (u :: _) _        => Left (UnknownArg u)

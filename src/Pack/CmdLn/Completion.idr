@@ -2,11 +2,8 @@ module Pack.CmdLn.Completion
 
 import Control.Monad.Trans
 import Data.List
-import Data.List1
 import Data.SortedMap
-import Data.String
 import Libraries.Data.List.Extra
-import Libraries.Utils.Path
 import Pack.CmdLn.Opts
 import Pack.Config.Types
 import Pack.Core
@@ -22,13 +19,12 @@ import System.Directory
 ipkgFiles : HasIO io => io (List String)
 ipkgFiles = do
   Right ss <- runEitherT currentEntries | Left _ => pure []
-  pure $ filter isIpkgFile ss
+  pure . map interpolate $ filter isIpkgBody ss
 
-toDBName : String -> Maybe String
-toDBName s =
-  if Just "toml" == extension s
-     then fileStem s
-     else Nothing
+toDBName : Body -> Maybe String
+toDBName s = case splitFileName s of
+  Just (db,"toml") => Just "\{db}"
+  _                => Nothing
 
 -- list of package collections in `$HOME/.pack/db`
 collections : HasIO io => Env s -> io (List String)

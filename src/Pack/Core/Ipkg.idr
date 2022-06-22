@@ -199,17 +199,19 @@ addField p (PPostclean fc e)     = { postclean := Just (fc, e) } p
 addFields : (name : String) -> List DescField -> PkgDesc
 addFields = foldl addField . initPkgDesc
 
-parseIpkg : (path : Path) -> (str : String) -> Either PackErr PkgDesc
+parseIpkg :  (path : Path Abs)
+          -> (str : String)
+          -> Either PackErr PkgDesc
 parseIpkg path str =
   let err = InvalidIpkgFile path
    in do
      toks           <- mapFst (const err) $ lex str
-     (_, (n,fs), _) <- mapFst (const err) $ parse (pkgDesc $ show path) toks
+     (_, (n,fs), _) <- mapFst (const err) $ parse (pkgDesc "\{path}") toks
      Right $ addFields n fs
 
 export covering
 parseIpkgFile :  HasIO io
-              => (path : Path)
+              => (path : Path Abs)
               -> (PkgDesc -> a)
               -> EitherT PackErr io (String, a)
 parseIpkgFile path f = do

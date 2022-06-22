@@ -2,7 +2,6 @@ module Pack.Runner.Database
 
 import Data.SortedMap
 import Idris.Package.Types
-import Libraries.Utils.Path
 import Pack.Config.Env
 import Pack.Config.Types
 import Pack.Core
@@ -37,38 +36,33 @@ executableExists c rp n =
        exists pth
 
 export
-cacheCoreIpkgFiles : HasIO io => Env s -> EitherT PackErr io ()
-cacheCoreIpkgFiles e = do
-  copyFile (parse "libs/prelude/prelude.ipkg") (preludePath e)
-  copyFile (parse "libs/base/base.ipkg") (basePath e)
-  copyFile (parse "libs/contrib/contrib.ipkg") (contribPath e)
-  copyFile (parse "libs/network/network.ipkg") (networkPath e)
-  copyFile (parse "libs/linear/linear.ipkg") (linearPath e)
-  copyFile (parse "libs/test/test.ipkg") (testPath e)
-  copyFile (parse "idris2api.ipkg") (idrisApiPath e)
+cacheCoreIpkgFiles : HasIO io => Env s -> Path Abs -> EitherT PackErr io ()
+cacheCoreIpkgFiles e dir = for_ corePkgs $ \c =>
+  copyFile (dir </> coreIpkgPath c) (coreCachePath e c)
 
 resolveCore :  HasIO io
             => Env s
-            -> Path
             -> CorePkg
             -> EitherT PackErr io (String, ResolvedPackage)
-resolveCore e pth c = do
-  when !(missing pth) $
-    withGit (tmpDir e) e.db.idrisURL e.db.idrisCommit (cacheCoreIpkgFiles e)
-  parseIpkgFile pth (Core c)
+resolveCore e c =
+  let pth := coreCachePath e c
+   in do
+     when !(missing pth) $
+       withGit (tmpDir e) e.db.idrisURL e.db.idrisCommit (cacheCoreIpkgFiles e)
+     parseIpkgFile pth (Core c)
 
 covering
 resolveImpl :  HasIO io
             => (e : Env s)
             -> PkgName
             -> EitherT PackErr io (String, ResolvedPackage)
-resolveImpl e "base"    = resolveCore e (basePath e) Base
-resolveImpl e "contrib" = resolveCore e (contribPath e) Contrib
-resolveImpl e "linear"  = resolveCore e (linearPath e) Linear
-resolveImpl e "idris2"  = resolveCore e (idrisApiPath e) IdrisApi
-resolveImpl e "network" = resolveCore e (networkPath e) Network
-resolveImpl e "prelude" = resolveCore e (preludePath e) Prelude
-resolveImpl e "test"    = resolveCore e (testPath e) Test
+resolveImpl e "base"    = resolveCore e Base
+resolveImpl e "contrib" = resolveCore e Contrib
+resolveImpl e "linear"  = resolveCore e Linear
+resolveImpl e "idris2"  = resolveCore e IdrisApi
+resolveImpl e "network" = resolveCore e Network
+resolveImpl e "prelude" = resolveCore e Prelude
+resolveImpl e "test"    = resolveCore e Test
 resolveImpl e n         = case lookup n (allPackages e) of
   Nothing  => throwE (UnknownPkg n)
 
@@ -78,13 +72,14 @@ resolveImpl e n         = case lookup n (allPackages e) of
     let cache = ipkgPath e n commit ipkg
      in do
        when !(missing cache) $
-         withGit (tmpDir e) url commit $ do
-           let pf = patchFile e n ipkg
-           when !(exists pf) (patch ipkg pf)
-           copyFile ipkg cache
+         withGit (tmpDir e) url commit $ \dir => do
+           let ipkgAbs := dir </> ipkg
+               pf      := patchFile e n ipkg
+           when !(exists pf) (patch ipkgAbs pf)
+           copyFile ipkgAbs cache
        parseIpkgFile cache (RGitHub n url commit ipkg pp)
   Just (Local dir ipkg pp) =>
-    inDir dir $ parseIpkgFile ipkg (RLocal n dir ipkg pp)
+    parseIpkgFile (dir </> ipkg) (RLocal n dir ipkg pp)
 
 execStr : PkgDesc -> String
 execStr d = maybe "library" (const "application") d.executable
