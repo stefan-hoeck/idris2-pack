@@ -461,7 +461,7 @@ packagePathDirs : Env s -> String
 packagePathDirs e =
   let pth = fastConcat
           . intersperse ":"
-          . map (show . pkgPathDir e)
+          . map (interpolate . pkgPathDir e)
           $ SortedMap.toList (allPackages e)
    in "\{idrisInstallDir e}:\{pth}"
 
@@ -470,7 +470,7 @@ packageLibDirs : Env s -> String
 packageLibDirs e =
   let pth = fastConcat
           . intersperse ":"
-          . map (show . pkgLibDir e)
+          . map (interpolate . pkgLibDir e)
           $ SortedMap.toList (allPackages e)
    in "\{idrisLibDir e}:\{pth}"
 
@@ -479,7 +479,7 @@ packageDataDirs : Env s -> String
 packageDataDirs e =
   let pth = fastConcat
           . intersperse ":"
-          . map (show . pkgDataDir e)
+          . map (interpolate . pkgDataDir e)
           $ SortedMap.toList (allPackages e)
    in "\{idrisDataDir e}:\{pth}"
 

@@ -252,7 +252,7 @@ repl :  HasIO io
      -> Env HasIdris
      -> EitherT PackErr io ()
 repl Nothing e  = idrisRepl e ""
-repl (Just p) e = idrisRepl e (show p)
+repl (Just p) e = idrisRepl e "\{p}"
 
 ||| Install an Idris application given as a package name
 export covering
