@@ -399,11 +399,23 @@ packagePrefixDir e (RGitHub n _ c _ _ _) = githubPkgPrefixDir e n c
 packagePrefixDir e (RLocal n _ _ _ _)    = localPkgPrefixDir e n
 packagePrefixDir e (Core _ _)            = idrisPrefixDir e
 
+||| Timestamp used to monitor if a local package has been
+||| modified and requires reinstalling.
 export
-packageTimestamp : Env s -> ResolvedPackage -> Maybe Path
-packageTimestamp e p@(RLocal {}) = Just $ packagePrefixDir e p /> ".timestamp"
-packageTimestamp e _             = Nothing
+localTimestamp :  Env s
+               -> (p : ResolvedPackage)
+               -> {auto 0 prf : IsLocal p}
+               -> Path Abs
+localTimestamp e p = packagePrefixDir e p /> ".timestamp"
 
+||| Directory where the sources of a local package are
+||| stored.
+export
+localSrcDir :  (p : ResolvedPackage)
+            -> {auto 0 prf : IsLocal p}
+            -> Path Abs
+localSrcDir (RLocal _ dir _ _ d) =
+  dir /> fromMaybe "build" (d.sourcedir >>= body)
 
 export
 packageInstallPrefix : Env s -> ResolvedPackage -> List (String,String)

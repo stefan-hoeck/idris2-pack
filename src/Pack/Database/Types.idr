@@ -151,6 +151,11 @@ data ResolvedPackage : Type where
   ||| The *base* library from the Idris2 project.
   Core    : CorePkg -> PkgDesc -> ResolvedPackage
 
+||| Witness that a resolved package is a local package.
+public export
+data IsLocal : ResolvedPackage -> Type where
+  ItIsLocal : IsLocal (RLocal n d i p de)
+
 ||| True, if the given resolved package represents
 ||| one of the core packages (`base`, `prelude`, etc.)
 export
