@@ -160,30 +160,30 @@ chgDir dir = do
 export
 inDir :  HasIO io
       => (dir : Path Abs)
-      -> (act : EitherT PackErr io a)
+      -> (act : Path Abs -> EitherT PackErr io a)
       -> EitherT PackErr io a
 inDir dir act =
-  curDir >>= \cur => finally (chgDir cur) (chgDir dir >> act)
+  curDir >>= \cur => finally (chgDir cur) (chgDir dir >> act dir)
 
 ||| Returns the names of entries in a directory
 export
 entries :  HasIO io
         => (dir : Path Abs)
-        -> EitherT PackErr io (List $ Path Rel)
+        -> EitherT PackErr io (List Body)
 entries dir = do
   ss <- eitherIO (DirEntries dir) (listDir "\{dir}")
-  pure (map (neutral />) $ mapMaybe body ss)
+  pure (mapMaybe body ss)
 
-||| Returns the names of entries in a directory
+||| Returns the names of toml files in a directory
 export
 tomlFiles :  HasIO io
           => (dir : Path Abs)
-          -> EitherT PackErr io (List $ Path Rel)
-tomlFiles dir = filter isTomlFile <$> entries dir
+          -> EitherT PackErr io (List Body)
+tomlFiles dir = filter isTomlBody <$> entries dir
 
 ||| Returns the names of entries in the current directory
 export
-currentEntries : HasIO io => EitherT PackErr io (List $ Path Rel)
+currentEntries : HasIO io => EitherT PackErr io (List Body)
 currentEntries = curDir >>= entries
 
 ||| Copy a directory.

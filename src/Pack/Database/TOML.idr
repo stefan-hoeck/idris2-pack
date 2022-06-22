@@ -36,7 +36,7 @@ idrisRepo : URL
 idrisRepo = "https://github.com/idris-lang/Idris2.git"
 
 export
-db : FromTOML c => Path Abs -> Value -> Either TOMLErr DB
+db : Path Abs -> Value -> Either TOMLErr DB
 db dir v = [| MkDB (optValAt "idris2.url" idrisRepo v)
                    (valAt "idris2.commit" v)
                    (valAt "idris2.version" v)

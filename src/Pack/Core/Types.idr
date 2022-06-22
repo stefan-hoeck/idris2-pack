@@ -16,10 +16,20 @@ export
 isIpkgFile : Path t -> Bool
 isIpkgFile = (Just "ipkg" ==) . extension
 
+||| True if the given file path body ends on `.ipkg`
+export
+isIpkgBody : Body -> Bool
+isIpkgBody = (Just "ipkg" ==) . map snd . splitFileName
+
 ||| True if the given file path ends on `.toml`
 export
 isTomlFile : Path t -> Bool
 isTomlFile = (Just "toml" ==) . extension
+
+||| True if the given file path body ends on `.toml`
+export
+isTomlBody : Body -> Bool
+isTomlBody = (Just "toml" ==) . map snd . splitFileName
 
 toRelPath : String -> Path Rel
 toRelPath s = case the FilePath (fromString s) of
@@ -30,6 +40,12 @@ export
 toAbsPath : Path Abs -> FilePath -> Path Abs
 toAbsPath dir (FP $ PAbs sx) = PAbs sx
 toAbsPath dir (FP $ PRel sx) = dir </> PRel sx
+
+export
+tryParse : String -> Maybe (Path Abs)
+tryParse s = case the FilePath (fromString s) of
+  FP (PAbs sx) => Just (PAbs sx)
+  FP (PRel _)  => Nothing
 
 export
 parse : String -> Path Abs -> Path Abs

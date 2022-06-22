@@ -1,6 +1,7 @@
 module Pack.Database.Types
 
 import Data.List1
+import Data.List.Elem
 import Data.SortedMap
 import Data.String
 import Idris.Package.Types
@@ -80,6 +81,10 @@ data CorePkg =
   | Test
   | IdrisApi
 
+public export
+corePkgs : List CorePkg
+corePkgs = [Prelude, Base, Contrib, Linear, Network, Test, IdrisApi]
+
 export
 Interpolation CorePkg where
   interpolate Prelude  = "prelude"
@@ -108,6 +113,11 @@ export
 coreIpkgFile : CorePkg -> Body
 coreIpkgFile IdrisApi = "idris2api.ipkg"
 coreIpkgFile c        = toBody c <+> ".ipkg"
+
+export
+coreIpkgPath : CorePkg -> Path Rel
+coreIpkgPath IdrisApi = "idris2api.ipkg"
+coreIpkgPath c        = neutral /> "libs" /> toBody c /> coreIpkgFile c
 
 ||| A resolved package, which was downloaded from GitHub
 ||| or looked up in the local file system. This comes with
@@ -244,3 +254,17 @@ printDB (MkDB u c v db) =
         commit  = "\{c}"
         """
    in unlines $ header :: map printPair (SortedMap.toList db)
+
+--------------------------------------------------------------------------------
+--          Tests
+--------------------------------------------------------------------------------
+
+-- make sure no core package was forgotten
+0 corePkgsTest : (c : CorePkg) -> Elem c Types.corePkgs
+corePkgsTest Prelude  = %search
+corePkgsTest Base     = %search
+corePkgsTest Contrib  = %search
+corePkgsTest Linear   = %search
+corePkgsTest Network  = %search
+corePkgsTest Test     = %search
+corePkgsTest IdrisApi = %search

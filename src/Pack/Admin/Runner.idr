@@ -1,7 +1,6 @@
 module Pack.Admin.Runner
 
 import Data.SortedMap
-import Libraries.Utils.Path
 import Pack.Admin.Runner.Check
 import Pack.CmdLn.Opts
 import Pack.CmdLn.Types
@@ -12,15 +11,15 @@ import Pack.Runner.Install
 import public Pack.Core
 
 data ACmd : Type where
-  CheckDB  : DBName -> Path -> ACmd
-  FromHEAD : (path : Path) -> ACmd
+  CheckDB  : DBName -> Path Abs -> ACmd
+  FromHEAD : (path : Path Abs) -> ACmd
   Help     : ACmd
 
-readCmd : List String -> Either PackErr ACmd
-readCmd ["help"]                 = Right Help
-readCmd ["extract-from-head",p]  = Right (FromHEAD $ parse p)
-readCmd ["check-collection",n,p] = Right (CheckDB (MkDBName n) (parse p))
-readCmd xs                       = Left $ UnknownCommand xs
+readCmd : Path Abs -> List String -> Either PackErr ACmd
+readCmd _   ["help"]                 = Right Help
+readCmd dir ["extract-from-head",p]  = Right (FromHEAD $ parse p dir)
+readCmd dir ["check-collection",n,p] = Right (CheckDB (MkDBName n) (parse p dir))
+readCmd _   xs                       = Left $ UnknownCommand xs
 
 covering
 commitOf : HasIO io => Package -> EitherT PackErr io Package
@@ -42,7 +41,7 @@ dbOf (MkDB u commit v ps) = do
 -- package to one holding the latest commit hash for each
 -- and writes the resulting DB to the given file.
 covering
-writeLatestDB : HasIO io => Path -> Env s -> EitherT PackErr io ()
+writeLatestDB : HasIO io => Path Abs -> Env s -> EitherT PackErr io ()
 writeLatestDB path e = do
   ndb <- dbOf e.db
   write path (printDB ndb)

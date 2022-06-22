@@ -208,27 +208,25 @@ readTOML path = do
 ||| @ file : Name of the .toml file to read
 export covering
 readFromTOML :  HasIO io
-             => (dir  : Path Abs)
-             -> (file : Body)
+             => (file : Path Abs)
              -> (Path Abs -> Value -> Either TOMLErr a)
              -> EitherT PackErr io a
-readFromTOML dir file f =
-  let toml = dir /> file
-   in do
-     v <- readTOML toml
-     liftEither $ mapFst (TOMLFile toml) (f dir v)
+readFromTOML file f = case parentDir file of
+  Just dir => do
+    v <- readTOML file
+    liftEither $ mapFst (TOMLFile file) (f dir v)
+  Nothing  => throwE (TOMLParse file "no parent directory")
 
 ||| Reads a file, converts its content to a TOML value, and
 ||| extracts an Idris value from this.
 export covering
 readOptionalFromTOML :  HasIO io
-                     => (dir  : Path Abs)
-                     -> (file : Body)
+                     => (file : Path Abs)
                      -> (Path Abs -> Value -> Either TOMLErr a)
                      -> EitherT PackErr io a
-readOptionalFromTOML dir file f =
-  let toml = dir /> file
-   in do
-     True <- exists toml
-       | False => liftEither (mapFst (TOMLFile toml) . f dir $ VTable empty)
-     readFromTOML dir file f
+readOptionalFromTOML file f = case parentDir file of
+  Just dir => do
+    True <- exists file
+      | False => liftEither (mapFst (TOMLFile file) . f dir $ VTable empty)
+    readFromTOML file f
+  Nothing  => throwE (TOMLParse file "no parent directory")

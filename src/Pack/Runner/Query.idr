@@ -4,7 +4,6 @@ import Core.Name.Namespace
 import Data.List
 import Data.Maybe
 import Data.SortedMap
-import Data.String
 import Idris.Package.Types
 import Pack.CmdLn.Types
 import Pack.Config.Types
@@ -234,10 +233,10 @@ fuzzyPkg q e allPkgs rp =
   let dir = tmpDir e
    in do
      mkDir dir
-     finally (rmDir dir) $ inDir dir $ do
+     finally (rmDir dir) $ inDir dir $ \d => do
        putStrLn "\{name rp}:\n"
-       write (parse "test.idr") (imports rp)
-       write (parse "input") ":fs \{q}\n"
+       write (d /> "test.idr") (imports rp)
+       write (d /> "input") ":fs \{q}\n"
 
        let (cmd,env) := idrisWithPkgs e allPkgs
 

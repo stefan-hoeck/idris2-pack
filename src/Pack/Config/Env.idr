@@ -1,7 +1,6 @@
 module Pack.Config.Env
 
 import Data.Maybe
-import Data.String
 import Pack.CmdLn.Opts
 import Pack.CmdLn.Types
 import Pack.Config.TOML
@@ -38,36 +37,43 @@ export
 warn : HasIO io => (conf : Config s) -> (msg  : Lazy String) -> io ()
 warn c = log c Warning
 
-configPath : Path -> Path
-configPath dir = dir /> "user" /> "pack.toml"
+configPath : Path Abs -> Path Abs
+configPath dir = dir /> "user" /> packToml
+
+getEnvPath : HasIO io => String -> io (Maybe (Path Abs))
+getEnvPath s = (>>= tryParse) <$> getEnv s
 
 ||| Return the path of the *pack* root directory,
 ||| either from environment variable `$PACK_DIR`, or
 ||| as `$HOME/.pack`.
 export
-packDir : HasIO io => EitherT PackErr io Path
+packDir : HasIO io => EitherT PackErr io (Path Abs)
 packDir = do
-  Nothing <- getEnv "PACK_DIR" | Just v => pure (parse v)
-  Nothing <- getEnv "HOME"     | Just v => pure (parse v /> ".pack")
+  Nothing <- getEnvPath "PACK_DIR" | Just v => pure v
+  Nothing <- getEnvPath "HOME"     | Just v => pure (v /> ".pack")
   throwE NoPackDir
 
 ||| Update the package database.
 export
-updateDB_ : HasIO io => (packDir : Path) -> EitherT PackErr io ()
+updateDB_ : HasIO io => (packDir : Path Abs) -> EitherT PackErr io ()
 updateDB_ packDir = do
   rmDir (dbDir_ packDir)
-  withGit (tmpDir_ packDir) dbRepo "main" $
-    copyDir (tmpDir_ packDir /> "collections") (dbDir_ packDir)
+  withGit (tmpDir_ packDir) dbRepo "main" $ \d =>
+    copyDir (d /> "collections") (dbDir_ packDir)
 
 ||| Loads the name of the default collection (currently the latest
 ||| nightly)
 export
-defaultColl : HasIO io => (packDir : Path) -> EitherT PackErr io DBName
+defaultColl : HasIO io => (packDir : Path Abs) -> EitherT PackErr io DBName
 defaultColl packDir = do
   when !(missing $ dbDir_ packDir) (updateDB_ packDir)
   (x :: xs) <- filter ("HEAD.toml" /=) <$> tomlFiles (dbDir_ packDir)
     | [] => pure $ MkDBName "HEAD"
-  pure . MkDBName . fromMaybe "HEAD" . fileStem $ foldl max x xs
+  pure
+    . MkDBName
+    . maybe "HEAD" (interpolate . fst)
+    . splitFileName
+    $ foldl max x xs
 
 ||| Update the package database.
 export
@@ -84,44 +90,47 @@ resolveMeta (Local d i p) = pure $ Local d i p
 
 -- tries to fiend a `pack.toml` file in the given directory
 -- or one of its parent directories (to a maximal depth of 100 dirs).
-findPackToml : HasIO io => String -> io (Maybe Path)
-findPackToml = go 100
-  where go : Nat -> String -> io (Maybe Path)
-        go 0     _   = pure Nothing
-        go (S k) str =
-          let pth = parse $ str </> "pack.toml"
+findPackToml : HasIO io => Path Abs -> io (Maybe $ Path Abs)
+findPackToml (PAbs sb) = go sb
+  where go : SnocList Body -> io (Maybe $ Path Abs)
+        go [<]       = pure Nothing
+        go (sb :< b) =
+          let dir  = PAbs (sb :< b)
+              pth  = dir /> packToml
            in do
              False <- exists pth | True => pure (Just pth)
-             case parent str of
-               Just p  => go k p
-               Nothing => pure Nothing
+             go sb
 
 ||| Read application config from command line arguments.
 export covering
 getConfig :  HasIO io
-          => (readCmd : List String -> Either PackErr a)
+          => (readCmd : Path Abs -> List String -> Either PackErr a)
           -> (dflt    : a)
           -> EitherT PackErr io (Config Nothing,a)
 getConfig readCmd dflt = do
+  -- relevant directories
+  cur        <- curDir
   dir        <- packDir
   coll       <- defaultColl dir
 
-  -- Initialize `pack.toml` if none exists
-  when !(missing $ configPath dir) $
-    write (configPath dir) (initToml "scheme" coll)
+  let globalConfig       = configPath dir
 
-  localToml   <- curDir >>= findPackToml . show
-  global'     <- readOptionalFromTOML (configPath dir) config
+  -- Initialize `pack.toml` if none exists
+  when !(missing globalConfig) $
+    write globalConfig (initToml "scheme" coll)
+
+  localToml   <- findPackToml cur
+  global'     <- readOptionalFromTOML globalConfig config
   local'      <- case localToml of
-    Just pth => readFromTOML pth config
-    Nothing  => readOptionalFromTOML (parse "pack.toml") config
+    Just p  => readFromTOML p config
+    Nothing => readOptionalFromTOML (cur /> packToml) config
   global      <- traverse resolveMeta global'
   local       <- traverse resolveMeta local'
 
   let ini = init dir coll `update` global `update` local
 
   pn :: args <- getArgs | Nil => pure (ini, dflt)
-  (conf,cmd) <- liftEither $ applyArgs ini args readCmd
+  (conf,cmd) <- liftEither $ applyArgs cur ini args (readCmd cur)
   debug conf "Config loaded"
   mkDir conf.packDir
   pure (conf,cmd)
@@ -135,7 +144,7 @@ loadDB : HasIO io => (conf : Config s) -> EitherT PackErr io DB
 loadDB conf = do
   when !(missing $ dbDir conf) (updateDB conf)
   debug conf "reading package collection"
-  readFromTOML (dbFile conf) (fromTOML)
+  readFromTOML (dbFile conf) db
 
 ||| Load the package database and create a package
 ||| environment.

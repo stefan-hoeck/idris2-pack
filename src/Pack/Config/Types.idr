@@ -236,6 +236,10 @@ update ci cm = MkConfig {
 --          Files and Directories
 --------------------------------------------------------------------------------
 
+export
+packToml : Body
+packToml = "pack.toml"
+
 ||| Temporary directory used for building packages.
 export
 tmpDir_ : (packDir : Path Abs) -> Path Abs
@@ -266,54 +270,16 @@ export
 ipkgPath : Config s -> PkgName -> Commit -> Path Rel -> Path Abs
 ipkgPath c p com ipkg = cacheDir c <//> p <//> com </> ipkg
 
--- path to cached core library `.ipkg` file
+||| Path to cached core library `.ipkg` file
+export
 coreCachePath : Env s -> CorePkg -> Path Abs
 coreCachePath  e n =
   cacheDir e <//> n <//> e.db.idrisCommit /> coreIpkgFile n
-
-||| Path to cached `prelude.ipkg` file.
-export
-preludePath : Env s -> Path Abs
-preludePath e = coreCachePath e Prelude
-
-||| Path to cached `base.ipkg` file.
-export
-basePath : Env s -> Path Abs
-basePath e = coreCachePath e Base
-
-||| Path to cached `contrib.ipkg` file.
-export
-contribPath : Env s -> Path Abs
-contribPath e = coreCachePath e Contrib
-
-||| Path to cached `network.ipkg` file.
-export
-networkPath : Env s -> Path Abs
-networkPath e = coreCachePath e Network
-
-||| Path to cached `test.ipkg` file.
-export
-testPath : Env s -> Path Abs
-testPath e = coreCachePath e Test
-
-||| Path to cached `test.ipkg` file.
-export
-linearPath : Env s -> Path Abs
-linearPath e = coreCachePath e Linear
-
-||| Path to cached `idris2api.ipkg` file.
-export
-idrisApiPath : Env s -> Path Abs
-idrisApiPath e = coreCachePath e IdrisApi
 
 ||| Directory where user settings are stored.
 export
 userDir : Config s -> Path Abs
 userDir c = c.packDir /> "user"
-
-export
-packToml : (dir : Path Abs) -> Path Abs
-packToml dir = dir </> "user/pack.toml"
 
 ||| File where package DB is located
 export
