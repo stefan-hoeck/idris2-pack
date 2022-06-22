@@ -2,7 +2,6 @@ module Pack.CmdLn.Types
 
 import Pack.Core.Types
 import Pack.Database.Types
-import Libraries.Utils.Path
 
 %default total
 
@@ -15,16 +14,16 @@ data QueryMode = PkgName | Dependency | Module
 public export
 data Cmd : Type where
   -- Developing Idris libs and apps
-  Build            : Path -> Cmd
-  BuildDeps        : Path -> Cmd
-  Typecheck        : Path -> Cmd
-  Repl             : Maybe Path -> Cmd
+  Build            : Path Abs -> Cmd
+  BuildDeps        : Path Abs -> Cmd
+  Typecheck        : Path Abs -> Cmd
+  Repl             : Maybe (Path Abs) -> Cmd
 
   -- Package management
   Install          : List PkgName -> Cmd
   InstallApp       : List PkgName -> Cmd
   Remove           : List PkgName -> Cmd
-  Run              : Either Path PkgName -> List String -> Cmd
+  Run              : Either (Path Abs) PkgName -> List String -> Cmd
 
   -- Idris environment
   PackagePath      : Cmd

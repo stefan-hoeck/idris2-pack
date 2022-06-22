@@ -17,7 +17,7 @@ dbRepo = "https://github.com/stefan-hoeck/idris2-pack-db"
 export
 gitClone :  HasIO io
          => (url  : URL)
-         -> (dest : Path)
+         -> (dest : Path Abs)
          -> EitherT PackErr io ()
 gitClone url dest = sys "git clone -q \{url} \{dest}"
 
@@ -42,7 +42,7 @@ gitLatest url c =
 |||          this will fail.
 export
 withGit :  HasIO io
-        => (dir    : Path)
+        => (dir    : Path Abs)
         -> (url    : URL)
         -> (commit : Commit)
         -> (act    : EitherT PackErr io a)

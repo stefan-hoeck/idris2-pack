@@ -199,7 +199,9 @@ addField p (PPostclean fc e)     = { postclean := Just (fc, e) } p
 addFields : (name : String) -> List DescField -> PkgDesc
 addFields = foldl addField . initPkgDesc
 
-parseIpkg : (path : Path) -> (str : String) -> Either PackErr PkgDesc
+parseIpkg :  (path : Path Abs)
+          -> (str : String)
+          -> Either PackErr PkgDesc
 parseIpkg path str =
   let err = InvalidIpkgFile path
    in do
@@ -209,7 +211,7 @@ parseIpkg path str =
 
 export covering
 parseIpkgFile :  HasIO io
-              => (path : Path)
+              => (path : Path Abs)
               -> (PkgDesc -> a)
               -> EitherT PackErr io (String, a)
 parseIpkgFile path f = do

@@ -1,8 +1,7 @@
 module Pack.Core.IO
 
 import public Control.Monad.Either
-import public Libraries.Utils.Path
-import Data.String
+import Data.FilePath
 import Pack.Core.Types
 import System
 import System.Directory
@@ -116,50 +115,51 @@ sysRunWithEnv cmd env = do
 
 ||| Checks if a file at the given location exists.
 export
-exists : HasIO io => (dir : Path) -> io Bool
-exists = exists . show
+exists : HasIO io => (dir : Path Abs) -> io Bool
+exists = exists . interpolate
 
 ||| Checks if a file at the given location is missing.
 export
-missing : HasIO io => (dir : Path) -> io Bool
+missing : HasIO io => (dir : Path Abs) -> io Bool
 missing = map not . exists
 
 ||| Tries to create a director (including parent directories)
 export
-mkDir : HasIO io => (dir : Path) -> EitherT PackErr io ()
-mkDir dir = case show dir of
-  "" => pure ()
-  s  => sys "mkdir -p \{s}"
+mkDir : HasIO io => (dir : Path Abs) -> EitherT PackErr io ()
+mkDir (PAbs [<]) = pure ()
+mkDir d          = sys "mkdir -p \{d}"
 
 ||| Creates a parent directory of a (file) path
 export
-mkParentDir : HasIO io => (dir : Path) -> EitherT PackErr io ()
-mkParentDir dir = whenJust (parent $ show dir) (mkDir . parse)
+mkParentDir : HasIO io => (p : Path Abs) -> EitherT PackErr io ()
+mkParentDir p = whenJust (parentDir p) mkDir
 
 ||| Forcefully deletes a directory with all its content
 export
-rmDir : HasIO io => (dir : Path) -> EitherT PackErr io ()
+rmDir : HasIO io => (dir : Path Abs) -> EitherT PackErr io ()
 rmDir dir = when !(exists dir) $ sys "rm -rf \{dir}"
 
 ||| Returns the current directory's path.
 export
-curDir : HasIO io => EitherT PackErr io Path
+curDir : HasIO io => EitherT PackErr io (Path Abs)
 curDir = do
   Just s <- currentDir | Nothing => throwE CurDir
-  pure $ parse s
+  case the FilePath (fromString s) of
+    FP (PAbs sx) => pure (PAbs sx)
+    FP (PRel _)  => throwE CurDir
 
 ||| Changes the working directory
 export
-chgDir : HasIO io => (dir : Path) -> EitherT PackErr io ()
+chgDir : HasIO io => (dir : Path Abs) -> EitherT PackErr io ()
 chgDir dir = do
-  True <- changeDir (show dir) | False => throwE (ChangeDir dir)
+  True <- changeDir "\{dir}" | False => throwE (ChangeDir dir)
   pure ()
 
 ||| Runs an action in the given directory, changing back
 ||| to the current directory afterwards.
 export
 inDir :  HasIO io
-      => (dir : Path)
+      => (dir : Path Abs)
       -> (act : EitherT PackErr io a)
       -> EitherT PackErr io a
 inDir dir act =
@@ -167,22 +167,28 @@ inDir dir act =
 
 ||| Returns the names of entries in a directory
 export
-entries : HasIO io => (dir : Path) -> EitherT PackErr io (List String)
-entries dir = eitherIO (DirEntries dir) (listDir $ show dir)
+entries :  HasIO io
+        => (dir : Path Abs)
+        -> EitherT PackErr io (List $ Path Rel)
+entries dir = do
+  ss <- eitherIO (DirEntries dir) (listDir "\{dir}")
+  pure (map (neutral />) $ mapMaybe body ss)
 
 ||| Returns the names of entries in a directory
 export
-tomlFiles : HasIO io => (dir : Path) -> EitherT PackErr io (List String)
-tomlFiles dir = filter ((Just "toml" ==) . extension) <$> entries dir
+tomlFiles :  HasIO io
+          => (dir : Path Abs)
+          -> EitherT PackErr io (List $ Path Rel)
+tomlFiles dir = filter isTomlFile <$> entries dir
 
 ||| Returns the names of entries in the current directory
 export
-currentEntries : HasIO io => EitherT PackErr io (List String)
-currentEntries = entries (parse ".")
+currentEntries : HasIO io => EitherT PackErr io (List $ Path Rel)
+currentEntries = curDir >>= entries
 
 ||| Copy a directory.
 export
-copyDir : HasIO io => (from,to : Path) -> EitherT PackErr io ()
+copyDir : HasIO io => (from,to : Path Abs) -> EitherT PackErr io ()
 copyDir from to = do
   mkParentDir to
   sys "cp -r \{from} \{to}"
@@ -193,19 +199,19 @@ copyDir from to = do
 
 ||| Delete a file.
 export
-rmFile : HasIO io => (f : Path) -> EitherT PackErr io ()
+rmFile : HasIO io => (f : Path Abs) -> EitherT PackErr io ()
 rmFile f = when !(exists f) $ sys "rm \{f}"
 
 ||| Tries to read the content of a file
 export covering
-read : HasIO io => Path -> EitherT PackErr io String
-read fn = eitherIO (ReadFile fn) (readFile $ show fn)
+read : HasIO io => Path Abs -> EitherT PackErr io String
+read fn = eitherIO (ReadFile fn) (readFile "\{fn}")
 
 ||| Reads the content of a file if it exists, otherwise
 ||| returns the given alternative string.
 export covering
 readIfExists :  HasIO io
-             => (path : Path)
+             => (path : Path Abs)
              -> (alt  : String)
              -> EitherT PackErr io String
 readIfExists path alt = do
@@ -216,15 +222,15 @@ readIfExists path alt = do
 ||| The file's parent directory is created if
 ||| it does not yet exist.
 export covering
-write : HasIO io => Path -> String -> EitherT PackErr io ()
+write : HasIO io => Path Abs -> String -> EitherT PackErr io ()
 write path str = do
   mkParentDir path
-  eitherIO (WriteFile path) (writeFile (show path) str)
+  eitherIO (WriteFile path) (writeFile "\{path}" str)
 
 ||| Creates a symbolic link from one path to another,
 ||| remove a link at path `to` if there already is one.
 export
-link : HasIO io => (from,to : Path) -> EitherT PackErr io ()
+link : HasIO io => (from,to : Path Abs) -> EitherT PackErr io ()
 link from to = do
   rmFile to
   mkParentDir to
@@ -232,7 +238,7 @@ link from to = do
 
 ||| Copy a file.
 export
-copyFile : HasIO io => (from,to : Path) -> EitherT PackErr io ()
+copyFile : HasIO io => (from,to : Path Abs) -> EitherT PackErr io ()
 copyFile from to = do
   mkParentDir to
   sys "cp \{from} \{to}"
@@ -240,7 +246,7 @@ copyFile from to = do
 ||| Patch a file
 export
 patch :  HasIO io
-      => (original : Path)
-      -> (patch    : Path)
+      => (original : Path Abs)
+      -> (patch    : Path Abs)
       -> EitherT PackErr io ()
 patch o p = do sys "patch \{o} \{p}"

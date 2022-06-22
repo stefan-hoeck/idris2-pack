@@ -2,7 +2,6 @@ module Pack.Config.Env
 
 import Data.Maybe
 import Data.String
-import Libraries.Utils.Path
 import Pack.CmdLn.Opts
 import Pack.CmdLn.Types
 import Pack.Config.TOML

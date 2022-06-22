@@ -4,27 +4,89 @@
 ||| type safety.
 module Pack.Core.Types
 
-import Data.List1
-import Data.String
+import public Data.FilePath
+import Data.Maybe
 import Idris.Package.Types
-import Libraries.Utils.Path
 import System.File
 
 %default total
 
 ||| True if the given file path ends on `.ipkg`
 export
-isIpkgFile : String -> Bool
+isIpkgFile : Path t -> Bool
 isIpkgFile = (Just "ipkg" ==) . extension
+
+||| True if the given file path ends on `.toml`
+export
+isTomlFile : Path t -> Bool
+isTomlFile = (Just "toml" ==) . extension
+
+toRelPath : String -> Path Rel
+toRelPath s = case the FilePath (fromString s) of
+  FP (PAbs sx) => PRel sx
+  FP (PRel sx) => PRel sx
+
+export
+toAbsPath : Path Abs -> FilePath -> Path Abs
+toAbsPath dir (FP $ PAbs sx) = PAbs sx
+toAbsPath dir (FP $ PRel sx) = dir </> PRel sx
+
+export
+parse : String -> Path Abs -> Path Abs
+parse s dir = toAbsPath dir (fromString s)
+
+--------------------------------------------------------------------------------
+--          ToRelPath
+--------------------------------------------------------------------------------
+
+||| We use this interface to convert a value such as a
+||| commit hash or package name to a relative path in the
+||| file system.
+public export
+interface ToRelPath a where
+  relPath : a -> Path Rel
+
+export %inline
+ToRelPath String where
+  relPath = toRelPath
+
+export %inline
+ToRelPath (Path Rel) where
+  relPath = id
+
+infixl 5 <//>
+
+export %inline
+(<//>) : ToRelPath a => Path Abs -> a -> Path Abs
+p <//> v = p </> relPath v
+
+||| We use this interface to convert a value such as a
+||| commit hash or package name to a relative path in the
+||| file system.
+public export
+interface ToBody a where
+  toBody : a -> Body
+
+export %inline
+ToBody Body where
+  toBody = id
+
+infixl 5 //>
+
+export %inline
+(//>) : ToBody a => Path t -> a -> Path t
+p //> v = p /> toBody v
+
+infixl 8 <->
+
+||| Concatenate two file path bodies with a hyphen inbetween.
+export
+(<->) : ToBody a => ToBody b => a -> b -> Body
+x <-> y = toBody x <+> "-" <+> toBody y
 
 --------------------------------------------------------------------------------
 --          Interpolation
 --------------------------------------------------------------------------------
-
-||| Convenience implementation for using paths in string
-||| interpolation
-export
-Interpolation Path where interpolate = show
 
 ||| Convenience implementation for printing file errors in string
 ||| interpolation
@@ -35,6 +97,17 @@ Interpolation FileError where interpolate = show
 ||| interpolation
 export
 Interpolation PkgVersion where interpolate = show
+
+||| Convert a package version to a file path body.
+export
+ToBody PkgVersion where
+  toBody = fromMaybe "0" . body . show
+
+||| Convert a package version to a file path body.
+export
+ToBody (Maybe PkgVersion) where
+  toBody Nothing  = "0"
+  toBody (Just v) = toBody v
 
 --------------------------------------------------------------------------------
 --          URL
@@ -73,6 +146,10 @@ FromString Commit where fromString = MkCommit
 export %inline
 Interpolation Commit where interpolate = value
 
+export %inline
+ToRelPath Commit where
+  relPath = toRelPath . value
+
 --------------------------------------------------------------------------------
 --          Package Name
 --------------------------------------------------------------------------------
@@ -95,6 +172,10 @@ FromString PkgName where fromString = MkPkgName
 export %inline
 Interpolation PkgName where interpolate = value
 
+export %inline
+ToRelPath PkgName where
+  relPath = toRelPath . value
+
 --------------------------------------------------------------------------------
 --          DBName
 --------------------------------------------------------------------------------
@@ -116,6 +197,10 @@ FromString DBName where fromString = MkDBName
 
 export %inline
 Interpolation DBName where interpolate = value
+
+export %inline
+ToRelPath DBName where
+  relPath = toRelPath . value
 
 --------------------------------------------------------------------------------
 --          Errors
@@ -153,22 +238,22 @@ data PackErr : Type where
   NoPackDir  : PackErr
 
   ||| Failed to create the given directory
-  MkDir      : (path : Path) -> (err : FileError) -> PackErr
+  MkDir      : (path : Path Abs) -> (err : FileError) -> PackErr
 
   ||| Failed to read the given file
-  ReadFile   : (path : Path) -> (err : FileError) -> PackErr
+  ReadFile   : (path : Path Abs) -> (err : FileError) -> PackErr
 
   ||| Failed to write to the given file
-  WriteFile  : (path : Path) -> (err : FileError) -> PackErr
+  WriteFile  : (path : Path Abs) -> (err : FileError) -> PackErr
 
   ||| Failed to read the content of a directory
-  DirEntries : (path : Path) -> (err : FileError) -> PackErr
+  DirEntries : (path : Path Abs) -> (err : FileError) -> PackErr
 
   ||| Error when running the given system command
   Sys        : (cmd : String) -> (err : Int) -> PackErr
 
   ||| Error when changing into the given directory
-  ChangeDir  : (path : Path) -> PackErr
+  ChangeDir  : (path : Path Abs) -> PackErr
 
   ||| The given package is not in the package data base
   UnknownPkg : (name : PkgName) -> PackErr
@@ -179,7 +264,7 @@ data PackErr : Type where
 
   ||| The given package is not an applicatio
   ||| (No executable name set in the `.ipkg` file)
-  NoAppIpkg  : (path : Path) -> PackErr
+  NoAppIpkg  : (path : Path Abs) -> PackErr
 
   ||| An erroneous package description in a package DB file
   InvalidPackageDesc : (s : String) -> PackErr
@@ -194,7 +279,7 @@ data PackErr : Type where
   InvalidPkgVersion : (s : String) -> PackErr
 
   ||| Failed to parse an .ipkg file
-  InvalidIpkgFile  : (path : Path) -> PackErr
+  InvalidIpkgFile  : (path : Path Abs) -> PackErr
 
   ||| The given core package (base, contrib, etc.)
   ||| is missing from the Idris installation.
@@ -222,13 +307,13 @@ data PackErr : Type where
 
   ||| Trying to clone a repository into an existing
   ||| directory.
-  DirExists : Path -> PackErr
+  DirExists : Path Abs -> PackErr
 
   ||| Error in a toml file.
-  TOMLFile :  (file : Path) -> (err : TOMLErr) -> PackErr
+  TOMLFile :  (file : Path Abs) -> (err : TOMLErr) -> PackErr
 
   ||| Error in a toml file.
-  TOMLParse : (file : Path) -> (err : String) -> PackErr
+  TOMLParse : (file : Path Abs) -> (err : String) -> PackErr
 
   ||| Number of failures when building packages.
   BuildFailures : Nat -> PackErr

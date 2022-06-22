@@ -3,10 +3,8 @@ module Pack.Config.Types
 import Data.List
 import Data.Maybe
 import Data.SortedMap
-import Data.String
 import Idris.Package.Types
 import Libraries.Data.List.Extra
-import Libraries.Utils.Path
 import Pack.Core.Types
 import Pack.Database.Types
 
@@ -108,13 +106,13 @@ record Config_ (c : Type) (f : Type -> Type) (s : Maybe State) where
   constructor MkConfig
   ||| Directory where the *pack* DB and installed
   ||| libraries and executables reside
-  packDir      : f Path
+  packDir      : f (Path Abs)
 
   ||| Package collection to use
   collection   : f DBName
 
   ||| Scheme executable to use
-  scheme       : f Path
+  scheme       : f FilePath
 
   ||| Whether to use bootstrapping when building Idris2
   bootstrap    : f Bool
@@ -128,7 +126,7 @@ record Config_ (c : Type) (f : Type -> Type) (s : Maybe State) where
   withSrc      : f Bool
 
   ||| The `.ipkg` file to use when starting a REPL session
-  withIpkg     : f (Maybe Path)
+  withIpkg     : f (Maybe $ Path Abs)
 
   ||| Whether to use `rlwrap` to run a REPL session
   rlwrap       : f Bool
@@ -192,11 +190,11 @@ allPackages e =
 
 ||| Initial config
 export
-init : (dir : Path) -> (coll : DBName) -> Config_ Commit I Nothing
+init : (dir : Path Abs) -> (coll : DBName) -> Config_ Commit I Nothing
 init dir coll = MkConfig {
     packDir      = dir
   , collection   = coll
-  , scheme       = parse "scheme"
+  , scheme       = "scheme"
   , bootstrap    = False
   , safetyPrompt = True
   , withSrc      = False
@@ -240,86 +238,87 @@ update ci cm = MkConfig {
 
 ||| Temporary directory used for building packages.
 export
-tmpDir_ : (packDir : Path) -> Path
+tmpDir_ : (packDir : Path Abs) -> Path Abs
 tmpDir_ packDir = packDir /> "tmp"
 
 ||| Temporary directory used for building packages.
 export
-tmpDir : Config s -> Path
+tmpDir : Config s -> Path Abs
 tmpDir = tmpDir_ . packDir
 
 ||| Directory where databases are stored.
 export
-dbDir_ : (packDir : Path) -> Path
+dbDir_ : (packDir : Path Abs) -> Path Abs
 dbDir_ packDir = packDir /> "db"
 
 ||| Directory where databases are stored.
 export
-dbDir : Config s -> Path
+dbDir : Config s -> Path Abs
 dbDir = dbDir_ . packDir
 
 ||| Directory where databases are stored.
 export
-cacheDir : Config s -> Path
+cacheDir : Config s -> Path Abs
 cacheDir c = c.packDir /> ".cache"
 
 ||| Path to cached `.ipkg` file.
 export
-ipkgPath : Config s -> PkgName -> Commit -> Path -> Path
-ipkgPath c p com ipkg = cacheDir c /> p.value /> com.value /> show ipkg
+ipkgPath : Config s -> PkgName -> Commit -> Path Rel -> Path Abs
+ipkgPath c p com ipkg = cacheDir c <//> p <//> com </> ipkg
 
 -- path to cached core library `.ipkg` file
-coreCachePath : Env s -> (name : String) -> (ipkg : String) -> Path
-coreCachePath  e n i = cacheDir e /> n /> e.db.idrisCommit.value /> "\{i}.ipkg"
+coreCachePath : Env s -> CorePkg -> Path Abs
+coreCachePath  e n =
+  cacheDir e <//> n <//> e.db.idrisCommit /> coreIpkgFile n
 
 ||| Path to cached `prelude.ipkg` file.
 export
-preludePath : Env s -> Path
-preludePath e = coreCachePath e "prelude" "prelude"
+preludePath : Env s -> Path Abs
+preludePath e = coreCachePath e Prelude
 
 ||| Path to cached `base.ipkg` file.
 export
-basePath : Env s -> Path
-basePath e = coreCachePath e "base" "base"
+basePath : Env s -> Path Abs
+basePath e = coreCachePath e Base
 
 ||| Path to cached `contrib.ipkg` file.
 export
-contribPath : Env s -> Path
-contribPath e = coreCachePath e "contrib" "contrib"
+contribPath : Env s -> Path Abs
+contribPath e = coreCachePath e Contrib
 
 ||| Path to cached `network.ipkg` file.
 export
-networkPath : Env s -> Path
-networkPath e = coreCachePath e "network" "network"
+networkPath : Env s -> Path Abs
+networkPath e = coreCachePath e Network
 
 ||| Path to cached `test.ipkg` file.
 export
-testPath : Env s -> Path
-testPath e = coreCachePath e "test" "test"
+testPath : Env s -> Path Abs
+testPath e = coreCachePath e Test
 
 ||| Path to cached `test.ipkg` file.
 export
-linearPath : Env s -> Path
-linearPath e = coreCachePath e "linear" "linear"
+linearPath : Env s -> Path Abs
+linearPath e = coreCachePath e Linear
 
 ||| Path to cached `idris2api.ipkg` file.
 export
-idrisApiPath : Env s -> Path
-idrisApiPath e = coreCachePath e "idris2" "idris2api"
+idrisApiPath : Env s -> Path Abs
+idrisApiPath e = coreCachePath e IdrisApi
 
 ||| Directory where user settings are stored.
 export
-userDir : Config s -> Path
+userDir : Config s -> Path Abs
 userDir c = c.packDir /> "user"
 
 export
-packToml : (dir : Path) -> Path
-packToml dir = dir /> "user" /> "pack.toml"
+packToml : (dir : Path Abs) -> Path Abs
+packToml dir = dir </> "user/pack.toml"
 
 ||| File where package DB is located
 export
-dbFile : Config s -> Path
-dbFile c = dbDir c /> c.collection.value <.> "toml"
+dbFile : Config s -> Path Abs
+dbFile c = (dbDir c <//> c.collection) <.> "toml"
 
 ||| A symbolic link to `idrisBinDir` of the current
 ||| db version. This corresponds to `$PACK_DIR/bin`
@@ -327,26 +326,26 @@ dbFile c = dbDir c /> c.collection.value <.> "toml"
 ||| order to have access to the current Idris2 binary
 ||| and related applications.
 export
-packBinDir : Config s -> Path
+packBinDir : Config s -> Path Abs
 packBinDir c = c.packDir /> "bin"
 
 ||| Directory where symbolic links to installed binaries
 ||| will be placed.
 export
-collectionBinDir : Config s -> Path
-collectionBinDir c = c.packDir /> c.collection.value /> "bin"
+collectionBinDir : Config s -> Path Abs
+collectionBinDir c = c.packDir <//> c.collection /> "bin"
 
 ||| Symbolic link to the Idris2 executable associated with
 ||| each collection.
 export
-collectionIdrisExec : Config s -> Path
+collectionIdrisExec : Config s -> Path Abs
 collectionIdrisExec c = collectionBinDir c /> "idris2"
 
 ||| Symbolic link to an application installed for a package
 ||| collection.
 export
-collectionAppExec : Config s -> String -> Path
-collectionAppExec c s = collectionBinDir c /> s
+collectionAppExec : Config s -> Path Rel -> Path Abs
+collectionAppExec c s = collectionBinDir c </> s
 
 ||| `$SCHEME` variable during Idris2 installation
 export
@@ -355,14 +354,14 @@ schemeVar c = "SCHEME=\"\{c.scheme}\""
 
 ||| Directory where `.ipkg` patches are stored.
 export
-patchesDir : Config s -> Path
+patchesDir : Config s -> Path Abs
 patchesDir c = dbDir c /> "patches"
 
 ||| File where the patch (if any) for an `.ipkg` file is stored.
 export
-patchFile : Config s -> PkgName -> Path -> Path
+patchFile : Config s -> PkgName -> Path Rel -> Path Abs
 patchFile c n ipkg =
-  patchesDir c /> c.collection.value /> n.value /> "\{ipkg}.patch"
+  patchesDir c <//> c.collection <//> n </> (ipkg <.> "patch")
 
 --------------------------------------------------------------------------------
 --          Environment
@@ -371,23 +370,23 @@ patchFile c n ipkg =
 ||| Directory where all packages (and Idris2) built with the
 ||| current Idris2 commit will be installed.
 export
-commitDir : Env s -> Path
-commitDir e = e.packDir /> "install" /> e.db.idrisCommit.value
+commitDir : Env s -> Path Abs
+commitDir e = e.packDir </> "install" <//> e.db.idrisCommit
 
 ||| The directory where Idris2 and core libraries will be installed.
 export
-idrisPrefixDir : Env s -> Path
+idrisPrefixDir : Env s -> Path Abs
 idrisPrefixDir e = commitDir e /> "idris2"
 
 ||| The directory where the Idris2 binary will be installed.
 export
-idrisBinDir : Env s -> Path
+idrisBinDir : Env s -> Path Abs
 idrisBinDir c = idrisPrefixDir c /> "bin"
 
 ||| Location of the Idris2 executable used to build
 ||| packages.
 export
-idrisExec : Env s -> Path
+idrisExec : Env s -> Path Abs
 idrisExec c = idrisBinDir c /> "idris2"
 
 ||| `$PREFIX` variable during Idris2 installation
@@ -400,95 +399,95 @@ export
 idrisBootVar : Env s -> String
 idrisBootVar c = "IDRIS2_BOOT=\"\{idrisExec c}\""
 
-
-idrisDir : Env e -> String
-idrisDir e = "idris2-\{e.db.idrisVersion}"
+idrisDir : Env e -> Body
+idrisDir e = the Body "idris2" <-> e.db.idrisVersion
 
 ||| The directory where Idris2 packages will be installed.
 export
-idrisInstallDir : Env s -> Path
+idrisInstallDir : Env s -> Path Abs
 idrisInstallDir e = idrisPrefixDir e /> idrisDir e
 
 ||| The `lib` directory in the Idris2 installation folder
 export
-idrisLibDir : Env s -> Path
+idrisLibDir : Env s -> Path Abs
 idrisLibDir e = idrisInstallDir e /> "lib"
 
 ||| The `support` directory in the Idris2 installation folder
 export
-idrisDataDir : Env s -> Path
+idrisDataDir : Env s -> Path Abs
 idrisDataDir e = idrisInstallDir e /> "support"
 
 export
-githubPkgPrefixDir : Env s -> PkgName -> Commit -> Path
-githubPkgPrefixDir e n c = commitDir e /> n.value /> c.value
+githubPkgPrefixDir : Env s -> PkgName -> Commit -> Path Abs
+githubPkgPrefixDir e n c = commitDir e <//> n <//> c
 
 export
-localPkgPrefixDir : Env s -> PkgName -> Path
-localPkgPrefixDir e n = commitDir e /> "local" /> n.value
+localPkgPrefixDir : Env s -> PkgName -> Path Abs
+localPkgPrefixDir e n = commitDir e </> "local" <//> n
 
 ||| Returns the directory where a package for the current
 ||| package collection is installed.
 export
-packagePrefixDir : Env s -> ResolvedPackage -> Path
+packagePrefixDir : Env s -> ResolvedPackage -> Path Abs
 packagePrefixDir e (RGitHub n _ c _ _ _) = githubPkgPrefixDir e n c
 packagePrefixDir e (RLocal n _ _ _ _)    = localPkgPrefixDir e n
 packagePrefixDir e (Core _ _)            = idrisPrefixDir e
 
 export
 packageInstallPrefix : Env s -> ResolvedPackage -> List (String,String)
-packageInstallPrefix e rp = [("IDRIS2_PREFIX", show $ packagePrefixDir e rp)]
+packageInstallPrefix e rp = [("IDRIS2_PREFIX", "\{packagePrefixDir e rp}")]
+
+pkgRelDir : PkgDesc -> Path Rel
+pkgRelDir d = case body d.name of
+  Just b  => neutral /> (b <-> d.version)
+  Nothing => relPath d.name //> d.version
 
 ||| Returns the directory where a package for the current
 ||| package collection is installed.
 export
-packageInstallDir : Env s -> ResolvedPackage -> Path
+packageInstallDir : Env s -> ResolvedPackage -> Path Abs
 packageInstallDir e p =
   let vers = e.db.idrisVersion
       dir  = packagePrefixDir e p /> idrisDir e
    in case p of
-        Core c _            => dir /> "\{c}-\{vers}"
-        RGitHub _ _ _ _ _ d =>
-          let v = maybe "0" show d.version
-           in dir /> "\{d.name}-\{v}"
-        RLocal _ _ _ _ d    =>
-          let v = maybe "0" show d.version
-           in dir /> "\{d.name}-\{v}"
+        Core c _            => dir /> (c <-> vers)
+        RGitHub _ _ _ _ _ d => dir </> pkgRelDir d
+        RLocal _ _ _ _ d    => dir </> pkgRelDir d
 
 ||| Directory where an installed executable can be found
 export
-packageBinDir : Env s -> ResolvedPackage -> Path
+packageBinDir : Env s -> ResolvedPackage -> Path Abs
 packageBinDir e rp = packagePrefixDir e rp /> "bin"
 
 ||| Location of an executable of the given name.
 export
-packageExec : Env s -> ResolvedPackage -> String -> Path
-packageExec e rp n = packageBinDir e rp /> n
+packageExec : Env s -> ResolvedPackage -> String -> Path Abs
+packageExec e rp n = packageBinDir e rp <//> n
 
 ||| `_app` directory of an executable of the given name.
 export
-packageAppDir : Env s -> ResolvedPackage -> String -> Path
-packageAppDir e rp n = packageBinDir e rp /> "\{n}_app"
+packageAppDir : Env s -> ResolvedPackage -> String -> Path Abs
+packageAppDir e rp n = packageBinDir e rp <//> "\{n}_app"
 
 export
-pkgPrefixDir : Env s -> (PkgName, Package) -> Path
+pkgPrefixDir : Env s -> (PkgName, Package) -> Path Abs
 pkgPrefixDir e (n, GitHub _ c _ _) = githubPkgPrefixDir e n c
 pkgPrefixDir e (n, Local _ _ _)    = localPkgPrefixDir e n
 
 export
-pkgPathDir : Env s -> (PkgName, Package) -> Path
+pkgPathDir : Env s -> (PkgName, Package) -> Path Abs
 pkgPathDir e p = pkgPrefixDir e p /> idrisDir e
 
 export
-pkgBinDir : Env s -> (PkgName, Package) -> Path
+pkgBinDir : Env s -> (PkgName, Package) -> Path Abs
 pkgBinDir e p = pkgPrefixDir e p /> "bin"
 
 export
-pkgLibDir : Env s -> (PkgName, Package) -> Path
+pkgLibDir : Env s -> (PkgName, Package) -> Path Abs
 pkgLibDir e p = pkgPathDir e p /> "lib"
 
 export
-pkgDataDir : Env s -> (PkgName, Package) -> Path
+pkgDataDir : Env s -> (PkgName, Package) -> Path Abs
 pkgDataDir e p = pkgPathDir e p /> "support"
 
 export
