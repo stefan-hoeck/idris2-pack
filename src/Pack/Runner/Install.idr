@@ -153,7 +153,7 @@ installLib e n = do
   traverse_ (installLib e) (dependencies rp)
   case rp of
     RGitHub pn url commit ipkg _ d => do
-      False <- packageExists e rp | True => pure ()
+      False <- packageUpToDate e rp | True => pure ()
       when !(promptDesc rp e d) $
         withGit (tmpDir e) url commit $ \dir => do
           let ipkgAbs := dir </> ipkg
@@ -162,13 +162,16 @@ installLib e n = do
           idrisPkg e (packageInstallPrefix e rp)
                      (installCmd e.withSrc)
                      ipkgAbs
-    RLocal _ dir ipkg _ d =>
-      when !(promptDesc rp e d) $
+    p@(RLocal _ dir ipkg _ d) => do
+      let ts := localTimestamp e p
+      False <- localUpToDate e rp | True => pure ()
+      when !(promptDesc rp e d) $ do
         idrisPkg e (packageInstallPrefix e rp)
                    (installCmd e.withSrc)
                    (dir </> ipkg)
+        write ts ""
     _             => do
-      False <- packageExists e rp | True => pure ()
+      False <- packageUpToDate e rp | True => pure ()
       throwE (MissingCorePackage (name rp) e.db.idrisVersion e.db.idrisCommit)
 
 removeExec :  HasIO io

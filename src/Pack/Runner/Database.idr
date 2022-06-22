@@ -9,13 +9,36 @@ import Pack.Database.Types
 
 %default total
 
+-- check if the source dir of a local package has been
+-- changed since the last time the package was installed
+-- (by comparing with a timestamp).
+export
+localUpToDate :  HasIO io
+              => (env : Env s)
+              -> (p : ResolvedPackage)
+              -> {auto 0 prf : IsLocal p}
+              -> EitherT PackErr io Bool
+localUpToDate env p =
+  let ts  := localTimestamp env p
+      src := localSrcDir p
+   in do
+     debug env "Checking files in \{src} against timestamp \{ts}."
+     True <- exists ts
+       | False => debug env "Timestamp not found." $> False
+     True <- exists src
+       | False => debug env "Source dir not found." $> False
+     out  <- sysRun "find \{src} -newer \{ts}"
+     debug env "Found: \{out}"
+     pure . null $ trim out
+
 ||| Check if a package has already been built and installed
 export
-packageExists :  HasIO io
-              => (env : Env s)
-              -> ResolvedPackage
-              -> EitherT PackErr io Bool
-packageExists env p =
+packageUpToDate :  HasIO io
+                => (env : Env s)
+                -> ResolvedPackage
+                -> EitherT PackErr io Bool
+packageUpToDate env p@(RLocal {}) = localUpToDate env p
+packageUpToDate env p =
   let dir = packageInstallDir env p
    in do
        debug env "Looking for package \{name p} at \{dir}"
