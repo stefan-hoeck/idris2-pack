@@ -32,7 +32,10 @@ setRlwrap : Bool -> Path Abs -> Config s -> Config s
 setRlwrap b _ = {rlwrap := b }
 
 setIpkg : String -> Path Abs -> Config s -> Config s
-setIpkg v dir = {withIpkg := Just (toAbsPath dir $ fromString v)}
+setIpkg v dir = {withIpkg := Use (toAbsPath dir $ fromString v)}
+
+noIpkg : Path Abs -> Config s -> Config s
+noIpkg _ = {withIpkg := None}
 
 codegen : String -> Path Abs -> Config s -> Config s
 codegen v _ = {codegen := fromString v}
@@ -91,6 +94,10 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             """
             Use settings and packages from the given `.ipkg` file when
             starting a REPL session.
+            """
+        , MkOpt [] ["no-ipkg"]   (NoArg noIpkg)
+            """
+            Don't look for an `.ipkg` file in scope when starting a REPL session.
             """
         , MkOpt [] ["rlwrap"]   (NoArg $ setRlwrap True)
             "Run a REPL session in `rlwrap`."
@@ -187,9 +194,13 @@ usageInfo = """
 
     repl [.idr file]
       Start a REPL session loading an optional `.idr` file.
-      Use command line option `--with-ipkg` to load setings
-      and packages from an `.ipkg` file. In order to start
-      the REPL session with `rlwrap`, use the `--rlwrap`
+      Use command line option `--with-ipkg` to load settings
+      and packages from an `.ipkg` file. Option `--no-ipkg` can be used
+      to not go looking for an `.ipkg` file. The default behavior
+      is for pack to use the first `.ipkg` file it can find in the
+      current directory or one of its prent directories.
+
+      In order to start the REPL session with `rlwrap`, use the `--rlwrap`
       option or set flag `repl.rlwrap` in file
       `$HOME./pack/user/pack.toml` to `true`.
 

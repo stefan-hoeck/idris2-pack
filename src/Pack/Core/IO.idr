@@ -193,6 +193,22 @@ copyDir from to = do
   mkParentDir to
   sys "cp -r \{from} \{to}"
 
+||| Tries to fine a file, the body of which returns `True` for
+||| the given prediccate.
+export
+findInParentDirs :  HasIO io
+                 => (Body -> Bool)
+                 -> Path Abs
+                 -> EitherT PackErr io (Maybe $ Path Abs)
+findInParentDirs p (PAbs sb) = go sb
+  where go : SnocList Body -> EitherT PackErr io (Maybe $ Path Abs)
+        go [<]       = pure Nothing
+        go (sb :< b) =
+          let dir := PAbs (sb :< b)
+           in do
+             (h :: _) <- filter p <$> entries dir | Nil => go sb
+             pure $ Just (dir /> h)
+
 --------------------------------------------------------------------------------
 --         File Access
 --------------------------------------------------------------------------------

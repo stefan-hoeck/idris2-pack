@@ -89,6 +89,19 @@ fromString "refc"          = RefC
 fromString "vmcode-interp" = VMCode
 fromString x               = Other x
 
+||| Data type describing whether to search for an `.ipkg`
+||| file in one of the parent directories (the default), not
+||| using an `.ipkg` file at all, or use the one provided at
+||| the command line.
+|||
+||| This is only relevant when working with Idris source files
+||| directly, for instance when loading them into a REPL session.
+public export
+data WithIpkg : Type where
+  Search : WithIpkg
+  None   : WithIpkg
+  Use    : Path Abs -> WithIpkg
+
 ||| Type-level identity
 public export
 0 I : Type -> Type
@@ -125,8 +138,8 @@ record Config_ (c : Type) (f : Type -> Type) (s : Maybe State) where
   ||| Whether to install the library sources as well
   withSrc      : f Bool
 
-  ||| The `.ipkg` file to use when starting a REPL session
-  withIpkg     : f (Maybe $ Path Abs)
+  ||| The `.ipkg` file to use (if any) when starting a REPL session
+  withIpkg     : f WithIpkg
 
   ||| Whether to use `rlwrap` to run a REPL session
   rlwrap       : f Bool
@@ -198,7 +211,7 @@ init dir coll = MkConfig {
   , bootstrap    = False
   , safetyPrompt = True
   , withSrc      = False
-  , withIpkg     = Nothing
+  , withIpkg     = Search
   , rlwrap       = False
   , autoLibs     = []
   , autoApps     = []
