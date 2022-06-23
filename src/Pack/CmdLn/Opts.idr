@@ -221,6 +221,12 @@ usageInfo = """
       `$HOME/.pack/bin`, which you can then include in your
       `$PATH` variable.
 
+      Note: It is also possible to switch to the latest package
+      collection by using "latest" as the collection name. This will
+      automatically update the data collection, select the latest
+      nightly, and change the `collection =` entry in the global
+      `pack.toml` file.
+
     info
       Print general information about the current package
       collection and list installed applications and libraries.

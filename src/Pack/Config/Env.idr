@@ -153,3 +153,16 @@ env : HasIO io => Config s -> EitherT PackErr io (Env DBLoaded)
 env conf = do
   db <- loadDB conf
   pure $ {db := db} conf
+
+adjCollection : DBName -> String -> String
+adjCollection db str = case isPrefixOf "collection " str of
+  False => str
+  True  => "collection = \"\{db}\""
+
+export covering
+writeCollection : HasIO io => Config s -> EitherT PackErr io ()
+writeCollection c =
+  let toml = configPath c.packDir
+   in do
+     str <- read toml
+     write toml (unlines . map (adjCollection c.collection) $ lines str)

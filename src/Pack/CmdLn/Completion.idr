@@ -127,7 +127,8 @@ opts x "run"              e = prefixOnlyIfNonEmpty x <$> packagesOrIpkg e
 opts x "install"          e = prefixOnlyIfNonEmpty x <$> pure (packages e)
 opts x "install-app"      e = prefixOnlyIfNonEmpty x <$> pure (packages e)
 opts x "remove"           e = prefixOnlyIfNonEmpty x <$> installedPackages e
-opts x "switch"           e = prefixOnlyIfNonEmpty x <$> collections e
+opts x "switch"           e =   prefixOnlyIfNonEmpty x . ("latest" ::)
+                            <$> collections e
 opts x "typecheck"        e = prefixOnlyIfNonEmpty x <$> ipkgFiles
 
 -- options
