@@ -208,16 +208,23 @@ runIdrisOn cmd p e = do
     Just c  => idrisPkg e [] c p
     Nothing => pure ()
 
-findIpkg : HasIO io => WithIpkg -> EitherT PackErr io (Maybe $ Path Abs)
-findIpkg Search  = findInParentDirs isIpkgBody
-findIpkg None    = ?findIpkg_rhs_1
-findIpkg (Use x) = ?findIpkg_rhs_2
-
+findIpkg :  HasIO io
+         => WithIpkg
+         -> Maybe (Path Abs)
+         -> EitherT PackErr io (Maybe $ Path Abs)
+findIpkg (Search dir) fi =
+  let searchDir := fromMaybe dir $ fi >>= parentDir
+   in findInParentDirs isIpkgBody searchDir
+findIpkg None         _  = pure Nothing
+findIpkg (Use x)      _  = pure (Just x)
 
 covering
-replOpts : HasIO io => Env HasIdris -> EitherT PackErr io String
-replOpts e = do
-  Just p <- findIpkg e.withIpkg | Nothing => pure ""
+replOpts :  HasIO io
+         => Env HasIdris
+         -> (file : Maybe $ Path Abs)
+         -> EitherT PackErr io String
+replOpts e mf = do
+  Just p <- findIpkg e.withIpkg mf | Nothing => pure ""
   (_,desc) <- parseIpkgFile p id
   traverse_ (installLib e) (dependencies desc)
   let srcDir = maybe "" (\s => "--source-dir \"\{s}\"") desc.sourcedir
@@ -228,14 +235,14 @@ replOpts e = do
 ||| given argument string.
 export covering
 idrisRepl :  HasIO io
-          => Env HasIdris
-          -> (file : Maybe $ Path Abs)
+          => (file : Maybe $ Path Abs)
+          -> Env HasIdris
           -> EitherT PackErr io ()
-idrisRepl e file = do
+idrisRepl file e = do
   let args := maybe "" interpolate $ file
       pth  := packagePath e
       exe  := idrisWithCG e
-  opts <- replOpts e
+  opts <- replOpts e file
   case e.rlwrap of
     True  => sysWithEnv "rlwrap \{exe} \{opts} \{args}" [pth]
     False => sysWithEnv "\{exe} \{opts} \{args}" [pth]

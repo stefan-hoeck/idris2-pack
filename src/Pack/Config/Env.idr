@@ -114,7 +114,7 @@ getConfig readCmd dflt = do
   global      <- traverse resolveMeta global'
   local       <- traverse resolveMeta local'
 
-  let ini = init dir coll `update` global `update` local
+  let ini = init cur dir coll `update` global `update` local
 
   pn :: args <- getArgs | Nil => pure (ini, dflt)
   (conf,cmd) <- liftEither $ applyArgs cur ini args (readCmd cur)

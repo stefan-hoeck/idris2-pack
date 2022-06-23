@@ -98,9 +98,19 @@ fromString x               = Other x
 ||| directly, for instance when loading them into a REPL session.
 public export
 data WithIpkg : Type where
-  Search : WithIpkg
+  ||| Search for an `.ipkg` file in a parent directory.
+  ||| If an `.idr` file is provided, the parent directories
+  ||| of this file will be searched. If on `.idr` file is
+  ||| given, the current working directory will be search,
+  ||| which is given as an argument to this constructor.
+  Search : (dir : Path Abs) -> WithIpkg
+
+  ||| Don't use an `.ipkg` file.
   None   : WithIpkg
-  Use    : Path Abs -> WithIpkg
+
+  ||| Use the given `.ipkg` file, provided as a command line
+  ||| argument.
+  Use    : (ipkg : Path Abs) -> WithIpkg
 
 ||| Type-level identity
 public export
@@ -203,15 +213,15 @@ allPackages e =
 
 ||| Initial config
 export
-init : (dir : Path Abs) -> (coll : DBName) -> Config_ Commit I Nothing
-init dir coll = MkConfig {
+init : (cur, dir : Path Abs) -> (coll : DBName) -> Config_ Commit I Nothing
+init cur dir coll = MkConfig {
     packDir      = dir
   , collection   = coll
   , scheme       = "scheme"
   , bootstrap    = False
   , safetyPrompt = True
   , withSrc      = False
-  , withIpkg     = Search
+  , withIpkg     = Search cur
   , rlwrap       = False
   , autoLibs     = []
   , autoApps     = []
