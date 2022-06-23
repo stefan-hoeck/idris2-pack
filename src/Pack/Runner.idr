@@ -39,4 +39,5 @@ runCmd = do
       db  <- defaultColl c.packDir
       env <- idrisEnv ({collection := db} c)
       links env
+      writeCollection env
     Switch db          => idrisEnv ({collection := db} c) >>= links
