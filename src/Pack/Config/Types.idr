@@ -89,6 +89,29 @@ fromString "refc"          = RefC
 fromString "vmcode-interp" = VMCode
 fromString x               = Other x
 
+||| Data type describing whether to search for an `.ipkg`
+||| file in one of the parent directories (the default), not
+||| using an `.ipkg` file at all, or use the one provided at
+||| the command line.
+|||
+||| This is only relevant when working with Idris source files
+||| directly, for instance when loading them into a REPL session.
+public export
+data WithIpkg : Type where
+  ||| Search for an `.ipkg` file in a parent directory.
+  ||| If an `.idr` file is provided, the parent directories
+  ||| of this file will be searched. If on `.idr` file is
+  ||| given, the current working directory will be search,
+  ||| which is given as an argument to this constructor.
+  Search : (dir : Path Abs) -> WithIpkg
+
+  ||| Don't use an `.ipkg` file.
+  None   : WithIpkg
+
+  ||| Use the given `.ipkg` file, provided as a command line
+  ||| argument.
+  Use    : (ipkg : Path Abs) -> WithIpkg
+
 ||| Type-level identity
 public export
 0 I : Type -> Type
@@ -125,8 +148,8 @@ record Config_ (c : Type) (f : Type -> Type) (s : Maybe State) where
   ||| Whether to install the library sources as well
   withSrc      : f Bool
 
-  ||| The `.ipkg` file to use when starting a REPL session
-  withIpkg     : f (Maybe $ Path Abs)
+  ||| The `.ipkg` file to use (if any) when starting a REPL session
+  withIpkg     : f WithIpkg
 
   ||| Whether to use `rlwrap` to run a REPL session
   rlwrap       : f Bool
@@ -190,15 +213,15 @@ allPackages e =
 
 ||| Initial config
 export
-init : (dir : Path Abs) -> (coll : DBName) -> Config_ Commit I Nothing
-init dir coll = MkConfig {
+init : (cur, dir : Path Abs) -> (coll : DBName) -> Config_ Commit I Nothing
+init cur dir coll = MkConfig {
     packDir      = dir
   , collection   = coll
   , scheme       = "scheme"
   , bootstrap    = False
   , safetyPrompt = True
   , withSrc      = False
-  , withIpkg     = Nothing
+  , withIpkg     = Search cur
   , rlwrap       = False
   , autoLibs     = []
   , autoApps     = []

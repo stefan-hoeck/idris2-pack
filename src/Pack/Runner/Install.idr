@@ -208,30 +208,44 @@ runIdrisOn cmd p e = do
     Just c  => idrisPkg e [] c p
     Nothing => pure ()
 
+findIpkg :  HasIO io
+         => WithIpkg
+         -> Maybe (Path Abs)
+         -> EitherT PackErr io (Maybe $ Path Abs)
+findIpkg (Search dir) fi =
+  let searchDir := fromMaybe dir $ fi >>= parentDir
+   in findInParentDirs isIpkgBody searchDir
+findIpkg None         _  = pure Nothing
+findIpkg (Use x)      _  = pure (Just x)
+
+covering
+replOpts :  HasIO io
+         => Env HasIdris
+         -> (file : Maybe $ Path Abs)
+         -> EitherT PackErr io String
+replOpts e mf = do
+  Just p <- findIpkg e.withIpkg mf | Nothing => pure ""
+  (_,desc) <- parseIpkgFile p id
+  traverse_ (installLib e) (dependencies desc)
+  let srcDir = maybe "" (\s => "--source-dir \"\{s}\"") desc.sourcedir
+      pkgs = unwords $ map (("-p " ++) . pkgname) desc.depends
+  pure "\{srcDir} \{pkgs}"
+
 ||| Use the installed Idris to start a REPL session with the
 ||| given argument string.
 export covering
 idrisRepl :  HasIO io
-          => Env HasIdris
-          -> (args : String)
+          => (file : Maybe $ Path Abs)
+          -> Env HasIdris
           -> EitherT PackErr io ()
-idrisRepl e args = do
-  let pth = packagePath e
-      exe = idrisWithCG e
-  opts <- replOpts
+idrisRepl file e = do
+  let args := maybe "" interpolate $ file
+      pth  := packagePath e
+      exe  := idrisWithCG e
+  opts <- replOpts e file
   case e.rlwrap of
     True  => sysWithEnv "rlwrap \{exe} \{opts} \{args}" [pth]
     False => sysWithEnv "\{exe} \{opts} \{args}" [pth]
-
-  where covering replOpts : EitherT PackErr io String
-        replOpts = case e.withIpkg of
-          Nothing => pure ""
-          Just p  => do
-            (_,desc) <- parseIpkgFile p id
-            traverse_ (installLib e) (dependencies desc)
-            let srcDir = maybe "" (\s => "--source-dir \"\{s}\"") desc.sourcedir
-                pkgs = unwords $ map (("-p " ++) . pkgname) desc.depends
-            pure "\{srcDir} \{pkgs}"
 
 ||| Build a local library given as an `.ipkg` file.
 export covering
@@ -247,15 +261,6 @@ buildDeps = runIdrisOn Nothing
 export covering
 typecheck : HasIO io => Path Abs -> Env HasIdris -> EitherT PackErr io ()
 typecheck = runIdrisOn (Just "--typecheck")
-
-||| Load an optional file into a REPL session
-export covering
-repl :  HasIO io
-     => Maybe (Path Abs)
-     -> Env HasIdris
-     -> EitherT PackErr io ()
-repl Nothing e  = idrisRepl e ""
-repl (Just p) e = idrisRepl e "\{p}"
 
 ||| Install an Idris application given as a package name
 export covering
