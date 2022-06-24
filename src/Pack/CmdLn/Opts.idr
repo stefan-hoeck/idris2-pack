@@ -7,41 +7,49 @@ import System.Console.GetOpt
 
 %default total
 
-debug : Path Abs -> Config s -> Config s
-debug _ = {logLevel := Debug}
+-- Function for adjusting the config based on a command
+-- line option. This first argument is the current directory
+-- from which the application was invoked.
+0 AdjConf : Maybe State -> Type
+AdjConf s = Path Abs -> Config s -> Either PackErr (Config s)
 
-bootstrap : Path Abs -> Config s -> Config s
-bootstrap _ = {bootstrap := True}
+debug : AdjConf s
+debug _ = Right . {logLevel := Debug}
 
-withSrc : Path Abs -> Config s -> Config s
-withSrc _ = {withSrc := True}
+bootstrap : AdjConf s
+bootstrap _ = Right . {bootstrap := True}
 
-setDB : String -> Path Abs -> Config s -> Config s
-setDB s _ = {collection := MkDBName s}
+withSrc : AdjConf s
+withSrc _ = Right . {withSrc := True}
 
-setQuery : QueryType -> Path Abs -> Config s -> Config s
-setQuery s _ = {queryType := s}
+setDB : String -> AdjConf s
+setDB s _ c = map (\db => {collection := db} c) $ readDBName s
 
-setPrompt : Bool -> Path Abs -> Config s -> Config s
-setPrompt b _ = {safetyPrompt := b}
+setQuery : QueryType -> AdjConf s
+setQuery s _ = Right . {queryType := s}
 
-setScheme : String -> Path Abs -> Config s -> Config s
-setScheme s _ = {scheme := fromString s}
+setPrompt : Bool -> AdjConf s
+setPrompt b _ = Right . {safetyPrompt := b}
 
-setRlwrap : Bool -> Path Abs -> Config s -> Config s
-setRlwrap b _ = {rlwrap := b }
+setScheme : String -> AdjConf s
+setScheme s _ = Right . {scheme := fromString s}
 
-setIpkg : String -> Path Abs -> Config s -> Config s
-setIpkg v dir = {withIpkg := Use (toAbsPath dir $ fromString v)}
+setRlwrap : Bool -> AdjConf s
+setRlwrap b _ = Right . {rlwrap := b }
 
-noIpkg : Path Abs -> Config s -> Config s
-noIpkg _ = {withIpkg := None}
+setIpkg : String -> AdjConf s
+setIpkg v dir c = case readAbsFile dir v of
+  Right af => Right $ {withIpkg := Use af} c
+  Left err => Left err
 
-codegen : String -> Path Abs -> Config s -> Config s
-codegen v _ = {codegen := fromString v}
+noIpkg : AdjConf s
+noIpkg _ = Right . {withIpkg := None}
+
+codegen : String -> AdjConf s
+codegen v _ = Right . {codegen := fromString v}
 
 -- command line options with description
-descs : List $ OptDescr (Path Abs -> Config Nothing -> Config Nothing)
+descs : List $ OptDescr (AdjConf Nothing)
 descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             "Set the curated package set to use."
         , MkOpt [] ["cg"]   (ReqArg codegen "<codgen>")
@@ -112,6 +120,8 @@ optionNames = foldMap names descs
         names (MkOpt sns lns _ _) =
           map (\c => "-\{String.singleton c}") sns ++ map ("--" ++) lns
 
+ipkgFile : Path Abs -> String -> (AbsFile -> Cmd) -> Either PackErr Cmd
+ipkgFile dir s f = f <$> readAbsFile dir s
 
 export
 cmd : Path Abs -> List String -> Either PackErr Cmd
@@ -127,13 +137,14 @@ cmd _   ["query", "module", s]     = Right $ Query Module s
 cmd _   ["repl"]                   = Right $ Repl Nothing
 cmd dir ["repl", s]                = Right $ Repl (Just $ parse s dir)
 cmd dir ("run" :: p :: args)       =
-  let pth = parse p dir
-   in case isIpkgFile pth of
-     True  => Right $ Run (Left $ pth) args
-     False => Right $ Run (Right $ MkPkgName p) args
-cmd dir ["build", file]            = Right $ Build (parse file dir)
-cmd dir ["install-deps", file]     = Right $ BuildDeps (parse file dir)
-cmd dir ["typecheck", file]        = Right $ Typecheck (parse file dir)
+  let deflt   := Right $ Run (Right $ MkPkgName p) args
+      Right af := readAbsFile dir p | Left _ => deflt
+   in case isIpkgBody af.file of
+     True  => Right $ Run (Left af) args
+     False => deflt
+cmd dir ["build", file]            = ipkgFile dir file Build
+cmd dir ["install-deps", file]     = ipkgFile dir file BuildDeps
+cmd dir ["typecheck", file]        = ipkgFile dir file Typecheck
 cmd _   ("install" :: xs)          = Right $ Install (map fromString xs)
 cmd _   ("remove" :: xs)           = Right $ Remove (map fromString xs)
 cmd _   ("install-app" :: xs)      = Right $ InstallApp (map fromString xs)
@@ -142,8 +153,8 @@ cmd _   ["completion-script",f]    = Right $ CompletionScript f
 cmd _   ["package-path"]           = Right PackagePath
 cmd _   ["libs-path"]              = Right LibsPath
 cmd _   ["data-path"]              = Right DataPath
-cmd _   ["switch",db]              = Right $ Switch (MkDBName db)
-cmd _  xs                         = Left  $ UnknownCommand xs
+cmd _   ["switch",db]              = Switch <$> readDBName db
+cmd _  xs                          = Left  $ UnknownCommand xs
 
 ||| Given a root directory for *pack* and a db version,
 ||| generates the application
@@ -157,8 +168,8 @@ applyArgs :  (curDir  : Path Abs)
 applyArgs dir init args readCmd =
   case getOpt RequireOrder descs args of
        MkResult opts n  []      []       =>
-         let conf = foldl (\c,f => f dir c) init opts
-          in map (conf,) (readCmd n)
+         let conf = foldlM (\c,f => f dir c) init opts
+          in [| MkPair conf (readCmd n) |]
 
        MkResult _    _ (u :: _) _        => Left (UnknownArg u)
        MkResult _    _ _        (e :: _) => Left (ErroneousArg e)

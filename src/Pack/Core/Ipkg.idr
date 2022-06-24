@@ -199,22 +199,42 @@ addField p (PPostclean fc e)     = { postclean := Just (fc, e) } p
 addFields : (name : String) -> List DescField -> PkgDesc
 addFields = foldl addField . initPkgDesc
 
-parseIpkg :  (path : Path Abs)
+parseIpkg :  (file : AbsFile)
           -> (str : String)
           -> Either PackErr PkgDesc
-parseIpkg path str =
-  let err = InvalidIpkgFile path
+parseIpkg file str =
+  let err = InvalidIpkgFile file
    in do
      toks           <- mapFst (const err) $ lex str
-     (_, (n,fs), _) <- mapFst (const err) $ parse (pkgDesc "\{path}") toks
+     (_, (n,fs), _) <- mapFst (const err) $ parse (pkgDesc "\{file}") toks
      Right $ addFields n fs
 
 export covering
 parseIpkgFile :  HasIO io
-              => (path : Path Abs)
+              => (file : AbsFile)
               -> (PkgDesc -> a)
               -> EitherT PackErr io (String, a)
-parseIpkgFile path f = do
-  str  <- read path
-  desc <- liftEither (parseIpkg path str)
+parseIpkgFile file f = do
+  str  <- read file
+  desc <- liftEither (parseIpkg file str)
   pure (str, f desc)
+
+--------------------------------------------------------------------------------
+--          Extracting Infos
+--------------------------------------------------------------------------------
+
+||| Extract the absolute path to the source directory
+||| from a package description plus its file location.
+export
+sourcePath : (file : AbsFile) -> PkgDesc -> Path Abs
+sourcePath f d = maybe f.parent (toAbsPath f.parent . fromString) d.sourcedir
+
+||| Extract the absolute path to the build directory
+||| from a package description plus its file location.
+export
+buildPath : (file : AbsFile) -> PkgDesc -> Path Abs
+buildPath f d = maybe f.parent (toAbsPath f.parent . fromString) d.builddir
+
+export
+exec : PkgDesc -> Maybe Body
+exec d = d.executable >>= body

@@ -48,7 +48,7 @@ data Package_ : (c : Type) -> Type where
   ||| where Idris packages are installed.
   GitHub :  (url     : URL)
          -> (commit  : c)
-         -> (ipkg    : Path Rel)
+         -> (ipkg    : RelFile)
          -> (pkgPath : Bool)
          -> Package_ c
 
@@ -58,7 +58,7 @@ data Package_ : (c : Type) -> Type where
   ||| access to the `IDRIS2_PACKAGE_PATH`: The list of directories
   ||| where Idris packages are installed.
   Local  :  (dir     : Path Abs)
-         -> (ipkg    : Path Rel)
+         -> (ipkg    : RelFile)
          -> (pkgPath : Bool)
          -> Package_ c
 
@@ -115,9 +115,9 @@ coreIpkgFile IdrisApi = "idris2api.ipkg"
 coreIpkgFile c        = toBody c <+> ".ipkg"
 
 export
-coreIpkgPath : CorePkg -> Path Rel
-coreIpkgPath IdrisApi = "idris2api.ipkg"
-coreIpkgPath c        = neutral /> "libs" /> toBody c /> coreIpkgFile c
+coreIpkgPath : CorePkg -> RelFile
+coreIpkgPath IdrisApi = MkRF neutral "idris2api.ipkg"
+coreIpkgPath c        = MkRF (neutral /> "libs" /> toBody c) (coreIpkgFile c)
 
 ||| A resolved package, which was downloaded from GitHub
 ||| or looked up in the local file system. This comes with
@@ -131,7 +131,7 @@ data ResolvedPackage : Type where
   RGitHub :  (name    : PkgName)
           -> (url     : URL)
           -> (commit  : Commit)
-          -> (ipkg    : Path Rel)
+          -> (ipkg    : RelFile)
           -> (pkgPath : Bool)
           -> (desc    : PkgDesc)
           -> ResolvedPackage
@@ -142,8 +142,7 @@ data ResolvedPackage : Type where
   ||| access to the `IDRIS2_PACKAGE_PATH`: The list of directories
   ||| where Idris packages are installed.
   RLocal  :  (name    : PkgName)
-          -> (dir     : Path Abs)
-          -> (ipkg    : Path Rel)
+          -> (ipkg    : AbsFile)
           -> (pkgPath : Bool)
           -> (desc    : PkgDesc)
           -> ResolvedPackage
@@ -154,22 +153,22 @@ data ResolvedPackage : Type where
 ||| Witness that a resolved package is a local package.
 public export
 data IsLocal : ResolvedPackage -> Type where
-  ItIsLocal : IsLocal (RLocal n d i p de)
+  ItIsLocal : IsLocal (RLocal n f p de)
 
 ||| True, if the given resolved package represents
 ||| one of the core packages (`base`, `prelude`, etc.)
 export
 isCorePackage : ResolvedPackage -> Bool
-isCorePackage (RGitHub _ _ _ _ _ _) = False
-isCorePackage (RLocal _ _ _ _ _)    = False
-isCorePackage (Core _ _)            = True
+isCorePackage (RGitHub {}) = False
+isCorePackage (RLocal {})  = False
+isCorePackage (Core {})    = True
 
 ||| Try to extract the package description from a
 ||| resolved package.
 export
 desc : ResolvedPackage -> PkgDesc
 desc (RGitHub _ _ _ _ _ d) = d
-desc (RLocal _ _ _ _ d)    = d
+desc (RLocal _ _ _ d)      = d
 desc (Core _ d)            = d
 
 namespace PkgDesc
@@ -185,14 +184,14 @@ dependencies = dependencies . desc
 ||| Extracts the name of the executable (if any) from
 ||| a resolved package.
 export
-executable : ResolvedPackage -> Maybe String
-executable = executable . desc
+executable : ResolvedPackage -> Maybe Body
+executable d = executable (desc d) >>= body
 
 ||| Extracts the package name from a resolved package.
 export
 name : ResolvedPackage -> PkgName
 name (RGitHub n _ _ _ _ _) = n
-name (RLocal n _ _ _ _)    = n
+name (RLocal n _ _ _)      = n
 name (Core c _)            = MkPkgName "\{c}"
 
 ||| Extracts the package name from a resolved package.
@@ -205,7 +204,7 @@ nameStr = value . name
 export
 usePackagePath : ResolvedPackage -> Bool
 usePackagePath (RGitHub _ _ _ _ pp _) = pp
-usePackagePath (RLocal _ _ _ pp _)    = pp
+usePackagePath (RLocal _ _ pp _)      = pp
 usePackagePath _                      = False
 
 --------------------------------------------------------------------------------

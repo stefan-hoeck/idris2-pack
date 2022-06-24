@@ -60,10 +60,10 @@ details (RGitHub name url commit ipkg _ desc) = [
   , "ipkg File    : \{ipkg}"
   ]
 
-details (RLocal name dir ipkg _ desc) = [
+details (RLocal name ipkg _ desc) = [
     "Type         : Local Idris project"
-  , "Location     : \{dir}"
-  , "ipkg File    : \{ipkg}"
+  , "Location     : \{ipkg.parent}"
+  , "ipkg File    : \{ipkg.file}"
   ]
 
 details (Core _ _) = [ "Type         : Idris core package" ]
@@ -235,8 +235,8 @@ fuzzyPkg q e allPkgs rp =
      mkDir dir
      finally (rmDir dir) $ inDir dir $ \d => do
        putStrLn "\{name rp}:\n"
-       write (d /> "test.idr") (imports rp)
-       write (d /> "input") ":fs \{q}\n"
+       write (MkAF d "test.idr") (imports rp)
+       write (MkAF d "input") ":fs \{q}\n"
 
        let (cmd,env) := idrisWithPkgs e allPkgs
 

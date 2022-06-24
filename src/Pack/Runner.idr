@@ -34,10 +34,11 @@ runCmd = do
     LibsPath           => env c >>= putStrLn . packageLibDirs
     DataPath           => env c >>= putStrLn . packageDataDirs
     Info               => env c >>= printInfo
-    Switch "latest"    => do
-      updateDB c
-      db  <- defaultColl c.packDir
-      env <- idrisEnv ({collection := db} c)
-      links env
-      writeCollection env
-    Switch db          => idrisEnv ({collection := db} c) >>= links
+    Switch db          => case db == MkDBName "latest" of
+      True  => do
+        updateDB c
+        db  <- defaultColl c.packDir
+        env <- idrisEnv ({collection := db} c)
+        links env
+        writeCollection env
+      False => idrisEnv ({collection := db} c) >>= links

@@ -20,7 +20,10 @@ interface Ord a => TOMLKey a where
   fromKey : (k : String) -> Either TOMLErr a
 
 export
-TOMLKey DBName where fromKey = Right . MkDBName
+TOMLKey DBName where
+  fromKey s = case body s of
+    Just b  => Right $ MkDBName b
+    Nothing => Left $ WrongType [] "collection name"
 
 export
 TOMLKey PkgName where fromKey = Right . MkPkgName
@@ -128,11 +131,18 @@ toRelPath : FilePath -> Either TOMLErr (Path Rel)
 toRelPath (FP $ PRel sx) = Right (PRel sx)
 toRelPath (FP $ PAbs _)  = Left (WrongType [] "Relative Path")
 
-export
+toRelFile : FilePath -> Either TOMLErr (RelFile)
+toRelFile (FP $ PRel (sx :< x)) = Right (MkRF (PRel sx) x)
+toRelFile _                     = Left (WrongType [] "relative file path")
+
+export %inline
 FromTOML (Path Rel) where fromTOML = trefine toRelPath
 
-export
-FromTOML DBName where fromTOML = tmap MkDBName
+export %inline
+FromTOML (RelFile) where fromTOML = trefine toRelFile
+
+export %inline
+FromTOML DBName where fromTOML = trefine fromKey
 
 export
 FromTOML Bool where
@@ -184,6 +194,16 @@ absPathAt :  (path : String)
           -> Either TOMLErr (Path Abs)
 absPathAt path dir val = toAbsPath dir <$> valAt path val
 
+||| Read an absolute file path from a .toml file that could also be given
+||| as a path relative to the .toml file's parent directory. We therefore
+||| need the parent directory as an additional input.
+export
+absFileAt :  (path : String)
+          -> (dir  : Path Abs) -- parent directory of the .toml file we read
+          -> (val  : Value)
+          -> Either TOMLErr AbsFile
+absFileAt path dir val = toAbsFile dir <$> valAt path val
+
 --------------------------------------------------------------------------------
 --          Reading a TOML File
 --------------------------------------------------------------------------------
@@ -191,13 +211,13 @@ absPathAt path dir val = toAbsPath dir <$> valAt path val
 ||| Reads a file and converts its content to a TOML value.
 export covering
 readTOML :  HasIO io
-         => (path : Path Abs)
+         => (file : AbsFile)
          -> EitherT PackErr io Value
-readTOML path = do
-  str <- read path
+readTOML file = do
+  str <- read file
   case parseTOML str of
     Right v  => pure (VTable v)
-    Left err => throwE $ TOMLParse path (show err)
+    Left err => throwE $ TOMLParse file (show err)
 
 ||| Reads a file, converts its content to a TOML value, and
 ||| extracts an Idris value from this.
@@ -208,25 +228,21 @@ readTOML path = do
 ||| @ file : Name of the .toml file to read
 export covering
 readFromTOML :  HasIO io
-             => (file : Path Abs)
+             => (file : AbsFile)
              -> (Path Abs -> Value -> Either TOMLErr a)
              -> EitherT PackErr io a
-readFromTOML file f = case parentDir file of
-  Just dir => do
-    v <- readTOML file
-    liftEither $ mapFst (TOMLFile file) (f dir v)
-  Nothing  => throwE (TOMLParse file "no parent directory")
+readFromTOML file f = do
+  v <- readTOML file
+  liftEither $ mapFst (TOMLFile file) (f file.parent v)
 
 ||| Reads a file, converts its content to a TOML value, and
 ||| extracts an Idris value from this.
 export covering
 readOptionalFromTOML :  HasIO io
-                     => (file : Path Abs)
+                     => (file : AbsFile)
                      -> (Path Abs -> Value -> Either TOMLErr a)
                      -> EitherT PackErr io a
-readOptionalFromTOML file f = case parentDir file of
-  Just dir => do
-    True <- exists file
-      | False => liftEither (mapFst (TOMLFile file) . f dir $ VTable empty)
-    readFromTOML file f
-  Nothing  => throwE (TOMLParse file "no parent directory")
+readOptionalFromTOML file f = do
+  True <- exists (path file)
+    | False => liftEither (mapFst (TOMLFile file) . f file.parent $ VTable empty)
+  readFromTOML file f
