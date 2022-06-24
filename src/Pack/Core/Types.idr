@@ -262,7 +262,7 @@ Head = MkDBName "HEAD"
 
 export %inline
 All : DBName
-All = MkDBName "All"
+All = MkDBName "all"
 
 --------------------------------------------------------------------------------
 --          Errors

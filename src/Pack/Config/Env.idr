@@ -117,6 +117,13 @@ getConfig readCmd dflt = do
 
   pn :: args <- getArgs | Nil => pure (ini, dflt)
   (conf,cmd) <- liftEither $ applyArgs cur ini args (readCmd cur)
+
+  debug conf "Pack home is \{dir}"
+  debug conf "Current directory is \{cur}"
+  case localToml of
+    Just af => info conf "Found local config at \{af}"
+    Nothing => debug conf "No local config found"
+  info conf "Using package collection \{conf.collection}"
   debug conf "Config loaded"
   mkDir conf.packDir
   pure (conf,cmd)

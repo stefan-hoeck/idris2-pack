@@ -211,10 +211,10 @@ runIdrisOn cmd p e = do
 
 findIpkg :  HasIO io
          => WithIpkg
-         -> Maybe (Path Abs)
+         -> Maybe AbsFile
          -> EitherT PackErr io (Maybe AbsFile)
 findIpkg (Search dir) fi =
-  let searchDir := fromMaybe dir $ fi >>= parentDir
+  let searchDir := maybe dir parent fi
    in findInParentDirs isIpkgBody searchDir
 findIpkg None         _  = pure Nothing
 findIpkg (Use x)      _  = pure (Just x)
@@ -222,31 +222,38 @@ findIpkg (Use x)      _  = pure (Just x)
 covering
 replOpts :  HasIO io
          => Env HasIdris
-         -> (file : Maybe $ Path Abs)
-         -> EitherT PackErr io String
+         -> (file : Maybe AbsFile)
+         -> EitherT PackErr io (String, Maybe AbsFile)
 replOpts e mf = do
-  Just p <- findIpkg e.withIpkg mf | Nothing => pure ""
+  Just p <- findIpkg e.withIpkg mf | Nothing => pure ("",Nothing)
+  info e "Found `.ipkg` file at \{p}"
   (_,desc) <- parseIpkgFile p id
   traverse_ (installLib e) (dependencies desc)
   let srcDir = maybe "" (\s => "--source-dir \"\{s}\"") desc.sourcedir
       pkgs = unwords $ map (("-p " ++) . pkgname) desc.depends
-  pure "\{srcDir} \{pkgs}"
+  pure ("\{srcDir} \{pkgs}", Just p)
 
 ||| Use the installed Idris to start a REPL session with the
 ||| given argument string.
 export covering
 idrisRepl :  HasIO io
-          => (file : Maybe $ Path Abs)
+          => (file : Maybe AbsFile)
           -> Env HasIdris
           -> EitherT PackErr io ()
 idrisRepl file e = do
   let args := maybe "" interpolate $ file
       pth  := packagePath e
       exe  := idrisWithCG e
-  opts <- replOpts e file
-  case e.rlwrap of
-    True  => sysWithEnv "rlwrap \{exe} \{opts} \{args}" [pth]
-    False => sysWithEnv "\{exe} \{opts} \{args}" [pth]
+
+  (opts, mp) <- replOpts e file
+
+  cmd <- case e.rlwrap of
+    True  => pure "rlwrap \{exe} \{opts} \{args}"
+    False => pure "\{exe} \{opts} \{args}"
+
+  case mp of
+    Just af => inDir af.parent $ \_ => sysWithEnv cmd [pth]
+    Nothing => sysWithEnv cmd [pth]
 
 ||| Build a local library given as an `.ipkg` file.
 export covering

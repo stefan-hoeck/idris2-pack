@@ -17,7 +17,7 @@ data Cmd : Type where
   Build            : AbsFile -> Cmd
   BuildDeps        : AbsFile -> Cmd
   Typecheck        : AbsFile -> Cmd
-  Repl             : Maybe (Path Abs) -> Cmd
+  Repl             : Maybe AbsFile -> Cmd
 
   -- Package management
   Install          : List PkgName -> Cmd

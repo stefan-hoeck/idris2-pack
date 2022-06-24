@@ -135,7 +135,7 @@ cmd _   ["query", s]               = Right $ Query PkgName s
 cmd _   ["query", "dep", s]        = Right $ Query Dependency s
 cmd _   ["query", "module", s]     = Right $ Query Module s
 cmd _   ["repl"]                   = Right $ Repl Nothing
-cmd dir ["repl", s]                = Right $ Repl (Just $ parse s dir)
+cmd dir ["repl", s]                = Repl . Just <$> readAbsFile dir s
 cmd dir ("run" :: p :: args)       =
   let deflt   := Right $ Run (Right $ MkPkgName p) args
       Right af := readAbsFile dir p | Left _ => deflt
