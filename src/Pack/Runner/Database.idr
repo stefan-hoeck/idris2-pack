@@ -23,7 +23,7 @@ localUpToDate env p =
       src := localSrcDir p
    in do
      debug env "Checking files in \{src} against timestamp \{ts}."
-     True <- exists ts
+     True <- exists (path ts)
        | False => debug env "Timestamp not found." $> False
      True <- exists src
        | False => debug env "Source dir not found." $> False
@@ -49,19 +49,16 @@ packageUpToDate env p =
 export
 executableExists :  HasIO io
                  => Env s
-                 -> ResolvedPackage
-                 -> String
+                 -> AbsFile
                  -> EitherT PackErr io Bool
-executableExists c rp n =
-  let pth = packageExec c rp n
-   in do
-       debug c "Looking for executable \{n} at \{pth}"
-       exists pth
+executableExists c f =
+  debug c "Looking for executable \{f.file} at \{f.parent}" >>
+  exists (path f)
 
 export
 cacheCoreIpkgFiles : HasIO io => Env s -> Path Abs -> EitherT PackErr io ()
 cacheCoreIpkgFiles e dir = for_ corePkgs $ \c =>
-  copyFile (dir </> coreIpkgPath c) (coreCachePath e c)
+  copyFile (toAbsFile dir (coreIpkgPath c)) (coreCachePath e c)
 
 resolveCore :  HasIO io
             => Env s
@@ -70,7 +67,7 @@ resolveCore :  HasIO io
 resolveCore e c =
   let pth := coreCachePath e c
    in do
-     when !(missing pth) $
+     when !(missing $ path pth) $
        withGit (tmpDir e) e.db.idrisURL e.db.idrisCommit (cacheCoreIpkgFiles e)
      parseIpkgFile pth (Core c)
 
@@ -94,15 +91,16 @@ resolveImpl e n         = case lookup n (allPackages e) of
   Just (GitHub url commit ipkg pp) =>
     let cache = ipkgPath e n commit ipkg
      in do
-       when !(missing cache) $
+       when !(missing $ path cache) $
          withGit (tmpDir e) url commit $ \dir => do
-           let ipkgAbs := dir </> ipkg
+           let ipkgAbs := toAbsFile dir ipkg
                pf      := patchFile e n ipkg
-           when !(exists pf) (patch ipkgAbs pf)
+           when !(exists $ path pf) (patch ipkgAbs pf)
            copyFile ipkgAbs cache
        parseIpkgFile cache (RGitHub n url commit ipkg pp)
   Just (Local dir ipkg pp) =>
-    parseIpkgFile (dir </> ipkg) (RLocal n dir ipkg pp)
+    let af = toAbsFile dir ipkg
+     in parseIpkgFile af (RLocal n af pp)
 
 execStr : PkgDesc -> String
 execStr d = maybe "library" (const "application") d.executable
@@ -110,7 +108,7 @@ execStr d = maybe "library" (const "application") d.executable
 descStr : ResolvedPackage -> String
 descStr (RGitHub name url commit ipkg _ desc) =
   "GitHub \{execStr desc} (\{url}:\{commit})"
-descStr (RLocal name dir ipkg _ desc) = "local \{execStr desc}"
+descStr (RLocal name ipkg _ desc) = "local \{execStr desc}"
 descStr _ = "core package"
 
 ||| Lookup a package name in the package data base,

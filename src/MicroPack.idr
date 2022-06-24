@@ -48,13 +48,13 @@ main = run $ do
   scheme  <- fromMaybe "scheme" <$> getEnv "SCHEME"
 
   let db   = case args of
-        [_,n] => MkDBName n
+        [_,n] => either (const defCol) id $ readDBName n
         _     => defCol
 
       conf = microInit dir scheme db
 
   -- initialize `$HOME/.pack/user/pack.toml`
-  write (dir /> "user" /> packToml) (initToml scheme db)
+  write (MkAF (dir /> "user") packToml) (initToml scheme db)
 
   e <- idrisEnv conf
   links e

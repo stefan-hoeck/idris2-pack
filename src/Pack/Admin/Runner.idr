@@ -11,14 +11,15 @@ import Pack.Runner.Install
 import public Pack.Core
 
 data ACmd : Type where
-  CheckDB  : DBName -> Path Abs -> ACmd
-  FromHEAD : (path : Path Abs) -> ACmd
+  CheckDB  : DBName -> AbsFile -> ACmd
+  FromHEAD : (out : AbsFile) -> ACmd
   Help     : ACmd
 
 readCmd : Path Abs -> List String -> Either PackErr ACmd
 readCmd _   ["help"]                 = Right Help
-readCmd dir ["extract-from-head",p]  = Right (FromHEAD $ parse p dir)
-readCmd dir ["check-collection",n,p] = Right (CheckDB (MkDBName n) (parse p dir))
+readCmd dir ["extract-from-head",p]  = FromHEAD <$> readAbsFile dir p
+readCmd dir ["check-collection",n,p] =
+  [| CheckDB (readDBName n) (readAbsFile dir p) |]
 readCmd _   xs                       = Left $ UnknownCommand xs
 
 covering
@@ -41,7 +42,7 @@ dbOf (MkDB u commit v ps) = do
 -- package to one holding the latest commit hash for each
 -- and writes the resulting DB to the given file.
 covering
-writeLatestDB : HasIO io => Path Abs -> Env s -> EitherT PackErr io ()
+writeLatestDB : HasIO io => AbsFile -> Env s -> EitherT PackErr io ()
 writeLatestDB path e = do
   ndb <- dbOf e.db
   write path (printDB ndb)
@@ -58,7 +59,7 @@ runCmd = do
       let c = setColl db c'
        in idrisEnv c >>= checkDB p
     FromHEAD p         =>
-      let c = setColl "HEAD" c'
+      let c = setColl (MkDBName "HEAD") c'
        in env c >>= writeLatestDB p
     Help               => putStrLn """
       Usage: pack-admin [cmd] [args]

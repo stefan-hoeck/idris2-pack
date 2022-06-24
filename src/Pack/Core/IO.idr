@@ -199,15 +199,15 @@ export
 findInParentDirs :  HasIO io
                  => (Body -> Bool)
                  -> Path Abs
-                 -> EitherT PackErr io (Maybe $ Path Abs)
+                 -> EitherT PackErr io (Maybe AbsFile)
 findInParentDirs p (PAbs sb) = go sb
-  where go : SnocList Body -> EitherT PackErr io (Maybe $ Path Abs)
+  where go : SnocList Body -> EitherT PackErr io (Maybe AbsFile)
         go [<]       = pure Nothing
         go (sb :< b) =
           let dir := PAbs (sb :< b)
            in do
              (h :: _) <- filter p <$> entries dir | Nil => go sb
-             pure $ Just (dir /> h)
+             pure $ Just (MkAF dir h)
 
 --------------------------------------------------------------------------------
 --         File Access
@@ -215,54 +215,54 @@ findInParentDirs p (PAbs sb) = go sb
 
 ||| Delete a file.
 export
-rmFile : HasIO io => (f : Path Abs) -> EitherT PackErr io ()
-rmFile f = when !(exists f) $ sys "rm \{f}"
+rmFile : HasIO io => (f : AbsFile) -> EitherT PackErr io ()
+rmFile f = when !(exists $ path f) $ sys "rm \{f}"
 
 ||| Tries to read the content of a file
 export covering
-read : HasIO io => Path Abs -> EitherT PackErr io String
+read : HasIO io => AbsFile -> EitherT PackErr io String
 read fn = eitherIO (ReadFile fn) (readFile "\{fn}")
 
 ||| Reads the content of a file if it exists, otherwise
 ||| returns the given alternative string.
 export covering
 readIfExists :  HasIO io
-             => (path : Path Abs)
+             => (file : AbsFile)
              -> (alt  : String)
              -> EitherT PackErr io String
-readIfExists path alt = do
-  True <- exists path | False => pure alt
-  read path
+readIfExists file alt = do
+  True <- exists (path file) | False => pure alt
+  read file
 
 ||| Tries to write a string to a file.
 ||| The file's parent directory is created if
 ||| it does not yet exist.
 export covering
-write : HasIO io => Path Abs -> String -> EitherT PackErr io ()
-write path str = do
-  mkParentDir path
-  eitherIO (WriteFile path) (writeFile "\{path}" str)
+write : HasIO io => AbsFile -> String -> EitherT PackErr io ()
+write file str = do
+  mkDir file.parent
+  eitherIO (WriteFile file) (writeFile "\{file}" str)
 
 ||| Creates a symbolic link from one path to another,
 ||| remove a link at path `to` if there already is one.
 export
-link : HasIO io => (from,to : Path Abs) -> EitherT PackErr io ()
+link : HasIO io => (from : Path Abs) -> (to : AbsFile) -> EitherT PackErr io ()
 link from to = do
   rmFile to
-  mkParentDir to
+  mkDir to.parent
   sys "ln -s \{from} \{to}"
 
 ||| Copy a file.
 export
-copyFile : HasIO io => (from,to : Path Abs) -> EitherT PackErr io ()
+copyFile : HasIO io => (from,to : AbsFile) -> EitherT PackErr io ()
 copyFile from to = do
-  mkParentDir to
+  mkDir to.parent
   sys "cp \{from} \{to}"
 
 ||| Patch a file
 export
 patch :  HasIO io
-      => (original : Path Abs)
-      -> (patch    : Path Abs)
+      => (original : AbsFile)
+      -> (patch    : AbsFile)
       -> EitherT PackErr io ()
 patch o p = do sys "patch \{o} \{p}"
