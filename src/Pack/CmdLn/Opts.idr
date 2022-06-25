@@ -154,6 +154,8 @@ cmd _   ["package-path"]           = Right PackagePath
 cmd _   ["libs-path"]              = Right LibsPath
 cmd _   ["data-path"]              = Right DataPath
 cmd _   ["switch",db]              = Switch <$> readDBName db
+cmd dir ["new", pty, p]            =
+  New dir <$> readPkgType pty <*> readBody p
 cmd _  xs                          = Left  $ UnknownCommand xs
 
 ||| Given a root directory for *pack* and a db version,
@@ -195,6 +197,11 @@ usageInfo = """
   Commands:
     help
       Print this help text.
+
+    new <lib | bin> <package name>
+      Create a new package in the current directory
+      consisting of a source directory, default module and a .ipkg file.
+      A git repository will be initialized.
 
     build <.ipkg file>
       Build a local package given as an `.ipkg` file.

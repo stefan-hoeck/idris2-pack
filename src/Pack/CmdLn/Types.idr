@@ -24,6 +24,7 @@ data Cmd : Type where
   InstallApp       : List PkgName -> Cmd
   Remove           : List PkgName -> Cmd
   Run              : Either AbsFile PkgName -> List String -> Cmd
+  New              : (cur : Path Abs) -> PkgType -> Body -> Cmd
 
   -- Idris environment
   PackagePath      : Cmd
@@ -51,6 +52,7 @@ loglevel : Cmd -> LogLevel
 loglevel (Build x)              = Info
 loglevel (BuildDeps x)          = Info
 loglevel (Typecheck x)          = Info
+loglevel (New _ _ _)            = Info
 loglevel (Repl x)               = Warning
 loglevel (Install xs)           = Info
 loglevel (InstallApp xs)        = Info

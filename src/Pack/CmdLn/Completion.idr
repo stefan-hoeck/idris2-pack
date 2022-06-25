@@ -58,6 +58,10 @@ prefixOnlyIfNonEmpty : String -> List String -> List String
 prefixOnlyIfNonEmpty "--" = id
 prefixOnlyIfNonEmpty s    = prefixOnly s
 
+-- list of package types when creating a new package
+packageTypes : List String
+packageTypes = map show [Lib, Bin]
+
 packageList : String -> List String -> List String
 packageList "--" xs = xs
 packageList s    xs = case reverse $ split (',' ==) s of
@@ -96,6 +100,7 @@ optionFlags =
   , "install-app"
   , "completion"
   , "completion-script"
+  , "new"
   ] ++ optionNames
 
 queries : Env s -> List String
@@ -130,6 +135,7 @@ opts x "remove"           e = prefixOnlyIfNonEmpty x <$> installedPackages e
 opts x "switch"           e =   prefixOnlyIfNonEmpty x . ("latest" ::)
                             <$> collections e
 opts x "typecheck"        e = prefixOnlyIfNonEmpty x <$> ipkgFiles
+opts x "new"              e = prefixOnlyIfNonEmpty x <$> pure (packageTypes)
 
 -- options
 opts x _ e = pure $ if (x `elem` optionFlags)

@@ -9,6 +9,7 @@ import public Pack.Core
 import Pack.Runner.Database
 import Pack.Runner.Query
 import Pack.Runner.Install
+import Pack.Runner.New
 
 export covering
 runCmd : HasIO io => EitherT PackErr io ()
@@ -34,6 +35,7 @@ runCmd = do
     LibsPath           => env c >>= putStrLn . packageLibDirs
     DataPath           => env c >>= putStrLn . packageDataDirs
     Info               => env c >>= printInfo
+    New dir pty p      => idrisEnv c >>= new dir pty p
     Switch db          => case db == MkDBName "latest" of
       True  => do
         updateDB c
