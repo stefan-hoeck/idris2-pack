@@ -154,7 +154,8 @@ cmd _   ["package-path"]           = Right PackagePath
 cmd _   ["libs-path"]              = Right LibsPath
 cmd _   ["data-path"]              = Right DataPath
 cmd _   ["switch",db]              = Switch <$> readDBName db
-cmd _   ["new", pty, p]            = Right $ New (fromString pty) p
+cmd dir ["new", pty, p]            =
+  New dir <$> readPkgType pty <*> readBody p
 cmd _  xs                          = Left  $ UnknownCommand xs
 
 ||| Given a root directory for *pack* and a db version,

@@ -364,11 +364,17 @@ data PackErr : Type where
   ||| Invalid package database header
   InvalidDBName : (s : String) -> PackErr
 
+  ||| Invalid package type
+  InvalidPkgType : (s : String) -> PackErr
+
   ||| Invalid package version
   InvalidPkgVersion : (s : String) -> PackErr
 
   ||| Failed to parse an .ipkg file
   InvalidIpkgFile  : (path : AbsFile) -> PackErr
+
+  ||| Invalid file path body
+  InvalidBody  : (s : String) -> PackErr
 
   ||| Failed to parse a file path
   NoFilePath : (str : String) -> PackErr
@@ -457,6 +463,13 @@ printErr (InvalidDBName s) = """
   This should be a non-empty string without path separators.
   """
 
+printErr (InvalidBody s) = "Invalid file path body: \"\{s}\"."
+
+printErr (InvalidPkgType s) = """
+  Invalid package type: \"\{s}\".
+  Valid types are `lib` and `bin`.
+  """
+
 printErr (InvalidPkgVersion s) = "Invalid package version: \"\{s}\"."
 
 printErr (UnknownPkg name) = "Unknown package: \{name}"
@@ -505,6 +518,18 @@ readDBName : String -> Either PackErr DBName
 readDBName s = case body s of
   Just b  => Right $ MkDBName b
   Nothing => Left (InvalidDBName s)
+
+export
+readBody : String -> Either PackErr Body
+readBody s = case body s of
+  Just b  => Right b
+  Nothing => Left (InvalidBody s)
+
+export
+readPkgType : String -> Either PackErr PkgType
+readPkgType "lib" = Right Lib
+readPkgType "bin" = Right Bin
+readPkgType s     = Left (InvalidPkgType s)
 
 export
 readAbsFile : (curdir : Path Abs) -> String -> Either PackErr AbsFile

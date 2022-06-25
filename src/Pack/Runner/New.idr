@@ -16,19 +16,20 @@ import Libraries.Text.PrettyPrint.Prettyprinter.Render.String
 
 %default total
 
-newPkgDesc : (name : String) -> (mod : String) -> (user: String) -> PkgDesc
-newPkgDesc name mod user = let ipkg = initPkgDesc name
+newPkgDesc : (name : Body) -> (mod : Body) -> (user: String) -> PkgDesc
+newPkgDesc name mod user = let ipkg = initPkgDesc "\{name}"
                               in { authors := Just user,
                                    version := Just (MkPkgVersion (0 ::: [1, 0])),
-                                   mainmod := toMaybe (mod == "Main") (nsAsModuleIdent $ mkNamespace mod, ""),
-                                   executable := toMaybe (mod == "Main") name,
+                                   mainmod := toMaybe (mod == "Main") (nsAsModuleIdent $ mkNamespace "\{mod}", ""),
+                                   executable := toMaybe (mod == "Main") "\{name}",
                                    sourcedir := Just "src" } ipkg
 
--- Helper to capitalize the first letter of a given String
-capitalize : String -> String
-capitalize s with (strM s)
-  capitalize "" | StrNil = ""
-  capitalize (strCons x xs) | (StrCons x xs) = strCons (toUpper x) xs
+-- Helper to capitalize the first letter of a Body
+capitalize : Body -> Body
+capitalize (MkBody [] prf) impossible
+capitalize (MkBody (x :: xs) prf) = case fromChars (toUpper x :: xs) of
+  Just b  => b
+  Nothing => MkBody (x :: xs) prf
 
 mainModFile : String
 mainModFile = """
@@ -39,7 +40,7 @@ mainModFile = """
 
               """
 
-libModFile : String -> String
+libModFile : Body -> String
 libModFile name = """
                   module \{name}
 
@@ -49,7 +50,7 @@ libModFile name = """
                   """
 
 -- Returns module name and module file
-getModFile : PkgType -> String -> (String, String)
+getModFile : PkgType -> Body -> (Body, String)
 getModFile Lib pkgName = let mod = capitalize pkgName in (mod, libModFile mod)
 getModFile Bin pkgName = ("Main", mainModFile)
 
@@ -61,8 +62,13 @@ gitIgnoreFile = """
 
 ||| Create a new package at current location
 export covering
-new : HasIO io => PkgType -> (pkgName : String) -> Env HasIdris -> EitherT PackErr io ()
-new pty pkgName e = do
+new :  HasIO io
+    => (curdir : Path Abs)
+    -> PkgType
+    -> (pkgName : Body)
+    -> Env HasIdris
+    -> EitherT PackErr io ()
+new curdir pty pkgName e = do
     debug e "Creating new \{pty} package named \{pkgName}..."
     debug e "Getting author name from git config"
     user <- trim <$> (sysRun "git config user.name")
@@ -72,18 +78,18 @@ new pty pkgName e = do
     ipkg <- pure $ newPkgDesc pkgName mod user
 
     debug e "Creating parent and src directories"
-    let pkgRootDir = parse "./\{pkgName}"
+    let pkgRootDir = curdir /> pkgName
     let srcDir = pkgRootDir /> "src"
     mkDir (srcDir)
 
     debug e "Initializing git repo"
     eitherT (\err => warn e "Git repo creation failed: \{printErr err}")
-            (\_ => write (pkgRootDir /> ".gitignore") gitIgnoreFile)
+            (\_ => write (MkAF pkgRootDir ".gitignore") gitIgnoreFile)
             (sys "git init \{pkgRootDir}")
 
     debug e "Writing ipkg file"
-    write (pkgRootDir /> "\{pkgName}.ipkg") (renderString $ layoutUnbounded $ pretty ipkg)
+    write (MkAF pkgRootDir  (pkgName <+> ".ipkg")) (renderString $ layoutUnbounded $ pretty ipkg)
 
     debug e "Writing module file"
-    write (srcDir /> "\{mod}.idr") modFile
+    write (MkAF srcDir $ mod <+> ".idr") modFile
     info e "Created \{pty} package '\{pkgName}'"
