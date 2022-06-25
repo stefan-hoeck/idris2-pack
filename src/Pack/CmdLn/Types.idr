@@ -45,3 +45,25 @@ data Cmd : Type where
 
   -- Help
   PrintHelp        : Cmd
+
+export
+loglevel : Cmd -> LogLevel
+loglevel (Build x)              = Info
+loglevel (BuildDeps x)          = Info
+loglevel (Typecheck x)          = Info
+loglevel (Repl x)               = Warning
+loglevel (Install xs)           = Info
+loglevel (InstallApp xs)        = Info
+loglevel (Remove xs)            = Info
+loglevel (Run x strs)           = Warning
+loglevel PackagePath            = Warning
+loglevel LibsPath               = Warning
+loglevel DataPath               = Warning
+loglevel (Switch x)             = Info
+loglevel UpdateDB               = Info
+loglevel Info                   = Warning
+loglevel (Query x str)          = Warning
+loglevel (Fuzzy xs str)         = Warning
+loglevel (Completion str str1)  = Warning
+loglevel (CompletionScript str) = Warning
+loglevel PrintHelp              = Warning

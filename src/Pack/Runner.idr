@@ -13,7 +13,7 @@ import Pack.Runner.Install
 export covering
 runCmd : HasIO io => EitherT PackErr io ()
 runCmd = do
-  (c,cmd) <- getConfig cmd PrintHelp
+  (c,cmd) <- getConfig cmd PrintHelp loglevel
   case cmd of
     Completion a b     => env c >>= complete a b
     CompletionScript f => putStrLn (completionScript f)

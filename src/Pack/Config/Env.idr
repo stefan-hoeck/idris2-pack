@@ -90,10 +90,11 @@ resolveMeta (Local d i p) = pure $ Local d i p
 ||| Read application config from command line arguments.
 export covering
 getConfig :  HasIO io
-          => (readCmd : Path Abs -> List String -> Either PackErr a)
-          -> (dflt    : a)
+          => (readCmd   : Path Abs -> List String -> Either PackErr a)
+          -> (dflt      : a)
+          -> (dfltLevel : a -> LogLevel)
           -> EitherT PackErr io (Config Nothing,a)
-getConfig readCmd dflt = do
+getConfig readCmd dflt dfltLevel = do
   -- relevant directories
   cur        <- curDir
   dir        <- packDir
@@ -116,7 +117,7 @@ getConfig readCmd dflt = do
   let ini = init cur dir coll `update` global `update` local
 
   pn :: args <- getArgs | Nil => pure (ini, dflt)
-  (conf,cmd) <- liftEither $ applyArgs cur ini args (readCmd cur)
+  (conf,cmd) <- liftEither $ applyArgs cur ini args (readCmd cur) dfltLevel
 
   debug conf "Pack home is \{dir}"
   debug conf "Current directory is \{cur}"

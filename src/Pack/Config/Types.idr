@@ -213,7 +213,9 @@ allPackages e =
 
 ||| Initial config
 export
-init : (cur, dir : Path Abs) -> (coll : DBName) -> Config_ Commit I Nothing
+init :  (cur, dir : Path Abs)
+     -> (coll : DBName)
+     -> Config_ Commit I Nothing
 init cur dir coll = MkConfig {
     packDir      = dir
   , collection   = coll
@@ -227,7 +229,7 @@ init cur dir coll = MkConfig {
   , autoApps     = []
   , custom       = empty
   , queryType    = NameOnly
-  , logLevel     = Info
+  , logLevel     = Warning
   , codegen      = Default
   , db           = ()
   }

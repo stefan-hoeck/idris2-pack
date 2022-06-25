@@ -15,6 +15,11 @@ data ACmd : Type where
   FromHEAD : (out : AbsFile) -> ACmd
   Help     : ACmd
 
+loglevel : ACmd -> LogLevel
+loglevel (CheckDB x y)  = Info
+loglevel (FromHEAD out) = Info
+loglevel Help           = Warning
+
 readCmd : Path Abs -> List String -> Either PackErr ACmd
 readCmd _   ["help"]                 = Right Help
 readCmd dir ["extract-from-head",p]  = FromHEAD <$> readAbsFile dir p
@@ -53,7 +58,7 @@ setColl db = {collection := db}
 export covering
 runCmd : HasIO io => EitherT PackErr io ()
 runCmd = do
-  (c',cmd) <- getConfig readCmd Help
+  (c',cmd) <- getConfig readCmd Help loglevel
   case cmd of
     CheckDB db p       =>
       let c = setColl db c'
