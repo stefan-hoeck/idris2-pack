@@ -13,18 +13,24 @@ function check_installed {
 
 # end common functions
 
+# Detect Chez executable
+
 PACK_DIR="${PACK_DIR:-$HOME/.pack}"
 
 if command -v chezscheme &>/dev/null; then
 	DETECTED_SCHEME=chezscheme
 elif command -v scheme &>/dev/null; then
 	DETECTED_SCHEME=scheme
+elif command -v chez &>/dev/null; then
+	DETECTED_SCHEME=chez
 else
 	DETECTED_SCHEME=''
 fi
 
 read -r -p "Enter the name of your chez scheme binary [$DETECTED_SCHEME]: " SCHEME
 SCHEME=${SCHEME:-$DETECTED_SCHEME}
+
+# Verify that the necessary programs are installed
 
 if [ -z "$SCHEME" ]; then
 	echo 'scheme binary was not set'
@@ -37,9 +43,17 @@ if [ -d "$PACK_DIR" ]; then
 	exit 1
 fi
 
+# Homebrew gmp on M1 macos
+
+if [ -d "/opt/homebrew/include" ]; then
+	export CPATH="/opt/homebrew/include"
+fi
+
 check_installed git
 check_installed "$SCHEME"
 check_installed make
+
+# Install package collection
 
 mkdir "$PACK_DIR"
 mkdir "$PACK_DIR/clones"
@@ -49,8 +63,10 @@ git clone https://github.com/stefan-hoeck/idris2-pack-db.git "$PACK_DIR/clones/i
 cp "$PACK_DIR/clones/idris2-pack-db/collections/"* "$PACK_DIR/db"
 
 LATEST_DB="$(find "$PACK_DIR/db" -name 'nightly-*' | sort | tail -1)"
-PACKAGE_COLLECTION="$(basename --suffix .toml "$LATEST_DB")"
-IDRIS2_COMMIT=$(sed -ne '/^\[idris2\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
+PACKAGE_COLLECTION="$(basename -s .toml "$LATEST_DB")"
+IDRIS2_COMMIT=$(sed -ne '/^\[idris2\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p;}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
+
+# Bootstrap the Idris compiler
 
 git clone https://github.com/idris-lang/Idris2.git "$PACK_DIR/clones/Idris2"
 pushd "$PACK_DIR/clones/Idris2"
@@ -68,14 +84,27 @@ make install-with-src-libs IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH"
 make install-with-src-api IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH"
 popd
 
-TOML_COMMIT=$(sed -ne '/^\[db.toml\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
+# Install filepath
+
+FILEPATH_COMMIT=$(sed -ne '/^\[db.filepath\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p;}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
+git clone https://github.com/stefan-hoeck/idris2-filepath.git "$PACK_DIR/clones/idris2-filepath"
+pushd "$PACK_DIR/clones/idris2-filepath"
+git checkout "$FILEPATH_COMMIT"
+"$BOOT_PATH" --install filepath.ipkg
+popd
+
+# Install toml-idr
+
+TOML_COMMIT=$(sed -ne '/^\[db.toml\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p;}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
 git clone https://github.com/cuddlefishie/toml-idr "$PACK_DIR/clones/toml-idr"
 pushd "$PACK_DIR/clones/toml-idr"
 git checkout "$TOML_COMMIT"
 "$BOOT_PATH" --install toml.ipkg
 popd
 
-PACK_COMMIT=$(sed -ne '/^\[db.pack\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
+# Install pack
+
+PACK_COMMIT=$(sed -ne '/^\[db.pack\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p;}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
 git clone https://github.com/stefan-hoeck/idris2-pack.git "$PACK_DIR/clones/idris2-pack"
 pushd "$PACK_DIR/clones/idris2-pack"
 git checkout "$PACK_COMMIT"
@@ -85,14 +114,29 @@ mkdir -p "$PACK_DIR/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin"
 cp -r build/exec/* "$PACK_DIR/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin"
 popd
 
+# Setup symlinks to binaries
+
 mkdir -p "$PACK_DIR/$PACKAGE_COLLECTION/bin"
 pushd "$PACK_DIR/$PACKAGE_COLLECTION/bin"
 ln -s "$PACK_DIR/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin/pack" pack
+
+cat <<EOF >>idris2
+#!/bin/sh
+
+export IDRIS2_PACKAGE_PATH="\$($PACK_DIR/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin/pack package-path)"
+export IDRIS2_LIBS="\$("$PACK_DIR/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin/pack" libs-path)"
+export IDRIS2_DATA="\$("$PACK_DIR/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin/pack" data-path)"
+"$PACK_DIR/install/$IDRIS2_COMMIT/idris2/bin/idris2" "\$@"
+EOF
+
+chmod +x idris2
 popd
 
 ln -s "$PACK_DIR/$PACKAGE_COLLECTION/bin" "$PACK_DIR/bin"
 
-mkdir "$PACK_DIR/user"
+# Initialize `pack.toml`
+
+mkdir -p "$PACK_DIR/user"
 cat <<EOF >>"$PACK_DIR/user/pack.toml"
 # The package collection to use
 collection = "$PACKAGE_COLLECTION"
@@ -130,7 +174,7 @@ bootstrap  = false
 scheme      = "$SCHEME"
 
 # Default code generator to us
-codegen     = "chez"
+# codegen     = "chez"
 
 # Set this to \`true\` in order to run REPL sessions from within
 # \`rlwrap\`. This will give you additional features such as a
@@ -161,5 +205,7 @@ repl.rlwrap = false
 # commit = "eb7a146f565276f82ebf30cb6d5502e9f65dcc3c"
 # ipkg   = "toml.ipkg"
 EOF
+
+# Cleanup
 
 rm -rf "$PACK_DIR/clones"

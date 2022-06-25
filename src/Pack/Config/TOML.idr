@@ -3,8 +3,6 @@ module Pack.Config.TOML
 import Data.List1
 import Data.String
 
-import Libraries.Utils.Path
-
 import Pack.Config.Types
 import Pack.Core.TOML
 import Pack.Core.Types
@@ -17,10 +15,16 @@ export
 FromTOML Codegen where
   fromTOML = tmap Types.fromString
 
+0 CustomDB : Type
+CustomDB = SortedMap DBName (SortedMap PkgName $ Package_ MetaCommit)
+
+cstm :  Path Abs -> Value -> Either TOMLErr CustomDB
+cstm = sortedMap (sortedMap package)
+
 ||| Adj configuration.
 export
-config : Value -> Either TOMLErr (Config_ Maybe Nothing)
-config v =
+config : Path Abs -> Value -> Either TOMLErr (Config_ MetaCommit Maybe Nothing)
+config dir v =
   [| MkConfig (pure Nothing)
               (maybeValAt "collection" v)
               (maybeValAt "idris2.scheme" v)
@@ -31,7 +35,7 @@ config v =
               (maybeValAt "idris2.repl.rlwrap" v)
               (maybeValAt "install.libs" v)
               (maybeValAt "install.apps" v)
-              (maybeValAt "custom" v)
+              (maybeValAt' (cstm dir) "custom" v)
               (pure Nothing)
               (pure Nothing)
               (maybeValAt "idris2.codegen" v)
@@ -77,7 +81,7 @@ initToml scheme db = """
   scheme      = "\{scheme}"
 
   # Default code generator to us
-  codegen     = "chez"
+  # codegen     = "chez"
 
   # Set this to `true` in order to run REPL sessions from within
   # `rlwrap`. This will give you additional features such as a
@@ -87,7 +91,14 @@ initToml scheme db = """
   # Below are some examples for custom packages
 
   # A local package to be available with all
-  # package collections.
+  # package collections. The path to the package's root
+  # directory can be absolute or relative. In the latter
+  # case, it will be considered to be relative to the
+  # parent directory of the `pack.toml` file where it is
+  # defined.
+  #
+  # The path to `.ipkg` files must always relative to the
+  # given `path`.
   # [custom.all.chem]
   # type = "local"
   # path = "/data/idris/chem"
@@ -97,7 +108,7 @@ initToml scheme db = """
   # package collections.
   # [custom.all.foo]
   # type = "github"
-  # path = "https://github.com/bar/foo"
+  # url  = "https://github.com/bar/foo"
   # ipkg = "foo.ipkg"
 
   # Override library `toml` from package collection `nightly-220503`

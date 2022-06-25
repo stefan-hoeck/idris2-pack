@@ -3,9 +3,7 @@ module Pack.CmdLn.Completion
 import Control.Monad.Trans
 import Data.List
 import Data.SortedMap
-import Data.String
 import Libraries.Data.List.Extra
-import Libraries.Utils.Path
 import Pack.CmdLn.Opts
 import Pack.Config.Types
 import Pack.Core
@@ -21,13 +19,12 @@ import System.Directory
 ipkgFiles : HasIO io => io (List String)
 ipkgFiles = do
   Right ss <- runEitherT currentEntries | Left _ => pure []
-  pure $ filter isIpkgFile ss
+  pure . map interpolate $ filter isIpkgBody ss
 
-toDBName : String -> Maybe String
-toDBName s =
-  if Just "toml" == extension s
-     then fileStem s
-     else Nothing
+toDBName : Body -> Maybe String
+toDBName s = case splitFileName s of
+  Just (db,"toml") => Just "\{db}"
+  _                => Nothing
 
 -- list of package collections in `$HOME/.pack/db`
 collections : HasIO io => Env s -> io (List String)
@@ -40,9 +37,12 @@ collections e = do
 packages : Env s -> List String
 packages e = value <$> keys (allPackages e)
 
--- Packages or `.ipkg` files in the current directory
-anyPackage : HasIO io => Env s -> io (List String)
-anyPackage e = (++ packages e) <$> ipkgFiles
+-- list of packages in the currently selected data
+-- collection
+packagesOrIpkg : HasIO io => Env s -> io (List String)
+packagesOrIpkg e = do
+  ps <- ipkgFiles
+  pure (packages e ++ ps)
 
 -- Lists only installed packages
 installedPackages : HasIO io => Env s -> io (List String)
@@ -62,6 +62,11 @@ prefixOnlyIfNonEmpty s    = prefixOnly s
 packageTypes : List String
 packageTypes = map show [Lib, Bin]
 
+packageList : String -> List String -> List String
+packageList "--" xs = xs
+packageList s    xs = case reverse $ split (',' ==) s of
+  h ::: _ => prefixOnly h xs
+
 codegens : List String
 codegens =
   [ "chez"
@@ -79,8 +84,10 @@ optionFlags =
   [ "help"
   , "update-db"
   , "query"
-  , "exec"
+  , "run"
+  , "fuzzy"
   , "build"
+  , "install-deps"
   , "typecheck"
   , "switch"
   , "install"
@@ -95,6 +102,9 @@ optionFlags =
   , "completion-script"
   , "new"
   ] ++ optionNames
+
+queries : Env s -> List String
+queries e = ["dep", "module"] ++ packages e
 
 ||| Given a pair of strings, the first representing the word
 ||| actually being edited, the second representing the word
@@ -112,14 +122,18 @@ opts x "--cg"             e = prefixOnlyIfNonEmpty x <$> pure codegens
 
 -- actions
 opts x "build"            e = prefixOnlyIfNonEmpty x <$> ipkgFiles
-opts x "query"            e = prefixOnlyIfNonEmpty x <$> pure (packages e)
+opts x "install-deps"     e = prefixOnlyIfNonEmpty x <$> ipkgFiles
+opts x "query"            e = prefixOnlyIfNonEmpty x <$> pure (queries e)
+opts x "fuzzy"            e = packageList          x <$> installedPackages e
+opts x "dep"              e = prefixOnlyIfNonEmpty x <$> pure (packages e)
+opts x "modules"          e = prefixOnlyIfNonEmpty x <$> pure (packages e)
 opts x "check-db"         e = prefixOnlyIfNonEmpty x <$> collections e
-opts x "exec"             e = prefixOnlyIfNonEmpty x <$> anyPackage e
-opts x "install"          e = prefixOnlyIfNonEmpty x <$> anyPackage e
-opts x "install-app"      e = prefixOnlyIfNonEmpty x <$> anyPackage e
-opts x "install-with-src" e = prefixOnlyIfNonEmpty x <$> anyPackage e
+opts x "run"              e = prefixOnlyIfNonEmpty x <$> packagesOrIpkg e
+opts x "install"          e = prefixOnlyIfNonEmpty x <$> pure (packages e)
+opts x "install-app"      e = prefixOnlyIfNonEmpty x <$> pure (packages e)
 opts x "remove"           e = prefixOnlyIfNonEmpty x <$> installedPackages e
-opts x "switch"           e = prefixOnlyIfNonEmpty x <$> collections e
+opts x "switch"           e =   prefixOnlyIfNonEmpty x . ("latest" ::)
+                            <$> collections e
 opts x "typecheck"        e = prefixOnlyIfNonEmpty x <$> ipkgFiles
 opts x "new"              e = prefixOnlyIfNonEmpty x <$> pure (packageTypes)
 

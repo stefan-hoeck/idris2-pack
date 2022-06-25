@@ -4,22 +4,105 @@
 ||| type safety.
 module Pack.Core.Types
 
-import Data.List1
-import Data.String
+import public Data.FilePath
+import Data.Maybe
 import Idris.Package.Types
-import Libraries.Utils.Path
 import System.File
 
 %default total
 
+||| True if the given file path ends on `.ipkg`
+export
+isIpkgFile : Path t -> Bool
+isIpkgFile = (Just "ipkg" ==) . extension
+
+||| True if the given file path body ends on `.ipkg`
+export
+isIpkgBody : Body -> Bool
+isIpkgBody = (Just "ipkg" ==) . map snd . splitFileName
+
+||| True if the given file path ends on `.toml`
+export
+isTomlFile : Path t -> Bool
+isTomlFile = (Just "toml" ==) . extension
+
+||| True if the given file path body ends on `.toml`
+export
+isTomlBody : Body -> Bool
+isTomlBody = (Just "toml" ==) . map snd . splitFileName
+
+toRelPath : String -> Path Rel
+toRelPath s = case the FilePath (fromString s) of
+  FP (PAbs sx) => PRel sx
+  FP (PRel sx) => PRel sx
+
+export
+toAbsPath : Path Abs -> FilePath -> Path Abs
+toAbsPath dir (FP $ PAbs sx) = PAbs sx
+toAbsPath dir (FP $ PRel sx) = dir </> PRel sx
+
+export
+tryParse : String -> Maybe (Path Abs)
+tryParse s = case the FilePath (fromString s) of
+  FP (PAbs sx) => Just (PAbs sx)
+  FP (PRel _)  => Nothing
+
+export
+parse : String -> Path Abs -> Path Abs
+parse s dir = toAbsPath dir (fromString s)
+
+--------------------------------------------------------------------------------
+--          ToRelPath
+--------------------------------------------------------------------------------
+
+||| We use this interface to convert a value such as a
+||| commit hash or package name to a relative path in the
+||| file system.
+public export
+interface ToRelPath a where
+  relPath : a -> Path Rel
+
+export %inline
+ToRelPath String where
+  relPath = toRelPath
+
+export %inline
+ToRelPath (Path Rel) where
+  relPath = id
+
+infixl 5 <//>
+
+export %inline
+(<//>) : ToRelPath a => Path Abs -> a -> Path Abs
+p <//> v = p </> relPath v
+
+||| We use this interface to convert a value such as a
+||| commit hash or package name to a relative path in the
+||| file system.
+public export
+interface ToBody a where
+  toBody : a -> Body
+
+export %inline
+ToBody Body where
+  toBody = id
+
+infixl 5 //>
+
+export %inline
+(//>) : ToBody a => Path t -> a -> Path t
+p //> v = p /> toBody v
+
+infixl 8 <->
+
+||| Concatenate two file path bodies with a hyphen inbetween.
+export
+(<->) : ToBody a => ToBody b => a -> b -> Body
+x <-> y = toBody x <+> "-" <+> toBody y
+
 --------------------------------------------------------------------------------
 --          Interpolation
 --------------------------------------------------------------------------------
-
-||| Convenience implementation for using paths in string
-||| interpolation
-export
-Interpolation Path where interpolate = show
 
 ||| Convenience implementation for printing file errors in string
 ||| interpolation
@@ -30,6 +113,57 @@ Interpolation FileError where interpolate = show
 ||| interpolation
 export
 Interpolation PkgVersion where interpolate = show
+
+||| Convert a package version to a file path body.
+export
+ToBody PkgVersion where
+  toBody = fromMaybe "0" . body . show
+
+||| Convert a package version to a file path body.
+export
+ToBody (Maybe PkgVersion) where
+  toBody Nothing  = "0"
+  toBody (Just v) = toBody v
+
+--------------------------------------------------------------------------------
+--          Files
+--------------------------------------------------------------------------------
+
+||| A file given as the absolute path to its parent
+||| directory plus the file body.
+public export
+record AbsFile where
+  constructor MkAF
+  parent : Path Abs
+  file   : Body
+
+export
+path : AbsFile -> Path Abs
+path (MkAF p f) = p /> f
+
+export
+Interpolation AbsFile where
+  interpolate (MkAF parent file) = "\{parent /> file}"
+
+||| A file given as the relative path to its parent
+||| directory plus the file body.
+public export
+record RelFile where
+  constructor MkRF
+  parent : Path Rel
+  file   : Body
+
+export %inline
+toAbsFile : Path Abs -> RelFile -> AbsFile
+toAbsFile dir (MkRF p f) = MkAF (dir </> p) f
+
+export %inline
+ToRelPath RelFile where
+  relPath (MkRF p f) = p /> f
+
+export %inline
+Interpolation RelFile where
+  interpolate (MkRF p f) = interpolate $ p /> f
 
 --------------------------------------------------------------------------------
 --          URL
@@ -68,6 +202,10 @@ FromString Commit where fromString = MkCommit
 export %inline
 Interpolation Commit where interpolate = value
 
+export %inline
+ToRelPath Commit where
+  relPath = toRelPath . value
+
 --------------------------------------------------------------------------------
 --          Package Name
 --------------------------------------------------------------------------------
@@ -89,6 +227,10 @@ FromString PkgName where fromString = MkPkgName
 
 export %inline
 Interpolation PkgName where interpolate = value
+
+export %inline
+ToRelPath PkgName where
+  relPath = toRelPath . value
 
 --------------------------------------------------------------------------------
 --          Package Type
@@ -118,11 +260,12 @@ Interpolation PkgType where
 --          DBName
 --------------------------------------------------------------------------------
 
-||| Name of a package collection
+||| Name of a package collection. This should be a valid
+||| file path body.
 public export
 record DBName where
   constructor MkDBName
-  value : String
+  value : Body
 
 export %inline
 Eq DBName where (==) = (==) `on` value
@@ -131,35 +274,19 @@ export %inline
 Ord DBName where compare = compare `on` value
 
 export %inline
-FromString DBName where fromString = MkDBName
+Interpolation DBName where interpolate = interpolate . value
 
 export %inline
-Interpolation DBName where interpolate = value
+ToBody DBName where
+  toBody = value
 
---------------------------------------------------------------------------------
---          PkgRep
---------------------------------------------------------------------------------
+export %inline
+Head : DBName
+Head = MkDBName "HEAD"
 
-||| Package representation at the command line.
-||| This is either a path to an `.ipkg` file or the
-||| name of a package in the package collection.
-public export
-data PkgRep : Type where
-  Pkg  : PkgName -> PkgRep
-  Ipkg : Path    -> PkgRep
-
-export
-Interpolation PkgRep where
-  interpolate (Pkg n)  = n.value
-  interpolate (Ipkg p) = interpolate p
-
-export
-isIpkgFile : String -> Bool
-isIpkgFile = (Just "ipkg" ==) . extension
-
-export
-FromString PkgRep where
-  fromString s = if isIpkgFile s then Ipkg (parse s) else Pkg (MkPkgName s)
+export %inline
+All : DBName
+All = MkDBName "all"
 
 --------------------------------------------------------------------------------
 --          Errors
@@ -197,29 +324,33 @@ data PackErr : Type where
   NoPackDir  : PackErr
 
   ||| Failed to create the given directory
-  MkDir      : (path : Path) -> (err : FileError) -> PackErr
+  MkDir      : (path : Path Abs) -> (err : FileError) -> PackErr
 
   ||| Failed to read the given file
-  ReadFile   : (path : Path) -> (err : FileError) -> PackErr
+  ReadFile   : (path : AbsFile) -> (err : FileError) -> PackErr
 
   ||| Failed to write to the given file
-  WriteFile  : (path : Path) -> (err : FileError) -> PackErr
+  WriteFile  : (path : AbsFile) -> (err : FileError) -> PackErr
 
   ||| Failed to read the content of a directory
-  DirEntries : (path : Path) -> (err : FileError) -> PackErr
+  DirEntries : (path : Path Abs) -> (err : FileError) -> PackErr
 
   ||| Error when running the given system command
   Sys        : (cmd : String) -> (err : Int) -> PackErr
 
   ||| Error when changing into the given directory
-  ChangeDir  : (path : Path) -> PackErr
+  ChangeDir  : (path : Path Abs) -> PackErr
 
   ||| The given package is not in the package data base
   UnknownPkg : (name : PkgName) -> PackErr
 
   ||| The given package is not an applicatio
   ||| (No executable name set in the `.ipkg` file)
-  NoApp      : (rep : PkgRep) -> PackErr
+  NoApp      : (rep : PkgName) -> PackErr
+
+  ||| The given package is not an application
+  ||| (No executable name set in the `.ipkg` file)
+  NoAppIpkg  : (path : AbsFile) -> PackErr
 
   ||| An erroneous package description in a package DB file
   InvalidPackageDesc : (s : String) -> PackErr
@@ -230,11 +361,17 @@ data PackErr : Type where
   ||| Invalid package database header
   InvalidDBHeader : (s : String) -> PackErr
 
+  ||| Invalid package database header
+  InvalidDBName : (s : String) -> PackErr
+
   ||| Invalid package version
   InvalidPkgVersion : (s : String) -> PackErr
 
   ||| Failed to parse an .ipkg file
-  InvalidIpkgFile  : (path : Path) -> PackErr
+  InvalidIpkgFile  : (path : AbsFile) -> PackErr
+
+  ||| Failed to parse a file path
+  NoFilePath : (str : String) -> PackErr
 
   ||| The given core package (base, contrib, etc.)
   ||| is missing from the Idris installation.
@@ -262,13 +399,16 @@ data PackErr : Type where
 
   ||| Trying to clone a repository into an existing
   ||| directory.
-  DirExists : Path -> PackErr
+  DirExists : Path Abs -> PackErr
 
   ||| Error in a toml file.
-  TOMLFile :  (file : Path) -> (err : TOMLErr) -> PackErr
+  TOMLFile :  (file : AbsFile) -> (err : TOMLErr) -> PackErr
 
   ||| Error in a toml file.
-  TOMLParse : (file : Path) -> (err : String) -> PackErr
+  TOMLParse : (file : AbsFile) -> (err : String) -> PackErr
+
+  ||| Number of failures when building packages.
+  BuildFailures : Nat -> PackErr
 
 ||| Prints an error that occured during program execution.
 export
@@ -312,11 +452,18 @@ printErr (InvalidDBHeader s) = """
   This should be of the format \"idris2 commit hash,idris2 version\".
   """
 
+printErr (InvalidDBName s) = """
+  Invalid data collection name: \"\{s}\".
+  This should be a non-empty string without path separators.
+  """
+
 printErr (InvalidPkgVersion s) = "Invalid package version: \"\{s}\"."
 
 printErr (UnknownPkg name) = "Unknown package: \{name}"
 
 printErr (NoApp rep) = "Package \{rep} is not an application"
+
+printErr (NoAppIpkg p) = "Package \{p} is not an application"
 
 printErr EmptyPkgDB = "Empty package data base"
 
@@ -337,6 +484,8 @@ printErr (UnknownCommand cmd) = "Unknown command: \{unwords cmd}"
 printErr BuildMany =
   "Can only build or typecheck a single Idris2 package given as an `.ipkg` file."
 
+printErr (NoFilePath s) = "Not a file path : \{s}"
+
 printErr (DirExists path) = """
   Failed to clone GitHub repository into \{path}.
   Directory already exists.
@@ -346,6 +495,22 @@ printErr (TOMLFile file err) =
   "Error in file \{file}: \{printTOMLErr err}."
 
 printErr (TOMLParse file err) = "Error in file \{file}: \{err}."
+
+printErr (BuildFailures 1) = "1 package failed to build."
+
+printErr (BuildFailures n) = "\{show n} packages failed to build."
+
+export
+readDBName : String -> Either PackErr DBName
+readDBName s = case body s of
+  Just b  => Right $ MkDBName b
+  Nothing => Left (InvalidDBName s)
+
+export
+readAbsFile : (curdir : Path Abs) -> String -> Either PackErr AbsFile
+readAbsFile cd s = case split $ toAbsPath cd (fromString s) of
+  Just (p,b) => Right $ MkAF p b
+  Nothing    => Left (NoFilePath s)
 
 --------------------------------------------------------------------------------
 --          Logging

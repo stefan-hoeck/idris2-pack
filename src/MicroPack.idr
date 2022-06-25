@@ -6,7 +6,6 @@ module MicroPack
 import Data.Maybe
 import Data.SortedMap
 import Data.String
-import Libraries.Utils.Path
 import Pack.Config.Env
 import Pack.Config.TOML
 import Pack.Config.Types
@@ -17,18 +16,18 @@ import System
 
 %default total
 
-microInit :  (dir    : Path)
+microInit :  (dir    : Path Abs)
           -> (scheme : String)
           -> (db     : DBName)
           ->  Config Nothing
 microInit dir scheme db = MkConfig {
     packDir       = dir
   , collection    = db
-  , scheme        = parse scheme
+  , scheme        = fromString scheme
   , bootstrap     = True
   , safetyPrompt  = True
   , withSrc       = True
-  , withIpkg      = Nothing
+  , withIpkg      = None
   , rlwrap        = False
   , autoLibs      = []
   , autoApps      = ["pack"]
@@ -43,15 +42,19 @@ covering
 main : IO ()
 main = run $ do
   dir     <- packDir
-  [_,db'] <- getArgs | as => throwE (InvalidArgs as)
+  mkDir dir
+  defCol  <- defaultColl dir
+  args    <- getArgs
   scheme  <- fromMaybe "scheme" <$> getEnv "SCHEME"
 
-  let db   = MkDBName db'
+  let db   = case args of
+        [_,n] => either (const defCol) id $ readDBName n
+        _     => defCol
+
       conf = microInit dir scheme db
 
   -- initialize `$HOME/.pack/user/pack.toml`
-  write (packToml dir) (initToml scheme db)
+  write (MkAF (dir /> "user") packToml) (initToml scheme db)
 
-  updateDB conf
   e <- idrisEnv conf
   links e

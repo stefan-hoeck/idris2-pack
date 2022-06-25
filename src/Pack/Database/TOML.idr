@@ -9,21 +9,26 @@ import Pack.Database.Types
 
 %default total
 
-github : Value -> Either TOMLErr Package
-github v = [| GitHub (valAt "url" v) (valAt "commit" v) (valAt "ipkg" v) |]
+export
+FromTOML MetaCommit where fromTOML = tmap fromString
 
-local : Value -> Either TOMLErr Package
-local v = [| Local (valAt "path" v) (valAt "ipkg" v) |]
+github : FromTOML c => Value -> Either TOMLErr (Package_ c)
+github v = [| GitHub (valAt "url" v)
+                     (valAt "commit" v)
+                     (valAt "ipkg" v)
+                     (optValAt "packagePath" False v) |]
 
-package : Value -> Either TOMLErr Package
-package v = valAt {a = String} "type" v >>=
+local : Path Abs -> Value -> Either TOMLErr (Package_ c)
+local dir v = [| Local (absPathAt "path" dir v)
+                       (valAt "ipkg" v)
+                       (optValAt "packagePath" False v) |]
+
+export
+package : FromTOML c => Path Abs -> Value -> Either TOMLErr (Package_ c)
+package dir v = valAt {a = String} "type" v >>=
   \case "github" => github v
-        "local"  => local v
+        "local"  => local dir v
         _        => Left $ WrongType ["type"] "Package Type"
-
-export %inline
-FromTOML Package where
-  fromTOML = package
 
 ||| URL of the Idris repository
 export
@@ -31,8 +36,8 @@ idrisRepo : URL
 idrisRepo = "https://github.com/idris-lang/Idris2.git"
 
 export
-FromTOML DB where
-  fromTOML v = [| MkDB (optValAt "idris2.url" idrisRepo v)
-                       (valAt "idris2.commit" v)
-                       (valAt "idris2.version" v)
-                       (valAt "db" v) |]
+db : Path Abs -> Value -> Either TOMLErr DB
+db dir v = [| MkDB (optValAt "idris2.url" idrisRepo v)
+                   (valAt "idris2.commit" v)
+                   (valAt "idris2.version" v)
+                   (valAt' (sortedMap package dir) "db" (Just empty) v) |]

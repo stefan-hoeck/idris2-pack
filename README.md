@@ -1,5 +1,7 @@
 # An Idris2 Package Manager with Curated Package Collections
 
+![Check Collection](https://github.com/stefan-hoeck/idris2-pack-db/actions/workflows/ci-db.yml/badge.svg)
+
 This is a simple package manager taking a slightly different
 approach than other available options like
 [sirdi](https://github.com/eayus/sirdi) or
@@ -12,20 +14,24 @@ that's a bug in the package collection). This is similar to what
 There is a second GitHub repository containing the package collections:
 [idris2-pack-db](https://github.com/stefan-hoeck/idris2-pack-db).
 See instructions there if you want to make your own packages
-available to *pack*.
+available to *pack*. The list of currently available packages plus
+their current build status can also be found
+[here](https://github.com/stefan-hoeck/idris2-pack-db/blob/main/STATUS.md).
 
 ## Quick Installation
 
 For detailed instructions and prerequisites, see [installation](INSTALL.md).
-Assuming, you have already installed Chez Scheme (and its
-executable is called `chez`) and you want to start with
-the `nightly-220507` package collection, you can set up
-*pack* and the corresponding Idris2 compiler with the following
-command:
+Assuming, you have already installed Chez Scheme
+you can set up *pack* and the corresponding Idris2
+compiler with the following command:
 
 ```sh
-make micropack SCHEME=chez DB=nightly-220507
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/stefan-hoeck/idris2-pack/main/install.bash)"
 ```
+
+You will be asked about the name of your Chez Scheme executable during
+the installation procedure. If all goes well, make sure to add
+folder `$HOME/.pack/bin` to your `$PATH` variable.
 
 ## Usage
 
@@ -66,19 +72,18 @@ It is also possible to work with local `.ipkg` files as long
 as they depend on packages known to *pack*:
 
 ```sh
-pack install-app fix_whitespace.ipkg
 pack build json.ipkg
 pack typecheck elab-util.ipkg
 ```
 
 The build tool can run executables, both from local
-packages as well as from installed applications. Command
+`.ipkg` files as well as from installed applications. Command
 line arguments to be passed on to the executable can be
 listed after the package name or `.ipkg` file:
 
 ```sh
-pack exec test.ipkg -n 50
-pack exec katla --help
+pack run test.ipkg -n 50
+pack run katla --help
 ```
 
 You can use *pack* to start an Idris REPL session, optionally
@@ -155,7 +160,10 @@ of a project. Just as with the global `pack.toml` file in directory
 `$HOME/.pack/user/`, you can specify the package collection to
 use for a project as well as define additional local dependencies
 and even override global package settings. Local settings take
-precedence over global once.
+precedence over global once. Pack will look for local `pack.toml`
+files in all parent directories of the current working directory
+(including the current working directory itself) and will stop
+at the first one it finds.
 
 ## Directory Structure
 
@@ -236,41 +244,6 @@ pack switch nightly-220518
 And second, add directory `$HOME/.pack/bin` to your `$PATH`
 variable.
 
-### Package Path
-
-Since *pack* installs its libraries not in the default locations,
-vanilla Idris will not be able to find them (nor will other
-applications like
-[idris2-lsp](https://github.com/idris-community/idris2-lsp)).
-As an additional complication, the locations of libraries
-will depend both on the global and local versions of
-the `pack.toml` file. It is therefore necessary, to make the
-package path available to these tools before you start hacking
-on an Idris2 project.
-
-For instance, on my Linux box I use `neovim` with `idris2-lsp` and
-the [idris2-nvim](https://github.com/ShinKage/idris2-nvim) plugin.
-The `idris2-lsp` application will look for libraries based on
-an `.ipkg` file in the project I work on, but these libraries
-are scattered all over the place. In order to find them, we
-have to add their locations to the `$IDRIS2_PACKAGE_PATH`
-environment variable. This can be done as follows:
-
-```sh
-IDRIS2_PACKAGE_PATH=$(pack package-path) nvim
-```
-
-Likewise, you can invoke the Idris2 compiler in a similar
-manner:
-
-```sh
-IDRIS2_PACKAGE_PATH=$(pack package-path) idris2
-```
-
-If you find these commands to be cumbersome to use, consider
-defining an alias for them in the configuration files
-of your shell.
-
 ## Stuff still Missing
 
 There is a lot of functionality still missing. Here's a
@@ -278,10 +251,10 @@ non-comprehensive list:
 
 - [x] Support for local package collections
 - [x] Command for starting a REPL session
-- [ ] Support for custom build directories
+- [x] Support for custom build directories
 - [x] Command for typechecking an Idris package
 - [x] Command for building a local Idris2 package
 - [x] Command for running an application
 - [x] Command for querying a data collection
-- [ ] Command for listing current version of data collection
+- [x] Command for listing current version of data collection
 - [ ] Support for running tests

@@ -1,11 +1,18 @@
 package pack
+
 version = 0.0.1
+
 authors = "Stefan Höck"
+
+brief   = "A package manager for Idris2 with curated package collections"
+
 langversion >= 0.5.1
+
 depends = base >= 0.5.1
         , contrib
         , idris2
         , toml
+        , filepath
 
 modules = Pack.CmdLn.Completion
         , Pack.CmdLn.Opts
@@ -33,4 +40,5 @@ modules = Pack.CmdLn.Completion
 main       = Main
 
 executable = pack
+
 sourcedir  = "src"

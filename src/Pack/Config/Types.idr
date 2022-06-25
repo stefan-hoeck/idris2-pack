@@ -3,11 +3,9 @@ module Pack.Config.Types
 import Data.List
 import Data.Maybe
 import Data.SortedMap
-import Data.String
 import Idris.Package.Types
 import Libraries.Data.List.Extra
-import Libraries.Utils.Path
-import Pack.Core.Types
+import Pack.Core
 import Pack.Database.Types
 
 %default total
@@ -45,6 +43,9 @@ data QueryType : Type where
 
   ||| List direct dependencies
   Dependencies : QueryType
+
+  ||| Print the full `.ipkg` file
+  Ipkg         : QueryType
 
   ||| List detailed information about a package
   Details      : QueryType
@@ -88,6 +89,29 @@ fromString "refc"          = RefC
 fromString "vmcode-interp" = VMCode
 fromString x               = Other x
 
+||| Data type describing whether to search for an `.ipkg`
+||| file in one of the parent directories (the default), not
+||| using an `.ipkg` file at all, or use the one provided at
+||| the command line.
+|||
+||| This is only relevant when working with Idris source files
+||| directly, for instance when loading them into a REPL session.
+public export
+data WithIpkg : Type where
+  ||| Search for an `.ipkg` file in a parent directory.
+  ||| If an `.idr` file is provided, the parent directories
+  ||| of this file will be searched. If no `.idr` file is
+  ||| given, the current working directory will be search,
+  ||| which is given as an argument to this constructor.
+  Search : (dir : Path Abs) -> WithIpkg
+
+  ||| Don't use an `.ipkg` file.
+  None   : WithIpkg
+
+  ||| Use the given `.ipkg` file, provided as a command line
+  ||| argument.
+  Use    : (ipkg : AbsFile) -> WithIpkg
+
 ||| Type-level identity
 public export
 0 I : Type -> Type
@@ -101,17 +125,17 @@ I t = t
 ||| the configuration from user config file, we use context
 ||| `Maybe`, because all values will be optional.
 public export
-record Config_ (f : Type -> Type) (s : Maybe State) where
+record Config_ (c : Type) (f : Type -> Type) (s : Maybe State) where
   constructor MkConfig
   ||| Directory where the *pack* DB and installed
   ||| libraries and executables reside
-  packDir      : f Path
+  packDir      : f (Path Abs)
 
   ||| Package collection to use
   collection   : f DBName
 
   ||| Scheme executable to use
-  scheme       : f Path
+  scheme       : f FilePath
 
   ||| Whether to use bootstrapping when building Idris2
   bootstrap    : f Bool
@@ -124,8 +148,8 @@ record Config_ (f : Type -> Type) (s : Maybe State) where
   ||| Whether to install the library sources as well
   withSrc      : f Bool
 
-  ||| The `.ipkg` file to use when starting a REPL session
-  withIpkg     : f (Maybe Path)
+  ||| The `.ipkg` file to use (if any) when starting a REPL session
+  withIpkg     : f WithIpkg
 
   ||| Whether to use `rlwrap` to run a REPL session
   rlwrap       : f Bool
@@ -137,7 +161,7 @@ record Config_ (f : Type -> Type) (s : Maybe State) where
   autoApps     : f (List PkgName)
 
   ||| Customizations to the package data base
-  custom       : f (SortedMap DBName (SortedMap PkgName Package))
+  custom       : f (SortedMap DBName (SortedMap PkgName $ Package_ c))
 
   ||| Type of query to run
   queryType    : f (QueryType)
@@ -151,13 +175,22 @@ record Config_ (f : Type -> Type) (s : Maybe State) where
   ||| The package collection
   db           : f (DBType s)
 
+export
+traverse :  Applicative f
+         => (Package_ a -> f (Package_ b))
+         -> Config_ a Maybe s
+         -> f (Config_ b Maybe s)
+traverse f cfg =
+  let cst = traverse (traverse (traverse f)) cfg.custom
+   in map (\c => {custom := c} cfg) cst
+
 --------------------------------------------------------------------------------
 --          Updating the Config
 --------------------------------------------------------------------------------
 
 public export
 0 Config : Maybe State -> Type
-Config = Config_ I
+Config = Config_ Commit I
 
 ||| Program configuration with data collection
 public export
@@ -174,27 +207,29 @@ mergeRight = mergeWith (\_,v => v)
 export
 allPackages : Env e -> SortedMap PkgName Package
 allPackages e =
-  let all = fromMaybe empty $ lookup "all" e.custom
+  let all = fromMaybe empty $ lookup All e.custom
       loc = fromMaybe empty $ lookup e.collection e.custom
    in e.db.packages `mergeRight` all `mergeRight` loc
 
 ||| Initial config
 export
-init : (dir : Path) -> (coll : DBName) -> Config_ I Nothing
-init dir coll = MkConfig {
+init :  (cur, dir : Path Abs)
+     -> (coll : DBName)
+     -> Config_ Commit I Nothing
+init cur dir coll = MkConfig {
     packDir      = dir
   , collection   = coll
-  , scheme       = parse "scheme"
+  , scheme       = "scheme"
   , bootstrap    = False
   , safetyPrompt = True
   , withSrc      = False
-  , withIpkg     = Nothing
+  , withIpkg     = Search cur
   , rlwrap       = False
   , autoLibs     = []
   , autoApps     = []
   , custom       = empty
   , queryType    = NameOnly
-  , logLevel     = Info
+  , logLevel     = Warning
   , codegen      = Default
   , db           = ()
   }
@@ -203,7 +238,7 @@ infixl 7 `update`
 
 ||| Update a config with optional settings
 export
-update : Config_ I Nothing -> Config_ Maybe Nothing -> Config_ I Nothing
+update : Config_ c I Nothing -> Config_ c Maybe Nothing -> Config_ c I Nothing
 update ci cm = MkConfig {
     packDir      = fromMaybe ci.packDir cm.packDir
   , collection   = fromMaybe ci.collection cm.collection
@@ -226,49 +261,55 @@ update ci cm = MkConfig {
 --          Files and Directories
 --------------------------------------------------------------------------------
 
+export
+packToml : Body
+packToml = "pack.toml"
+
 ||| Temporary directory used for building packages.
 export
-tmpDir_ : (packDir : Path) -> Path
+tmpDir_ : (packDir : Path Abs) -> Path Abs
 tmpDir_ packDir = packDir /> "tmp"
 
 ||| Temporary directory used for building packages.
 export
-tmpDir : Config s -> Path
+tmpDir : Config s -> Path Abs
 tmpDir = tmpDir_ . packDir
 
 ||| Directory where databases are stored.
 export
-dbDir_ : (packDir : Path) -> Path
+dbDir_ : (packDir : Path Abs) -> Path Abs
 dbDir_ packDir = packDir /> "db"
 
 ||| Directory where databases are stored.
 export
-dbDir : Config s -> Path
+dbDir : Config s -> Path Abs
 dbDir = dbDir_ . packDir
 
 ||| Directory where databases are stored.
 export
-cacheDir : Config s -> Path
+cacheDir : Config s -> Path Abs
 cacheDir c = c.packDir /> ".cache"
 
 ||| Path to cached `.ipkg` file.
 export
-ipkgPath : Config s -> PkgName -> Commit -> Path -> Path
-ipkgPath c p com ipkg = cacheDir c /> p.value /> com.value /> show ipkg
+ipkgPath : Config s -> PkgName -> Commit -> RelFile -> AbsFile
+ipkgPath c p com = toAbsFile (cacheDir c <//> p <//> com)
+
+||| Path to cached core library `.ipkg` file
+export
+coreCachePath : Env s -> CorePkg -> AbsFile
+coreCachePath  e n =
+  MkAF (cacheDir e <//> n <//> e.db.idrisCommit) (coreIpkgFile n)
 
 ||| Directory where user settings are stored.
 export
-userDir : Config s -> Path
+userDir : Config s -> Path Abs
 userDir c = c.packDir /> "user"
-
-export
-packToml : (dir : Path) -> Path
-packToml dir = dir /> "user" /> "pack.toml"
 
 ||| File where package DB is located
 export
-dbFile : Config s -> Path
-dbFile c = dbDir c /> c.collection.value <.> "toml"
+dbFile : Config s -> AbsFile
+dbFile c = MkAF (dbDir c) $ c.collection.value <+> ".toml"
 
 ||| A symbolic link to `idrisBinDir` of the current
 ||| db version. This corresponds to `$PACK_DIR/bin`
@@ -276,26 +317,26 @@ dbFile c = dbDir c /> c.collection.value <.> "toml"
 ||| order to have access to the current Idris2 binary
 ||| and related applications.
 export
-packBinDir : Config s -> Path
-packBinDir c = c.packDir /> "bin"
+packBinDir : Config s -> AbsFile
+packBinDir c = MkAF c.packDir "bin"
 
 ||| Directory where symbolic links to installed binaries
 ||| will be placed.
 export
-collectionBinDir : Config s -> Path
-collectionBinDir c = c.packDir /> c.collection.value /> "bin"
+collectionBinDir : Config s -> Path Abs
+collectionBinDir c = c.packDir //> c.collection /> "bin"
 
 ||| Symbolic link to the Idris2 executable associated with
 ||| each collection.
 export
-collectionIdrisExec : Config s -> Path
-collectionIdrisExec c = collectionBinDir c /> "idris2"
+collectionIdrisExec : Config s -> AbsFile
+collectionIdrisExec c = MkAF (collectionBinDir c) "idris2"
 
 ||| Symbolic link to an application installed for a package
 ||| collection.
-export
-collectionAppExec : Config s -> String -> Path
-collectionAppExec c s = collectionBinDir c /> s
+export %inline
+collectionAppExec : Config s -> Body -> AbsFile
+collectionAppExec c = MkAF (collectionBinDir c)
 
 ||| `$SCHEME` variable during Idris2 installation
 export
@@ -304,14 +345,15 @@ schemeVar c = "SCHEME=\"\{c.scheme}\""
 
 ||| Directory where `.ipkg` patches are stored.
 export
-patchesDir : Config s -> Path
+patchesDir : Config s -> Path Abs
 patchesDir c = dbDir c /> "patches"
 
 ||| File where the patch (if any) for an `.ipkg` file is stored.
 export
-patchFile : Config s -> PkgName -> Path -> Path
-patchFile c n ipkg =
-  patchesDir c /> c.collection.value /> n.value /> "\{ipkg}.patch"
+patchFile : Config s -> PkgName -> RelFile -> AbsFile
+patchFile c n (MkRF p b) = MkAF
+  (patchesDir c //> c.collection <//> n </> p)
+  (b <+> ".patch")
 
 --------------------------------------------------------------------------------
 --          Environment
@@ -320,24 +362,24 @@ patchFile c n ipkg =
 ||| Directory where all packages (and Idris2) built with the
 ||| current Idris2 commit will be installed.
 export
-commitDir : Env s -> Path
-commitDir e = e.packDir /> "install" /> e.db.idrisCommit.value
+commitDir : Env s -> Path Abs
+commitDir e = e.packDir </> "install" <//> e.db.idrisCommit
 
 ||| The directory where Idris2 and core libraries will be installed.
 export
-idrisPrefixDir : Env s -> Path
+idrisPrefixDir : Env s -> Path Abs
 idrisPrefixDir e = commitDir e /> "idris2"
 
 ||| The directory where the Idris2 binary will be installed.
 export
-idrisBinDir : Env s -> Path
+idrisBinDir : Env s -> Path Abs
 idrisBinDir c = idrisPrefixDir c /> "bin"
 
 ||| Location of the Idris2 executable used to build
 ||| packages.
 export
-idrisExec : Env s -> Path
-idrisExec c = idrisBinDir c /> "idris2"
+idrisExec : Env s -> AbsFile
+idrisExec c = MkAF (idrisBinDir c) "idris2"
 
 ||| `$PREFIX` variable during Idris2 installation
 export
@@ -349,111 +391,112 @@ export
 idrisBootVar : Env s -> String
 idrisBootVar c = "IDRIS2_BOOT=\"\{idrisExec c}\""
 
-
-idrisDir : Env e -> String
-idrisDir e = "idris2-\{e.db.idrisVersion}"
+idrisDir : Env e -> Body
+idrisDir e = the Body "idris2" <-> e.db.idrisVersion
 
 ||| The directory where Idris2 packages will be installed.
 export
-idrisInstallDir : Env s -> Path
+idrisInstallDir : Env s -> Path Abs
 idrisInstallDir e = idrisPrefixDir e /> idrisDir e
 
 ||| The `lib` directory in the Idris2 installation folder
 export
-idrisLibDir : Env s -> Path
+idrisLibDir : Env s -> Path Abs
 idrisLibDir e = idrisInstallDir e /> "lib"
 
 ||| The `support` directory in the Idris2 installation folder
 export
-idrisDataDir : Env s -> Path
+idrisDataDir : Env s -> Path Abs
 idrisDataDir e = idrisInstallDir e /> "support"
 
 export
-githubPkgPrefixDir : Env s -> PkgName -> Commit -> Path
-githubPkgPrefixDir e n c = commitDir e /> n.value /> c.value
+githubPkgPrefixDir : Env s -> PkgName -> Commit -> Path Abs
+githubPkgPrefixDir e n c = commitDir e <//> n <//> c
 
 export
-localPkgPrefixDir : Env s -> PkgName -> Path
-localPkgPrefixDir e n = commitDir e /> "local" /> n.value
-
-||| Returns the directory where a package for the current
-||| package collection is installed.
-export
-packagePrefixDir : Env s -> ResolvedPackage -> Path
-packagePrefixDir e (RGitHub n _ c _ _) = githubPkgPrefixDir e n c
-packagePrefixDir e (RIpkg _ d)         = idrisPrefixDir e
-packagePrefixDir e (RLocal n _ _ _)    = localPkgPrefixDir e n
-packagePrefixDir e Base                = idrisPrefixDir e
-packagePrefixDir e Contrib             = idrisPrefixDir e
-packagePrefixDir e Idris2              = idrisPrefixDir e
-packagePrefixDir e Linear              = idrisPrefixDir e
-packagePrefixDir e Network             = idrisPrefixDir e
-packagePrefixDir e Prelude             = idrisPrefixDir e
-packagePrefixDir e Test                = idrisPrefixDir e
-
-export
-packageInstallPrefix : Env s -> ResolvedPackage -> String
-packageInstallPrefix e rp = "IDRIS2_PREFIX=\"\{packagePrefixDir e rp}\""
+localPkgPrefixDir : Env s -> PkgName -> Path Abs
+localPkgPrefixDir e n = commitDir e </> "local" <//> n
 
 ||| Returns the directory where a package for the current
 ||| package collection is installed.
 export
-packageInstallDir : Env s -> ResolvedPackage -> Path
+packagePrefixDir : Env s -> ResolvedPackage -> Path Abs
+packagePrefixDir e (RGitHub n _ c _ _ _) = githubPkgPrefixDir e n c
+packagePrefixDir e (RLocal n _ _ _)      = localPkgPrefixDir e n
+packagePrefixDir e (Core _ _)            = idrisPrefixDir e
+
+||| Timestamp used to monitor if a local package has been
+||| modified and requires reinstalling.
+export
+localTimestamp :  Env s
+               -> (p : ResolvedPackage)
+               -> {auto 0 prf : IsLocal p}
+               -> AbsFile
+localTimestamp e p = MkAF (packagePrefixDir e p) ".timestamp"
+
+||| Directory where the sources of a local package are
+||| stored.
+export
+localSrcDir :  (p : ResolvedPackage)
+            -> {auto 0 prf : IsLocal p}
+            -> Path Abs
+localSrcDir (RLocal _ f _ d) = sourcePath f d
+
+export
+packageInstallPrefix : Env s -> ResolvedPackage -> List (String,String)
+packageInstallPrefix e rp = [("IDRIS2_PREFIX", "\{packagePrefixDir e rp}")]
+
+pkgRelDir : PkgDesc -> Path Rel
+pkgRelDir d = case body d.name of
+  Just b  => neutral /> (b <-> d.version)
+  Nothing => relPath d.name //> d.version
+
+||| Returns the directory where a package for the current
+||| package collection is installed.
+export
+packageInstallDir : Env s -> ResolvedPackage -> Path Abs
 packageInstallDir e p =
   let vers = e.db.idrisVersion
       dir  = packagePrefixDir e p /> idrisDir e
    in case p of
-        Base     => dir /> "base-\{vers}"
-        Contrib  => dir /> "contrib-\{vers}"
-        Linear   => dir /> "linear-\{vers}"
-        Network  => dir /> "network-\{vers}"
-        Prelude  => dir /> "prelude-\{vers}"
-        Idris2   => dir /> "idris2-\{vers}"
-        Test     => dir /> "test-\{vers}"
-        RGitHub _ _ _ _ d   =>
-          let v = maybe "0" show d.version
-           in dir /> "\{d.name}-\{v}"
-        RIpkg p d =>
-          let v = maybe "0" show d.version
-           in dir /> "\{d.name}-\{v}"
-        RLocal _ _ _ d =>
-          let v = maybe "0" show d.version
-           in dir /> "\{d.name}-\{v}"
+        Core c _            => dir /> (c <-> vers)
+        RGitHub _ _ _ _ _ d => dir </> pkgRelDir d
+        RLocal _ _ _ d      => dir </> pkgRelDir d
 
 ||| Directory where an installed executable can be found
 export
-packageBinDir : Env s -> ResolvedPackage -> Path
+packageBinDir : Env s -> ResolvedPackage -> Path Abs
 packageBinDir e rp = packagePrefixDir e rp /> "bin"
 
 ||| Location of an executable of the given name.
 export
-packageExec : Env s -> ResolvedPackage -> String -> Path
-packageExec e rp n = packageBinDir e rp /> n
+packageExec : Env s -> ResolvedPackage -> Maybe AbsFile
+packageExec e rp = MkAF (packageBinDir e rp) <$> exec (desc rp)
 
 ||| `_app` directory of an executable of the given name.
 export
-packageAppDir : Env s -> ResolvedPackage -> String -> Path
-packageAppDir e rp n = packageBinDir e rp /> "\{n}_app"
+packageAppDir : Env s -> ResolvedPackage -> String -> Path Abs
+packageAppDir e rp n = packageBinDir e rp <//> "\{n}_app"
 
 export
-pkgPrefixDir : Env s -> (PkgName, Package) -> Path
-pkgPrefixDir e (n, GitHub _ c _) = githubPkgPrefixDir e n c
-pkgPrefixDir e (n, Local _ _)    = localPkgPrefixDir e n
+pkgPrefixDir : Env s -> (PkgName, Package) -> Path Abs
+pkgPrefixDir e (n, GitHub _ c _ _) = githubPkgPrefixDir e n c
+pkgPrefixDir e (n, Local _ _ _)    = localPkgPrefixDir e n
 
 export
-pkgPathDir : Env s -> (PkgName, Package) -> Path
+pkgPathDir : Env s -> (PkgName, Package) -> Path Abs
 pkgPathDir e p = pkgPrefixDir e p /> idrisDir e
 
 export
-pkgBinDir : Env s -> (PkgName, Package) -> Path
+pkgBinDir : Env s -> (PkgName, Package) -> Path Abs
 pkgBinDir e p = pkgPrefixDir e p /> "bin"
 
 export
-pkgLibDir : Env s -> (PkgName, Package) -> Path
+pkgLibDir : Env s -> (PkgName, Package) -> Path Abs
 pkgLibDir e p = pkgPathDir e p /> "lib"
 
 export
-pkgDataDir : Env s -> (PkgName, Package) -> Path
+pkgDataDir : Env s -> (PkgName, Package) -> Path Abs
 pkgDataDir e p = pkgPathDir e p /> "support"
 
 export
@@ -461,7 +504,7 @@ packagePathDirs : Env s -> String
 packagePathDirs e =
   let pth = fastConcat
           . intersperse ":"
-          . map (show . pkgPathDir e)
+          . map (interpolate . pkgPathDir e)
           $ SortedMap.toList (allPackages e)
    in "\{idrisInstallDir e}:\{pth}"
 
@@ -470,7 +513,7 @@ packageLibDirs : Env s -> String
 packageLibDirs e =
   let pth = fastConcat
           . intersperse ":"
-          . map (show . pkgLibDir e)
+          . map (interpolate . pkgLibDir e)
           $ SortedMap.toList (allPackages e)
    in "\{idrisLibDir e}:\{pth}"
 
@@ -479,22 +522,50 @@ packageDataDirs : Env s -> String
 packageDataDirs e =
   let pth = fastConcat
           . intersperse ":"
-          . map (show . pkgDataDir e)
+          . map (interpolate . pkgDataDir e)
           $ SortedMap.toList (allPackages e)
    in "\{idrisDataDir e}:\{pth}"
 
 export
-packagePath : Env s -> String
-packagePath e = "IDRIS2_PACKAGE_PATH=\"\{packagePathDirs e}\""
+packagePath : Env s -> (String, String)
+packagePath e = ("IDRIS2_PACKAGE_PATH", packagePathDirs e)
 
 export
-libPath : Env s -> String
-libPath e = "IDRIS2_LIBS=\"\{packageLibDirs e}\""
+libPath : Env s -> (String, String)
+libPath e = ("IDRIS2_LIBS", packageLibDirs e)
 
 export
-dataPath : Env s -> String
-dataPath e = "IDRIS2_DATA=\"\{packageDataDirs e}\""
+dataPath : Env s -> (String, String)
+dataPath e = ("IDRIS2_DATA", packageDataDirs e)
 
 export
-buildEnv : Env s -> String
-buildEnv e = "\{packagePath e} \{libPath e} \{dataPath e}"
+buildEnv : Env s -> List (String,String)
+buildEnv e = [packagePath e, libPath e, dataPath e]
+
+||| Idris executable to use together with the
+||| `--cg` (codegen) command line option.
+export
+idrisWithCG : Env HasIdris -> String
+idrisWithCG e = case e.codegen of
+  Default => "\{idrisExec e}"
+  cg      => "\{idrisExec e} --cg \{cg}"
+
+||| Idris executable loading the given package plus the
+||| environment variables needed to run it.
+export
+idrisWithPkg :  Env HasIdris
+             -> ResolvedPackage
+             -> (String, List (String,String))
+idrisWithPkg e rp =
+  ("\{idrisWithCG e} -p \{name rp}", buildEnv e)
+
+||| Idris executable loading the given packages plus the
+||| environment variables needed to run it.
+export
+idrisWithPkgs :  Env HasIdris
+              -> List ResolvedPackage
+              -> (String, List (String,String))
+idrisWithPkgs e [] = (idrisWithCG e, [])
+idrisWithPkgs e pkgs =
+  let ps = fastConcat $ map (\p => " -p \{name p}") pkgs
+   in ("\{idrisWithCG e}\{ps}", buildEnv e)
