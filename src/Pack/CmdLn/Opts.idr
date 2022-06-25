@@ -160,16 +160,18 @@ cmd _  xs                          = Left  $ UnknownCommand xs
 ||| generates the application
 ||| config from a list of command line arguments.
 export
-applyArgs :  (curDir  : Path Abs)
-          -> (init    : Config Nothing)
-          -> (args    : List String)
-          -> (readCmd : List String -> Either PackErr a)
+applyArgs :  (curDir     : Path Abs)
+          -> (init       : Config Nothing)
+          -> (args       : List String)
+          -> (readCmd    : List String -> Either PackErr a)
+          -> (defltLevel : a -> LogLevel)
           -> Either PackErr (Config Nothing, a)
-applyArgs dir init args readCmd =
+applyArgs dir init args readCmd defltLevel =
   case getOpt RequireOrder descs args of
-       MkResult opts n  []      []       =>
-         let conf = foldlM (\c,f => f dir c) init opts
-          in [| MkPair conf (readCmd n) |]
+       MkResult opts n  []      []       => do
+         conf <- foldlM (\c,f => f dir c) init opts
+         cmd  <- readCmd n
+         Right ({logLevel := defltLevel cmd} conf, cmd)
 
        MkResult _    _ (u :: _) _        => Left (UnknownArg u)
        MkResult _    _ _        (e :: _) => Left (ErroneousArg e)
