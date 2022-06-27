@@ -11,8 +11,8 @@ import Pack.Runner.Install
 import public Pack.Core
 
 data ACmd : Type where
-  CheckDB  : DBName -> AbsFile -> ACmd
-  FromHEAD : (out : AbsFile) -> ACmd
+  CheckDB  : DBName -> File Abs -> ACmd
+  FromHEAD : (out : File Abs) -> ACmd
   Help     : ACmd
 
 loglevel : ACmd -> LogLevel
@@ -47,7 +47,7 @@ dbOf (MkDB u commit v ps) = do
 -- package to one holding the latest commit hash for each
 -- and writes the resulting DB to the given file.
 covering
-writeLatestDB : HasIO io => AbsFile -> Env s -> EitherT PackErr io ()
+writeLatestDB : HasIO io => File Abs -> Env s -> EitherT PackErr io ()
 writeLatestDB path e = do
   ndb <- dbOf e.db
   write path (printDB ndb)

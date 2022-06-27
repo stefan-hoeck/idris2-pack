@@ -11,14 +11,14 @@ import Pack.Runner.Database
 
 %default total
 
-packExec : HasIO io => Env e -> EitherT PackErr io AbsFile
+packExec : HasIO io => Env e -> EitherT PackErr io (File Abs)
 packExec e = do
   rp <- resolve e "pack"
   Just p <- pure (packageExec e rp) | Nothing => throwE $ NoApp "pack"
   pure p
 
 packInstalled : HasIO io => Env e -> EitherT PackErr io Bool
-packInstalled e = packExec e >>= exists . path
+packInstalled e = packExec e >>= fileExists
 
 ||| Use the installed Idris to run an operation on an `.ipkg` file.
 export
@@ -26,7 +26,7 @@ idrisPkg :  HasIO io
          => Env HasIdris
          -> (env : List (String,String))
          -> (cmd : String)
-         -> AbsFile
+         -> File Abs
          -> EitherT PackErr io ()
 idrisPkg e env cmd ipkg =
   let exe := idrisWithCG e
@@ -61,11 +61,11 @@ links e = do
 -- before invoking the binary, for the latter we create just
 -- a symlink.
 appLink :  HasIO io
-        => (exec     : AbsFile)
-        -> (target   : AbsFile)
-        -> (packPath : Maybe AbsFile)
+        => (exec     : File Abs)
+        -> (target   : File Abs)
+        -> (packPath : Maybe $ File Abs)
         -> EitherT PackErr io ()
-appLink (MkAF p b) target Nothing  = link (p /> b) target
+appLink (MkF p b) target Nothing  = link (p /> b) target
 appLink exec target (Just p)       =
   let content = """
       #!/bin/sh
@@ -159,7 +159,7 @@ installLib e n = do
         withGit (tmpDir e) url commit $ \dir => do
           let ipkgAbs := toAbsFile dir ipkg
               pf      := patchFile e n ipkg
-          when !(exists $ path pf) (patch ipkgAbs pf)
+          when !(fileExists pf) (patch ipkgAbs pf)
           idrisPkg e (packageInstallPrefix e rp)
                      (installCmd e.withSrc)
                      ipkgAbs
@@ -199,7 +199,7 @@ remove env n = do
 covering
 runIdrisOn :  HasIO io
            => (cmd : Maybe String)
-           -> AbsFile
+           -> File Abs
            -> Env HasIdris
            -> EitherT PackErr io ()
 runIdrisOn cmd p e = do
@@ -211,8 +211,8 @@ runIdrisOn cmd p e = do
 
 findIpkg :  HasIO io
          => WithIpkg
-         -> Maybe AbsFile
-         -> EitherT PackErr io (Maybe AbsFile)
+         -> Maybe (File Abs)
+         -> EitherT PackErr io (Maybe $ File Abs)
 findIpkg (Search dir) fi =
   let searchDir := maybe dir parent fi
    in findInParentDirs isIpkgBody searchDir
@@ -222,8 +222,8 @@ findIpkg (Use x)      _  = pure (Just x)
 covering
 replOpts :  HasIO io
          => Env HasIdris
-         -> (file : Maybe AbsFile)
-         -> EitherT PackErr io (String, Maybe AbsFile)
+         -> (file : Maybe $ File Abs)
+         -> EitherT PackErr io (String, Maybe $ File Abs)
 replOpts e mf = do
   Just p <- findIpkg e.withIpkg mf | Nothing => pure ("",Nothing)
   info e "Found `.ipkg` file at \{p}"
@@ -237,7 +237,7 @@ replOpts e mf = do
 ||| given argument string.
 export covering
 idrisRepl :  HasIO io
-          => (file : Maybe AbsFile)
+          => (file : Maybe $ File Abs)
           -> Env HasIdris
           -> EitherT PackErr io ()
 idrisRepl file e = do
@@ -257,17 +257,17 @@ idrisRepl file e = do
 
 ||| Build a local library given as an `.ipkg` file.
 export covering
-build : HasIO io => AbsFile -> Env HasIdris -> EitherT PackErr io ()
+build : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
 build = runIdrisOn (Just "--build")
 
 ||| Install dependencies of a local `.ipkg` file
 export covering
-buildDeps : HasIO io => AbsFile -> Env HasIdris -> EitherT PackErr io ()
+buildDeps : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
 buildDeps = runIdrisOn Nothing
 
 ||| Typecheck a local library given as an `.ipkg` file.
 export covering
-typecheck : HasIO io => AbsFile -> Env HasIdris -> EitherT PackErr io ()
+typecheck : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
 typecheck = runIdrisOn (Just "--typecheck")
 
 ||| Install an Idris application given as a package name
@@ -288,7 +288,7 @@ installApp e n = do
         withGit (tmpDir e) url commit $ \dir => do
           let ipkgAbs := toAbsFile dir ipkg
               pf      := patchFile e n ipkg
-          when !(exists $ path pf) (patch ipkgAbs pf)
+          when !(fileExists pf) (patch ipkgAbs pf)
           idrisPkg e [] "--build" ipkgAbs
           copyApp e rp
 
@@ -302,16 +302,16 @@ installApp e n = do
     True  => packExec e >>= appLink exe (collectionAppExec e exe.file) . Just
     False => appLink exe (collectionAppExec e exe.file) Nothing
 
-execPath : AbsFile -> PkgDesc -> Maybe (Path Abs)
+execPath : File Abs -> PkgDesc -> Maybe (Path Abs)
 execPath p d = do
   exe <- d.executable
-  bod <- body exe
+  bod <- Body.parse exe
   pure (toAbsPath p.parent (buildDir d) /> "exec" /> bod)
 
 ||| Install and run an executable given as a package name.
 export covering
 runIpkg :  HasIO io
-        => AbsFile
+        => File Abs
         -> (args : List String)
         -> Env HasIdris
         -> EitherT PackErr io ()

@@ -14,16 +14,16 @@ data QueryMode = PkgName | Dependency | Module
 public export
 data Cmd : Type where
   -- Developing Idris libs and apps
-  Build            : AbsFile -> Cmd
-  BuildDeps        : AbsFile -> Cmd
-  Typecheck        : AbsFile -> Cmd
-  Repl             : Maybe AbsFile -> Cmd
+  Build            : File Abs -> Cmd
+  BuildDeps        : File Abs -> Cmd
+  Typecheck        : File Abs -> Cmd
+  Repl             : Maybe (File Abs) -> Cmd
 
   -- Package management
   Install          : List PkgName -> Cmd
   InstallApp       : List PkgName -> Cmd
   Remove           : List PkgName -> Cmd
-  Run              : Either AbsFile PkgName -> List String -> Cmd
+  Run              : Either (File Abs) PkgName -> List String -> Cmd
   New              : (cur : Path Abs) -> PkgType -> Body -> Cmd
 
   -- Idris environment

@@ -22,7 +22,7 @@ ipkgFiles = do
   pure . map interpolate $ filter isIpkgBody ss
 
 toDBName : Body -> Maybe String
-toDBName s = case splitFileName s of
+toDBName s = case split s of
   Just (db,"toml") => Just "\{db}"
   _                => Nothing
 
@@ -60,7 +60,7 @@ prefixOnlyIfNonEmpty s    = prefixOnly s
 
 -- list of package types when creating a new package
 packageTypes : List String
-packageTypes = map show [Lib, Bin]
+packageTypes = map interpolate [Lib, Bin]
 
 packageList : String -> List String -> List String
 packageList "--" xs = xs

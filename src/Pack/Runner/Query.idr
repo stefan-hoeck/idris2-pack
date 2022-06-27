@@ -235,8 +235,8 @@ fuzzyPkg q e allPkgs rp =
      mkDir dir
      finally (rmDir dir) $ inDir dir $ \d => do
        putStrLn "\{name rp}:\n"
-       write (MkAF d "test.idr") (imports rp)
-       write (MkAF d "input") ":fs \{q}\n"
+       write (MkF d "test.idr") (imports rp)
+       write (MkF d "input") ":fs \{q}\n"
 
        let (cmd,env) := idrisWithPkgs e allPkgs
 

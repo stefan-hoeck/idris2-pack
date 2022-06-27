@@ -120,7 +120,7 @@ optionNames = foldMap names descs
         names (MkOpt sns lns _ _) =
           map (\c => "-\{String.singleton c}") sns ++ map ("--" ++) lns
 
-ipkgFile : Path Abs -> String -> (AbsFile -> Cmd) -> Either PackErr Cmd
+ipkgFile : Path Abs -> String -> (File Abs -> Cmd) -> Either PackErr Cmd
 ipkgFile dir s f = f <$> readAbsFile dir s
 
 export

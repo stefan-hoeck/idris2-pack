@@ -84,12 +84,12 @@ new curdir pty pkgName e = do
 
     debug e "Initializing git repo"
     eitherT (\err => warn e "Git repo creation failed: \{printErr err}")
-            (\_ => write (MkAF pkgRootDir ".gitignore") gitIgnoreFile)
+            (\_ => write (MkF pkgRootDir ".gitignore") gitIgnoreFile)
             (sys "git init \{pkgRootDir}")
 
     debug e "Writing ipkg file"
-    write (MkAF pkgRootDir  (pkgName <+> ".ipkg")) (renderString $ layoutUnbounded $ pretty ipkg)
+    write (MkF pkgRootDir  (pkgName <+> ".ipkg")) (renderString $ layoutUnbounded $ pretty ipkg)
 
     debug e "Writing module file"
-    write (MkAF srcDir $ mod <+> ".idr") modFile
+    write (MkF srcDir $ mod <+> ".idr") modFile
     info e "Created \{pty} package '\{pkgName}'"

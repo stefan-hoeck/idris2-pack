@@ -110,7 +110,7 @@ data WithIpkg : Type where
 
   ||| Use the given `.ipkg` file, provided as a command line
   ||| argument.
-  Use    : (ipkg : AbsFile) -> WithIpkg
+  Use    : (ipkg : File Abs) -> WithIpkg
 
 ||| Type-level identity
 public export
@@ -292,14 +292,14 @@ cacheDir c = c.packDir /> ".cache"
 
 ||| Path to cached `.ipkg` file.
 export
-ipkgPath : Config s -> PkgName -> Commit -> RelFile -> AbsFile
+ipkgPath : Config s -> PkgName -> Commit -> File Rel -> File Abs
 ipkgPath c p com = toAbsFile (cacheDir c <//> p <//> com)
 
 ||| Path to cached core library `.ipkg` file
 export
-coreCachePath : Env s -> CorePkg -> AbsFile
+coreCachePath : Env s -> CorePkg -> File Abs
 coreCachePath  e n =
-  MkAF (cacheDir e <//> n <//> e.db.idrisCommit) (coreIpkgFile n)
+  MkF (cacheDir e <//> n <//> e.db.idrisCommit) (coreIpkgFile n)
 
 ||| Directory where user settings are stored.
 export
@@ -308,8 +308,8 @@ userDir c = c.packDir /> "user"
 
 ||| File where package DB is located
 export
-dbFile : Config s -> AbsFile
-dbFile c = MkAF (dbDir c) $ c.collection.value <+> ".toml"
+dbFile : Config s -> File Abs
+dbFile c = MkF (dbDir c) $ c.collection.value <+> ".toml"
 
 ||| A symbolic link to `idrisBinDir` of the current
 ||| db version. This corresponds to `$PACK_DIR/bin`
@@ -317,8 +317,8 @@ dbFile c = MkAF (dbDir c) $ c.collection.value <+> ".toml"
 ||| order to have access to the current Idris2 binary
 ||| and related applications.
 export
-packBinDir : Config s -> AbsFile
-packBinDir c = MkAF c.packDir "bin"
+packBinDir : Config s -> File Abs
+packBinDir c = MkF c.packDir "bin"
 
 ||| Directory where symbolic links to installed binaries
 ||| will be placed.
@@ -329,14 +329,14 @@ collectionBinDir c = c.packDir //> c.collection /> "bin"
 ||| Symbolic link to the Idris2 executable associated with
 ||| each collection.
 export
-collectionIdrisExec : Config s -> AbsFile
-collectionIdrisExec c = MkAF (collectionBinDir c) "idris2"
+collectionIdrisExec : Config s -> File Abs
+collectionIdrisExec c = MkF (collectionBinDir c) "idris2"
 
 ||| Symbolic link to an application installed for a package
 ||| collection.
 export %inline
-collectionAppExec : Config s -> Body -> AbsFile
-collectionAppExec c = MkAF (collectionBinDir c)
+collectionAppExec : Config s -> Body -> File Abs
+collectionAppExec c = MkF (collectionBinDir c)
 
 ||| `$SCHEME` variable during Idris2 installation
 export
@@ -350,8 +350,8 @@ patchesDir c = dbDir c /> "patches"
 
 ||| File where the patch (if any) for an `.ipkg` file is stored.
 export
-patchFile : Config s -> PkgName -> RelFile -> AbsFile
-patchFile c n (MkRF p b) = MkAF
+patchFile : Config s -> PkgName -> File Rel -> File Abs
+patchFile c n (MkF p b) = MkF
   (patchesDir c //> c.collection <//> n </> p)
   (b <+> ".patch")
 
@@ -378,8 +378,8 @@ idrisBinDir c = idrisPrefixDir c /> "bin"
 ||| Location of the Idris2 executable used to build
 ||| packages.
 export
-idrisExec : Env s -> AbsFile
-idrisExec c = MkAF (idrisBinDir c) "idris2"
+idrisExec : Env s -> File Abs
+idrisExec c = MkF (idrisBinDir c) "idris2"
 
 ||| `$PREFIX` variable during Idris2 installation
 export
@@ -431,8 +431,8 @@ export
 localTimestamp :  Env s
                -> (p : ResolvedPackage)
                -> {auto 0 prf : IsLocal p}
-               -> AbsFile
-localTimestamp e p = MkAF (packagePrefixDir e p) ".timestamp"
+               -> File Abs
+localTimestamp e p = MkF (packagePrefixDir e p) ".timestamp"
 
 ||| Directory where the sources of a local package are
 ||| stored.
@@ -447,9 +447,9 @@ packageInstallPrefix : Env s -> ResolvedPackage -> List (String,String)
 packageInstallPrefix e rp = [("IDRIS2_PREFIX", "\{packagePrefixDir e rp}")]
 
 pkgRelDir : PkgDesc -> Path Rel
-pkgRelDir d = case body d.name of
+pkgRelDir d = case Body.parse d.name of
   Just b  => neutral /> (b <-> d.version)
-  Nothing => relPath d.name //> d.version
+  Nothing => cast d.name //> d.version
 
 ||| Returns the directory where a package for the current
 ||| package collection is installed.
@@ -470,8 +470,8 @@ packageBinDir e rp = packagePrefixDir e rp /> "bin"
 
 ||| Location of an executable of the given name.
 export
-packageExec : Env s -> ResolvedPackage -> Maybe AbsFile
-packageExec e rp = MkAF (packageBinDir e rp) <$> exec (desc rp)
+packageExec : Env s -> ResolvedPackage -> Maybe (File Abs)
+packageExec e rp = MkF (packageBinDir e rp) <$> exec (desc rp)
 
 ||| `_app` directory of an executable of the given name.
 export

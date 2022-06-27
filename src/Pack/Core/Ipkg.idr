@@ -199,7 +199,7 @@ addField p (PPostclean fc e)     = { postclean := Just (fc, e) } p
 addFields : (name : String) -> List DescField -> PkgDesc
 addFields = foldl addField . initPkgDesc
 
-parseIpkg :  (file : AbsFile)
+parseIpkg :  (file : File Abs)
           -> (str : String)
           -> Either PackErr PkgDesc
 parseIpkg file str =
@@ -211,7 +211,7 @@ parseIpkg file str =
 
 export covering
 parseIpkgFile :  HasIO io
-              => (file : AbsFile)
+              => (file : File Abs)
               -> (PkgDesc -> a)
               -> EitherT PackErr io (String, a)
 parseIpkgFile file f = do
@@ -226,15 +226,15 @@ parseIpkgFile file f = do
 ||| Extract the absolute path to the source directory
 ||| from a package description plus its file location.
 export
-sourcePath : (file : AbsFile) -> PkgDesc -> Path Abs
+sourcePath : (file : File Abs) -> PkgDesc -> Path Abs
 sourcePath f d = maybe f.parent (toAbsPath f.parent . fromString) d.sourcedir
 
 ||| Extract the absolute path to the build directory
 ||| from a package description plus its file location.
 export
-buildPath : (file : AbsFile) -> PkgDesc -> Path Abs
+buildPath : (file : File Abs) -> PkgDesc -> Path Abs
 buildPath f d = maybe f.parent (toAbsPath f.parent . fromString) d.builddir
 
 export
 exec : PkgDesc -> Maybe Body
-exec d = d.executable >>= body
+exec d = d.executable >>= parse
