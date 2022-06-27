@@ -47,7 +47,7 @@ checkPkg e p = do
       report p rp $ withGit (tmpDir e) url commit $ \dir => do
         let ipkgAbs := toAbsFile dir ipkg
             pf      := patchFile e pn ipkg
-        when !(exists $ path pf) (patch ipkgAbs pf)
+        when !(fileExists pf) (patch ipkgAbs pf)
         idrisPkg e (packageInstallPrefix e rp) "--install-with-src" ipkgAbs
 
     RLocal _ ipkg _ d => do
@@ -57,7 +57,7 @@ checkPkg e p = do
     _ => updateRep p (Success rp)
 
 export covering
-checkDB : HasIO io => AbsFile -> Env HasIdris -> EitherT PackErr io ()
+checkDB : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
 checkDB p e = do
   rep <- liftIO $ execStateT empty
                 $ traverse_ (checkPkg e) (keys e.db.packages)

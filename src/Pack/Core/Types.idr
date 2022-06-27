@@ -4,32 +4,22 @@
 ||| type safety.
 module Pack.Core.Types
 
-import public Data.FilePath
+import public Data.FilePath.File
 import Data.Maybe
 import Idris.Package.Types
 import System.File
 
 %default total
 
-||| True if the given file path ends on `.ipkg`
-export
-isIpkgFile : Path t -> Bool
-isIpkgFile = (Just "ipkg" ==) . extension
-
 ||| True if the given file path body ends on `.ipkg`
 export
 isIpkgBody : Body -> Bool
-isIpkgBody = (Just "ipkg" ==) . map snd . splitFileName
-
-||| True if the given file path ends on `.toml`
-export
-isTomlFile : Path t -> Bool
-isTomlFile = (Just "toml" ==) . extension
+isIpkgBody = (Just "ipkg" ==) . extension
 
 ||| True if the given file path body ends on `.toml`
 export
 isTomlBody : Body -> Bool
-isTomlBody = (Just "toml" ==) . map snd . splitFileName
+isTomlBody = (Just "toml" ==) . extension
 
 toRelPath : String -> Path Rel
 toRelPath s = case the FilePath (fromString s) of
@@ -42,67 +32,53 @@ toAbsPath dir (FP $ PAbs sx) = PAbs sx
 toAbsPath dir (FP $ PRel sx) = dir </> PRel sx
 
 export
-tryParse : String -> Maybe (Path Abs)
-tryParse s = case the FilePath (fromString s) of
-  FP (PAbs sx) => Just (PAbs sx)
-  FP (PRel _)  => Nothing
-
-export
 parse : String -> Path Abs -> Path Abs
 parse s dir = toAbsPath dir (fromString s)
 
---------------------------------------------------------------------------------
---          ToRelPath
---------------------------------------------------------------------------------
-
-||| We use this interface to convert a value such as a
-||| commit hash or package name to a relative path in the
-||| file system.
-public export
-interface ToRelPath a where
-  relPath : a -> Path Rel
-
 export %inline
-ToRelPath String where
-  relPath = toRelPath
-
-export %inline
-ToRelPath (Path Rel) where
-  relPath = id
+Cast String (Path Rel) where
+  cast = toRelPath
 
 infixl 5 <//>
 
 export %inline
-(<//>) : ToRelPath a => Path Abs -> a -> Path Abs
-p <//> v = p </> relPath v
-
-||| We use this interface to convert a value such as a
-||| commit hash or package name to a relative path in the
-||| file system.
-public export
-interface ToBody a where
-  toBody : a -> Body
-
-export %inline
-ToBody Body where
-  toBody = id
+(<//>) : Cast a (Path Rel) => Path Abs -> a -> Path Abs
+p <//> v = p </> cast v
 
 infixl 5 //>
 
 export %inline
-(//>) : ToBody a => Path t -> a -> Path t
-p //> v = p /> toBody v
+(//>) : Cast a Body => Path t -> a -> Path t
+p //> v = p /> cast v
 
 infixl 8 <->
 
 ||| Concatenate two file path bodies with a hyphen inbetween.
 export
-(<->) : ToBody a => ToBody b => a -> b -> Body
-x <-> y = toBody x <+> "-" <+> toBody y
+(<->) : Cast a Body => Cast b Body => a -> b -> Body
+x <-> y = the Body (cast x) <+> "-" <+> cast y
 
---------------------------------------------------------------------------------
---          Interpolation
---------------------------------------------------------------------------------
+||| Convert a package version to a file path body.
+export
+Cast PkgVersion Body where
+  cast = fromMaybe "0" . parse . show
+
+||| Convert a package version to a file path body.
+export
+Cast (Maybe PkgVersion) Body where
+  cast Nothing  = "0"
+  cast (Just v) = cast v
+
+export %inline
+toAbsFile : Path Abs -> File Rel -> File Abs
+toAbsFile dir (MkF p f) = MkF (dir </> p) f
+
+export
+Cast (File t) (Path t) where cast = toPath
+
+----------------------------------------------------------------------------------
+----          Interpolation
+----------------------------------------------------------------------------------
 
 ||| Convenience implementation for printing file errors in string
 ||| interpolation
@@ -113,57 +89,6 @@ Interpolation FileError where interpolate = show
 ||| interpolation
 export
 Interpolation PkgVersion where interpolate = show
-
-||| Convert a package version to a file path body.
-export
-ToBody PkgVersion where
-  toBody = fromMaybe "0" . body . show
-
-||| Convert a package version to a file path body.
-export
-ToBody (Maybe PkgVersion) where
-  toBody Nothing  = "0"
-  toBody (Just v) = toBody v
-
---------------------------------------------------------------------------------
---          Files
---------------------------------------------------------------------------------
-
-||| A file given as the absolute path to its parent
-||| directory plus the file body.
-public export
-record AbsFile where
-  constructor MkAF
-  parent : Path Abs
-  file   : Body
-
-export
-path : AbsFile -> Path Abs
-path (MkAF p f) = p /> f
-
-export
-Interpolation AbsFile where
-  interpolate (MkAF parent file) = "\{parent /> file}"
-
-||| A file given as the relative path to its parent
-||| directory plus the file body.
-public export
-record RelFile where
-  constructor MkRF
-  parent : Path Rel
-  file   : Body
-
-export %inline
-toAbsFile : Path Abs -> RelFile -> AbsFile
-toAbsFile dir (MkRF p f) = MkAF (dir </> p) f
-
-export %inline
-ToRelPath RelFile where
-  relPath (MkRF p f) = p /> f
-
-export %inline
-Interpolation RelFile where
-  interpolate (MkRF p f) = interpolate $ p /> f
 
 --------------------------------------------------------------------------------
 --          URL
@@ -203,8 +128,8 @@ export %inline
 Interpolation Commit where interpolate = value
 
 export %inline
-ToRelPath Commit where
-  relPath = toRelPath . value
+Cast Commit (Path Rel) where
+  cast = toRelPath . value
 
 --------------------------------------------------------------------------------
 --          Package Name
@@ -229,8 +154,8 @@ export %inline
 Interpolation PkgName where interpolate = value
 
 export %inline
-ToRelPath PkgName where
-  relPath = toRelPath . value
+Cast PkgName (Path Rel) where
+  cast = toRelPath . value
 
 --------------------------------------------------------------------------------
 --          Package Type
@@ -239,17 +164,6 @@ ToRelPath PkgName where
 ||| Type of an Idris package
 public export
 data PkgType = Lib | Bin
-
-export %inline
-FromString PkgType where
-  fromString "lib" = Lib
-  fromString "bin" = Bin
-  fromString _ = Lib
-
-export %inline
-Show PkgType where
-  show Lib = "lib"
-  show Bin = "bin"
 
 export %inline
 Interpolation PkgType where
@@ -277,8 +191,8 @@ export %inline
 Interpolation DBName where interpolate = interpolate . value
 
 export %inline
-ToBody DBName where
-  toBody = value
+Cast DBName Body where
+  cast = value
 
 export %inline
 Head : DBName
@@ -327,10 +241,10 @@ data PackErr : Type where
   MkDir      : (path : Path Abs) -> (err : FileError) -> PackErr
 
   ||| Failed to read the given file
-  ReadFile   : (path : AbsFile) -> (err : FileError) -> PackErr
+  ReadFile   : (path : File Abs) -> (err : FileError) -> PackErr
 
   ||| Failed to write to the given file
-  WriteFile  : (path : AbsFile) -> (err : FileError) -> PackErr
+  WriteFile  : (path : File Abs) -> (err : FileError) -> PackErr
 
   ||| Failed to read the content of a directory
   DirEntries : (path : Path Abs) -> (err : FileError) -> PackErr
@@ -350,7 +264,7 @@ data PackErr : Type where
 
   ||| The given package is not an application
   ||| (No executable name set in the `.ipkg` file)
-  NoAppIpkg  : (path : AbsFile) -> PackErr
+  NoAppIpkg  : (path : File Abs) -> PackErr
 
   ||| An erroneous package description in a package DB file
   InvalidPackageDesc : (s : String) -> PackErr
@@ -371,7 +285,7 @@ data PackErr : Type where
   InvalidPkgVersion : (s : String) -> PackErr
 
   ||| Failed to parse an .ipkg file
-  InvalidIpkgFile  : (path : AbsFile) -> PackErr
+  InvalidIpkgFile  : (path : File Abs) -> PackErr
 
   ||| Invalid file path body
   InvalidBody  : (s : String) -> PackErr
@@ -408,10 +322,10 @@ data PackErr : Type where
   DirExists : Path Abs -> PackErr
 
   ||| Error in a toml file.
-  TOMLFile :  (file : AbsFile) -> (err : TOMLErr) -> PackErr
+  TOMLFile :  (file : File Abs) -> (err : TOMLErr) -> PackErr
 
   ||| Error in a toml file.
-  TOMLParse : (file : AbsFile) -> (err : String) -> PackErr
+  TOMLParse : (file : File Abs) -> (err : String) -> PackErr
 
   ||| Number of failures when building packages.
   BuildFailures : Nat -> PackErr
@@ -515,13 +429,13 @@ printErr (BuildFailures n) = "\{show n} packages failed to build."
 
 export
 readDBName : String -> Either PackErr DBName
-readDBName s = case body s of
+readDBName s = case Body.parse s of
   Just b  => Right $ MkDBName b
   Nothing => Left (InvalidDBName s)
 
 export
 readBody : String -> Either PackErr Body
-readBody s = case body s of
+readBody s = case Body.parse s of
   Just b  => Right b
   Nothing => Left (InvalidBody s)
 
@@ -532,9 +446,9 @@ readPkgType "bin" = Right Bin
 readPkgType s     = Left (InvalidPkgType s)
 
 export
-readAbsFile : (curdir : Path Abs) -> String -> Either PackErr AbsFile
+readAbsFile : (curdir : Path Abs) -> String -> Either PackErr (File Abs)
 readAbsFile cd s = case split $ toAbsPath cd (fromString s) of
-  Just (p,b) => Right $ MkAF p b
+  Just (p,b) => Right $ MkF p b
   Nothing    => Left (NoFilePath s)
 
 --------------------------------------------------------------------------------

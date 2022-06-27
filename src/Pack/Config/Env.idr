@@ -37,11 +37,11 @@ export
 warn : HasIO io => (conf : Config s) -> (msg  : Lazy String) -> io ()
 warn c = log c Warning
 
-configPath : Path Abs -> AbsFile
-configPath dir = MkAF (dir /> "user") packToml
+configPath : Path Abs -> File Abs
+configPath dir = MkF (dir /> "user") packToml
 
 getEnvPath : HasIO io => String -> io (Maybe (Path Abs))
-getEnvPath s = (>>= tryParse) <$> getEnv s
+getEnvPath s = (>>= parse) <$> getEnv s
 
 ||| Return the path of the *pack* root directory,
 ||| either from environment variable `$PACK_DIR`, or
@@ -70,8 +70,8 @@ defaultColl packDir = do
   (x :: xs) <- filter ("HEAD.toml" /=) <$> tomlFiles (dbDir_ packDir)
     | [] => pure Head
   pure
-    . maybe Head (MkDBName . fst)
-    . splitFileName
+    . maybe Head MkDBName
+    . fileStem
     $ foldl max x xs
 
 ||| Update the package database.
@@ -103,14 +103,14 @@ getConfig readCmd dflt dfltLevel = do
   let globalConfig       = configPath dir
 
   -- Initialize `pack.toml` if none exists
-  when !(missing $ path globalConfig) $
+  when !(fileMissing globalConfig) $
     write globalConfig (initToml "scheme" coll)
 
   localToml   <- findInParentDirs ("pack.toml" ==) cur
   global'     <- readOptionalFromTOML globalConfig config
   local'      <- case localToml of
     Just af => readFromTOML af config
-    Nothing => readOptionalFromTOML (MkAF cur packToml) config
+    Nothing => readOptionalFromTOML (MkF cur packToml) config
   global      <- traverse resolveMeta global'
   local       <- traverse resolveMeta local'
 

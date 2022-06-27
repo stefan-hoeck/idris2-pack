@@ -23,7 +23,7 @@ localUpToDate env p =
       src := localSrcDir p
    in do
      debug env "Checking files in \{src} against timestamp \{ts}."
-     True <- exists (path ts)
+     True <- fileExists ts
        | False => debug env "Timestamp not found." $> False
      True <- exists src
        | False => debug env "Source dir not found." $> False
@@ -49,11 +49,11 @@ packageUpToDate env p =
 export
 executableExists :  HasIO io
                  => Env s
-                 -> AbsFile
+                 -> File Abs
                  -> EitherT PackErr io Bool
 executableExists c f =
   debug c "Looking for executable \{f.file} at \{f.parent}" >>
-  exists (path f)
+  fileExists f
 
 export
 cacheCoreIpkgFiles : HasIO io => Env s -> Path Abs -> EitherT PackErr io ()
@@ -67,7 +67,7 @@ resolveCore :  HasIO io
 resolveCore e c =
   let pth := coreCachePath e c
    in do
-     when !(missing $ path pth) $
+     when !(fileMissing pth) $
        withGit (tmpDir e) e.db.idrisURL e.db.idrisCommit (cacheCoreIpkgFiles e)
      parseIpkgFile pth (Core c)
 
@@ -91,11 +91,11 @@ resolveImpl e n         = case lookup n (allPackages e) of
   Just (GitHub url commit ipkg pp) =>
     let cache = ipkgPath e n commit ipkg
      in do
-       when !(missing $ path cache) $
+       when !(fileMissing cache) $
          withGit (tmpDir e) url commit $ \dir => do
            let ipkgAbs := toAbsFile dir ipkg
                pf      := patchFile e n ipkg
-           when !(exists $ path pf) (patch ipkgAbs pf)
+           when !(fileExists pf) (patch ipkgAbs pf)
            copyFile ipkgAbs cache
        parseIpkgFile cache (RGitHub n url commit ipkg pp)
   Just (Local dir ipkg pp) =>

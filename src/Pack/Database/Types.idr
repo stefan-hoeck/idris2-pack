@@ -48,7 +48,7 @@ data Package_ : (c : Type) -> Type where
   ||| where Idris packages are installed.
   GitHub :  (url     : URL)
          -> (commit  : c)
-         -> (ipkg    : RelFile)
+         -> (ipkg    : File Rel)
          -> (pkgPath : Bool)
          -> Package_ c
 
@@ -58,7 +58,7 @@ data Package_ : (c : Type) -> Type where
   ||| access to the `IDRIS2_PACKAGE_PATH`: The list of directories
   ||| where Idris packages are installed.
   Local  :  (dir     : Path Abs)
-         -> (ipkg    : RelFile)
+         -> (ipkg    : File Rel)
          -> (pkgPath : Bool)
          -> Package_ c
 
@@ -96,28 +96,28 @@ Interpolation CorePkg where
   interpolate IdrisApi = "idris2"
 
 export
-ToBody CorePkg where
-  toBody Prelude  = "prelude"
-  toBody Base     = "base"
-  toBody Contrib  = "contrib"
-  toBody Linear   = "linear"
-  toBody Network  = "network"
-  toBody Test     = "test"
-  toBody IdrisApi = "idris2"
+Cast CorePkg Body where
+  cast Prelude  = "prelude"
+  cast Base     = "base"
+  cast Contrib  = "contrib"
+  cast Linear   = "linear"
+  cast Network  = "network"
+  cast Test     = "test"
+  cast IdrisApi = "idris2"
 
 export %inline
-ToRelPath CorePkg where
-  relPath c = PRel [< toBody c]
+Cast CorePkg (Path Rel) where
+  cast c = PRel [< cast c]
 
 export
 coreIpkgFile : CorePkg -> Body
 coreIpkgFile IdrisApi = "idris2api.ipkg"
-coreIpkgFile c        = toBody c <+> ".ipkg"
+coreIpkgFile c        = cast c <+> ".ipkg"
 
 export
-coreIpkgPath : CorePkg -> RelFile
-coreIpkgPath IdrisApi = MkRF neutral "idris2api.ipkg"
-coreIpkgPath c        = MkRF (neutral /> "libs" /> toBody c) (coreIpkgFile c)
+coreIpkgPath : CorePkg -> File Rel
+coreIpkgPath IdrisApi = MkF neutral "idris2api.ipkg"
+coreIpkgPath c        = MkF (neutral /> "libs" //> c) (coreIpkgFile c)
 
 ||| A resolved package, which was downloaded from GitHub
 ||| or looked up in the local file system. This comes with
@@ -131,7 +131,7 @@ data ResolvedPackage : Type where
   RGitHub :  (name    : PkgName)
           -> (url     : URL)
           -> (commit  : Commit)
-          -> (ipkg    : RelFile)
+          -> (ipkg    : File Rel)
           -> (pkgPath : Bool)
           -> (desc    : PkgDesc)
           -> ResolvedPackage
@@ -142,7 +142,7 @@ data ResolvedPackage : Type where
   ||| access to the `IDRIS2_PACKAGE_PATH`: The list of directories
   ||| where Idris packages are installed.
   RLocal  :  (name    : PkgName)
-          -> (ipkg    : AbsFile)
+          -> (ipkg    : File Abs)
           -> (pkgPath : Bool)
           -> (desc    : PkgDesc)
           -> ResolvedPackage
@@ -185,7 +185,7 @@ dependencies = dependencies . desc
 ||| a resolved package.
 export
 executable : ResolvedPackage -> Maybe Body
-executable d = executable (desc d) >>= body
+executable d = executable (desc d) >>= parse
 
 ||| Extracts the package name from a resolved package.
 export

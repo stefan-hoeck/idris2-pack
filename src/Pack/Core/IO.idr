@@ -1,7 +1,6 @@
 module Pack.Core.IO
 
 import public Control.Monad.Either
-import Data.FilePath
 import Pack.Core.Types
 import System
 import System.Directory
@@ -114,14 +113,24 @@ sysRunWithEnv cmd env = do
 --------------------------------------------------------------------------------
 
 ||| Checks if a file at the given location exists.
-export
+export %inline
 exists : HasIO io => (dir : Path Abs) -> io Bool
 exists = exists . interpolate
+
+||| Checks if a file at the given location exists.
+export %inline
+fileExists : HasIO io => (f : File Abs) -> io Bool
+fileExists = exists . interpolate
 
 ||| Checks if a file at the given location is missing.
 export
 missing : HasIO io => (dir : Path Abs) -> io Bool
 missing = map not . exists
+
+||| Checks if a file at the given location is missing.
+export
+fileMissing : HasIO io => (f : File Abs) -> io Bool
+fileMissing = map not . fileExists
 
 ||| Tries to create a director (including parent directories)
 export
@@ -172,7 +181,7 @@ entries :  HasIO io
         -> EitherT PackErr io (List Body)
 entries dir = do
   ss <- eitherIO (DirEntries dir) (listDir "\{dir}")
-  pure (mapMaybe body ss)
+  pure (mapMaybe parse ss)
 
 ||| Returns the names of toml files in a directory
 export
@@ -199,15 +208,15 @@ export
 findInParentDirs :  HasIO io
                  => (Body -> Bool)
                  -> Path Abs
-                 -> EitherT PackErr io (Maybe AbsFile)
+                 -> EitherT PackErr io (Maybe (File Abs))
 findInParentDirs p (PAbs sb) = go sb
-  where go : SnocList Body -> EitherT PackErr io (Maybe AbsFile)
+  where go : SnocList Body -> EitherT PackErr io (Maybe (File Abs))
         go [<]       = pure Nothing
         go (sb :< b) =
           let dir := PAbs (sb :< b)
            in do
              (h :: _) <- filter p <$> entries dir | Nil => go sb
-             pure $ Just (MkAF dir h)
+             pure $ Just (MkF dir h)
 
 --------------------------------------------------------------------------------
 --         File Access
@@ -215,30 +224,30 @@ findInParentDirs p (PAbs sb) = go sb
 
 ||| Delete a file.
 export
-rmFile : HasIO io => (f : AbsFile) -> EitherT PackErr io ()
-rmFile f = when !(exists $ path f) $ sys "rm \{f}"
+rmFile : HasIO io => (f : File Abs) -> EitherT PackErr io ()
+rmFile f = when !(fileExists f) $ sys "rm \{f}"
 
 ||| Tries to read the content of a file
 export covering
-read : HasIO io => AbsFile -> EitherT PackErr io String
+read : HasIO io => File Abs -> EitherT PackErr io String
 read fn = eitherIO (ReadFile fn) (readFile "\{fn}")
 
 ||| Reads the content of a file if it exists, otherwise
 ||| returns the given alternative string.
 export covering
 readIfExists :  HasIO io
-             => (file : AbsFile)
+             => (file : File Abs)
              -> (alt  : String)
              -> EitherT PackErr io String
 readIfExists file alt = do
-  True <- exists (path file) | False => pure alt
+  True <- fileExists file | False => pure alt
   read file
 
 ||| Tries to write a string to a file.
 ||| The file's parent directory is created if
 ||| it does not yet exist.
 export covering
-write : HasIO io => AbsFile -> String -> EitherT PackErr io ()
+write : HasIO io => File Abs -> String -> EitherT PackErr io ()
 write file str = do
   mkDir file.parent
   eitherIO (WriteFile file) (writeFile "\{file}" str)
@@ -246,7 +255,7 @@ write file str = do
 ||| Creates a symbolic link from one path to another,
 ||| remove a link at path `to` if there already is one.
 export
-link : HasIO io => (from : Path Abs) -> (to : AbsFile) -> EitherT PackErr io ()
+link : HasIO io => (from : Path Abs) -> (to : File Abs) -> EitherT PackErr io ()
 link from to = do
   rmFile to
   mkDir to.parent
@@ -254,7 +263,7 @@ link from to = do
 
 ||| Copy a file.
 export
-copyFile : HasIO io => (from,to : AbsFile) -> EitherT PackErr io ()
+copyFile : HasIO io => (from,to : File Abs) -> EitherT PackErr io ()
 copyFile from to = do
   mkDir to.parent
   sys "cp \{from} \{to}"
@@ -262,7 +271,7 @@ copyFile from to = do
 ||| Patch a file
 export
 patch :  HasIO io
-      => (original : AbsFile)
-      -> (patch    : AbsFile)
+      => (original : File Abs)
+      -> (patch    : File Abs)
       -> EitherT PackErr io ()
 patch o p = do sys "patch \{o} \{p}"

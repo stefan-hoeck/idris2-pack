@@ -21,7 +21,7 @@ interface Ord a => TOMLKey a where
 
 export
 TOMLKey DBName where
-  fromKey s = case body s of
+  fromKey s = case Body.parse s of
     Just b  => Right $ MkDBName b
     Nothing => Left $ WrongType [] "collection name"
 
@@ -131,15 +131,15 @@ toRelPath : FilePath -> Either TOMLErr (Path Rel)
 toRelPath (FP $ PRel sx) = Right (PRel sx)
 toRelPath (FP $ PAbs _)  = Left (WrongType [] "Relative Path")
 
-toRelFile : FilePath -> Either TOMLErr (RelFile)
-toRelFile (FP $ PRel (sx :< x)) = Right (MkRF (PRel sx) x)
+toRelFile : FilePath -> Either TOMLErr (File Rel)
+toRelFile (FP $ PRel (sx :< x)) = Right (MkF (PRel sx) x)
 toRelFile _                     = Left (WrongType [] "relative file path")
 
 export %inline
 FromTOML (Path Rel) where fromTOML = trefine toRelPath
 
 export %inline
-FromTOML (RelFile) where fromTOML = trefine toRelFile
+FromTOML (File Rel) where fromTOML = trefine toRelFile
 
 export %inline
 FromTOML DBName where fromTOML = trefine fromKey
@@ -201,7 +201,7 @@ export
 absFileAt :  (path : String)
           -> (dir  : Path Abs) -- parent directory of the .toml file we read
           -> (val  : Value)
-          -> Either TOMLErr AbsFile
+          -> Either TOMLErr (File Abs)
 absFileAt path dir val = toAbsFile dir <$> valAt path val
 
 --------------------------------------------------------------------------------
@@ -211,7 +211,7 @@ absFileAt path dir val = toAbsFile dir <$> valAt path val
 ||| Reads a file and converts its content to a TOML value.
 export covering
 readTOML :  HasIO io
-         => (file : AbsFile)
+         => (file : File Abs)
          -> EitherT PackErr io Value
 readTOML file = do
   str <- read file
@@ -228,7 +228,7 @@ readTOML file = do
 ||| @ file : Name of the .toml file to read
 export covering
 readFromTOML :  HasIO io
-             => (file : AbsFile)
+             => (file : File Abs)
              -> (Path Abs -> Value -> Either TOMLErr a)
              -> EitherT PackErr io a
 readFromTOML file f = do
@@ -239,10 +239,10 @@ readFromTOML file f = do
 ||| extracts an Idris value from this.
 export covering
 readOptionalFromTOML :  HasIO io
-                     => (file : AbsFile)
+                     => (file : File Abs)
                      -> (Path Abs -> Value -> Either TOMLErr a)
                      -> EitherT PackErr io a
 readOptionalFromTOML file f = do
-  True <- exists (path file)
+  True <- fileExists file
     | False => liftEither (mapFst (TOMLFile file) . f file.parent $ VTable empty)
   readFromTOML file f

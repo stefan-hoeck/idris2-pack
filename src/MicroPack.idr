@@ -54,7 +54,7 @@ main = run $ do
       conf = microInit dir scheme db
 
   -- initialize `$HOME/.pack/user/pack.toml`
-  write (MkAF (dir /> "user") packToml) (initToml scheme db)
+  write (MkF (dir /> "user") packToml) (initToml scheme db)
 
   e <- idrisEnv conf
   links e
