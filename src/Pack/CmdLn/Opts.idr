@@ -22,6 +22,12 @@ bootstrap _ = Right . {bootstrap := True}
 withSrc : AdjConf s
 withSrc _ = Right . {withSrc := True}
 
+withDocs : AdjConf s
+withDocs _ = Right . {withDocs := True}
+
+useKatla : AdjConf s
+useKatla _ = Right . {useKatla := True}
+
 setDB : String -> AdjConf s
 setDB s _ c = map (\db => {collection := db} c) $ readDBName s
 
@@ -97,6 +103,14 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             it. This allows some editor plugins to jump to the
             definitions of functions and data types in other
             modules.
+            """
+        , MkOpt [] ["with-docs"]   (NoArg withDocs)
+            """
+            Include the API documentation when installing libraries.
+            """
+        , MkOpt [] ["use-katla"]   (NoArg useKatla)
+            """
+            Use katla to add links to the semantically highlighted API sources.
             """
         , MkOpt [] ["with-ipkg"]   (ReqArg setIpkg "<.ipkg>")
             """

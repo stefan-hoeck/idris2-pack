@@ -141,6 +141,13 @@ promptDesc :  HasIO io
            -> io Bool
 promptDesc = prompt . name
 
+covering
+installImpl :  HasIO io
+            => Env HasIdris
+            -> ResolvedPackage
+            -> (ipkg : File Abs)
+            -> (desc : PkgDesc)
+            -> EitherT PackErr io ()
 
 ||| Install the given library with all its dependencies.
 export covering
@@ -148,6 +155,38 @@ installLib :  HasIO io
            => Env HasIdris
            -> PkgName
            -> EitherT PackErr io ()
+
+||| Install an Idris application given as a package name
+export covering
+installApp :  HasIO io
+           => Env HasIdris
+           -> PkgName
+           -> EitherT PackErr io ()
+
+installImpl e rp ipkg d = do
+  idrisPkg e (packageInstallPrefix e rp)
+             (installCmd e.withSrc)
+             ipkg
+  when e.withDocs $ do
+    let docsDir : Path Abs
+        docsDir = buildPath ipkg d /> "docs"
+
+        htmlDir : Path Abs
+        htmlDir = docsDir /> "docs"
+
+    idrisPkg e (packageInstallPrefix e rp) "--mkdoc" ipkg
+    when e.useKatla $ do
+      installApp e "katla"
+      fs <- map (MkF htmlDir) <$> htmlFiles htmlDir
+      for_ fs $ \htmlFile =>
+        let Just ds@(MkDS _ src ttm srcHtml) := sourceForDoc ipkg d htmlFile
+              | Nothing => pure ()
+         in sys "katla html \{src} \{ttm} > \{srcHtml}" >>
+            insertSources ds
+
+    copyDir docsDir (packageDocs e rp)
+
+
 installLib e n = do
   debug e "Installing library \{n}..."
   rp <- resolve e n
@@ -160,16 +199,12 @@ installLib e n = do
           let ipkgAbs := toAbsFile dir ipkg
               pf      := patchFile e n ipkg
           when !(fileExists pf) (patch ipkgAbs pf)
-          idrisPkg e (packageInstallPrefix e rp)
-                     (installCmd e.withSrc)
-                     ipkgAbs
+          installImpl e rp ipkgAbs d
     p@(RLocal _ ipkg _ d) => do
       let ts := localTimestamp e p
       False <- localUpToDate e rp | True => pure ()
       when !(promptDesc rp e d) $ do
-        idrisPkg e (packageInstallPrefix e rp)
-                   (installCmd e.withSrc)
-                   ipkg
+        installImpl e rp ipkg d
         write ts ""
     _             => do
       False <- packageUpToDate e rp | True => pure ()
@@ -270,12 +305,6 @@ export covering
 typecheck : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
 typecheck = runIdrisOn (Just "--typecheck")
 
-||| Install an Idris application given as a package name
-export covering
-installApp :  HasIO io
-           => Env HasIdris
-           -> PkgName
-           -> EitherT PackErr io ()
 installApp e n = do
   debug e "Installing application \{n}..."
   rp       <- resolve e n

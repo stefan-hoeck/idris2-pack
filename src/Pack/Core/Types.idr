@@ -21,6 +21,11 @@ export
 isTomlBody : Body -> Bool
 isTomlBody = (Just "toml" ==) . extension
 
+||| True if the given file path body ends on `.html`
+export
+isHtmlBody : Body -> Bool
+isHtmlBody = (Just "html" ==) . extension
+
 toRelPath : String -> Path Rel
 toRelPath s = case the FilePath (fromString s) of
   FP (PAbs sx) => PRel sx
