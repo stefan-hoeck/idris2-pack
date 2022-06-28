@@ -105,8 +105,22 @@ idrisPkg :  HasIO io
          -> EitherT PackErr io ()
 
 ||| Builds and installs the Idris commit given in the environment.
-export
+export covering
 mkIdris : HasIO io => Env DBLoaded -> EitherT PackErr io (Env HasIdris)
+
+covering
+installCore :  HasIO io
+            => Env HasIdris
+            -> (dir : Path Abs)
+            -> CorePkg
+            -> EitherT PackErr io ()
+
+covering
+docsCore :  HasIO io
+         => Env HasIdris
+         -> (dir : Path Abs)
+         -> CorePkg
+         -> EitherT PackErr io ()
 
 covering
 installImpl :  HasIO io
@@ -115,6 +129,14 @@ installImpl :  HasIO io
             -> (ipkg : File Abs)
             -> (desc : PkgDesc)
             -> EitherT PackErr io ()
+
+covering
+docsImpl :  HasIO io
+         => Env HasIdris
+         -> ResolvedPackage
+         -> (ipkg : File Abs)
+         -> (desc : PkgDesc)
+         -> EitherT PackErr io ()
 
 ||| Install the given library with all its dependencies.
 export covering
@@ -136,36 +158,41 @@ installApp :  HasIO io
 
 mkIdris e = do
   debug e "Checking Idris installation"
+  let env := the (Env HasIdris) ({db $= id} e)
   when !(missing $ idrisInstallDir e) $ do
     debug e "No Idris compiler found. Installing..."
-    withGit (tmpDir e) e.db.idrisURL e.db.idrisCommit $ \dir =>
-      if e.bootstrap
-        then do -- build with bootstrapping
-          sys "make bootstrap \{prefixVar e} \{schemeVar e}"
-          sys "make install \{prefixVar e}"
-          sys "make clean-libs"
-          sys "rm -r build/ttc build/exec"
-          sys "make idris2-exec \{idrisBootVar e} \{prefixVar e} IDRIS2_INC_CGS=\"\""
-          sys "make libs \{idrisBootVar e} \{prefixVar e}"
-          sys "make install \{idrisBootVar e} \{prefixVar e}"
-          sys "make install-with-src-libs \{idrisBootVar e} \{prefixVar e}"
-          sys "rm -r build/ttc build/exec"
-          sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
-          cacheCoreIpkgFiles e dir
+    withGit (tmpDir e) e.db.idrisURL e.db.idrisCommit $ \dir => do
+      when e.bootstrap $ do
+        sys "make bootstrap \{prefixVar e} \{schemeVar e}"
+        sys "make install \{prefixVar e}"
+        sys "make clean-libs"
+        sys "rm -r build/ttc build/exec"
 
-        else do -- build with existing Idris2 compiler
-          sys "make support \{prefixVar e}"
-          sys "make idris2-exec \{prefixVar e} IDRIS2_INC_CGS=\"\""
-          sys "make libs \{prefixVar e}"
-          sys "make install \{prefixVar e}"
-          sys "make install-with-src-libs \{prefixVar e}"
-          sys "rm -r build/ttc build/exec"
-          sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
-          cacheCoreIpkgFiles e dir
+      sys "make support"
+      sys "make install-support \{prefixVar e}"
+      sys "make idris2-exec IDRIS2_INC_CGS=\"\""
+      sys "make install-idris2 \{prefixVar e}"
+      sys "make src/IdrisPaths.idr"
+
+      cacheCoreIpkgFiles e dir
+      traverse_ (installCore env dir) corePkgs
+      traverse_ (docsCore env dir) corePkgs
 
   exepath <- packExec e
   appLink (idrisExec e) (collectionIdrisExec e) (Just exepath)
-  pure $ {db $= id} e
+  pure env
+
+installCore e dir c =
+  let pth := dir </> coreIpkgPath c
+   in do
+     (_, d) <- parseIpkgFile pth id
+     installImpl e (Core c d) pth d
+
+docsCore e dir c =
+  let pth := dir </> coreIpkgPath c
+   in do
+     (_, d) <- parseIpkgFile pth id
+     docsImpl e (Core c d) pth d
 
 idrisPkg e env cmd ipkg d =
   let exe := idrisWithCG e
@@ -176,11 +203,7 @@ idrisPkg e env cmd ipkg d =
      debug e "About to run: \{s}"
      sysWithEnv s pre
 
-installImpl e rp ipkg d = do
-  idrisPkg e (packageInstallPrefix e rp)
-             (installCmd e.withSrc)
-             ipkg
-             d
+docsImpl e rp ipkg d = when e.withDocs $ do
   when e.withDocs $ do
     let docsDir : Path Abs
         docsDir = buildPath ipkg d /> "docs"
@@ -191,15 +214,21 @@ installImpl e rp ipkg d = do
     idrisPkg e (packageInstallPrefix e rp) "--mkdoc" ipkg d
     when e.useKatla $ do
       installApp e "katla"
+      rp <- resolve e "katla"
+      let katla := MkF (packageBinDir e rp) "katla"
       fs <- map (MkF htmlDir) <$> htmlFiles htmlDir
       for_ fs $ \htmlFile =>
         let Just ds@(MkDS _ src ttm srcHtml) := sourceForDoc ipkg d htmlFile
               | Nothing => pure ()
-         in sys "katla html \{src} \{ttm} > \{srcHtml}" >>
+         in sys "\{katla} html \{src} \{ttm} > \{srcHtml}" >>
             insertSources ds
 
     copyDir docsDir (packageDocs e rp)
 
+installImpl e rp ipkg d =
+  let pre := packageInstallPrefix e rp
+      cmd := installCmd e.withSrc
+   in idrisPkg e pre cmd ipkg d
 
 installLib e n = do
   debug e "Installing library \{n}..."
@@ -213,11 +242,13 @@ installLib e n = do
               pf      := patchFile e n ipkg
           when !(fileExists pf) (patch ipkgAbs pf)
           installImpl e rp ipkgAbs d
+          docsImpl e rp ipkgAbs d
     p@(RLocal pn ipkg _ d) => do
       let ts := localTimestamp e p
       False <- localUpToDate e rp | True => pure ()
       when !(prompt pn e d) $ do
         installImpl e rp ipkg d
+        docsImpl e rp ipkg d
         write ts ""
     _             => do
       False <- packageUpToDate e rp | True => pure ()
