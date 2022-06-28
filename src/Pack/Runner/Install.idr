@@ -19,7 +19,7 @@ import Pack.Runner.Database
 -- to the current collection
 packExec : HasIO io => Env e -> EitherT PackErr io (File Abs)
 packExec e = do
-  rp <- resolve e "pack"
+  rp     <- resolve e "pack"
   Just p <- pure (packageExec e rp) | Nothing => throwE $ NoApp "pack"
   pure p
 

@@ -42,19 +42,9 @@ checkPkg e p = do
     | Left err => updateRep p (Error p err)
   [] <- failingDeps <$> traverse (checkPkg e) (dependencies rp)
     | rs => updateRep p (Failure rp rs)
-  case rp of
-    RGitHub pn url commit ipkg _ d =>
-      report p rp $ withGit (tmpDir e) url commit $ \dir => do
-        let ipkgAbs := toAbsFile dir ipkg
-            pf      := patchFile e pn ipkg
-        when !(fileExists pf) (patch ipkgAbs pf)
-        idrisPkg e (packageInstallPrefix e rp) "--install-with-src" ipkgAbs
-
-    RLocal _ ipkg _ d => do
-      report p rp $
-      idrisPkg e (packageInstallPrefix e rp) "--install" ipkg
-
-    _ => updateRep p (Success rp)
+  Right () <- toState $ installLib e p
+    | Left err => updateRep p (Error p err)
+  updateRep p (Success rp)
 
 export covering
 checkDB : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
