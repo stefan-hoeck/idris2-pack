@@ -171,7 +171,7 @@ mkIdris e = do
       sys "make support"
       sys "make install-support \{prefixVar e}"
       sys "make idris2-exec IDRIS2_INC_CGS=\"\""
-      sys "make install-idris2 \{prefixVar e}"
+      sys "make install-idris2 \{idrisBootVar e} \{prefixVar e}"
       sys "make src/IdrisPaths.idr"
 
       cacheCoreIpkgFiles e dir
