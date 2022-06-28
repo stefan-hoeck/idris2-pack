@@ -7,6 +7,7 @@ import Pack.Config.Env
 import Pack.Config.Types
 import public Pack.Core
 import Pack.Runner.Database
+import Pack.Runner.Develop
 import Pack.Runner.Query
 import Pack.Runner.Install
 import Pack.Runner.New

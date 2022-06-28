@@ -240,6 +240,12 @@ export
 exec : PkgDesc -> Maybe Body
 exec d = d.executable >>= parse
 
+||| Extract the absolute path to an application's
+||| executable in the build directory.
+export
+execPath : (file : File Abs) -> PkgDesc -> (Maybe $ File Abs)
+execPath f d = (MkF $ buildPath f d /> "exec") <$> exec d
+
 --------------------------------------------------------------------------------
 --          Docs
 --------------------------------------------------------------------------------
