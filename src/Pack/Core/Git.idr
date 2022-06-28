@@ -48,7 +48,7 @@ withGit' :  HasIO io
          -> (act    : Path Abs -> EitherT PackErr io a)
          -> EitherT PackErr io a
 withGit' p n url commit act =
-  let dir := maybe p (p />) $ Body.parse (show n)
+  let dir := maybe p (p <.>) $ Body.parse (show n)
    in do
      False <- exists dir
        | True => case n of
