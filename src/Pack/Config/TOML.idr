@@ -31,6 +31,8 @@ config dir v =
               (maybeValAt "idris2.bootstrap" v)
               (maybeValAt "install.safety-prompt" v)
               (maybeValAt "install.with-src" v)
+              (maybeValAt "install.with-docs" v)
+              (maybeValAt "install.use-katla" v)
               (pure Nothing)
               (maybeValAt "idris2.repl.rlwrap" v)
               (maybeValAt "install.libs" v)
@@ -55,6 +57,14 @@ initToml scheme db = """
   # who have set their editor up with some *go to definition*
   # functionality (for instance by using idris2-lsp with neovim).
   with-src   = true
+
+  # Whether to install API docs together with installed
+  # libraries.
+  # with-docs = false
+
+  # Whether to use katla to generate HTML links to
+  # semantically highlighted API sources
+  # use-katla = false
 
   # Whether to prompt the user before building or installing
   # packages or applications with custom build hooks in their

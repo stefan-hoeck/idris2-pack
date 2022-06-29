@@ -148,6 +148,13 @@ record Config_ (c : Type) (f : Type -> Type) (s : Maybe State) where
   ||| Whether to install the library sources as well
   withSrc      : f Bool
 
+  ||| Whether to install the library docs as well
+  withDocs      : f Bool
+
+  ||| Whether to use katla to add semantically highlighted source code
+  ||| to the library docs.
+  useKatla      : f Bool
+
   ||| The `.ipkg` file to use (if any) when starting a REPL session
   withIpkg     : f WithIpkg
 
@@ -223,6 +230,8 @@ init cur dir coll = MkConfig {
   , bootstrap    = False
   , safetyPrompt = True
   , withSrc      = False
+  , withDocs     = False
+  , useKatla     = False
   , withIpkg     = Search cur
   , rlwrap       = False
   , autoLibs     = []
@@ -246,6 +255,8 @@ update ci cm = MkConfig {
   , bootstrap    = fromMaybe ci.bootstrap cm.bootstrap
   , safetyPrompt = fromMaybe ci.safetyPrompt cm.safetyPrompt
   , withSrc      = fromMaybe ci.withSrc cm.withSrc
+  , withDocs     = fromMaybe ci.withDocs cm.withDocs
+  , useKatla     = fromMaybe ci.useKatla cm.useKatla
   , withIpkg     = fromMaybe ci.withIpkg cm.withIpkg
   , rlwrap       = fromMaybe ci.rlwrap cm.rlwrap
   , autoLibs     = sortedNub (ci.autoLibs ++ concat cm.autoLibs)
@@ -462,6 +473,11 @@ packageInstallDir e p =
         Core c _            => dir /> (c <-> vers)
         RGitHub _ _ _ _ _ d => dir </> pkgRelDir d
         RLocal _ _ _ d      => dir </> pkgRelDir d
+
+||| Directory where the API docs of the package will be installed.
+export
+packageDocs : Env s -> ResolvedPackage -> Path Abs
+packageDocs e rp = packageInstallDir e rp /> "docs"
 
 ||| Directory where an installed executable can be found
 export

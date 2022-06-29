@@ -21,6 +21,11 @@ export
 isTomlBody : Body -> Bool
 isTomlBody = (Just "toml" ==) . extension
 
+||| True if the given file path body ends on `.html`
+export
+isHtmlBody : Body -> Bool
+isHtmlBody = (Just "html" ==) . extension
+
 toRelPath : String -> Path Rel
 toRelPath s = case the FilePath (fromString s) of
   FP (PAbs sx) => PRel sx
@@ -169,6 +174,18 @@ export %inline
 Interpolation PkgType where
   interpolate Lib = "lib"
   interpolate Bin = "bin"
+
+export
+Eq PkgType where
+  Lib == Lib = True
+  Bin == Bin = True
+  _   == _   = False
+
+export
+Ord PkgType where
+  compare Lib Bin = LT
+  compare Bin Lib = GT
+  compare _   _   = EQ
 
 --------------------------------------------------------------------------------
 --          DBName

@@ -34,6 +34,7 @@ modules = Pack.CmdLn.Completion
 
         , Pack.Runner
         , Pack.Runner.Database
+        , Pack.Runner.Develop
         , Pack.Runner.Install
         , Pack.Runner.Query
 

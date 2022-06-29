@@ -11,41 +11,34 @@ import Pack.Runner.Database
 
 %default total
 
+--------------------------------------------------------------------------------
+--          Utilities
+--------------------------------------------------------------------------------
+
+-- return the path to the `pack` executable corresponding
+-- to the current collection
 packExec : HasIO io => Env e -> EitherT PackErr io (File Abs)
 packExec e = do
-  rp <- resolve e "pack"
+  rp     <- resolve e "pack"
   Just p <- pure (packageExec e rp) | Nothing => throwE $ NoApp "pack"
   pure p
 
+-- True if the `pack` executable exists.
 packInstalled : HasIO io => Env e -> EitherT PackErr io Bool
 packInstalled e = packExec e >>= fileExists
 
-||| Use the installed Idris to run an operation on an `.ipkg` file.
-export
-idrisPkg :  HasIO io
-         => Env HasIdris
-         -> (env : List (String,String))
-         -> (cmd : String)
-         -> File Abs
-         -> EitherT PackErr io ()
-idrisPkg e env cmd ipkg =
-  let exe := idrisWithCG e
-      pre := env ++ buildEnv e
-      s   := "\{exe} \{cmd} \{ipkg}"
-   in do
-     debug e "About to run: \{s}"
-     sysWithEnv s pre
-
-buildDir : PkgDesc -> FilePath
-buildDir d = maybe "build" fromString d.builddir
-
-copyApp : HasIO io => Env HasIdris -> ResolvedPackage -> EitherT PackErr io ()
-copyApp e rp =
+copyApp :  HasIO io
+        => Env HasIdris
+        -> (ipkg : File Abs)
+        -> (desc : PkgDesc)
+        -> ResolvedPackage
+        -> EitherT PackErr io ()
+copyApp e ipkg d rp =
   let dir = packageBinDir e rp
    in do
-        debug e "Copying application to \{dir}" >>
-        mkDir dir
-        sys "cp -r \{buildDir $ desc rp}/exec/* \{dir}"
+     debug e "Copying application to \{dir}"
+     mkDir dir
+     sys "cp -r \{buildPath ipkg d}/exec/* \{dir}"
 
 export
 links : HasIO io => Env HasIdris -> EitherT PackErr io ()
@@ -77,103 +70,103 @@ appLink exec target (Just p)       =
       """
    in write target content >> sys "chmod +x \{target}"
 
-||| Builds and installs the Idris commit given in the environment.
+installCmd : (withSrc : Bool) -> String
+installCmd True  = "--install-with-src"
+installCmd False = "--install"
+
+||| Use the installed Idris to run an operation on an `.ipkg` file.
 export
+idrisPkg :  HasIO io
+         => Env HasIdris
+         -> (env  : List (String,String))
+         -> (cmd  : String)
+         -> (ipkg : File Abs)
+         -> (desc : PkgDesc)
+         -> EitherT PackErr io ()
+idrisPkg e env cmd ipkg d =
+  let exe := idrisWithCG e
+      pre := env ++ buildEnv e
+      s   := "\{exe} \{cmd} \{ipkg}"
+   in debug e "About to run: \{s}" >>
+      sysWithEnv s pre
+
+--------------------------------------------------------------------------------
+--          Installing Idris
+--------------------------------------------------------------------------------
+
+||| Builds and installs the Idris commit given in the environment.
+export covering
 mkIdris : HasIO io => Env DBLoaded -> EitherT PackErr io (Env HasIdris)
 mkIdris e = do
   debug e "Checking Idris installation"
   when !(missing $ idrisInstallDir e) $ do
     debug e "No Idris compiler found. Installing..."
-    if e.bootstrap
-       then -- build with bootstrapping
-         withGit (tmpDir e) e.db.idrisURL e.db.idrisCommit $ \dir => do
-           sys "make bootstrap \{prefixVar e} \{schemeVar e}"
-           sys "make install \{prefixVar e}"
-           sys "make clean-libs"
-           sys "rm -r build/ttc build/exec"
-           sys "make idris2-exec \{idrisBootVar e} \{prefixVar e} IDRIS2_INC_CGS=\"\""
-           sys "make libs \{idrisBootVar e} \{prefixVar e}"
-           sys "make install \{idrisBootVar e} \{prefixVar e}"
-           sys "make install-with-src-libs \{idrisBootVar e} \{prefixVar e}"
-           sys "rm -r build/ttc build/exec"
-           sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
-           cacheCoreIpkgFiles e dir
-
-       else -- build with existing Idris2 compiler
-         withGit (tmpDir e) e.db.idrisURL e.db.idrisCommit $ \dir => do
-           sys "make support \{prefixVar e}"
-           sys "make idris2-exec \{prefixVar e} IDRIS2_INC_CGS=\"\""
-           sys "make libs \{prefixVar e}"
-           sys "make install \{prefixVar e}"
-           sys "make install-with-src-libs \{prefixVar e}"
-           sys "rm -r build/ttc build/exec"
-           sys "make install-with-src-api \{idrisBootVar e} \{prefixVar e}"
-           cacheCoreIpkgFiles e dir
+    withCoreGit e $ \dir => do
+      case e.bootstrap of
+        True => do
+          sys "make bootstrap \{prefixVar e} \{schemeVar e}"
+          sys "make install-support \{prefixVar e}"
+          sys "make install-idris2 \{prefixVar e}"
+        False => do
+          sys "make support"
+          sys "make install-support \{prefixVar e}"
+          sys "make idris2-exec IDRIS2_INC_CGS=\"\" \{idrisBootVar e}"
+          sys "make install-idris2 \{idrisBootVar e} \{prefixVar e}"
+      sys "make clean-libs"
+      sys "rm -r build/ttc build/exec"
+      cacheCoreIpkgFiles e dir
 
   exepath <- packExec e
   appLink (idrisExec e) (collectionIdrisExec e) (Just exepath)
   pure $ {db $= id} e
 
-installCmd : (withSrc : Bool) -> String
-installCmd True  = "--install-with-src"
-installCmd False = "--install"
+--------------------------------------------------------------------------------
+--          Installing Libs
+--------------------------------------------------------------------------------
 
--- check if a package has special build- or install hooks
--- defined, and if yes, prompt the user
--- before continuing (unless `safetyPrompt` in the
--- `Config` is set set to `False`).
-prompt : HasIO io => PkgName -> Config s -> PkgDesc -> io Bool
-prompt n c d =
-  if c.safetyPrompt && isJust (
-       d.prebuild <|> d.postbuild <|>
-       d.preinstall <|> d.postinstall
-     )
-     then do
-       putStrLn "Package \{n} uses custom build hooks. Continue (yes/*no)?"
-       "yes" <- trim <$> getLine | _ => putStrLn "Aborting..." $> False
-       pure True
-     else pure True
-
-promptDesc :  HasIO io
-           => ResolvedPackage
-           -> Config s
-           -> PkgDesc
-           -> io Bool
-promptDesc = prompt . name
-
+installImpl :  HasIO io
+            => Env HasIdris
+            -> ResolvedPackage
+            -> (ipkg : File Abs)
+            -> (desc : PkgDesc)
+            -> EitherT PackErr io ()
+installImpl e rp ipkg d =
+  let pre := packageInstallPrefix e rp
+      cmd := installCmd e.withSrc
+   in idrisPkg e pre cmd ipkg d
 
 ||| Install the given library with all its dependencies.
-export covering
+export
 installLib :  HasIO io
            => Env HasIdris
-           -> PkgName
+           -> ResolvedPackage
            -> EitherT PackErr io ()
-installLib e n = do
-  debug e "Installing library \{n}..."
-  rp <- resolve e n
-  traverse_ (installLib e) (dependencies rp)
+installLib e rp = do
+  info e "Installing library: \{name rp}"
   case rp of
-    RGitHub pn url commit ipkg _ d => do
-      False <- packageUpToDate e rp | True => pure ()
-      when !(promptDesc rp e d) $
-        withGit (tmpDir e) url commit $ \dir => do
-          let ipkgAbs := toAbsFile dir ipkg
-              pf      := patchFile e n ipkg
-          when !(fileExists pf) (patch ipkgAbs pf)
-          idrisPkg e (packageInstallPrefix e rp)
-                     (installCmd e.withSrc)
-                     ipkgAbs
-    p@(RLocal _ ipkg _ d) => do
-      let ts := localTimestamp e p
-      False <- localUpToDate e rp | True => pure ()
-      when !(promptDesc rp e d) $ do
-        idrisPkg e (packageInstallPrefix e rp)
-                   (installCmd e.withSrc)
-                   ipkg
-        write ts ""
-    _             => do
-      False <- packageUpToDate e rp | True => pure ()
-      throwE (MissingCorePackage (name rp) e.db.idrisVersion e.db.idrisCommit)
+    RGitHub pn url commit ipkg _ d =>
+      withGit (tmpDir e) pn url commit $ \dir => do
+        let ipkgAbs := toAbsFile dir ipkg
+            cache   := ipkgPath e pn commit ipkg
+        copyFile cache ipkgAbs
+        installImpl e rp ipkgAbs d
+
+    p@(RLocal pn ipkg _ d) => do
+      installImpl e rp ipkg d
+      write (localTimestamp e p) ""
+    Core c d               =>
+      withCoreGit e $ \dir => do
+        let ipkgAbs := toAbsFile dir (coreIpkgPath c)
+            cache   := coreCachePath e c
+        copyFile cache ipkgAbs
+        case c of
+          IdrisApi => sys "make src/IdrisPaths.idr"
+          _        => pure ()
+        installImpl e rp ipkgAbs d
+
+--------------------------------------------------------------------------------
+--          Installing Apps
+--------------------------------------------------------------------------------
 
 removeExec :  HasIO io
            => Env s
@@ -185,6 +178,129 @@ removeExec e rp n = do
   rmFile (collectionAppExec e n)
   rmDir (packageBinDir e rp)
 
+||| Install an Idris application given as a package name
+export covering
+installApp :  HasIO io
+           => Env HasIdris
+           -> ResolvedPackage
+           -> EitherT PackErr io ()
+installApp e rp = do
+  info e "Installing application: \{name rp}"
+  Just exe <- pure (packageExec e rp) | Nothing => throwE (NoApp $ name rp)
+  case rp of
+    RGitHub pn url commit ipkg pp d =>
+      withGit (tmpDir e) pn url commit $ \dir => do
+        let ipkgAbs := toAbsFile dir ipkg
+            cache   := ipkgPath e pn commit ipkg
+        copyFile cache ipkgAbs
+        idrisPkg e [] "--build" ipkgAbs d
+        copyApp e ipkgAbs d rp
+
+    RLocal pn ipkg pp d => do
+      removeExec e rp exe.file
+      idrisPkg e [] "--build" ipkg d
+      copyApp e ipkg d rp
+
+    _ => throwE (NoApp $ name rp)
+
+  case usePackagePath rp of
+    True  => packExec e >>= appLink exe (collectionAppExec e exe.file) . Just
+    False => appLink exe (collectionAppExec e exe.file) Nothing
+
+--------------------------------------------------------------------------------
+--          Generating API Docs
+--------------------------------------------------------------------------------
+
+covering
+docsImpl :  HasIO io
+         => Env HasIdris
+         -> ResolvedPackage
+         -> (ipkg : File Abs)
+         -> (desc : PkgDesc)
+         -> EitherT PackErr io ()
+
+docsImpl e rp ipkg d = do
+  let docsDir : Path Abs
+      docsDir = buildPath ipkg d /> "docs"
+
+      htmlDir : Path Abs
+      htmlDir = docsDir /> "docs"
+
+  info e "Building API docs for: \{name rp}"
+  idrisPkg e (packageInstallPrefix e rp) "--mkdoc" ipkg d
+  when e.useKatla $ do
+    info e "Building source docs for: \{name rp}"
+    rp <- resolve e "katla"
+    let katla := MkF (packageBinDir e rp) "katla"
+    fs <- map (MkF htmlDir) <$> htmlFiles htmlDir
+    for_ fs $ \htmlFile =>
+      let Just ds@(MkDS _ src ttm srcHtml) := sourceForDoc ipkg d htmlFile
+            | Nothing => pure ()
+       in sys "\{katla} html \{src} \{ttm} > \{srcHtml}" >>
+          insertSources ds
+
+  when !(exists $ packageDocs e rp) (rmDir $ packageDocs e rp)
+  copyDir docsDir (packageDocs e rp)
+
+export
+installDocs :  HasIO io
+            => Env HasIdris
+            -> ResolvedPackage
+            -> EitherT PackErr io ()
+installDocs e rp@(RGitHub pn url commit ipkg _ d) =
+  withGit (tmpDir e) pn url commit $ \dir =>
+    docsImpl e rp (toAbsFile dir ipkg) d
+
+installDocs e rp@(RLocal pn ipkg _ d) = docsImpl e rp ipkg d
+
+installDocs e rp@(Core c d) =
+  withCoreGit e $ \dir =>
+    docsImpl e rp (toAbsFile dir $ coreIpkgPath c) d
+
+katla : Env e -> List (PkgType, PkgName)
+katla e = if e.withDocs && e.useKatla then [(Bin, "katla")] else []
+
+autoPairs : Env e -> List (PkgType, PkgName)
+autoPairs e = map (Lib,) e.autoLibs ++ map (Bin,) e.autoApps
+
+libInfo : List (PkgType, ResolvedPackage) -> String
+libInfo = unlines . map (interpolate . name . snd) . filter ((Lib ==) . fst)
+
+appInfo : List (PkgType, ResolvedPackage) -> String
+appInfo = unlines . map (interpolate . name . snd) . filter ((Bin ==) . fst)
+
+export covering
+install :  HasIO io
+        => Env HasIdris
+        -> List (PkgType, PkgName)
+        -> EitherT PackErr io ()
+install e ps = do
+  rs <- plan e $ katla e <+> autoPairs e <+> ps
+  info e $ "Installing the following libraries:\n" ++ libInfo rs
+  info e $ "Installing the following apps:\n" ++ appInfo rs
+  for_ rs $ \case (Lib,rp) => installLib e rp
+                  (Bin,rp) => installApp e rp
+
+  when e.withDocs $
+    for_ rs $ \case (Lib,rp) => installDocs e rp
+                    (Bin,rp) => pure ()
+
+export covering
+installDeps :  HasIO io
+            => Env HasIdris
+            -> PkgDesc
+            -> EitherT PackErr io ()
+installDeps e = install e . map (Lib,) . dependencies
+
+||| Creates a packaging environment with Idris2 installed.
+export covering
+idrisEnv : HasIO io => Config Nothing -> EitherT PackErr io (Env HasIdris)
+idrisEnv c = env c >>= mkIdris
+
+--------------------------------------------------------------------------------
+--          Removing Libs
+--------------------------------------------------------------------------------
+
 ||| Remove a library or executable.
 export covering
 remove : HasIO io => Env s -> PkgName -> EitherT PackErr io ()
@@ -195,152 +311,3 @@ remove env n = do
   case executable rp of
     Just exe => removeExec env rp exe
     Nothing  => pure ()
-
-covering
-runIdrisOn :  HasIO io
-           => (cmd : Maybe String)
-           -> File Abs
-           -> Env HasIdris
-           -> EitherT PackErr io ()
-runIdrisOn cmd p e = do
-  (_,d) <- parseIpkgFile p id
-  traverse_ (installLib e) (dependencies d)
-  case cmd of
-    Just c  => idrisPkg e [] c p
-    Nothing => pure ()
-
-findIpkg :  HasIO io
-         => WithIpkg
-         -> Maybe (File Abs)
-         -> EitherT PackErr io (Maybe $ File Abs)
-findIpkg (Search dir) fi =
-  let searchDir := maybe dir parent fi
-   in findInParentDirs isIpkgBody searchDir
-findIpkg None         _  = pure Nothing
-findIpkg (Use x)      _  = pure (Just x)
-
-covering
-replOpts :  HasIO io
-         => Env HasIdris
-         -> (file : Maybe $ File Abs)
-         -> EitherT PackErr io (String, Maybe $ File Abs)
-replOpts e mf = do
-  Just p <- findIpkg e.withIpkg mf | Nothing => pure ("",Nothing)
-  info e "Found `.ipkg` file at \{p}"
-  (_,desc) <- parseIpkgFile p id
-  traverse_ (installLib e) (dependencies desc)
-  let srcDir = maybe "" (\s => "--source-dir \"\{s}\"") desc.sourcedir
-      pkgs = unwords $ map (("-p " ++) . pkgname) desc.depends
-  pure ("\{srcDir} \{pkgs}", Just p)
-
-||| Use the installed Idris to start a REPL session with the
-||| given argument string.
-export covering
-idrisRepl :  HasIO io
-          => (file : Maybe $ File Abs)
-          -> Env HasIdris
-          -> EitherT PackErr io ()
-idrisRepl file e = do
-  let args := maybe "" interpolate $ file
-      pth  := packagePath e
-      exe  := idrisWithCG e
-
-  (opts, mp) <- replOpts e file
-
-  cmd <- case e.rlwrap of
-    True  => pure "rlwrap \{exe} \{opts} \{args}"
-    False => pure "\{exe} \{opts} \{args}"
-
-  case mp of
-    Just af => inDir af.parent $ \_ => sysWithEnv cmd [pth]
-    Nothing => sysWithEnv cmd [pth]
-
-||| Build a local library given as an `.ipkg` file.
-export covering
-build : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
-build = runIdrisOn (Just "--build")
-
-||| Install dependencies of a local `.ipkg` file
-export covering
-buildDeps : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
-buildDeps = runIdrisOn Nothing
-
-||| Typecheck a local library given as an `.ipkg` file.
-export covering
-typecheck : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
-typecheck = runIdrisOn (Just "--typecheck")
-
-||| Install an Idris application given as a package name
-export covering
-installApp :  HasIO io
-           => Env HasIdris
-           -> PkgName
-           -> EitherT PackErr io ()
-installApp e n = do
-  debug e "Installing application \{n}..."
-  rp       <- resolve e n
-  Just exe <- pure (packageExec e rp) | Nothing => throwE (NoApp n)
-  traverse_ (installLib e) (dependencies rp)
-  case rp of
-    RGitHub pn url commit ipkg pp d => do
-      False <- executableExists e exe | True => pure ()
-      when !(promptDesc rp e d) $
-        withGit (tmpDir e) url commit $ \dir => do
-          let ipkgAbs := toAbsFile dir ipkg
-              pf      := patchFile e n ipkg
-          when !(fileExists pf) (patch ipkgAbs pf)
-          idrisPkg e [] "--build" ipkgAbs
-          copyApp e rp
-
-    RLocal _ ipkg pp d => when !(promptDesc rp e d) $ do
-      removeExec e rp exe.file
-      idrisPkg e [] "--build" ipkg
-      copyApp e rp
-    _ => throwE (NoApp n)
-
-  case usePackagePath rp of
-    True  => packExec e >>= appLink exe (collectionAppExec e exe.file) . Just
-    False => appLink exe (collectionAppExec e exe.file) Nothing
-
-execPath : File Abs -> PkgDesc -> Maybe (Path Abs)
-execPath p d = do
-  exe <- d.executable
-  bod <- Body.parse exe
-  pure (toAbsPath p.parent (buildDir d) /> "exec" /> bod)
-
-||| Install and run an executable given as a package name.
-export covering
-runIpkg :  HasIO io
-        => File Abs
-        -> (args : List String)
-        -> Env HasIdris
-        -> EitherT PackErr io ()
-runIpkg p args e = do
-  (_,d)    <- parseIpkgFile p id
-  Just exe <- pure (execPath p d) | Nothing => throwE (NoAppIpkg p)
-  build p e
-  sys "\{exe} \{unwords args}"
-
-||| Install and run an executable given as a package name.
-export covering
-execApp :  HasIO io
-        => PkgName
-        -> (args : List String)
-        -> Env HasIdris
-        -> EitherT PackErr io ()
-execApp p args e = do
-  rp@(RGitHub {}) <- resolve e p
-    | RLocal _ ipkg _ _ => runIpkg ipkg args e
-    | Core {}           => throwE (NoApp p)
-  Just exe <- pure (packageExec e rp) | Nothing => throwE (NoApp p)
-  installApp e p
-  sys "\{exe} \{unwords args}"
-
-||| Creates a packaging environment with Idris2 installed.
-export covering
-idrisEnv : HasIO io => Config Nothing -> EitherT PackErr io (Env HasIdris)
-idrisEnv c = do
-  e <- env c >>= mkIdris
-  traverse_ (installLib e) e.autoLibs
-  traverse_ (installApp e) e.autoApps
-  pure e

@@ -233,8 +233,60 @@ sourcePath f d = maybe f.parent (toAbsPath f.parent . fromString) d.sourcedir
 ||| from a package description plus its file location.
 export
 buildPath : (file : File Abs) -> PkgDesc -> Path Abs
-buildPath f d = maybe f.parent (toAbsPath f.parent . fromString) d.builddir
+buildPath f d =
+  maybe (f.parent /> "build") (toAbsPath f.parent . fromString) d.builddir
 
 export
 exec : PkgDesc -> Maybe Body
 exec d = d.executable >>= parse
+
+||| Extract the absolute path to an application's
+||| executable in the build directory.
+export
+execPath : (file : File Abs) -> PkgDesc -> (Maybe $ File Abs)
+execPath f d = (MkF $ buildPath f d /> "exec") <$> exec d
+
+--------------------------------------------------------------------------------
+--          Docs
+--------------------------------------------------------------------------------
+
+public export
+record DocSources where
+  constructor MkDS
+  htmlDoc : File Abs
+  srcFile : File Abs
+  ttmFile : File Abs
+  srcHtml : File Abs
+
+replaceDot : Char -> Char
+replaceDot '.' = '/'
+replaceDot c   = c
+
+export
+sourceForDoc : (ipkg : File Abs) -> PkgDesc -> File Abs -> Maybe DocSources
+sourceForDoc ipkg d f = do
+  MkBody cs _ <- fileStem f
+  rf          <- RelFile.parse . pack $ map replaceDot cs
+  Just $ MkDS {
+    htmlDoc = f
+  , srcFile = (sourcePath ipkg d </> rf) <.> "idr"
+  , ttmFile = (buildPath ipkg d </> "ttc" </> rf) <.> "ttm"
+  , srcHtml = MkF (f.parent) (MkBody cs %search <.> "src.html")
+  }
+
+export covering
+insertSources : HasIO io => DocSources -> EitherT PackErr io ()
+insertSources x = do
+  str <- read x.htmlDoc
+  write x.htmlDoc (unlines . map (pack . insertSrc . unpack) $ lines str)
+  where beforeH1 : List Char -> List Char
+        beforeH1 [] = []
+        beforeH1 ('<' :: '/' :: 'h' :: '1' :: '>' :: t) =
+          unpack "</h1><span style=\"float:right\">" ++
+          unpack "(<a href=\"\{x.srcHtml.file}\">source</a>)</span>" ++ t
+        beforeH1 (h :: t) = h :: beforeH1 t
+
+        insertSrc : List Char -> List Char
+        insertSrc []                              = []
+        insertSrc ('<' :: 'h' :: '1' :: '>' :: t) = unpack "<h1>" ++ beforeH1 t
+        insertSrc (h :: t)                        = h :: insertSrc t

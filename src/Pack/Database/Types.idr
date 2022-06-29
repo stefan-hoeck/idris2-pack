@@ -179,7 +179,8 @@ namespace PkgDesc
 ||| Extracts the dependencies of a resolved package.
 export
 dependencies : ResolvedPackage -> List PkgName
-dependencies = dependencies . desc
+dependencies (Core Network _) = ["contrib"]
+dependencies p                = dependencies $ desc p
 
 ||| Extracts the name of the executable (if any) from
 ||| a resolved package.

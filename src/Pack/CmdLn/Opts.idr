@@ -22,6 +22,12 @@ bootstrap _ = Right . {bootstrap := True}
 withSrc : AdjConf s
 withSrc _ = Right . {withSrc := True}
 
+withDocs : AdjConf s
+withDocs _ = Right . {withDocs := True}
+
+useKatla : AdjConf s
+useKatla _ = Right . {useKatla := True}
+
 setDB : String -> AdjConf s
 setDB s _ c = map (\db => {collection := db} c) $ readDBName s
 
@@ -98,6 +104,14 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             definitions of functions and data types in other
             modules.
             """
+        , MkOpt [] ["with-docs"]   (NoArg withDocs)
+            """
+            Include the API documentation when installing libraries.
+            """
+        , MkOpt [] ["use-katla"]   (NoArg useKatla)
+            """
+            Use katla to add links to the semantically highlighted API sources.
+            """
         , MkOpt [] ["with-ipkg"]   (ReqArg setIpkg "<.ipkg>")
             """
             Use settings and packages from the given `.ipkg` file when
@@ -145,9 +159,9 @@ cmd dir ("run" :: p :: args)       =
 cmd dir ["build", file]            = ipkgFile dir file Build
 cmd dir ["install-deps", file]     = ipkgFile dir file BuildDeps
 cmd dir ["typecheck", file]        = ipkgFile dir file Typecheck
-cmd _   ("install" :: xs)          = Right $ Install (map fromString xs)
+cmd _   ("install" :: xs)          = Right . Install $ map (\s => (Lib, MkPkgName s)) xs
 cmd _   ("remove" :: xs)           = Right $ Remove (map fromString xs)
-cmd _   ("install-app" :: xs)      = Right $ InstallApp (map fromString xs)
+cmd _   ("install-app" :: xs)      = Right . Install $ map (\s => (Bin, MkPkgName s)) xs
 cmd _   ["completion",a,b]         = Right $ Completion a b
 cmd _   ["completion-script",f]    = Right $ CompletionScript f
 cmd _   ["package-path"]           = Right PackagePath

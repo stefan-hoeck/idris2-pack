@@ -13,6 +13,14 @@ export
 dbRepo : URL
 dbRepo = "https://github.com/stefan-hoeck/idris2-pack-db"
 
+export
+compiler : PkgName
+compiler = "idris2-compiler"
+
+export
+packDB : PkgName
+packDB = "pack-db"
+
 ||| Clones a GitHub repository to the given destination
 export
 gitClone :  HasIO io
@@ -37,18 +45,18 @@ gitLatest url c =
 
 ||| Clone a git repository into `dir`, switch to the
 ||| given commit and run the given action.
-|||
-||| CAUTION: `dir` must be empty or non-existant, otherwise
-|||          this will fail.
 export
 withGit :  HasIO io
         => (dir    : Path Abs)
+        -> (pkg    : PkgName)
         -> (url    : URL)
         -> (commit : Commit)
         -> (act    : Path Abs -> EitherT PackErr io a)
         -> EitherT PackErr io a
-withGit dir url commit act = do
-  False <- exists dir | True => throwE (DirExists dir)
-  finally (rmDir dir) $ do
-    gitClone url dir
-    inDir dir (\d => gitCheckout commit >> act d)
+withGit p pkg url commit act =
+  let dir := p <//> pkg <//> commit
+   in do
+     False <- exists dir | True => inDir dir act
+     mkParentDir dir
+     gitClone url dir
+     inDir dir (\d => gitCheckout commit >> act d)

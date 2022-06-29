@@ -61,7 +61,11 @@ runCmd = do
   (c',cmd) <- getConfig readCmd Help loglevel
   case cmd of
     CheckDB db p       =>
-      let c = setColl db c'
+      let c = { collection   := db
+              , withDocs     := True
+              , useKatla     := True
+              , safetyPrompt := False
+              } c'
        in idrisEnv c >>= checkDB p
     FromHEAD p         =>
       let c = setColl (MkDBName "HEAD") c'

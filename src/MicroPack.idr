@@ -27,6 +27,8 @@ microInit dir scheme db = MkConfig {
   , bootstrap     = True
   , safetyPrompt  = True
   , withSrc       = True
+  , withDocs      = False
+  , useKatla      = False
   , withIpkg      = None
   , rlwrap        = False
   , autoLibs      = []
@@ -56,5 +58,7 @@ main = run $ do
   -- initialize `$HOME/.pack/user/pack.toml`
   write (MkF (dir /> "user") packToml) (initToml scheme db)
 
-  e <- idrisEnv conf
-  links e
+  finally (rmDir $ tmpDir conf) $ do
+    e <- idrisEnv conf
+    install e [(Bin, "pack")]
+    links e

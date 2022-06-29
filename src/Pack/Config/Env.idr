@@ -58,7 +58,7 @@ export
 updateDB_ : HasIO io => (packDir : Path Abs) -> EitherT PackErr io ()
 updateDB_ packDir = do
   rmDir (dbDir_ packDir)
-  withGit (tmpDir_ packDir) dbRepo "main" $ \d =>
+  withGit (tmpDir_ packDir) packDB dbRepo "main" $ \d =>
     copyDir (d /> "collections") (dbDir_ packDir)
 
 ||| Loads the name of the default collection (currently the latest

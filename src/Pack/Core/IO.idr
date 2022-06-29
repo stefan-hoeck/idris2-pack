@@ -190,6 +190,13 @@ tomlFiles :  HasIO io
           -> EitherT PackErr io (List Body)
 tomlFiles dir = filter isTomlBody <$> entries dir
 
+||| Returns the names of toml files in a directory
+export
+htmlFiles :  HasIO io
+          => (dir : Path Abs)
+          -> EitherT PackErr io (List Body)
+htmlFiles dir = filter isHtmlBody <$> entries dir
+
 ||| Returns the names of entries in the current directory
 export
 currentEntries : HasIO io => EitherT PackErr io (List Body)
