@@ -16,7 +16,10 @@ runIdrisOn :  HasIO io
            -> File Abs
            -> Env HasIdris
            -> EitherT PackErr io ()
-runIdrisOn c p e = parseIpkgFile p id >>= idrisPkg e [] c p . snd
+runIdrisOn c p e = do
+  (_, d) <- parseIpkgFile p id
+  installDeps e d
+  idrisPkg e [] c p d
 
 findIpkg :  HasIO io
          => WithIpkg
@@ -36,10 +39,10 @@ replOpts :  HasIO io
 replOpts e mf = do
   Just p <- findIpkg e.withIpkg mf | Nothing => pure ("",Nothing)
   info e "Found `.ipkg` file at \{p}"
-  (_,desc) <- parseIpkgFile p id
-  traverse_ (installLib e) (dependencies desc)
-  let srcDir = maybe "" (\s => "--source-dir \"\{s}\"") desc.sourcedir
-      pkgs = unwords $ map (("-p " ++) . pkgname) desc.depends
+  (_,d) <- parseIpkgFile p id
+  installDeps e d
+  let srcDir = maybe "" (\s => "--source-dir \"\{s}\"") d.sourcedir
+      pkgs = unwords $ map (("-p " ++) . pkgname) d.depends
   pure ("\{srcDir} \{pkgs}", Just p)
 
 ||| Use the installed Idris to start a REPL session with the
@@ -74,7 +77,7 @@ export covering
 buildDeps : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
 buildDeps ipkg e = do
   (_,d) <- parseIpkgFile ipkg id
-  traverse_ (installLib e) (dependencies d)
+  installDeps e d
 
 ||| Typecheck a local library given as an `.ipkg` file.
 export covering %inline
@@ -106,5 +109,5 @@ execApp p args e = do
     | RLocal _ ipkg _ _ => runIpkg ipkg args e
     | Core {}           => throwE (NoApp p)
   Just exe <- pure (packageExec e rp) | Nothing => throwE (NoApp p)
-  installApp e p
+  install e [(Bin,p)]
   sys "\{exe} \{unwords args}"

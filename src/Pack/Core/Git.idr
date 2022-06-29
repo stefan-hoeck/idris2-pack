@@ -13,6 +13,14 @@ export
 dbRepo : URL
 dbRepo = "https://github.com/stefan-hoeck/idris2-pack-db"
 
+export
+compiler : PkgName
+compiler = "idris2-compiler"
+
+export
+packDB : PkgName
+packDB = "pack-db"
+
 ||| Clones a GitHub repository to the given destination
 export
 gitClone :  HasIO io
@@ -35,36 +43,20 @@ gitLatest :  HasIO io
 gitLatest url c =
   MkCommit . fst . break isSpace <$> sysRun "git ls-remote \{url} \{c}"
 
-ndir : Nat -> Path Abs -> Path Abs
-ndir n p =
-  let Just b := Body.parse (show n) | Nothing => p
-   in p /> b
-
-withGit' :  HasIO io
-         => (p      : Path Abs)
-         -> (n      : Nat)
-         -> (url    : URL)
-         -> (commit : Commit)
-         -> (act    : Path Abs -> EitherT PackErr io a)
-         -> EitherT PackErr io a
-withGit' p n url commit act =
-  let dir := maybe p (p <.>) $ Body.parse (show n)
-   in do
-     False <- exists dir
-       | True => case n of
-           S k => withGit' p k url commit act
-           0   => throwE (DirExists dir)
-     finally (rmDir dir) $ do
-       gitClone url dir
-       inDir dir (\d => gitCheckout commit >> act d)
-
 ||| Clone a git repository into `dir`, switch to the
 ||| given commit and run the given action.
 export
 withGit :  HasIO io
         => (dir    : Path Abs)
+        -> (pkg    : PkgName)
         -> (url    : URL)
         -> (commit : Commit)
         -> (act    : Path Abs -> EitherT PackErr io a)
         -> EitherT PackErr io a
-withGit dir = withGit' dir 1000
+withGit p pkg url commit act =
+  let dir := p <//> pkg <//> commit
+   in do
+     False <- exists dir | True => inDir dir act
+     mkParentDir dir
+     gitClone url dir
+     inDir dir (\d => gitCheckout commit >> act d)

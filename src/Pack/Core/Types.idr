@@ -175,6 +175,18 @@ Interpolation PkgType where
   interpolate Lib = "lib"
   interpolate Bin = "bin"
 
+export
+Eq PkgType where
+  Lib == Lib = True
+  Bin == Bin = True
+  _   == _   = False
+
+export
+Ord PkgType where
+  compare Lib Bin = LT
+  compare Bin Lib = GT
+  compare _   _   = EQ
+
 --------------------------------------------------------------------------------
 --          DBName
 --------------------------------------------------------------------------------

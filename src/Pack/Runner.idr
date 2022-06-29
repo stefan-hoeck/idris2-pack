@@ -29,9 +29,8 @@ runCmd = do
     BuildDeps p        => idrisEnv c >>= buildDeps p
     Typecheck p        => idrisEnv c >>= typecheck p
     PrintHelp          => putStrLn usageInfo
-    Install ps         => idrisEnv c >>= \e => traverse_ (installLib e) ps
+    Install ps         => idrisEnv c >>= \e => install e ps
     Remove ps          => idrisEnv c >>= \e => traverse_ (remove e) ps
-    InstallApp ps      => idrisEnv c >>= \e => traverse_ (installApp e) ps
     PackagePath        => env c >>= putStrLn . packagePathDirs
     LibsPath           => env c >>= putStrLn . packageLibDirs
     DataPath           => env c >>= putStrLn . packageDataDirs
@@ -44,4 +43,7 @@ runCmd = do
         env <- idrisEnv ({collection := db} c)
         links env
         writeCollection env
+        install env []
       False => idrisEnv ({collection := db} c) >>= links
+
+  rmDir (tmpDir c)

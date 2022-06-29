@@ -20,8 +20,7 @@ data Cmd : Type where
   Repl             : Maybe (File Abs) -> Cmd
 
   -- Package management
-  Install          : List PkgName -> Cmd
-  InstallApp       : List PkgName -> Cmd
+  Install          : List (PkgType,PkgName) -> Cmd
   Remove           : List PkgName -> Cmd
   Run              : Either (File Abs) PkgName -> List String -> Cmd
   New              : (cur : Path Abs) -> PkgType -> Body -> Cmd
@@ -55,7 +54,6 @@ loglevel (Typecheck x)          = Info
 loglevel (New _ _ _)            = Info
 loglevel (Repl x)               = Warning
 loglevel (Install xs)           = Info
-loglevel (InstallApp xs)        = Info
 loglevel (Remove xs)            = Info
 loglevel (Run x strs)           = Warning
 loglevel PackagePath            = Warning

@@ -33,37 +33,46 @@ report p rp act = do
 covering
 checkPkg :  HasIO io
          => Env HasIdris
-         -> PkgName
+         -> (PkgType,PkgName)
          -> StateT ReportDB io Report
-checkPkg e p = do
-  info e "Checking \{p}"
+checkPkg e (t,p) = do
   Nothing  <- lookup p <$> get | Just rep => pure rep
+  info e "Checking \{p}"
   Right rp <- toState $ resolve e p
     | Left err => updateRep p (Error p err)
-  [] <- failingDeps <$> traverse (checkPkg e) (dependencies rp)
+  [] <- failingDeps <$> traverse (checkPkg e) (map (Lib,) $ dependencies rp)
     | rs => updateRep p (Failure rp rs)
-  Right () <- toState $ installLib e p
-    | Left err => updateRep p (Error p err)
-  updateRep p (Success rp)
+  case t of
+    Lib => do
+      Right () <- toState $ installLib e rp
+        | Left err => updateRep p (Error p err)
+      updateRep p (Success rp)
+    Bin => do
+      Right () <- toState $ installApp e rp
+        | Left err => updateRep p (Error p err)
+      updateRep p (Success rp)
 
-copyDocs : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
-copyDocs f e =
-  let pkgs := map (MkPkgName . interpolate) corePkgs
-           ++ keys e.db.packages
-   in traverse_ go pkgs
-  where go : PkgName -> EitherT PackErr io ()
-        go p = do
-          rp <- resolve e p
-          when !(exists $ packageDocs e rp) $
-            copyDir (packageDocs e rp) (f.parent /> "docs" <//> p)
+copyDocs :  HasIO io
+         => File Abs
+         -> Env HasIdris
+         -> ReportDB
+         -> EitherT PackErr io ()
+copyDocs f e db = traverse_ go db
+  where go : Report -> EitherT PackErr io ()
+        go (Success rp) = do
+          installDocs e rp
+          copyDir (packageDocs e rp) (f.parent /> "docs" <//> name rp)
+        go _            = pure ()
 
 export covering
 checkDB : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
-checkDB p e = do
-  rep <- liftIO $ execStateT empty
-                $ traverse_ (checkPkg e) (keys e.db.packages)
-  write p (printReport e rep)
-  copyDocs p e
-  case numberOfFailures rep of
-    0 => pure ()
-    n => throwE (BuildFailures n)
+checkDB p e =
+  let ps := (Bin, "katla") :: map (Lib,) (keys e.db.packages)
+   in do
+     rep <- liftIO $ execStateT empty
+                   $ traverse_ (checkPkg e) ps
+     write p (printReport e rep)
+     copyDocs p e rep
+     case numberOfFailures rep of
+       0 => pure ()
+       n => throwE (BuildFailures n)
