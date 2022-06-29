@@ -58,6 +58,7 @@ main = run $ do
   -- initialize `$HOME/.pack/user/pack.toml`
   write (MkF (dir /> "user") packToml) (initToml scheme db)
 
-  e <- idrisEnv conf
-  install e [(Bin, "pack")]
-  links e
+  finally (rmDir $ tmpDir conf) $ do
+    e <- idrisEnv conf
+    install e [(Bin, "pack")]
+    links e
