@@ -223,6 +223,7 @@ docsImpl e rp ipkg d = when e.withDocs $ do
          in sys "\{katla} html \{src} \{ttm} > \{srcHtml}" >>
             insertSources ds
 
+    when !(exists $ packageDocs e rp) (rmDir $ packageDocs e rp)
     copyDir docsDir (packageDocs e rp)
 
 installImpl e rp ipkg d =

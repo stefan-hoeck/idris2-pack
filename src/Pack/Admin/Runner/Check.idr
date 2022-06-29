@@ -46,12 +46,24 @@ checkPkg e p = do
     | Left err => updateRep p (Error p err)
   updateRep p (Success rp)
 
+copyDocs : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
+copyDocs f e =
+  let pkgs := map (MkPkgName . interpolate) corePkgs
+           ++ keys e.db.packages
+   in traverse_ go pkgs
+  where go : PkgName -> EitherT PackErr io ()
+        go p = do
+          rp <- resolve e p
+          when !(exists $ packageDocs e rp) $
+            copyDir (packageDocs e rp) (f.parent /> "docs" <//> p)
+
 export covering
 checkDB : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
 checkDB p e = do
   rep <- liftIO $ execStateT empty
                 $ traverse_ (checkPkg e) (keys e.db.packages)
   write p (printReport e rep)
+  copyDocs p e
   case numberOfFailures rep of
     0 => pure ()
     n => throwE (BuildFailures n)
