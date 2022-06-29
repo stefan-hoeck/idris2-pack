@@ -102,17 +102,18 @@ mkIdris e = do
   when !(missing $ idrisInstallDir e) $ do
     debug e "No Idris compiler found. Installing..."
     withCoreGit e $ \dir => do
-      when e.bootstrap $ do
-        sys "make bootstrap \{prefixVar e} \{schemeVar e}"
-        sys "make install \{prefixVar e}"
-        sys "make clean-libs"
-        sys "rm -r build/ttc build/exec"
-
-      sys "make support"
-      sys "make install-support \{prefixVar e}"
-      sys "make idris2-exec IDRIS2_INC_CGS=\"\" \{idrisBootVar e}"
-      sys "make install-idris2 \{idrisBootVar e} \{prefixVar e}"
-
+      case e.bootstrap of
+        True => do
+          sys "make bootstrap \{prefixVar e} \{schemeVar e}"
+          sys "make install-support \{prefixVar e}"
+          sys "make install-idris2 \{prefixVar e}"
+        False => do
+          sys "make support"
+          sys "make install-support \{prefixVar e}"
+          sys "make idris2-exec IDRIS2_INC_CGS=\"\" \{idrisBootVar e}"
+          sys "make install-idris2 \{idrisBootVar e} \{prefixVar e}"
+      sys "make clean-libs"
+      sys "rm -r build/ttc build/exec"
       cacheCoreIpkgFiles e dir
 
   exepath <- packExec e
@@ -158,6 +159,9 @@ installLib e rp = do
         let ipkgAbs := toAbsFile dir (coreIpkgPath c)
             cache   := coreCachePath e c
         copyFile cache ipkgAbs
+        case c of
+          IdrisApi => sys "make src/IdrisPaths.idr"
+          _        => pure ()
         installImpl e rp ipkgAbs d
 
 --------------------------------------------------------------------------------

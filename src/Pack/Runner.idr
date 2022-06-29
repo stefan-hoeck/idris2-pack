@@ -16,7 +16,7 @@ export covering
 runCmd : HasIO io => EitherT PackErr io ()
 runCmd = do
   (c,cmd) <- getConfig cmd PrintHelp loglevel
-  case cmd of
+  finally (rmDir $ tmpDir c) $ case cmd of
     Completion a b     => env c >>= complete a b
     CompletionScript f => putStrLn (completionScript f)
     Query m s          => env c >>= query m s
@@ -45,5 +45,3 @@ runCmd = do
         writeCollection env
         install env []
       False => idrisEnv ({collection := db} c) >>= links
-
-  rmDir (tmpDir c)
