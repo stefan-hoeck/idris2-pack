@@ -67,7 +67,9 @@ copyDocs f e db = traverse_ go db
 export covering
 checkDB : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
 checkDB p e =
-  let ps := (Bin, "katla") :: map (Lib,) (keys e.db.packages)
+  let ps := map (\c => (Lib, MkPkgName $ interpolate c)) corePkgs
+         ++ (Bin, "katla")
+         :: map (Lib,) (keys e.db.packages)
    in do
      rep <- liftIO $ execStateT empty
                    $ traverse_ (checkPkg e) ps
