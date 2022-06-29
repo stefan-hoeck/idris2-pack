@@ -59,4 +59,5 @@ main = run $ do
   write (MkF (dir /> "user") packToml) (initToml scheme db)
 
   e <- idrisEnv conf
+  install e [(Bin, "pack")]
   links e
