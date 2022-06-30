@@ -196,11 +196,13 @@ installApp e rp = do
             cache   := ipkgPath e pn commit ipkg
         copyFile cache ipkgAbs
         idrisPkg e [] "--build" ipkgAbs d
+        when e.withDocs $ idrisPkg e [] "--mkdoc" ipkgAbs d
         copyApp e ipkgAbs d rp
 
     RLocal pn ipkg pp d => do
       removeExec e rp exe.file
       idrisPkg e [] "--build" ipkg d
+      when e.withDocs $ idrisPkg e [] "--mkdoc" ipkg d
       copyApp e ipkg d rp
 
     _ => throwE (NoApp $ name rp)
@@ -282,8 +284,7 @@ install e ps = do
                   (Bin,rp) => installApp e rp
 
   when e.withDocs $
-    for_ rs $ \case (Lib,rp) => installDocs e rp
-                    (Bin,rp) => pure ()
+    for_ rs $ \(_,rp) => installDocs e rp
 
 export covering
 installDeps :  HasIO io
