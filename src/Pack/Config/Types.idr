@@ -279,12 +279,12 @@ packToml = "pack.toml"
 ||| Temporary directory used for building packages.
 export
 tmpDir_ : (packDir : Path Abs) -> Path Abs
-tmpDir_ packDir = packDir /> "tmp"
+tmpDir_ packDir = packDir /> ".tmp"
 
 ||| Temporary directory used for building packages.
 export
 tmpDir : Config s -> Path Abs
-tmpDir = tmpDir_ . packDir
+tmpDir c = packDir c /> (".tmp-" <+> cast c.collection)
 
 ||| Directory where databases are stored.
 export

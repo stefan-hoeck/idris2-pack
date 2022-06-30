@@ -43,6 +43,10 @@ gitLatest :  HasIO io
 gitLatest url c =
   MkCommit . fst . break isSpace <$> sysRun "git ls-remote \{url} \{c}"
 
+export
+gitDir : (dir : Path Abs) -> (pkg : PkgName) -> (commit : Commit) -> Path Abs
+gitDir dir pkg commit = dir <//> pkg <//> commit
+
 ||| Clone a git repository into `dir`, switch to the
 ||| given commit and run the given action.
 export
@@ -54,7 +58,7 @@ withGit :  HasIO io
         -> (act    : Path Abs -> EitherT PackErr io a)
         -> EitherT PackErr io a
 withGit p pkg url commit act =
-  let dir := p <//> pkg <//> commit
+  let dir := gitDir p pkg commit
    in do
      False <- exists dir | True => inDir dir act
      mkParentDir dir
