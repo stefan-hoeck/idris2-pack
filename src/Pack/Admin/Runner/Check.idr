@@ -39,17 +39,21 @@ checkPkg e (t,p) = do
   Nothing  <- lookup p <$> get | Just rep => pure rep
   info e "Checking \{p}"
   Right rp <- toState $ resolve e p
-    | Left err => updateRep p (Error p err)
+    | Left err => warn e "Could not resolve \{p}" >>
+                  updateRep p (Error p err)
   [] <- failingDeps <$> traverse (checkPkg e) (map (Lib,) $ dependencies rp)
-    | rs => updateRep p (Failure rp rs)
+    | rs => warn e "\{p} had failing dependencies" >>
+            updateRep p (Failure rp rs)
   case t of
     Lib => do
       Right () <- toState $ installLib e rp
-        | Left err => updateRep p (Error p err)
+        | Left err => warn e "Failed to build \{p}" >>
+                      updateRep p (Error p err)
       updateRep p (Success rp)
     Bin => do
       Right () <- toState $ installApp e rp
-        | Left err => updateRep p (Error p err)
+        | Left err => warn e "Failed to build \{p}" >>
+                      updateRep p (Error p err)
       updateRep p (Success rp)
 
 copyDocs :  HasIO io
