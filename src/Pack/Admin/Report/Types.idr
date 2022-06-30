@@ -49,10 +49,14 @@ ghCommitLink u c@(MkCommit commit)  =
   let shortSha = substr 0 7 commit in
  "[\{shortSha}](\{u}/commit/\{c})"
 
+apiLink : PkgName -> String
+apiLink p = "https://stefan-hoeck.github.io/idris2-pack-docs/docs/\{p}/index.html"
+
 succLine : ResolvedPackage -> Maybe String
 succLine (RGitHub n u c _ _ d) =
   let desc = fromMaybe "" d.brief
-   in Just "| [\{n}](\{u}) | \{desc} | \{ghCommitLink u c} |"
+      api  = apiLink n
+   in Just "| [\{n}](\{u}) | \{desc} | \{ghCommitLink u c} | [docs](\{api}) |"
 succLine _ = Nothing
 
 failLine : (ResolvedPackage, List PkgName) -> Maybe String
@@ -79,8 +83,8 @@ report e (MkRL es fs ss) =
 
       ## Building Packages
 
-      | Package | Description | Commit |
-      | --- | --- | --- |
+      | Package | Description | Commit | API Docs |
+      | --- | --- | --- | --- |
       \{succs}
 
       ## Failing Packages
