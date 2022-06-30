@@ -27,6 +27,10 @@ prompt n c d =
      else pure True
 
 export
+coreGitDir : Env e -> Path Abs
+coreGitDir e = gitDir (tmpDir e) compiler e.db.idrisCommit
+
+export
 withCoreGit : HasIO io
             => Env e
             -> (Path Abs -> EitherT PackErr io a)

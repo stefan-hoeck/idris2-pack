@@ -66,7 +66,7 @@ runCmd = do
               , useKatla     := True
               , safetyPrompt := False
               } c'
-       in idrisEnv c >>= checkDB p
+       in finally (rmDir $ tmpDir c) $ idrisEnv c >>= checkDB p
     FromHEAD p         =>
       let c = setColl (MkDBName "HEAD") c'
        in env c >>= writeLatestDB p

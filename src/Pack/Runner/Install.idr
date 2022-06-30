@@ -133,7 +133,9 @@ installImpl :  HasIO io
 installImpl e rp ipkg d =
   let pre := packageInstallPrefix e rp
       cmd := installCmd e.withSrc
-   in idrisPkg e pre cmd ipkg d
+   in do
+     idrisPkg e pre cmd ipkg d
+     when e.withDocs $ idrisPkg e pre "--mkdoc" ipkg d
 
 ||| Install the given library with all its dependencies.
 export
@@ -194,11 +196,13 @@ installApp e rp = do
             cache   := ipkgPath e pn commit ipkg
         copyFile cache ipkgAbs
         idrisPkg e [] "--build" ipkgAbs d
+        when e.withDocs $ idrisPkg e [] "--mkdoc" ipkgAbs d
         copyApp e ipkgAbs d rp
 
     RLocal pn ipkg pp d => do
       removeExec e rp exe.file
       idrisPkg e [] "--build" ipkg d
+      when e.withDocs $ idrisPkg e [] "--mkdoc" ipkg d
       copyApp e ipkg d rp
 
     _ => throwE (NoApp $ name rp)
@@ -226,8 +230,6 @@ docsImpl e rp ipkg d = do
       htmlDir : Path Abs
       htmlDir = docsDir /> "docs"
 
-  info e "Building API docs for: \{name rp}"
-  idrisPkg e (packageInstallPrefix e rp) "--mkdoc" ipkg d
   when e.useKatla $ do
     info e "Building source docs for: \{name rp}"
     rp <- resolve e "katla"
@@ -248,13 +250,13 @@ installDocs :  HasIO io
             -> ResolvedPackage
             -> EitherT PackErr io ()
 installDocs e rp@(RGitHub pn url commit ipkg _ d) =
-  withGit (tmpDir e) pn url commit $ \dir =>
+  inDir (gitDir (tmpDir e) pn commit) $ \dir =>
     docsImpl e rp (toAbsFile dir ipkg) d
 
 installDocs e rp@(RLocal pn ipkg _ d) = docsImpl e rp ipkg d
 
 installDocs e rp@(Core c d) =
-  withCoreGit e $ \dir =>
+  inDir (coreGitDir e) $ \dir =>
     docsImpl e rp (toAbsFile dir $ coreIpkgPath c) d
 
 katla : Env e -> List (PkgType, PkgName)
@@ -282,8 +284,7 @@ install e ps = do
                   (Bin,rp) => installApp e rp
 
   when e.withDocs $
-    for_ rs $ \case (Lib,rp) => installDocs e rp
-                    (Bin,rp) => pure ()
+    for_ rs $ \(_,rp) => installDocs e rp
 
 export covering
 installDeps :  HasIO io
