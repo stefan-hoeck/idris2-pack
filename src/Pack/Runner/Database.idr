@@ -95,8 +95,11 @@ doInstall e (Lib, rp)        = do
 doInstall e (Bin, RLocal {}) = pure True
 doInstall e (Bin, rp)        = case packageExec e rp of
   Just exe => do
-    False <- executableExists e exe | True => pure False
-    prompt (name rp) e (desc rp)
+    b1 <- executableExists e exe
+    b2 <- executableExists e (collectionAppExec e exe.file)
+    case b1 && b2 of
+      False => prompt (name rp) e (desc rp)
+      True  => pure False
   Nothing  => throwE (NoApp $ name rp)
 
 
