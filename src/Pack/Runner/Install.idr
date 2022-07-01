@@ -190,7 +190,8 @@ installApp e rp = do
   info e "Installing application: \{name rp}"
   Just exe <- pure (packageExec e rp) | Nothing => throwE (NoApp $ name rp)
   case rp of
-    RGitHub pn url commit ipkg pp d =>
+    RGitHub pn url commit ipkg pp d => do
+      False <- executableExists e exe | True => pure ()
       withGit (tmpDir e) pn url commit $ \dir => do
         let ipkgAbs := toAbsFile dir ipkg
             cache   := ipkgPath e pn commit ipkg
