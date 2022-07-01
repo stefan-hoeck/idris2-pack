@@ -187,6 +187,9 @@ filterM f (x :: xs) = do
   True <- f x | False => filterM f xs
   map (x ::) $ filterM f xs
 
+showPlan : List (PkgType, PkgName) -> String
+showPlan = unlines . map (\(t,n) => "\{n} (\{t})")
+
 ||| Create a build plan for the given list of packages and apps
 ||| plus their dependencies.
 |||
@@ -199,7 +202,9 @@ plan :  HasIO io
      -> EitherT PackErr io (List (PkgType, ResolvedPackage))
 plan e ps =
   let ps' := mapSnd Right <$> (Lib, "prelude") :: (Lib, "base") :: ps
-   in go empty Lin ps' >>= filterM (doInstall e)
+   in do
+     debug e "Building plan for the following libraries: \n \{showPlan ps}"
+     go empty Lin ps' >>= filterM (doInstall e)
   where covering
         go :  (planned  : SortedMap (PkgType, PkgName) ())
            -> (resolved : SnocList (PkgType, ResolvedPackage))

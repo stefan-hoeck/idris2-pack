@@ -110,8 +110,8 @@ mkIdris e = do
         False => do
           sys "make support"
           sys "make install-support \{prefixVar e}"
-          sys "make idris2-exec IDRIS2_INC_CGS=\"\" \{idrisBootVar e}"
-          sys "make install-idris2 \{idrisBootVar e} \{prefixVar e}"
+          sys "make idris2-exec IDRIS2_INC_CGS=\"\""
+          sys "make install-idris2 \{prefixVar e}"
       sys "make clean-libs"
       sys "rm -r build/ttc build/exec"
       cacheCoreIpkgFiles e dir
