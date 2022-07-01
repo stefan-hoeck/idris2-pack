@@ -185,9 +185,9 @@ applyArgs :  (curDir     : Path Abs)
 applyArgs dir init args readCmd defltLevel =
   case getOpt RequireOrder descs args of
        MkResult opts n  []      []       => do
-         conf <- foldlM (\c,f => f dir c) init opts
          cmd  <- readCmd n
-         Right ({logLevel := defltLevel cmd} conf, cmd)
+         conf <- foldlM (\c,f => f dir c) ({logLevel := defltLevel cmd} init) opts
+         Right (conf, cmd)
 
        MkResult _    _ (u :: _) _        => Left (UnknownArg u)
        MkResult _    _ _        (e :: _) => Left (ErroneousArg e)
