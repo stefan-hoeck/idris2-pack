@@ -87,6 +87,7 @@ resolveMeta (GitHub u (MC x) i p) = pure $ GitHub u x i p
 resolveMeta (GitHub u (Latest x) i p) =
   map (\c => GitHub u c i p) $ gitLatest u (MkCommit x)
 resolveMeta (Local d i p) = pure $ Local d i p
+resolveMeta (Core c)      = pure $ Core c
 
 ||| Read application config from command line arguments.
 export covering

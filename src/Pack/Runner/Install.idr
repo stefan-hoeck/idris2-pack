@@ -15,6 +15,9 @@ import Pack.Runner.Database
 --          Utilities
 --------------------------------------------------------------------------------
 
+coreGitDir : Env e -> Path Abs
+coreGitDir e = gitDir (tmpDir e) compiler e.db.idrisCommit
+
 -- return the path to the `pack` executable corresponding
 -- to the current collection
 packExec : HasIO io => Env e -> EitherT PackErr io (File Abs)

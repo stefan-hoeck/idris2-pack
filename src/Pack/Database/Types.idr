@@ -1,10 +1,12 @@
 module Pack.Database.Types
 
+import Core.Name.Namespace
 import Data.List1
 import Data.List.Elem
 import Data.SortedMap
 import Data.String
 import Idris.Package.Types
+import Pack.Core.Ipkg
 import Pack.Core.Types
 
 %default total
@@ -31,44 +33,8 @@ Interpolation MetaCommit where
   interpolate (MC c)     = "\{c}"
 
 --------------------------------------------------------------------------------
---          Packages
+--          Core Packages
 --------------------------------------------------------------------------------
-
-||| Description of a GitHub or local Idris package in the
-||| package database.
-|||
-||| Note: This does not contain the package name, as it
-||| will be paired with its name in a `SortedMap`.
-public export
-data Package_ : (c : Type) -> Type where
-  ||| A repository on GitHub, given as the package's URL,
-  ||| commit (hash or tag), and name of `.ipkg` file to use.
-  ||| `pkgPath` should be set to `True` for executable which need
-  ||| access to the `IDRIS2_PACKAGE_PATH`: The list of directories
-  ||| where Idris packages are installed.
-  GitHub :  (url     : URL)
-         -> (commit  : c)
-         -> (ipkg    : File Rel)
-         -> (pkgPath : Bool)
-         -> Package_ c
-
-  ||| A local Idris project given as an absolute path to a local
-  ||| directory, and `.ipkg` file to use.
-  ||| `pkgPath` should be set to `True` for executable which need
-  ||| access to the `IDRIS2_PACKAGE_PATH`: The list of directories
-  ||| where Idris packages are installed.
-  Local  :  (dir     : Path Abs)
-         -> (ipkg    : File Rel)
-         -> (pkgPath : Bool)
-         -> Package_ c
-
-public export
-0 Package : Type
-Package = Package_ Commit
-
-public export
-0 UserPackage : Type
-UserPackage = Package_ MetaCommit
 
 ||| Core packages bundled with the Idris compiler
 public export
@@ -110,6 +76,10 @@ Cast CorePkg (Path Rel) where
   cast c = PRel [< cast c]
 
 export
+corePkgName : CorePkg -> PkgName
+corePkgName = MkPkgName . interpolate
+
+export
 coreIpkgFile : CorePkg -> Body
 coreIpkgFile IdrisApi = "idris2api.ipkg"
 coreIpkgFile c        = cast c <+> ".ipkg"
@@ -119,94 +89,219 @@ coreIpkgPath : CorePkg -> File Rel
 coreIpkgPath IdrisApi = MkF neutral "idris2api.ipkg"
 coreIpkgPath c        = MkF (neutral /> "libs" //> c) (coreIpkgFile c)
 
+--------------------------------------------------------------------------------
+--          Packages
+--------------------------------------------------------------------------------
+
+||| Description of a GitHub or local Idris package in the
+||| package database.
+|||
+||| Note: This does not contain the package name, as it
+||| will be paired with its name in a `SortedMap`.
+public export
+data Package_ : (c : Type) -> Type where
+  ||| A repository on GitHub, given as the package's URL,
+  ||| commit (hash or tag), and name of `.ipkg` file to use.
+  ||| `pkgPath` should be set to `True` for executables which need
+  ||| access to the `IDRIS2_PACKAGE_PATH`: The list of directories
+  ||| where Idris packages are installed.
+  GitHub :  (url     : URL)
+         -> (commit  : c)
+         -> (ipkg    : File Rel)
+         -> (pkgPath : Bool)
+         -> Package_ c
+
+  ||| A local Idris project given as an absolute path to a local
+  ||| directory, and `.ipkg` file to use.
+  ||| `pkgPath` should be set to `True` for executable which need
+  ||| access to the `IDRIS2_PACKAGE_PATH`: The list of directories
+  ||| where Idris packages are installed.
+  Local  :  (dir     : Path Abs)
+         -> (ipkg    : File Rel)
+         -> (pkgPath : Bool)
+         -> Package_ c
+
+  ||| A core package of the Idris2 project
+  Core   : (core : CorePkg) -> Package_ c
+
+public export
+0 Package : Type
+Package = Package_ Commit
+
+public export
+0 UserPackage : Type
+UserPackage = Package_ MetaCommit
+
+||| Proof that a package is a core package
+public export
+data IsCore : Package -> Type where
+  ItIsCore : IsCore (Core c)
+
+export
+Uninhabited (IsCore $ Local {}) where
+  uninhabited _ impossible
+
+export
+Uninhabited (IsCore $ GitHub {}) where
+  uninhabited _ impossible
+
+||| Decides, if the given package represents
+||| one of the core packages (`base`, `prelude`, etc.)
+export
+isCore : (p : Package) -> Dec (IsCore p)
+isCore (Core {})   = Yes ItIsCore
+isCore (GitHub {}) = No absurd
+isCore (Local {})  = No absurd
+
+||| Proof that a package is a local package
+public export
+data IsLocal : Package -> Type where
+  ItIsLocal : IsLocal (Local {})
+
+export
+Uninhabited (IsLocal $ Core {}) where
+  uninhabited _ impossible
+
+export
+Uninhabited (IsLocal $ GitHub {}) where
+  uninhabited _ impossible
+
+||| Decides, if the given package represents
+||| a local package.
+export
+isLocal : (p : Package) -> Dec (IsLocal p)
+isLocal (Core {})   = No absurd
+isLocal (GitHub {}) = No absurd
+isLocal (Local {})  = Yes ItIsLocal
+
+||| Proof that a package is a GitHub package
+public export
+data IsGitHub : Package -> Type where
+  ItIsGitHub : IsGitHub (GitHub {})
+
+export
+Uninhabited (IsGitHub $ Core {}) where
+  uninhabited _ impossible
+
+export
+Uninhabited (IsGitHub $ Local {}) where
+  uninhabited _ impossible
+
+||| Decides, if the given package represents
+||| a package on GitHub.
+export
+isGitHub : (p : Package) -> Dec (IsGitHub p)
+isGitHub (Core {})   = No absurd
+isGitHub (GitHub {}) = Yes ItIsGitHub
+isGitHub (Local {})  = No absurd
+
+||| True, if the given application needs access to the
+||| folders where Idris package are installed.
+export
+usePackagePath : Package_ c -> Bool
+usePackagePath (GitHub _ _ _ pp) = pp
+usePackagePath (Local _ _ pp)    = pp
+usePackagePath (Core _)          = False
+
+--------------------------------------------------------------------------------
+--          Resolved Packages
+--------------------------------------------------------------------------------
+
+namespace PkgDesc
+  ||| Lists the dependencies of a package.
+  |||
+  ||| TODO: The `.ipkg` file of network lists contrib in the
+  |||       compiler's command line options instead of its
+  |||       depends field. I should file an issue and fix this.
+  export
+  dependencies : Package -> PkgDesc -> List PkgName
+  dependencies (Core Network) _ = [ "contrib" ]
+  dependencies p              d = map (MkPkgName . pkgname) $ d.depends
+
+||| Proof that a package is a library, i.e. that it exports
+||| a non-empty list of modules
+public export
+0 IsLib : PkgDesc -> Type
+IsLib d = NonEmpty (modules d)
+
+||| Decidably check if a package is a library.
+export
+isLib : (d : PkgDesc) -> Dec (IsLib d)
+isLib d with (modules d)
+  _ | []       = No absurd
+  _ | (_ :: _) = Yes IsNonEmpty
+
+namespace LibStatus
+  public export
+  data LibStatus : Package -> PkgDesc -> Type where
+    NoLib     :  (0 contra : Not (IsLib d)) => LibStatus p d
+    Missing   :  (0 isLib : IsLib d) => LibStatus p d
+    Installed :  (hasDocs : Bool) -> (0 isLib : IsLib d) => LibStatus p d
+    Outdated  :  (0 isLib : IsLib d)
+              => (0 isLocal : IsLocal p)
+              => LibStatus p d
+
+public export
+0 ExeOf : Body -> PkgDesc -> Type
+ExeOf b d = exec d === Just b
+
+namespace AppStatus
+  public export
+  data AppStatus : Package -> PkgDesc -> Type where
+    NoApp          :  (0 contra : exec d === Nothing) => AppStatus p d
+
+    Missing        :  (exe   : Body)
+                   -> (0 prf : ExeOf exe d)
+                   => AppStatus p d
+
+    AppInstalled   :  (exe   : Body)
+                   -> (0 prf : ExeOf exe d)
+                   => AppStatus p d
+
+    Outdated       :  (exe       : Body)
+                   -> (0 prf     : ExeOf exe d)
+                   => (0 isLocal : IsLocal p)
+                   => AppStatus p d
+
+    ExeLinkMissing :  (exe   : Body)
+                   -> (0 prf : ExeOf exe d)
+                   => AppStatus p d
+
 ||| A resolved package, which was downloaded from GitHub
 ||| or looked up in the local file system. This comes with
 ||| a fully parsed `PkgDesc` (representing the `.ipkg` file).
 public export
-data ResolvedPackage : Type where
-  ||| A resolved GitHub project with parse `.ipkg` file.
-  ||| `pkgPath` should be set to `True` for executable which need
-  ||| access to the `IDRIS2_PACKAGE_PATH`: The list of directories
-  ||| where Idris packages are installed.
-  RGitHub :  (name    : PkgName)
-          -> (url     : URL)
-          -> (commit  : Commit)
-          -> (ipkg    : File Rel)
-          -> (pkgPath : Bool)
-          -> (desc    : PkgDesc)
-          -> ResolvedPackage
+record ResolvedPackage where
+  constructor MkRP
+  pkg     : Package
+  name    : PkgName
+  desc    : PkgDesc
+  ipkgStr : String
+  lib     : LibStatus pkg desc
+  app     : AppStatus pkg desc
 
-  ||| A local project with (absolute) path to project's
-  ||| directory and parsed `.ipkg` file.
-  ||| `pkgPath` should be set to `True` for executable which need
-  ||| access to the `IDRIS2_PACKAGE_PATH`: The list of directories
-  ||| where Idris packages are installed.
-  RLocal  :  (name    : PkgName)
-          -> (ipkg    : File Abs)
-          -> (pkgPath : Bool)
-          -> (desc    : PkgDesc)
-          -> ResolvedPackage
+namespace ResolvePackage
+  ||| Extracts the package name from a resolved package.
+  export %inline
+  nameStr : ResolvedPackage -> String
+  nameStr = value . name
 
-  ||| The *base* library from the Idris2 project.
-  Core    : CorePkg -> PkgDesc -> ResolvedPackage
-
-||| Witness that a resolved package is a local package.
-public export
-data IsLocal : ResolvedPackage -> Type where
-  ItIsLocal : IsLocal (RLocal n f p de)
-
-||| True, if the given resolved package represents
-||| one of the core packages (`base`, `prelude`, etc.)
-export
-isCorePackage : ResolvedPackage -> Bool
-isCorePackage (RGitHub {}) = False
-isCorePackage (RLocal {})  = False
-isCorePackage (Core {})    = True
-
-||| Try to extract the package description from a
-||| resolved package.
-export
-desc : ResolvedPackage -> PkgDesc
-desc (RGitHub _ _ _ _ _ d) = d
-desc (RLocal _ _ _ d)      = d
-desc (Core _ d)            = d
-
-namespace PkgDesc
-  export
-  dependencies : PkgDesc -> List PkgName
-  dependencies = map (MkPkgName . pkgname) . depends
+  ||| True, if the given application needs access to the
+  ||| folders where Idris package are installed.
+  export %inline
+  usePackagePath : ResolvedPackage -> Bool
+  usePackagePath = usePackagePath . pkg
 
 ||| Extracts the dependencies of a resolved package.
 export
 dependencies : ResolvedPackage -> List PkgName
-dependencies (Core Network _) = ["contrib"]
-dependencies p                = dependencies $ desc p
+dependencies rp = dependencies rp.pkg rp.desc
 
 ||| Extracts the name of the executable (if any) from
 ||| a resolved package.
 export
 executable : ResolvedPackage -> Maybe Body
 executable d = executable (desc d) >>= parse
-
-||| Extracts the package name from a resolved package.
-export
-name : ResolvedPackage -> PkgName
-name (RGitHub n _ _ _ _ _) = n
-name (RLocal n _ _ _)      = n
-name (Core c _)            = MkPkgName "\{c}"
-
-||| Extracts the package name from a resolved package.
-export
-nameStr : ResolvedPackage -> String
-nameStr = value . name
-
-||| True, if the given application needs access to the
-||| folders where Idris package are installed.
-export
-usePackagePath : ResolvedPackage -> Bool
-usePackagePath (RGitHub _ _ _ _ pp _) = pp
-usePackagePath (RLocal _ _ pp _)      = pp
-usePackagePath _                      = False
 
 --------------------------------------------------------------------------------
 --          Package Database
@@ -247,6 +342,13 @@ printPair (x, Local dir ipkg pp) =
   path        = "\{dir}"
   ipkg        = "\{ipkg}"
   packagePath = \{tomlBool pp}
+  """
+
+printPair (x, Core c) =
+  """
+
+  [db.\{x}]
+  type        = "core"
   """
 
 export
