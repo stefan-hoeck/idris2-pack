@@ -66,7 +66,6 @@ LATEST_DB="$(find "$PACK_DIR/db" -name 'nightly-*' | sort | tail -1)"
 PACKAGE_COLLECTION="$(basename -s .toml "$LATEST_DB")"
 IDRIS2_COMMIT=$(sed -ne '/^\[idris2\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p;}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
 
-
 # Bootstrap the Idris compiler
 
 git clone https://github.com/idris-lang/Idris2.git "$PACK_DIR/clones/Idris2"
