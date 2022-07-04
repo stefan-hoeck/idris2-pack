@@ -18,17 +18,13 @@ import Pack.Runner.Database
 coreGitDir : Env e -> Path Abs
 coreGitDir e = gitDir (tmpDir e) compiler e.db.idrisCommit
 
-copyApp :  HasIO io
-        => Env HasIdris
-        -> (ipkg : File Abs)
-        -> ResolvedApp
-        -> EitherT PackErr io ()
-copyApp e ipkg ra =
-  let dir = pkgBinDir e ra.name ra.pkg
+copyApp : HasIO io => Env HasIdris -> SafeApp -> EitherT PackErr io ()
+copyApp e ra =
+  let dir := pkgBinDir e ra.name ra.pkg
    in do
      debug e "Copying application to \{dir}"
      mkDir dir
-     sys "cp -r \{buildPath ipkg ra.desc}/exec/* \{dir}"
+     sys "cp -r \{buildPath ra.desc}/exec/* \{dir}"
 
 pthStr : Config e -> Bool -> String
 pthStr _ False = ""
@@ -56,7 +52,7 @@ appLink c exec app withPkgPath =
       content := """
       #!/bin/sh
 
-      export APPLICATION="$(\{packExec c} app-path \{app})"
+      APPLICATION="$(\{packExec c} app-path \{app})"
       \{pthStr c withPkgPath}
 
       $APPLICATION "$@"
@@ -73,13 +69,12 @@ idrisPkg :  HasIO io
          => Env HasIdris
          -> (env  : List (String,String))
          -> (cmd  : String)
-         -> (ipkg : File Abs)
-         -> (desc : PkgDesc)
+         -> (desc : Desc Safe)
          -> EitherT PackErr io ()
-idrisPkg e env cmd ipkg d =
+idrisPkg e env cmd desc =
   let exe := idrisWithCG e
       pre := env ++ buildEnv e
-      s   := "\{exe} \{cmd} \{ipkg}"
+      s   := "\{exe} \{cmd} \{desc.path}"
    in debug e "About to run: \{s}" >>
       sysWithEnv s pre
 
@@ -111,42 +106,38 @@ mkIdris e = do
 
 installImpl :  HasIO io
             => Env HasIdris
-            -> ResolvedLib
-            -> (ipkg : File Abs)
+            -> SafeLib
             -> EitherT PackErr io ()
-installImpl e rl ipkg =
+installImpl e rl =
   let pre := libInstallPrefix e rl
       cmd := installCmd e.withSrc
    in do
      info e "Installing library: \{name rl}"
-     idrisPkg e pre cmd ipkg rl.desc
-     when e.withDocs $ idrisPkg e pre "--mkdoc" ipkg rl.desc
+     idrisPkg e pre cmd rl.desc
+     when e.withDocs $ idrisPkg e pre "--mkdoc" rl.desc
 
-installLib :  HasIO io
-           => Env HasIdris
-           -> ResolvedLib
-           -> EitherT PackErr io ()
+installLib :  HasIO io => Env HasIdris -> SafeLib -> EitherT PackErr io ()
 installLib e rl = case rl.status of
   Installed => pure ()
-  _         => withPkgEnv e rl.name rl.pkg $ \dir => case rl.pkg of
-    GitHub u c ipkg _ => do
-      let ipkgAbs := toAbsFile dir ipkg
-          cache   := ipkgPath e rl.name c ipkg
-      copyFile cache ipkgAbs
-      installImpl e rl ipkgAbs
+  _         => withPkgEnv e rl.name rl.pkg $ \dir =>
+    let ipkgAbs := ipkg dir rl.pkg
+     in case rl.pkg of
+          GitHub u c ipkg _ => do
+            let cache   := ipkgPath e rl.name c ipkg
+            copyFile cache ipkgAbs
+            installImpl e rl
 
-    Local _    ipkg _ => do
-      installImpl e rl (toAbsFile dir ipkg)
-      write (libTimestamp e rl.name rl.pkg) ""
+          Local _ _ _ => do
+            installImpl e rl
+            write (libTimestamp e rl.name rl.pkg) ""
 
-    Core c => do
-      let ipkgAbs := toAbsFile dir (coreIpkgPath c)
-          cache   := coreCachePath e c
-      copyFile cache ipkgAbs
-      case c of
-        IdrisApi => sys "make src/IdrisPaths.idr"
-        _        => pure ()
-      installImpl e rl ipkgAbs
+          Core c => do
+            let cache   := coreCachePath e c
+            copyFile cache ipkgAbs
+            case c of
+              IdrisApi => sys "make src/IdrisPaths.idr"
+              _        => pure ()
+            installImpl e rl
 
 --------------------------------------------------------------------------------
 --          Installing Apps
@@ -156,46 +147,45 @@ installLib e rl = case rl.status of
 export covering
 installApp :  HasIO io
            => Env HasIdris
-           -> ResolvedApp
+           -> SafeApp
            -> EitherT PackErr io ()
 installApp e ra = case ra.status of
   Installed => pure ()
-  _         => withPkgEnv e ra.name ra.pkg $ \dir => case ra.pkg of
-    Core _            => pure ()
-    GitHub u c ipkg b => do
-      let ipkgAbs := toAbsFile dir ipkg
-          cache   := ipkgPath e ra.name c ipkg
-      copyFile cache ipkgAbs
-      idrisPkg e [] "--build" ipkgAbs ra.desc
-      copyApp e ipkgAbs ra
-      appLink e ra.exec ra.name (usePackagePath ra)
-    Local _ ipkg b    => do
-      let ipkgAbs := toAbsFile dir ipkg
-      idrisPkg e [] "--build" ipkgAbs ra.desc
-      copyApp e ipkgAbs ra
-      appLink e ra.exec ra.name (usePackagePath ra)
-      write (appTimestamp e ra.name ra.pkg) ""
+  _         => withPkgEnv e ra.name ra.pkg $ \dir =>
+    let ipkgAbs := ipkg dir ra.pkg
+     in case ra.pkg of
+          Core _            => pure ()
+          GitHub u c ipkg b => do
+            let cache   := ipkgPath e ra.name c ipkg
+            copyFile cache ipkgAbs
+            idrisPkg e [] "--build" ra.desc
+            copyApp e ra
+            appLink e ra.exec ra.name (usePackagePath ra)
+          Local _ _ b    => do
+            idrisPkg e [] "--build" ra.desc
+            copyApp e ra
+            appLink e ra.exec ra.name (usePackagePath ra)
+            write (appTimestamp e ra.name ra.pkg) ""
 
 
 export covering
-installAny : HasIO io => Env HasIdris -> LibOrApp -> EitherT PackErr io ()
-installAny e (Left rl)  = installLib e rl
-installAny e (Right ra) = installApp e ra
+installAny :  HasIO io
+           => Env HasIdris
+           -> LibOrApp Safe
+           -> EitherT PackErr io ()
+installAny e (Left sli)  = installLib e sli
+installAny e (Right sla) = installApp e sla
 
 --------------------------------------------------------------------------------
 --          Generating API Docs
 --------------------------------------------------------------------------------
 
 covering
-docsImpl :  HasIO io
-         => Env HasIdris
-         -> ResolvedLib
-         -> (ipkg : File Abs)
-         -> EitherT PackErr io ()
+docsImpl : HasIO io => Env HasIdris -> SafeLib -> EitherT PackErr io ()
 
-docsImpl e rl ipkg = do
+docsImpl e rl = do
   let docsDir : Path Abs
-      docsDir = buildPath ipkg rl.desc /> "docs"
+      docsDir = buildPath rl.desc /> "docs"
 
       htmlDir : Path Abs
       htmlDir = docsDir /> "docs"
@@ -206,7 +196,7 @@ docsImpl e rl ipkg = do
     let katla := pkgExec e rp.name rp.pkg rp.exec
     fs <- map (MkF htmlDir) <$> htmlFiles htmlDir
     for_ fs $ \htmlFile =>
-      let Just ds@(MkDS _ src ttm srcHtml) := sourceForDoc ipkg rl.desc htmlFile
+      let Just ds@(MkDS _ src ttm srcHtml) := sourceForDoc rl.desc htmlFile
             | Nothing => pure ()
        in sys "\{katla} html \{src} \{ttm} > \{srcHtml}" >>
           insertSources ds
@@ -216,14 +206,9 @@ docsImpl e rl ipkg = do
   copyDir docsDir docs
 
 export
-installDocs :  HasIO io
-            => Env HasIdris
-            -> ResolvedLib
-            -> EitherT PackErr io ()
-installDocs e rl = withPkgEnv e rl.name rl.pkg $ \dir => case rl.pkg of
-  GitHub u c ipkg _ => docsImpl e rl (toAbsFile dir ipkg)
-  Local _ ipkg _    => docsImpl e rl (toAbsFile dir ipkg)
-  Core c            => docsImpl e rl (toAbsFile dir $ coreIpkgPath c)
+installDocs : HasIO io => Env HasIdris -> SafeLib -> EitherT PackErr io ()
+installDocs e rl =
+  withPkgEnv e rl.name rl.pkg $ \dir => docsImpl e rl
 
 katla : Env e -> List (PkgType, PkgName)
 katla e = if e.withDocs && e.useKatla then [(Bin, "katla")] else []
@@ -231,12 +216,11 @@ katla e = if e.withDocs && e.useKatla then [(Bin, "katla")] else []
 autoPairs : Env e -> List (PkgType, PkgName)
 autoPairs e = map (Lib,) e.autoLibs ++ map (Bin,) e.autoApps
 
-libInfo : List LibOrApp -> List String
+libInfo : List (LibOrApp t) -> List String
 libInfo = mapMaybe $ \case Left rl => Just "\{rl.name}"
                            Right _ => Nothing
 
-
-appInfo : List LibOrApp -> List String
+appInfo : List (LibOrApp t) -> List String
 appInfo = mapMaybe $ \case Right ra => Just "\{ra.name}"
                            Left _   => Nothing
 
@@ -247,10 +231,9 @@ install :  HasIO io
         -> EitherT PackErr io ()
 install e ps = do
   all <- plan e $ katla e <+> autoPairs e <+> ps
-  logMany e Info "Installing the following libraries:" (libInfo all)
-  logMany e Info "Installing the following apps:" (appInfo all)
-  for_ all $ \case Left rl  => installLib e rl
-                   Right ra => installApp e ra
+  logMany e Info "Installing libraries:" (libInfo all)
+  logMany e Info "Installing apps:" (appInfo all)
+  for_ all $ installAny e
 
   when e.withDocs $
     for_ all $ \case Left rl => installDocs e rl
@@ -259,9 +242,9 @@ install e ps = do
 export covering
 installDeps :  HasIO io
             => Env HasIdris
-            -> PkgDesc
+            -> Desc Safe
             -> EitherT PackErr io ()
-installDeps e = install e . map (\n => (Lib, MkPkgName $ pkgname n)) . depends
+installDeps e = install e . map (Lib,) . dependencies
 
 ||| Creates a packaging environment with Idris2 installed.
 export covering
@@ -280,10 +263,10 @@ update e =
           package collection.
           """
         gitClone packRepo dir
-        (_,desc) <- parseIpkgFile ipkg id
+        desc <- safeParseIpkgFile e ipkg
         installDeps e desc
         inDir dir $ \_ => do
-          idrisPkg e [] "--build" ipkg desc
+          idrisPkg e [] "--build" desc
           mkDir bin
           sys "cp -r build/exec/* \{bin}"
 

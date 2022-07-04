@@ -220,6 +220,38 @@ All : DBName
 All = MkDBName "all"
 
 --------------------------------------------------------------------------------
+--          Desc
+--------------------------------------------------------------------------------
+
+||| A tagged package desc. We use the tag mainly to make sure that
+||| the package desc in question has been checked for safety issues.
+public export
+record Desc t where
+  constructor MkDesc
+  ||| The parsed package desc
+  desc : PkgDesc
+
+  ||| String content of the package desc
+  cont : String
+
+  ||| Path to the file use when reading the package desc
+  path : File Abs
+
+  ||| Security tag. See `Pack.Runner.Database.check`
+  0 tag : t
+
+||| Lists the dependencies of a package.
+|||
+||| TODO: The `.ipkg` file of network lists contrib in the
+|||       compiler's command line options instead of its
+|||       depends field. I should file an issue and fix this.
+export
+dependencies : Desc t -> List PkgName
+dependencies d = case d.desc.name of
+  "network" => [ "contrib" ]
+  _         => map (MkPkgName . pkgname) $ d.desc.depends
+
+--------------------------------------------------------------------------------
 --          Errors
 --------------------------------------------------------------------------------
 
@@ -350,6 +382,9 @@ data PackErr : Type where
   ||| User tried to manually install the pack application
   ManualInstallPackApp : PackErr
 
+  ||| User aborted installation of a lib/app with custom build hooks.
+  SafetyAbort : PackErr
+
 ||| Prints an error that occured during program execution.
 export
 printErr : PackErr -> String
@@ -456,6 +491,8 @@ printErr ManualInstallPackApp = """
   operation, "pack" might be listed in as an auto-install application
   in one of your pack.toml files. Please remove it from there.
   """
+
+printErr SafetyAbort = "Installation aborted."
 
 export
 readDBName : String -> Either PackErr DBName

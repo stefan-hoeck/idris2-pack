@@ -81,26 +81,27 @@ codegens =
 
 optionFlags : List String
 optionFlags =
-  [ "help"
-  , "update-db"
-  , "query"
-  , "run"
-  , "fuzzy"
-  , "build"
-  , "install-deps"
-  , "typecheck"
-  , "switch"
-  , "install"
-  , "package-path"
-  , "libs-path"
-  , "data-path"
-  , "remove"
-  , "info"
-  , "repl"
-  , "install-app"
+  [ "build"
   , "completion"
   , "completion-script"
+  , "data-path"
+  , "fuzzy"
+  , "help"
+  , "info"
+  , "install"
+  , "install-app"
+  , "install-deps"
+  , "libs-path"
   , "new"
+  , "package-path"
+  , "query"
+  , "remove"
+  , "remove-app"
+  , "repl"
+  , "run"
+  , "switch"
+  , "typecheck"
+  , "update-db"
   ] ++ optionNames
 
 queries : Env s -> List String
@@ -132,6 +133,7 @@ opts x "run"              e = prefixOnlyIfNonEmpty x <$> packagesOrIpkg e
 opts x "install"          e = prefixOnlyIfNonEmpty x <$> pure (packages e)
 opts x "install-app"      e = prefixOnlyIfNonEmpty x <$> pure (packages e)
 opts x "remove"           e = prefixOnlyIfNonEmpty x <$> installedPackages e
+opts x "remove-app"       e = prefixOnlyIfNonEmpty x <$> installedPackages e
 opts x "switch"           e =   prefixOnlyIfNonEmpty x . ("latest" ::)
                             <$> collections e
 opts x "typecheck"        e = prefixOnlyIfNonEmpty x <$> ipkgFiles

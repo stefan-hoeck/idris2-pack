@@ -23,7 +23,7 @@ updateRep p rep = modify (insert p rep) $> rep
 
 report :  HasIO io
        => PkgName
-       -> LibOrApp
+       -> LibOrApp Safe
        -> EitherT PackErr io ()
        -> StateT ReportDB io Report
 report p rp act = do
@@ -38,7 +38,7 @@ checkPkg :  HasIO io
 checkPkg e (t,p) = do
   Nothing  <- lookup p <$> get | Just rep => pure rep
   info e "Checking \{p}"
-  Right loa <- toState $ resolveAny e t p
+  Right loa <- toState $ resolveAny e t p >>= checkLOA e
     | Left err => warn e "Could not resolve \{p}" >>
                   updateRep p (Error p err)
   [] <- failingDeps <$> traverse (checkPkg e) (map (Lib,) $ dependencies loa)
@@ -57,9 +57,9 @@ copyDocs :  HasIO io
 copyDocs f e db = traverse_ go db
   where go : Report -> EitherT PackErr io ()
         go (Success $ Left rl) = do
-          installDocs e rl
-          copyDir (pkgDocs e rl.name rl.pkg)
-                  (f.parent /> "docs" <//> name rl)
+            installDocs e rl
+            copyDir (pkgDocs e rl.name rl.pkg)
+                    (f.parent /> "docs" <//> name rl)
         go _            = pure ()
 
 export covering

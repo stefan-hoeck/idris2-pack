@@ -13,13 +13,12 @@ import Pack.Runner.Install
 covering
 runIdrisOn :  HasIO io
            => (cmd : String)
-           -> File Abs
            -> Env HasIdris
+           -> Desc Safe
            -> EitherT PackErr io ()
-runIdrisOn c p e = do
-  (_, d) <- parseIpkgFile p id
+runIdrisOn c e d = do
   installDeps e d
-  idrisPkg e [] c p d
+  idrisPkg e [] c d
 
 findIpkg :  HasIO io
          => WithIpkg
@@ -39,10 +38,10 @@ replOpts :  HasIO io
 replOpts e mf = do
   Just p <- findIpkg e.withIpkg mf | Nothing => pure ("",Nothing)
   info e "Found `.ipkg` file at \{p}"
-  (_,d) <- parseIpkgFile p id
+  d <- safeParseIpkgFile e p
+  let srcDir := maybe "" (\s => "--source-dir \"\{s}\"") d.desc.sourcedir
+      pkgs   := unwords $ map (("-p " ++) . value) (dependencies d)
   installDeps e d
-  let srcDir = maybe "" (\s => "--source-dir \"\{s}\"") d.sourcedir
-      pkgs = unwords $ map (("-p " ++) . pkgname) d.depends
   pure ("\{srcDir} \{pkgs}", Just p)
 
 ||| Use the installed Idris to start a REPL session with the
@@ -70,19 +69,19 @@ idrisRepl file e = do
 ||| Build a local library given as an `.ipkg` file.
 export covering %inline
 build : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
-build = runIdrisOn "--build"
+build f e = safeParseIpkgFile e f >>= runIdrisOn "--build" e
 
 ||| Install dependencies of a local `.ipkg` file
 export covering
 buildDeps : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
 buildDeps ipkg e = do
-  (_,d) <- parseIpkgFile ipkg id
+  d <- safeParseIpkgFile e ipkg
   installDeps e d
 
 ||| Typecheck a local library given as an `.ipkg` file.
 export covering %inline
 typecheck : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
-typecheck = runIdrisOn "--typecheck"
+typecheck f e = safeParseIpkgFile e f >>= runIdrisOn "--typecheck" e
 
 ||| Install and run an executable given as a package name.
 export covering
@@ -92,8 +91,8 @@ runIpkg :  HasIO io
         -> Env HasIdris
         -> EitherT PackErr io ()
 runIpkg p args e = do
-  (_,d)    <- parseIpkgFile p id
-  Just exe <- pure (execPath p d) | Nothing => throwE (NoAppIpkg p)
+  d        <- safeParseIpkgFile e p
+  Just exe <- pure (execPath d) | Nothing => throwE (NoAppIpkg p)
   build p e
   sys "\{exe} \{unwords args}"
 

@@ -114,7 +114,7 @@ popd
 cat <<EOF >>idris2
 #!/bin/sh
 
-export APPLICATION="\$($PACK_DIR/bin/pack app-path idris2)"
+APPLICATION="\$($PACK_DIR/bin/pack app-path idris2)"
 export IDRIS2_PACKAGE_PATH="\$($PACK_DIR/bin/pack package-path)"
 export IDRIS2_LIBS="\$($PACK_DIR/bin/pack libs-path)"
 export IDRIS2_DATA="\$($PACK_DIR/bin/pack data-path)"

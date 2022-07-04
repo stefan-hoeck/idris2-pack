@@ -8,6 +8,7 @@ import Idris.Package.Types
 import Pack.Core.Types
 import Pack.Config.Types
 import Pack.Database.Types
+import Pack.Runner.Database
 
 %default total
 
@@ -17,8 +18,8 @@ import Pack.Database.Types
 
 public export
 data Report : Type where
-  Success : LibOrApp -> Report
-  Failure : LibOrApp -> List PkgName -> Report
+  Success : LibOrApp Safe -> Report
+  Failure : LibOrApp Safe -> List PkgName -> Report
   Error   : PkgName -> PackErr -> Report
 
 public export
@@ -35,8 +36,8 @@ failingDeps rs = nub $ rs >>=
 record RepLines where
   constructor MkRL
   errs      : SnocList (PkgName, PackErr)
-  failures  : SnocList (LibOrApp, List PkgName)
-  successes : SnocList LibOrApp
+  failures  : SnocList (LibOrApp Safe, List PkgName)
+  successes : SnocList (LibOrApp Safe)
 
 Semigroup RepLines where
   MkRL e1 f1 s1 <+> MkRL e2 f2 s2 = MkRL (e1<+>e2) (f1<+>f2) (s1<+>s2)
@@ -52,18 +53,6 @@ ghCommitLink u c@(MkCommit commit)  =
 apiLink : PkgName -> String
 apiLink p = "https://stefan-hoeck.github.io/idris2-pack-docs/docs/\{p}/index.html"
 
-pkg : LibOrApp -> Package
-pkg (Left x) = x.pkg
-pkg (Right x) = x.pkg
-
-desc : LibOrApp -> PkgDesc
-desc (Left x) = x.desc
-desc (Right x) = x.desc
-
-name : LibOrApp -> PkgName
-name (Left x) = x.name
-name (Right x) = x.name
-
 url : Env s -> Package -> URL
 url e (GitHub u _ _ _) = u
 url e (Local dir ipkg pkgPath) = MkURL "\{dir}"
@@ -74,18 +63,18 @@ commit e (GitHub _ c _ _) = c
 commit e (Local dir ipkg pkgPath) = ""
 commit e (Core _) = e.db.idrisCommit
 
-succLine : Env s -> LibOrApp -> String
+succLine : Env s -> LibOrApp Safe -> String
 succLine e loa =
   let desc := desc loa
       pkg  := pkg loa
-      brf  := fromMaybe "" desc.brief
+      brf  := fromMaybe "" desc.desc.brief
       nm   := name loa
       api  := apiLink nm
       url  := url e pkg
       com  := commit e pkg
    in "| [\{nm}](\{url}) | \{brf} | \{ghCommitLink url com} | [docs](\{api}) |"
 
-failLine : Env s -> (LibOrApp, List PkgName) -> String
+failLine : Env s -> (LibOrApp Safe, List PkgName) -> String
 failLine e (loa,ps) =
   let pkg  := pkg loa
       url  := url e pkg

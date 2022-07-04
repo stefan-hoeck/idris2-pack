@@ -19,32 +19,32 @@ pkgNames e = keys (allPackages e)
 
 query_ :  HasIO io
        => (e : Env s)
-       -> (q : ResolvedLib -> Maybe b)
+       -> (q : ResolvedLib () -> Maybe b)
        -> EitherT PackErr io (List b)
 query_ e q = mapMaybe id <$> traverse run (pkgNames e)
   where run : PkgName -> EitherT PackErr io (Maybe b)
         run n = q <$> resolveLib e n
 
-shortDesc : ResolvedLib -> Maybe String
-shortDesc = brief . desc
+shortDesc : ResolvedLib t -> Maybe String
+shortDesc = brief . desc . desc
 
-deps : ResolvedLib -> List String
-deps = map pkgname . depends . desc
+deps : ResolvedLib t -> List PkgName
+deps = dependencies
 
-modules : ResolvedLib -> List String
-modules = map (show . fst) . modules . desc
+modules : ResolvedLib t -> List String
+modules = map (show . fst) . modules . desc . desc
 
-prettyDeps : ResolvedLib -> List String
+prettyDeps : ResolvedLib t -> List String
 prettyDeps rl = case deps rl of
   []     => ["Dependencies :"]
-  h :: t => "Dependencies : \{h}" :: map (indent 15) t
+  h :: t => "Dependencies : \{h}" :: map (indent 15 . interpolate) t
 
-prettyModules : String -> ResolvedLib -> List String
+prettyModules : String -> ResolvedLib t -> List String
 prettyModules s rl = case filter (isInfixOf s) (modules rl) of
   []     => ["Modules :"]
   h :: t => "Modules : \{h}" :: map (indent 10) t
 
-details : ResolvedLib -> List String
+details : ResolvedLib t -> List String
 details rl = case rl.pkg of
   GitHub url commit ipkg _ => [
     "Type         : GitHub project"
@@ -64,19 +64,19 @@ details rl = case rl.pkg of
     "Type         : Idris core package"
   ]
 
-namePlusModules : String -> ResolvedLib -> String
+namePlusModules : String -> ResolvedLib t -> String
 namePlusModules n rl =
   unlines $  nameStr rl :: map (indent 2) (prettyModules n rl)
 
-keep : QueryMode -> String -> ResolvedLib -> Bool
+keep : QueryMode -> String -> ResolvedLib t -> Bool
 keep PkgName    q p = isInfixOf q (nameStr p)
-keep Dependency q p = any ((q ==) . pkgname) (depends $ desc p)
-keep Module     q p = any (isInfixOf q . show . fst) (modules $ desc p)
+keep Dependency q p = any ((q ==) . value) (dependencies p)
+keep Module     q p = any (isInfixOf q . show . fst) (modules p.desc.desc)
 
 resultString :  Env s
              -> (query : String)
              -> QueryMode
-             -> ResolvedLib
+             -> ResolvedLib t
              -> String
 resultString e q Module rl = namePlusModules q rl
 resultString e _ _      rl = case e.queryType of
@@ -88,7 +88,7 @@ resultString e _ _      rl = case e.queryType of
 
   Dependencies =>
     let ds@(_ :: _) := deps rl | [] => nameStr rl
-     in unlines $  nameStr rl :: map (indent 2) ds
+     in unlines $  nameStr rl :: map (indent 2 . interpolate) ds
 
   Details => unlines . (nameStr rl ::) . map (indent 2) $ concat [
       toList (("Brief        : " ++) <$> shortDesc rl)
@@ -96,7 +96,7 @@ resultString e _ _      rl = case e.queryType of
     , prettyDeps rl
     ]
 
-  Ipkg => unlines $ nameStr rl :: map (indent 2) (lines rl.ipkgStr)
+  Ipkg => unlines $ nameStr rl :: map (indent 2) (lines rl.desc.cont)
 
 export
 query :  HasIO io
@@ -185,20 +185,20 @@ printInfo e = do
 installedPkgs :  HasIO io
               => List PkgName
               -> Env HasIdris
-              -> EitherT PackErr io (List ResolvedLib, List ResolvedLib)
+              -> EitherT PackErr io (List $ ResolvedLib (), List $ ResolvedLib ())
 installedPkgs ns e = do
   all <- mapMaybe id <$> traverse run (pkgNames e)
   pure (all, filter inPkgs all)
-  where run : PkgName -> EitherT PackErr io (Maybe ResolvedLib)
+  where run : PkgName -> EitherT PackErr io (Maybe $ ResolvedLib ())
         run n = do
           rl <- resolveLib e n
           b  <- exists (pkgInstallDir e rl.name rl.pkg rl.desc)
           pure (toMaybe b rl)
 
-        inPkgs : ResolvedLib -> Bool
+        inPkgs : ResolvedLib t -> Bool
         inPkgs rl = isNil ns || elem (name rl) ns
 
-imports : ResolvedLib -> String
+imports : ResolvedLib t -> String
 imports = unlines . map ("import " ++) . modules
 
 pre : String
@@ -221,8 +221,8 @@ fuzzyTrim = unlines
 fuzzyPkg :  HasIO io
          => String
          -> Env HasIdris
-         -> (allPkgs   : List ResolvedLib)
-         -> ResolvedLib
+         -> (allPkgs   : List $ ResolvedLib t)
+         -> ResolvedLib t
          -> EitherT PackErr io ()
 fuzzyPkg q e allPkgs rl =
   let dir = tmpDir e

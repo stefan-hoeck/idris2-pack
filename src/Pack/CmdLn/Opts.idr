@@ -165,6 +165,7 @@ cmd _   ["completion-script",f]    = Right $ CompletionScript f
 cmd _   ["package-path"]           = Right PackagePath
 cmd _   ["libs-path"]              = Right LibsPath
 cmd _   ["data-path"]              = Right DataPath
+cmd _   ["app-path", n]            = Right $ AppPath (MkPkgName n)
 cmd _   ["switch",db]              = Switch <$> readDBName db
 cmd dir ["new", pty, p]            =
   New dir <$> readPkgType pty <*> readBody p
@@ -252,7 +253,10 @@ usageInfo = """
       will be built and run locally without installing them.
 
     remove [package...]
-      Remove installed libraries and applications.
+      Remove installed libraries.
+
+    remove-app [package...]
+      Remove installed applications.
 
     update-db
       Update the pack data base by downloading the package collections
@@ -314,4 +318,8 @@ usageInfo = """
     data-path
       Return a colon-separated list of paths where data files
       are installed.
+
+    app-path <pkgname>
+      Return the absolute path to the given application managed by pack.
+      `pack app-path idris2` returns the path to the current Idris compiler
   """

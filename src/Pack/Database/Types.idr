@@ -214,20 +214,16 @@ usePackagePath (GitHub _ _ _ pp) = pp
 usePackagePath (Local _ _ pp)    = pp
 usePackagePath (Core _)          = False
 
+||| Absolute path to the `.ipkg` file of a package.
+export
+ipkg : (dir : Path Abs) -> Package -> File Abs
+ipkg dir (GitHub _ _ i _) = toAbsFile dir i
+ipkg dir (Local _ i _)    = toAbsFile dir i
+ipkg dir (Core c)         = toAbsFile dir (coreIpkgPath c)
+
 --------------------------------------------------------------------------------
 --          Resolved Packages
 --------------------------------------------------------------------------------
-
-namespace PkgDesc
-  ||| Lists the dependencies of a package.
-  |||
-  ||| TODO: The `.ipkg` file of network lists contrib in the
-  |||       compiler's command line options instead of its
-  |||       depends field. I should file an issue and fix this.
-  export
-  dependencies : Package -> PkgDesc -> List PkgName
-  dependencies (Core Network) _ = [ "contrib" ]
-  dependencies p              d = map (MkPkgName . pkgname) $ d.depends
 
 public export
 data PkgStatus : Package -> Type where
@@ -239,63 +235,84 @@ data PkgStatus : Package -> Type where
 ||| or looked up in the local file system. This comes with
 ||| a fully parsed `PkgDesc` (representing the `.ipkg` file).
 public export
-record ResolvedLib where
+record ResolvedLib t where
   constructor RL
   pkg     : Package
   name    : PkgName
-  desc    : PkgDesc
-  ipkgStr : String
+  desc    : Desc t
   status  : PkgStatus pkg
 
 namespace ResolveLib
   ||| Extracts the package name from a resolved library.
   export %inline
-  nameStr : ResolvedLib -> String
+  nameStr : ResolvedLib t -> String
   nameStr = value . name
+
+  export %inline
+  reTag : ResolvedLib s -> Desc t -> ResolvedLib t
+  reTag rl d = {desc := d} rl
 
   ||| Extracts the dependencies of a resolved library.
   export
-  dependencies : ResolvedLib -> List PkgName
-  dependencies rp = dependencies rp.pkg rp.desc
+  dependencies : ResolvedLib t -> List PkgName
+  dependencies rp = dependencies rp.desc
 
 ||| A resolved application, which was downloaded from GitHub
 ||| or looked up in the local file system. This comes with
 ||| a fully parsed `PkgDesc` (representing the `.ipkg` file).
 public export
-record ResolvedApp where
+record ResolvedApp t where
   constructor RA
   pkg     : Package
   name    : PkgName
-  desc    : PkgDesc
-  ipkgStr : String
+  desc    : Desc t
   status  : PkgStatus pkg
   exec    : Body
 
 namespace ResolveApp
   ||| Extracts the package name from a resolved application.
   export %inline
-  nameStr : ResolvedApp -> String
+  nameStr : ResolvedApp t -> String
   nameStr = value . name
 
   ||| Extracts the dependencies of a resolved application.
   export
-  dependencies : ResolvedApp -> List PkgName
-  dependencies rp = dependencies rp.pkg rp.desc
+  dependencies : ResolvedApp t -> List PkgName
+  dependencies rp = dependencies rp.desc
+
+  export %inline
+  reTag : ResolvedApp s -> Desc t -> ResolvedApp t
+  reTag rl d = {desc := d} rl
 
   ||| True, if the given application needs access to the
   ||| folders where Idris package are installed.
   export %inline
-  usePackagePath : ResolvedApp -> Bool
+  usePackagePath : ResolvedApp t -> Bool
   usePackagePath = usePackagePath . pkg
 
 public export
-0 LibOrApp : Type
-LibOrApp = Either ResolvedLib ResolvedApp
+0 LibOrApp : Type -> Type
+LibOrApp t = Either (ResolvedLib t) (ResolvedApp t)
 
 namespace LibOrApp
   export
-  dependencies : LibOrApp -> List PkgName
+  dependencies : LibOrApp t -> List PkgName
   dependencies = either dependencies dependencies
+
+  export
+  pkg : LibOrApp t -> Package
+  pkg (Left x) = x.pkg
+  pkg (Right x) = x.pkg
+
+  export
+  desc : LibOrApp t -> Desc t
+  desc (Left x) = x.desc
+  desc (Right x) = x.desc
+
+  export
+  name : LibOrApp t -> PkgName
+  name (Left x) = x.name
+  name (Right x) = x.name
 
 --------------------------------------------------------------------------------
 --          Package Database

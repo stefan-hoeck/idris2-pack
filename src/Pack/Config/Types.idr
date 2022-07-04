@@ -455,18 +455,18 @@ appTimestamp e n p = MkF (pkgBinDir e n p) ".timestamp"
 ||| Directory where the sources of a local package are
 ||| stored.
 export
-localSrcDir : (p : Package) -> (0 prf : IsLocal p) => PkgDesc -> Path Abs
-localSrcDir (Local p f _) d = sourcePath (p </> f) d
+localSrcDir : Desc t -> Path Abs
+localSrcDir d = sourcePath d
 
-pkgRelDir : PkgDesc -> Path Rel
-pkgRelDir d = case Body.parse d.name of
-  Just b  => neutral /> (b <-> d.version)
-  Nothing => cast d.name //> d.version
+pkgRelDir : Desc t -> Path Rel
+pkgRelDir d = case Body.parse d.desc.name of
+  Just b  => neutral /> (b <-> d.desc.version)
+  Nothing => cast d.desc.name //> d.desc.version
 
 ||| Returns the directory where a package for the current
 ||| package collection is installed.
 export
-pkgInstallDir : Env s -> PkgName -> Package -> PkgDesc -> Path Abs
+pkgInstallDir : Env s -> PkgName -> Package -> Desc t -> Path Abs
 pkgInstallDir e n p d =
   let vers = e.db.idrisVersion
       dir  = pkgPrefixDir e n p /> idrisDir e
@@ -481,8 +481,8 @@ pkgExec : Env s -> PkgName -> Package -> (exe : Body) -> File Abs
 pkgExec e n p exe = MkF (pkgBinDir e n p) exe
 
 export
-resolvedExec : Env s -> ResolvedApp -> File Abs
-resolvedExec e (RA p n d _ _ exe) = pkgExec e n p exe
+resolvedExec : Env s -> ResolvedApp t -> File Abs
+resolvedExec e (RA p n d _ exe) = pkgExec e n p exe
 
 -- ||| `_app` directory of an executable of the given name.
 -- export
@@ -490,7 +490,7 @@ resolvedExec e (RA p n d _ _ exe) = pkgExec e n p exe
 -- packageAppDir e rp n = packageBinDir e rp <//> "\{n}_app"
 
 export
-libInstallPrefix : Env s -> ResolvedLib -> List (String,String)
+libInstallPrefix : Env s -> ResolvedLib t -> List (String,String)
 libInstallPrefix e rl =
   [("IDRIS2_PREFIX", "\{pkgPrefixDir e rl.name rl.pkg}")]
 
@@ -543,7 +543,7 @@ idrisWithCG e = case e.codegen of
 ||| environment variables needed to run it.
 export
 idrisWithPkg :  Env HasIdris
-             -> ResolvedLib
+             -> ResolvedLib t
              -> (String, List (String,String))
 idrisWithPkg e rl =
   ("\{idrisWithCG e} -p \{name rl}", buildEnv e)
@@ -552,7 +552,7 @@ idrisWithPkg e rl =
 ||| environment variables needed to run it.
 export
 idrisWithPkgs :  Env HasIdris
-              -> List ResolvedLib
+              -> List (ResolvedLib t)
               -> (String, List (String,String))
 idrisWithPkgs e [] = (idrisWithCG e, [])
 idrisWithPkgs e pkgs =
