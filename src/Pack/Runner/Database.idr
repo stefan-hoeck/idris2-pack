@@ -52,9 +52,10 @@ check c (MkDesc d s f _) =
 export
 safeParseIpkgFile :  HasIO io
                   => Env s
-                  -> File Abs
+                  -> (file : File Abs)
+                  -> (loc : File Abs)
                   -> EitherT PackErr io (Desc Safe)
-safeParseIpkgFile e p = parseIpkgFile p >>= check e
+safeParseIpkgFile e p loc = parseIpkgFile p loc >>= check e
 
 export
 checkLOA :  HasIO io
@@ -145,21 +146,22 @@ loadIpkg :  HasIO io
          -> Package
          -> EitherT PackErr io (Desc ())
 loadIpkg e n (GitHub u c i _) =
-  let cache = ipkgPath e n c i
+  let cache  := ipkgCachePath e n c i
+      tmpLoc := gitDir (tmpDir e) n c </> i
    in do
      when !(fileMissing cache) $
        withGit (tmpDir e) n u c $ \dir => do
-         let ipkgAbs := toAbsFile dir i
-             pf      := patchFile e n i
-         when !(fileExists pf) (patch ipkgAbs pf)
-         copyFile ipkgAbs cache
-     parseIpkgFile cache
-loadIpkg e n (Local d i _)    = parseIpkgFile (d </> i)
+         let pf := patchFile e n i
+         when !(fileExists pf) (patch tmpLoc pf)
+         copyFile tmpLoc cache
+     parseIpkgFile cache tmpLoc
+loadIpkg e n (Local d i _)    = parseIpkgFile (d </> i) (d </> i)
 loadIpkg e n (Core c)         =
-  let pth := coreCachePath e c
+  let cache  := coreCachePath e c
+      tmpLoc := gitDir (tmpDir e) compiler  e.db.idrisCommit </> coreIpkgPath c
    in do
-     when !(fileMissing pth) $ withCoreGit e (cacheCoreIpkgFiles e)
-     parseIpkgFile pth
+     when !(fileMissing cache) $ withCoreGit e (cacheCoreIpkgFiles e)
+     parseIpkgFile cache tmpLoc
 
 export covering
 resolveLib : HasIO io => Env s -> PkgName -> EitherT PackErr io (ResolvedLib ())

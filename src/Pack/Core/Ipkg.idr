@@ -211,12 +211,13 @@ parseIpkg file str =
 
 export covering
 parseIpkgFile :  HasIO io
-              => (file : File Abs)
+              => (file   : File Abs)
+              -> (tmpLoc : File Abs)
               -> EitherT PackErr io (Desc ())
-parseIpkgFile file = do
+parseIpkgFile file loc = do
   str  <- read file
   desc <- liftEither (parseIpkg file str)
-  pure (MkDesc desc str file ())
+  pure (MkDesc desc str loc ())
 
 --------------------------------------------------------------------------------
 --          Extracting Infos

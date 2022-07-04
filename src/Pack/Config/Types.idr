@@ -306,8 +306,8 @@ cacheDir c = c.packDir /> ".cache"
 
 ||| Path to cached `.ipkg` file.
 export
-ipkgPath : Config s -> PkgName -> Commit -> File Rel -> File Abs
-ipkgPath c p com = toAbsFile (cacheDir c <//> p <//> com)
+ipkgCachePath : Config s -> PkgName -> Commit -> File Rel -> File Abs
+ipkgCachePath c p com = toAbsFile (cacheDir c <//> p <//> com)
 
 ||| Path to cached core library `.ipkg` file
 export

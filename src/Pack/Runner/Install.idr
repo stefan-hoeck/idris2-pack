@@ -123,7 +123,7 @@ installLib e rl = case rl.status of
     let ipkgAbs := ipkg dir rl.pkg
      in case rl.pkg of
           GitHub u c ipkg _ => do
-            let cache   := ipkgPath e rl.name c ipkg
+            let cache := ipkgCachePath e rl.name c ipkg
             copyFile cache ipkgAbs
             installImpl e rl
 
@@ -156,7 +156,7 @@ installApp e ra = case ra.status of
      in case ra.pkg of
           Core _            => pure ()
           GitHub u c ipkg b => do
-            let cache   := ipkgPath e ra.name c ipkg
+            let cache   := ipkgCachePath e ra.name c ipkg
             copyFile cache ipkgAbs
             idrisPkg e [] "--build" ra.desc
             copyApp e ra
@@ -263,7 +263,7 @@ update e =
           package collection.
           """
         gitClone packRepo dir
-        desc <- safeParseIpkgFile e ipkg
+        desc <- safeParseIpkgFile e ipkg ipkg
         installDeps e desc
         inDir dir $ \_ => do
           idrisPkg e [] "--build" desc
