@@ -209,6 +209,9 @@ infixl 8 `mergeRight`
 mergeRight : SortedMap k v -> SortedMap k v -> SortedMap k v
 mergeRight = mergeWith (\_,v => v)
 
+pkgs : SortedMap PkgName Package
+pkgs = fromList $ (\c => (corePkgName c, Core c)) <$> corePkgs
+
 ||| Merges the "official" package collection with user
 ||| defined settings, which will take precedence.
 export
@@ -216,7 +219,7 @@ allPackages : Env e -> SortedMap PkgName Package
 allPackages e =
   let all = fromMaybe empty $ lookup All e.custom
       loc = fromMaybe empty $ lookup e.collection e.custom
-   in e.db.packages `mergeRight` all `mergeRight` loc
+   in e.db.packages `mergeRight` all `mergeRight` loc `mergeRight` pkgs
 
 ||| Initial config
 export
@@ -322,36 +325,17 @@ export
 dbFile : Config s -> File Abs
 dbFile c = MkF (dbDir c) $ c.collection.value <+> ".toml"
 
-||| A symbolic link to `idrisBinDir` of the current
-||| db version. This corresponds to `$PACK_DIR/bin`
-||| and should be added to the `$PATH` variable in
-||| order to have access to the current Idris2 binary
-||| and related applications.
+||| Directory where wrapper scripts to binaries
+||| managed by pack are being stored. The only exception
+||| is pack itself, which is stored as a symbolic link.
 export
-packBinDir : Config s -> File Abs
-packBinDir c = MkF c.packDir "bin"
+packBinDir : Config s -> Path Abs
+packBinDir c = c.packDir /> "bin"
 
-||| Directory where symbolic links to installed binaries
-||| will be placed.
+||| Symbolic link to the current pack executable.
 export
-collectionBinDir : Config s -> Path Abs
-collectionBinDir c = c.packDir //> c.collection /> "bin"
-
-||| Symbolic link to the Idris2 executable associated with
-||| each collection.
-export
-collectionIdrisExec : Config s -> File Abs
-collectionIdrisExec c = MkF (collectionBinDir c) "idris2"
-
-||| Symbolic link to an application installed for a package
-||| collection.
-export %inline
-collectionAppExec :  Config s
-                  -> (exe   : Body)
-                  -> (0 p   : PkgDesc)
-                  -> (0 prf : ExeOf b p)
-                  => File Abs
-collectionAppExec c exe _ = MkF (collectionBinDir c) exe
+packExec : Config s -> File Abs
+packExec c = MkF (packBinDir c) "pack"
 
 ||| `$SCHEME` variable during Idris2 installation
 export
@@ -496,6 +480,14 @@ pkgExec :  Env s
         -> (0 prf : ExeOf exe d)
         => File Abs
 pkgExec e n p exe _ = MkF (pkgBinDir e n p) exe
+
+export
+resolvedExec : Env s -> ResolvedPackage -> Maybe (File Abs)
+resolvedExec e (MkRP p n d _ _ app) = case app of
+  NoApp              => Nothing
+  Missing exe        => Just $ pkgExec e n p exe d
+  AppInstalled exe   => Just $ pkgExec e n p exe d
+  Outdated exe       => Just $ pkgExec e n p exe d
 
 -- ||| `_app` directory of an executable of the given name.
 -- export

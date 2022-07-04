@@ -135,6 +135,9 @@ getConfig readCmd dflt dfltLevel = do
 --          Environment
 --------------------------------------------------------------------------------
 
+pkgs : SortedMap PkgName Package
+pkgs = fromList $ (\c => (corePkgName c, Core c)) <$> corePkgs
+
 covering
 loadDB : HasIO io => (conf : Config s) -> EitherT PackErr io DB
 loadDB conf = do

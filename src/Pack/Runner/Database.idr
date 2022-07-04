@@ -28,16 +28,15 @@ prompt n c d =
      else pure True
 
 export
-coreGitDir : Env e -> Path Abs
-coreGitDir e = gitDir (tmpDir e) compiler e.db.idrisCommit
-
-export
 withCoreGit : HasIO io
             => Env e
             -> (Path Abs -> EitherT PackErr io a)
             -> EitherT PackErr io a
 withCoreGit e = withGit (tmpDir e) compiler e.db.idrisURL e.db.idrisCommit
 
+-- tests if the files in a directory are new compare to
+-- a timestamp file, and returns one of two possible results
+-- accordingly
 checkOutdated :  HasIO io
               => (ts         : File Abs)
               -> (dir        : Path Abs)
@@ -49,7 +48,7 @@ checkOutdated ts src o u = do
   ""   <- trim <$> sysRun "find \{src} -newer \{ts}" | _ => pure o
   pure u
 
-export
+-- checks the status of a library
 libStatus :  HasIO io
           => Env e
           -> PkgName
@@ -68,7 +67,7 @@ libStatus e n p d = case isLib d of
             dir := localSrcDir p d
          in checkOutdated ts dir Outdated (Installed b)
 
-export
+-- checks the status of an application
 appStatus :  HasIO io
           => Env e
           -> PkgName
@@ -79,18 +78,12 @@ appStatus e n p d with (exec d) proof eq
   _ | Nothing  = pure NoApp
   _ | Just exe = do
     True <- fileExists (pkgExec e n p exe d) | False => pure $ Missing exe
-    ex   <- fileExists (collectionAppExec e exe d)
     case isLocal p of
-      No c     => case ex of
-        True  => pure $ AppInstalled exe
-        False => pure $ ExeLinkMissing exe
+      No c     => pure $ AppInstalled exe
       Yes ploc =>
         let ts  := appTimestamp e n p
             src := localSrcDir p d
-            res := case ex of
-              True  => AppInstalled exe
-              False => ExeLinkMissing exe
-         in checkOutdated ts src (Outdated exe) res
+         in checkOutdated ts src (Outdated exe) (AppInstalled exe)
 
 export
 cacheCoreIpkgFiles : HasIO io => Env s -> Path Abs -> EitherT PackErr io ()
@@ -102,7 +95,16 @@ loadIpkg :  HasIO io
          -> PkgName
          -> Package
          -> EitherT PackErr io (String, PkgDesc)
-loadIpkg e n (GitHub u c i _) = ?loadIpkg_rhs_0
+loadIpkg e n (GitHub u c i _) =
+  let cache = ipkgPath e n c i
+   in do
+     when !(fileMissing cache) $
+       withGit (tmpDir e) n u c $ \dir => do
+         let ipkgAbs := toAbsFile dir i
+             pf      := patchFile e n i
+         when !(fileExists pf) (patch ipkgAbs pf)
+         copyFile ipkgAbs cache
+     parseIpkgFile cache id
 loadIpkg e n (Local d i _)    = parseIpkgFile (d </> i) id
 loadIpkg e n (Core c)         =
   let pth := coreCachePath e c
@@ -110,116 +112,68 @@ loadIpkg e n (Core c)         =
      when !(fileMissing pth) $ withCoreGit e (cacheCoreIpkgFiles e)
      parseIpkgFile pth id
 
--- covering
--- resolveImpl :  HasIO io
---             => (e : Env s)
---             -> PkgName
---             -> EitherT PackErr io (String, ResolvedPackage)
--- resolveImpl e "base"    = resolveCore e Base
--- resolveImpl e "contrib" = resolveCore e Contrib
--- resolveImpl e "linear"  = resolveCore e Linear
--- resolveImpl e "idris2"  = resolveCore e IdrisApi
--- resolveImpl e "network" = resolveCore e Network
--- resolveImpl e "prelude" = resolveCore e Prelude
--- resolveImpl e "test"    = resolveCore e Test
--- resolveImpl e n         = case lookup n (allPackages e) of
---   Nothing  => throwE (UnknownPkg n)
---
---   -- this is a known package so we download its `.ipkg`
---   -- file from GitHub and patch it, if necessary
---   Just (GitHub url commit ipkg pp) =>
---     let cache = ipkgPath e n commit ipkg
---      in do
---        when !(fileMissing cache) $
---          withGit (tmpDir e) n url commit $ \dir => do
---            let ipkgAbs := toAbsFile dir ipkg
---                pf      := patchFile e n ipkg
---            when !(fileExists pf) (patch ipkgAbs pf)
---            copyFile ipkgAbs cache
---        parseIpkgFile cache (RGitHub n url commit ipkg pp)
---   Just (Local dir ipkg pp) =>
---     let af = toAbsFile dir ipkg
---      in parseIpkgFile af (RLocal n af pp)
---
--- execStr : PkgDesc -> String
--- execStr d = maybe "library" (const "application") d.executable
---
--- descStr : ResolvedPackage -> String
--- descStr (RGitHub name url commit ipkg _ desc) =
---   "GitHub \{execStr desc} (\{url}:\{commit})"
--- descStr (RLocal name ipkg _ desc) = "local \{execStr desc}"
--- descStr _ = "core package"
---
--- ||| Lookup a package name in the package data base,
--- ||| then download and extract its `.ipkg` file from
--- ||| its GitHub repository. The resulting pair contains also
--- ||| the unmodified content of the `.ipkg` file.
--- export covering
--- resolvePair :  HasIO io
---             => (e : Env s)
---             -> PkgName
---             -> EitherT PackErr io (String, ResolvedPackage)
--- resolvePair e pr = do
---   debug e "Trying to resolve package \{pr}"
---   res <- resolveImpl e pr
---   debug e "Found \{descStr $ snd res} \{name $ snd res}"
---   pure res
---
--- ||| Lookup a package name in the package data base,
--- ||| then download and extract its `.ipkg` file from
--- ||| its GitHub repository.
--- export covering
--- resolve :  HasIO io
---         => (e : Env s)
---         -> PkgName
---         -> EitherT PackErr io ResolvedPackage
--- resolve e pr = map snd (resolvePair e pr)
---
--- filterM : Monad m => (a -> m Bool) -> List a -> m (List a)
--- filterM f []        = pure []
--- filterM f (x :: xs) = do
---   True <- f x | False => filterM f xs
---   map (x ::) $ filterM f xs
---
--- showPlan : List (PkgType, PkgName) -> String
--- showPlan = unlines . map (\(t,n) => "\{n} (\{t})")
---
--- ||| Create a build plan for the given list of packages and apps
--- ||| plus their dependencies.
--- |||
--- ||| All packages depend on the prelude and
--- ||| base, so we make sure these are installed as well.
--- export covering
--- plan :  HasIO io
---      => Env s
---      -> List (PkgType, PkgName)
---      -> EitherT PackErr io (List (PkgType, ResolvedPackage))
--- plan e ps =
---   let ps' := mapSnd Right <$> (Lib, "prelude") :: (Lib, "base") :: ps
---    in do
---      debug e "Building plan for the following libraries: \n \{showPlan ps}"
---      go empty Lin ps' >>= filterM (doInstall e)
---   where covering
---         go :  (planned  : SortedMap (PkgType, PkgName) ())
---            -> (resolved : SnocList (PkgType, ResolvedPackage))
---            -> List (PkgType, Either ResolvedPackage PkgName)
---            -> EitherT PackErr io (List (PkgType, ResolvedPackage))
---         go ps sx []             = pure (sx <>> [])
---
---         -- the package `rp` has already been resolved and
---         -- its dependencies are already part of the build plan `sx`
---         -- We make sure its not added as a dep again and add
---         -- it to the list of handled packages.
---         go ps sx ((t, Left rp) :: xs) =
---           go (insert (t, name rp) () ps) (sx :< (t,rp)) xs
---
---         -- the package `p` might have been resolved already
---         -- if it was a dependency of another package
---         -- if that's the case, we ignore it. Otherwise, we
---         --
---         go ps sx ((t, Right p) :: xs) = case lookup (t,p) ps of
---           Just ()  => go ps sx xs
---           Nothing  => do
---             rp <- resolve e p
---             let deps := (\d => (Lib, Right d)) <$> dependencies rp
---             go ps sx $ deps ++ (t,Left rp) :: xs
+export covering
+resolve : HasIO io => Env s -> PkgName -> EitherT PackErr io ResolvedPackage
+resolve e n = case lookup n (allPackages e) of
+  Nothing => throwE (UnknownPkg n)
+  Just p  => do
+    (str,d) <- loadIpkg e n p
+    lib     <- libStatus e n p d
+    app     <- appStatus e n p d
+    pure $ MkRP p n d str lib app
+
+needsInstalling : (PkgType, ResolvedPackage) -> Bool
+needsInstalling (Lib, rp) = case rp.lib of
+  NoLib       => False
+  Missing     => True
+  Installed _ => False
+  Outdated    => True
+
+needsInstalling (Bin, rp) = case rp.app of
+  NoApp            => False
+  Missing _        => True
+  AppInstalled _   => False
+  Outdated _       => True
+
+showPlan : List (PkgType, PkgName) -> String
+showPlan = unlines . map (\(t,n) => "\{n} (\{t})")
+
+||| Create a build plan for the given list of packages and apps
+||| plus their dependencies.
+|||
+||| All packages depend on the prelude and
+||| base, so we make sure these are installed as well.
+export covering
+plan :  HasIO io
+     => Env s
+     -> List (PkgType, PkgName)
+     -> EitherT PackErr io (List (PkgType, ResolvedPackage))
+plan e ps =
+  let ps' := mapSnd Right <$> (Lib, "prelude") :: (Lib, "base") :: ps
+   in do
+     debug e "Building plan for the following libraries: \n \{showPlan ps}"
+     filter needsInstalling <$> go empty Lin ps'
+  where covering
+        go :  (planned  : SortedMap (PkgType, PkgName) ())
+           -> (resolved : SnocList (PkgType, ResolvedPackage))
+           -> List (PkgType, Either ResolvedPackage PkgName)
+           -> EitherT PackErr io (List (PkgType, ResolvedPackage))
+        go ps sx []             = pure (sx <>> [])
+
+        -- the package `rp` has already been resolved and
+        -- its dependencies are already part of the build plan `sx`
+        -- We make sure its not added as a dep again and add
+        -- it to the list of handled packages.
+        go ps sx ((t, Left rp) :: xs) =
+          go (insert (t, name rp) () ps) (sx :< (t,rp)) xs
+
+        -- the package `p` might have been resolved already
+        -- if it was a dependency of another package
+        -- if that's the case, we ignore it. Otherwise, we
+        --
+        go ps sx ((t, Right p) :: xs) = case lookup (t,p) ps of
+          Just ()  => go ps sx xs
+          Nothing  => do
+            rp <- resolve e p
+            let deps := (\d => (Lib, Right d)) <$> dependencies rp
+            go ps sx $ deps ++ (t,Left rp) :: xs

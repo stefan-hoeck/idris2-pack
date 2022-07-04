@@ -89,6 +89,17 @@ coreIpkgPath : CorePkg -> File Rel
 coreIpkgPath IdrisApi = MkF neutral "idris2api.ipkg"
 coreIpkgPath c        = MkF (neutral /> "libs" //> c) (coreIpkgFile c)
 
+export
+readCorePkg : String -> Maybe CorePkg
+readCorePkg "prelude" = Just Prelude
+readCorePkg "base"    = Just Base
+readCorePkg "contrib" = Just Contrib
+readCorePkg "linear"  = Just Linear
+readCorePkg "network" = Just Network
+readCorePkg "test"    = Just Test
+readCorePkg "idris2"  = Just IdrisApi
+readCorePkg _         = Nothing
+
 --------------------------------------------------------------------------------
 --          Packages
 --------------------------------------------------------------------------------
@@ -263,10 +274,6 @@ namespace AppStatus
                    => (0 isLocal : IsLocal p)
                    => AppStatus p d
 
-    ExeLinkMissing :  (exe   : Body)
-                   -> (0 prf : ExeOf exe d)
-                   => AppStatus p d
-
 ||| A resolved package, which was downloaded from GitHub
 ||| or looked up in the local file system. This comes with
 ||| a fully parsed `PkgDesc` (representing the `.ipkg` file).
@@ -375,3 +382,14 @@ corePkgsTest Linear   = %search
 corePkgsTest Network  = %search
 corePkgsTest Test     = %search
 corePkgsTest IdrisApi = %search
+
+-- all core packages should be parsable from their
+-- interpolation string
+0 corePkgRoundTrip : (c : CorePkg) -> readCorePkg (interpolate c) === Just c
+corePkgRoundTrip Prelude  = Refl
+corePkgRoundTrip Base     = Refl
+corePkgRoundTrip Contrib  = Refl
+corePkgRoundTrip Linear   = Refl
+corePkgRoundTrip Network  = Refl
+corePkgRoundTrip Test     = Refl
+corePkgRoundTrip IdrisApi = Refl
