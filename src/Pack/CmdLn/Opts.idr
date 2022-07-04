@@ -16,9 +16,6 @@ AdjConf s = Path Abs -> Config s -> Either PackErr (Config s)
 debug : AdjConf s
 debug _ = Right . {logLevel := Debug}
 
-bootstrap : AdjConf s
-bootstrap _ = Right . {bootstrap := True}
-
 withSrc : AdjConf s
 withSrc _ = Right . {withSrc := True}
 
@@ -80,13 +77,6 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             "Print the dependencies of each query result."
         , MkOpt [] ["ipkg"]   (NoArg $ setQuery Ipkg)
             "Print the full `.ipkg` file of each query result."
-        , MkOpt [] ["bootstrap"]   (NoArg bootstrap)
-            """
-            Use bootstrapping when building the Idris2 compiler.
-            This is for users who don't have a recent version of
-            the Idris2 compiler on their `$PATH`. Compiling Idris2
-            will take considerably longer with this option set.
-            """
         , MkOpt [] ["prompt"]   (NoArg $ setPrompt True)
             """
             Prompt before installing a potentially unsafe package

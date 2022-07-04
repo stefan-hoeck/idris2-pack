@@ -28,7 +28,6 @@ config dir v =
   [| MkConfig (pure Nothing)
               (maybeValAt "collection" v)
               (maybeValAt "idris2.scheme" v)
-              (maybeValAt "idris2.bootstrap" v)
               (maybeValAt "install.safety-prompt" v)
               (maybeValAt "install.with-src" v)
               (maybeValAt "install.with-docs" v)
