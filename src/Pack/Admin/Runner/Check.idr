@@ -23,7 +23,7 @@ updateRep p rep = modify (insert p rep) $> rep
 
 report :  HasIO io
        => PkgName
-       -> ResolvedPackage
+       -> LibOrApp
        -> EitherT PackErr io ()
        -> StateT ReportDB io Report
 report p rp act = do
@@ -38,23 +38,16 @@ checkPkg :  HasIO io
 checkPkg e (t,p) = do
   Nothing  <- lookup p <$> get | Just rep => pure rep
   info e "Checking \{p}"
-  Right rp <- toState $ resolve e p
+  Right loa <- toState $ resolveAny e t p
     | Left err => warn e "Could not resolve \{p}" >>
                   updateRep p (Error p err)
-  [] <- failingDeps <$> traverse (checkPkg e) (map (Lib,) $ dependencies rp)
+  [] <- failingDeps <$> traverse (checkPkg e) (map (Lib,) $ dependencies loa)
     | rs => warn e "\{p} had failing dependencies" >>
-            updateRep p (Failure rp rs)
-  case t of
-    Lib => do
-      Right () <- toState $ installLib e rp
-        | Left err => warn e "Failed to build \{p}" >>
-                      updateRep p (Error p err)
-      updateRep p (Success rp)
-    Bin => do
-      Right () <- toState $ installApp e rp
-        | Left err => warn e "Failed to build \{p}" >>
-                      updateRep p (Error p err)
-      updateRep p (Success rp)
+            updateRep p (Failure loa rs)
+  Right () <- toState $ installAny e loa
+    | Left err => warn e "Failed to build \{p}" >>
+                  updateRep p (Error p err)
+  updateRep p (Success loa)
 
 copyDocs :  HasIO io
          => File Abs
@@ -63,9 +56,10 @@ copyDocs :  HasIO io
          -> EitherT PackErr io ()
 copyDocs f e db = traverse_ go db
   where go : Report -> EitherT PackErr io ()
-        go (Success rp) = do
-          installDocs e rp
-          copyDir (packageDocs e rp) (f.parent /> "docs" <//> name rp)
+        go (Success $ Left rl) = do
+          installDocs e rl
+          copyDir (pkgDocs e rl.name rl.pkg)
+                  (f.parent /> "docs" <//> name rl)
         go _            = pure ()
 
 export covering

@@ -26,6 +26,16 @@ log :  HasIO io
 log c lvl msg = when (lvl >= c.logLevel) (putStrLn "[ \{lvl} ] \{msg}")
 
 export
+logMany :  HasIO io
+        => (conf : Config s)
+        -> (lvl  : LogLevel)
+        -> (msg  : Lazy String)
+        -> (msgs : Lazy (List String))
+        -> io ()
+logMany c lvl msg msgs = when (lvl >= c.logLevel && not (null msgs)) $ do
+  log c lvl $ unlines (msg :: map (indent 2) msgs)
+
+export
 debug : HasIO io => (conf : Config s) -> (msg  : Lazy String) -> io ()
 debug c = log c Debug
 
@@ -95,8 +105,9 @@ getConfig :  HasIO io
           => (readCmd   : Path Abs -> List String -> Either PackErr a)
           -> (dflt      : a)
           -> (dfltLevel : a -> LogLevel)
+          -> (adjConf   : Config Nothing -> a -> EitherT PackErr io (Config Nothing))
           -> EitherT PackErr io (Config Nothing,a)
-getConfig readCmd dflt dfltLevel = do
+getConfig readCmd dflt dfltLevel adjConf = do
   -- relevant directories
   cur        <- curDir
   dir        <- packDir
@@ -118,8 +129,9 @@ getConfig readCmd dflt dfltLevel = do
 
   let ini = init cur dir coll `update` global `update` local
 
-  pn :: args <- getArgs | Nil => pure (ini, dflt)
-  (conf,cmd) <- liftEither $ applyArgs cur ini args (readCmd cur) dfltLevel
+  pn :: args  <- getArgs | Nil => pure (ini, dflt)
+  (conf',cmd) <- liftEither $ applyArgs cur ini args (readCmd cur) dfltLevel
+  conf        <- adjConf conf' cmd
 
   debug conf "Pack home is \{dir}"
   debug conf "Current directory is \{cur}"

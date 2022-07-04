@@ -146,13 +146,21 @@ cmd dir ("run" :: p :: args)       =
    in case isIpkgBody af.file of
      True  => Right $ Run (Left af) args
      False => deflt
+
 cmd dir ["build", file]            = ipkgFile dir file Build
 cmd dir ["install-deps", file]     = ipkgFile dir file BuildDeps
 cmd dir ["typecheck", file]        = ipkgFile dir file Typecheck
-cmd _   ("install" :: xs)          = Right . Install $ map (\s => (Lib, MkPkgName s)) xs
-cmd _   ("remove" :: xs)           = Right $ Remove (map fromString xs)
-cmd _   ("install-app" :: xs)      = Right . Install $ map (\s => (Bin, MkPkgName s)) xs
+
+cmd _   ("install" :: xs)          =
+  Right . Install $ map (\s => (Lib, MkPkgName s)) xs
+cmd _   ("remove" :: xs)           =
+  Right . Remove $ map (\s => (Lib, MkPkgName s)) xs
+cmd _   ("remove-app" :: xs)           =
+  Right . Remove $ map (\s => (Bin, MkPkgName s)) xs
+cmd _   ("install-app" :: xs)      =
+  Right . Install $ map (\s => (Bin, MkPkgName s)) xs
 cmd _   ["completion",a,b]         = Right $ Completion a b
+
 cmd _   ["completion-script",f]    = Right $ CompletionScript f
 cmd _   ["package-path"]           = Right PackagePath
 cmd _   ["libs-path"]              = Right LibsPath

@@ -347,6 +347,9 @@ data PackErr : Type where
   ||| Number of failures when building packages.
   BuildFailures : Nat -> PackErr
 
+  ||| User tried to manually install the pack application
+  ManualInstallPackApp : PackErr
+
 ||| Prints an error that occured during program execution.
 export
 printErr : PackErr -> String
@@ -444,6 +447,16 @@ printErr (BuildFailures 1) = "1 package failed to build."
 
 printErr (BuildFailures n) = "\{show n} packages failed to build."
 
+printErr ManualInstallPackApp = """
+  You are not supposed to manually install or remove the pack
+  application. In order to update pack to latest version from
+  GitHub, run `pack update`.
+
+  Note: If you didn't run `pack install-app pack` or a similar
+  operation, "pack" might be listed in as an auto-install application
+  in one of your pack.toml files. Please remove it from there.
+  """
+
 export
 readDBName : String -> Either PackErr DBName
 readDBName s = case Body.parse s of
@@ -473,12 +486,13 @@ readAbsFile cd s = case split $ toAbsPath cd (fromString s) of
 --------------------------------------------------------------------------------
 
 public export
-data LogLevel = Debug | Info | Warning
+data LogLevel = Debug | Info | Warning | Silence
 
 llToNat : LogLevel -> Nat
 llToNat Debug   = 0
 llToNat Info    = 1
 llToNat Warning = 2
+llToNat Silence = 3
 
 export
 Eq LogLevel where (==) = (==) `on` llToNat
@@ -491,3 +505,4 @@ Interpolation LogLevel where
   interpolate Debug   = "debug"
   interpolate Info    = "info"
   interpolate Warning = "warning"
+  interpolate Silence = ""

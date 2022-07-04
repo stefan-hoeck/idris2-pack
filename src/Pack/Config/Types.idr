@@ -284,6 +284,11 @@ export
 tmpDir : Config s -> Path Abs
 tmpDir c = packDir c /> (".tmp-" <+> cast c.collection)
 
+||| Clone of the pack GitHub repo
+export
+packClone : Config s -> Path Abs
+packClone c = tmpDir c /> "pack"
+
 ||| Directory where databases are stored.
 export
 dbDir_ : (packDir : Path Abs) -> Path Abs
@@ -327,10 +332,15 @@ export
 packBinDir : Config s -> Path Abs
 packBinDir c = c.packDir /> "bin"
 
+||| Executable for an application
+export
+pathExec : Config s -> Body -> File Abs
+pathExec c b = MkF (packBinDir c) b
+
 ||| Symbolic link to the current pack executable.
 export
 packExec : Config s -> File Abs
-packExec c = MkF (packBinDir c) "pack"
+packExec c = pathExec c "pack"
 
 ||| `$SCHEME` variable during Idris2 installation
 export
@@ -428,7 +438,7 @@ pkgDataDir e n p = pkgPathDir e n p /> "support"
 ||| Directory where the API docs of the package will be installed.
 export %inline
 pkgDocs : Env s -> PkgName -> Package -> Path Abs
-pkgDocs e n p = pkgPathDir e n p /> "docs"
+pkgDocs e n p = pkgPrefixDir e n p /> "docs"
 
 ||| Timestamp used to monitor if a local library has been
 ||| modified and requires reinstalling.
@@ -467,99 +477,84 @@ pkgInstallDir e n p d =
 
 ||| Location of an executable of the given name.
 export
-pkgExec :  Env s
-        -> PkgName
-        -> Package
-        -> (exe : Body)
-        -> (0 d : PkgDesc)
-        -> (0 prf : ExeOf exe d)
-        => File Abs
-pkgExec e n p exe _ = MkF (pkgBinDir e n p) exe
+pkgExec : Env s -> PkgName -> Package -> (exe : Body) -> File Abs
+pkgExec e n p exe = MkF (pkgBinDir e n p) exe
 
 export
-resolvedExec : Env s -> ResolvedPackage -> Maybe (File Abs)
-resolvedExec e (MkRP p n d _ _ app) = case app of
-  NoApp              => Nothing
-  Missing exe        => Just $ pkgExec e n p exe d
-  AppInstalled exe   => Just $ pkgExec e n p exe d
-  Outdated exe       => Just $ pkgExec e n p exe d
+resolvedExec : Env s -> ResolvedApp -> File Abs
+resolvedExec e (RA p n d _ _ exe) = pkgExec e n p exe
 
 -- ||| `_app` directory of an executable of the given name.
 -- export
 -- packageAppDir : Env s -> ResolvedPackage -> String -> Path Abs
 -- packageAppDir e rp n = packageBinDir e rp <//> "\{n}_app"
 
--- export
--- packageInstallPrefix : Env s -> ResolvedPackage -> List (String,String)
--- packageInstallPrefix e rp = [("IDRIS2_PREFIX", "\{packagePrefixDir e rp}")]
---
--- export
--- packagePathDirs : Env s -> String
--- packagePathDirs e =
---   let pth = fastConcat
---           . intersperse ":"
---           . map (interpolate . pkgPathDir e)
---           $ SortedMap.toList (allPackages e)
---    in "\{idrisInstallDir e}:\{pth}"
---
--- export
--- packageLibDirs : Env s -> String
--- packageLibDirs e =
---   let pth = fastConcat
---           . intersperse ":"
---           . map (interpolate . pkgLibDir e)
---           $ SortedMap.toList (allPackages e)
---    in "\{idrisLibDir e}:\{pth}"
---
--- export
--- packageDataDirs : Env s -> String
--- packageDataDirs e =
---   let pth = fastConcat
---           . intersperse ":"
---           . map (interpolate . pkgDataDir e)
---           $ SortedMap.toList (allPackages e)
---    in "\{idrisDataDir e}:\{pth}"
---
--- export
--- packagePath : Env s -> (String, String)
--- packagePath e = ("IDRIS2_PACKAGE_PATH", packagePathDirs e)
---
--- export
--- libPath : Env s -> (String, String)
--- libPath e = ("IDRIS2_LIBS", packageLibDirs e)
---
--- export
--- dataPath : Env s -> (String, String)
--- dataPath e = ("IDRIS2_DATA", packageDataDirs e)
---
--- export
--- buildEnv : Env s -> List (String,String)
--- buildEnv e = [packagePath e, libPath e, dataPath e]
---
--- ||| Idris executable to use together with the
--- ||| `--cg` (codegen) command line option.
--- export
--- idrisWithCG : Env HasIdris -> String
--- idrisWithCG e = case e.codegen of
---   Default => "\{idrisExec e}"
---   cg      => "\{idrisExec e} --cg \{cg}"
---
--- ||| Idris executable loading the given package plus the
--- ||| environment variables needed to run it.
--- export
--- idrisWithPkg :  Env HasIdris
---              -> ResolvedPackage
---              -> (String, List (String,String))
--- idrisWithPkg e rp =
---   ("\{idrisWithCG e} -p \{name rp}", buildEnv e)
---
--- ||| Idris executable loading the given packages plus the
--- ||| environment variables needed to run it.
--- export
--- idrisWithPkgs :  Env HasIdris
---               -> List ResolvedPackage
---               -> (String, List (String,String))
--- idrisWithPkgs e [] = (idrisWithCG e, [])
--- idrisWithPkgs e pkgs =
---   let ps = fastConcat $ map (\p => " -p \{name p}") pkgs
---    in ("\{idrisWithCG e}\{ps}", buildEnv e)
+export
+libInstallPrefix : Env s -> ResolvedLib -> List (String,String)
+libInstallPrefix e rl =
+  [("IDRIS2_PREFIX", "\{pkgPrefixDir e rl.name rl.pkg}")]
+
+pathDirs :  Env s
+         -> (pth : Env s -> PkgName -> Package -> Path Abs)
+         -> String
+pathDirs e pth =
+    fastConcat
+  . intersperse ":"
+  . map (\(n,p) => "\{pth e n p}")
+  $ SortedMap.toList (allPackages e)
+
+export
+packagePathDirs : Env s -> String
+packagePathDirs e = "\{idrisInstallDir e}:\{pathDirs e pkgPathDir}"
+
+export
+packageLibDirs : Env s -> String
+packageLibDirs e = "\{idrisLibDir e}:\{pathDirs e pkgLibDir}"
+
+export
+packageDataDirs : Env s -> String
+packageDataDirs e = "\{idrisDataDir e}:\{pathDirs e pkgDataDir}"
+
+export
+packagePath : Env s -> (String, String)
+packagePath e = ("IDRIS2_PACKAGE_PATH", packagePathDirs e)
+
+export
+libPath : Env s -> (String, String)
+libPath e = ("IDRIS2_LIBS", packageLibDirs e)
+
+export
+dataPath : Env s -> (String, String)
+dataPath e = ("IDRIS2_DATA", packageDataDirs e)
+
+export
+buildEnv : Env s -> List (String,String)
+buildEnv e = [packagePath e, libPath e, dataPath e]
+
+||| Idris executable to use together with the
+||| `--cg` (codegen) command line option.
+export
+idrisWithCG : Env HasIdris -> String
+idrisWithCG e = case e.codegen of
+  Default => "\{idrisExec e}"
+  cg      => "\{idrisExec e} --cg \{cg}"
+
+||| Idris executable loading the given package plus the
+||| environment variables needed to run it.
+export
+idrisWithPkg :  Env HasIdris
+             -> ResolvedLib
+             -> (String, List (String,String))
+idrisWithPkg e rl =
+  ("\{idrisWithCG e} -p \{name rl}", buildEnv e)
+
+||| Idris executable loading the given packages plus the
+||| environment variables needed to run it.
+export
+idrisWithPkgs :  Env HasIdris
+              -> List ResolvedLib
+              -> (String, List (String,String))
+idrisWithPkgs e [] = (idrisWithCG e, [])
+idrisWithPkgs e pkgs =
+  let ps = fastConcat $ map (\p => " -p \{name p}") pkgs
+   in ("\{idrisWithCG e}\{ps}", buildEnv e)

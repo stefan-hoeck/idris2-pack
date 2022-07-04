@@ -15,6 +15,20 @@ data ACmd : Type where
   FromHEAD : (out : File Abs) -> ACmd
   Help     : ACmd
 
+adjConf :  HasIO io
+        => Config Nothing
+        -> ACmd
+        -> EitherT PackErr io (Config Nothing)
+adjConf c (CheckDB db _) = pure $ {
+    collection   := db
+  , withDocs     := True
+  , useKatla     := True
+  , safetyPrompt := False
+  } c
+
+adjConf c (FromHEAD p)   = pure $ {collection := MkDBName "HEAD"} c
+adjConf c Help           = pure c
+
 loglevel : ACmd -> LogLevel
 loglevel (CheckDB x y)  = Info
 loglevel (FromHEAD out) = Info
@@ -52,24 +66,13 @@ writeLatestDB path e = do
   ndb <- dbOf e.db
   write path (printDB ndb)
 
-setColl : DBName -> Config e -> Config e
-setColl db = {collection := db}
-
 export covering
 runCmd : HasIO io => EitherT PackErr io ()
 runCmd = do
-  (c',cmd) <- getConfig readCmd Help loglevel
+  (c,cmd) <- getConfig readCmd Help loglevel adjConf
   case cmd of
-    CheckDB db p       =>
-      let c = { collection   := db
-              , withDocs     := True
-              , useKatla     := True
-              , safetyPrompt := False
-              } c'
-       in finally (rmDir $ tmpDir c) $ idrisEnv c >>= checkDB p
-    FromHEAD p         =>
-      let c = setColl (MkDBName "HEAD") c'
-       in env c >>= writeLatestDB p
+    CheckDB db p       => finally (rmDir $ tmpDir c) $ idrisEnv c >>= checkDB p
+    FromHEAD p         => env c >>= writeLatestDB p
     Help               => putStrLn """
       Usage: pack-admin [cmd] [args]
 

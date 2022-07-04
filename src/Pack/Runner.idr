@@ -12,10 +12,22 @@ import Pack.Runner.Query
 import Pack.Runner.Install
 import Pack.Runner.New
 
+adjConf :  HasIO io
+        => Config Nothing
+        -> Cmd
+        -> EitherT PackErr io (Config Nothing)
+adjConf c (Switch db) = case db == MkDBName "latest" of
+  True  => do
+    updateDB c
+    latest <- defaultColl c.packDir
+    pure $ {collection := latest} c
+  False => pure $ {collection := db} c
+adjConf c _ = pure c
+
 export covering
 runCmd : HasIO io => EitherT PackErr io ()
 runCmd = do
-  (c,cmd) <- getConfig cmd PrintHelp loglevel
+  (c,cmd) <- getConfig cmd PrintHelp loglevel adjConf
   finally (rmDir $ tmpDir c) $ case cmd of
     Completion a b     => env c >>= complete a b
     CompletionScript f => putStrLn (completionScript f)
@@ -30,18 +42,17 @@ runCmd = do
     Typecheck p        => idrisEnv c >>= typecheck p
     PrintHelp          => putStrLn usageInfo
     Install ps         => idrisEnv c >>= \e => install e ps
-    Remove ps          => idrisEnv c >>= \e => traverse_ (remove e) ps
+    Remove ps          => idrisEnv c >>= \e => remove e ps
+    Update             => idrisEnv c >>= update
     PackagePath        => env c >>= putStrLn . packagePathDirs
     LibsPath           => env c >>= putStrLn . packageLibDirs
     DataPath           => env c >>= putStrLn . packageDataDirs
+    AppPath n          => env c >>= appPath n
     Info               => env c >>= printInfo
     New dir pty p      => idrisEnv c >>= new dir pty p
     Switch db          => case db == MkDBName "latest" of
       True  => do
-        updateDB c
-        db  <- defaultColl c.packDir
-        env <- idrisEnv ({collection := db} c)
-        links env
+        env <- idrisEnv c
         writeCollection env
         install env []
-      False => idrisEnv ({collection := db} c) >>= links
+      False => idrisEnv c $> ()

@@ -76,7 +76,7 @@ initToml scheme db = """
 
   # Must-have applications. These will be installed automatically
   # when using a new package collection.
-  apps       = [ "pack" ]
+  # apps       = [ "lsp" ]
 
   [idris2]
 

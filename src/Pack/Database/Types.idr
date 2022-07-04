@@ -229,86 +229,73 @@ namespace PkgDesc
   dependencies (Core Network) _ = [ "contrib" ]
   dependencies p              d = map (MkPkgName . pkgname) $ d.depends
 
-||| Proof that a package is a library, i.e. that it exports
-||| a non-empty list of modules
 public export
-0 IsLib : PkgDesc -> Type
-IsLib d = NonEmpty (modules d)
+data PkgStatus : Package -> Type where
+  Missing   :  PkgStatus p
+  Installed :  PkgStatus p
+  Outdated  :  (0 isLocal : IsLocal p) => PkgStatus p
 
-||| Decidably check if a package is a library.
-export
-isLib : (d : PkgDesc) -> Dec (IsLib d)
-isLib d with (modules d)
-  _ | []       = No absurd
-  _ | (_ :: _) = Yes IsNonEmpty
-
-namespace LibStatus
-  public export
-  data LibStatus : Package -> PkgDesc -> Type where
-    NoLib     :  (0 contra : Not (IsLib d)) => LibStatus p d
-    Missing   :  (0 isLib : IsLib d) => LibStatus p d
-    Installed :  (hasDocs : Bool) -> (0 isLib : IsLib d) => LibStatus p d
-    Outdated  :  (0 isLib : IsLib d)
-              => (0 isLocal : IsLocal p)
-              => LibStatus p d
-
-public export
-0 ExeOf : Body -> PkgDesc -> Type
-ExeOf b d = exec d === Just b
-
-namespace AppStatus
-  public export
-  data AppStatus : Package -> PkgDesc -> Type where
-    NoApp          :  (0 contra : exec d === Nothing) => AppStatus p d
-
-    Missing        :  (exe   : Body)
-                   -> (0 prf : ExeOf exe d)
-                   => AppStatus p d
-
-    AppInstalled   :  (exe   : Body)
-                   -> (0 prf : ExeOf exe d)
-                   => AppStatus p d
-
-    Outdated       :  (exe       : Body)
-                   -> (0 prf     : ExeOf exe d)
-                   => (0 isLocal : IsLocal p)
-                   => AppStatus p d
-
-||| A resolved package, which was downloaded from GitHub
+||| A resolved library, which was downloaded from GitHub
 ||| or looked up in the local file system. This comes with
 ||| a fully parsed `PkgDesc` (representing the `.ipkg` file).
 public export
-record ResolvedPackage where
-  constructor MkRP
+record ResolvedLib where
+  constructor RL
   pkg     : Package
   name    : PkgName
   desc    : PkgDesc
   ipkgStr : String
-  lib     : LibStatus pkg desc
-  app     : AppStatus pkg desc
+  status  : PkgStatus pkg
 
-namespace ResolvePackage
-  ||| Extracts the package name from a resolved package.
+namespace ResolveLib
+  ||| Extracts the package name from a resolved library.
   export %inline
-  nameStr : ResolvedPackage -> String
+  nameStr : ResolvedLib -> String
   nameStr = value . name
+
+  ||| Extracts the dependencies of a resolved library.
+  export
+  dependencies : ResolvedLib -> List PkgName
+  dependencies rp = dependencies rp.pkg rp.desc
+
+||| A resolved application, which was downloaded from GitHub
+||| or looked up in the local file system. This comes with
+||| a fully parsed `PkgDesc` (representing the `.ipkg` file).
+public export
+record ResolvedApp where
+  constructor RA
+  pkg     : Package
+  name    : PkgName
+  desc    : PkgDesc
+  ipkgStr : String
+  status  : PkgStatus pkg
+  exec    : Body
+
+namespace ResolveApp
+  ||| Extracts the package name from a resolved application.
+  export %inline
+  nameStr : ResolvedApp -> String
+  nameStr = value . name
+
+  ||| Extracts the dependencies of a resolved application.
+  export
+  dependencies : ResolvedApp -> List PkgName
+  dependencies rp = dependencies rp.pkg rp.desc
 
   ||| True, if the given application needs access to the
   ||| folders where Idris package are installed.
   export %inline
-  usePackagePath : ResolvedPackage -> Bool
+  usePackagePath : ResolvedApp -> Bool
   usePackagePath = usePackagePath . pkg
 
-||| Extracts the dependencies of a resolved package.
-export
-dependencies : ResolvedPackage -> List PkgName
-dependencies rp = dependencies rp.pkg rp.desc
+public export
+0 LibOrApp : Type
+LibOrApp = Either ResolvedLib ResolvedApp
 
-||| Extracts the name of the executable (if any) from
-||| a resolved package.
-export
-executable : ResolvedPackage -> Maybe Body
-executable d = executable (desc d) >>= parse
+namespace LibOrApp
+  export
+  dependencies : LibOrApp -> List PkgName
+  dependencies = either dependencies dependencies
 
 --------------------------------------------------------------------------------
 --          Package Database

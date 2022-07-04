@@ -105,9 +105,10 @@ execApp :  HasIO io
         -> Env HasIdris
         -> EitherT PackErr io ()
 execApp p args e = do
-  rp@(RGitHub {}) <- resolve e p
-    | RLocal _ ipkg _ _ => runIpkg ipkg args e
-    | Core {}           => throwE (NoApp p)
-  Just exe <- pure (packageExec e rp) | Nothing => throwE (NoApp p)
-  install e [(Bin,p)]
-  sys "\{exe} \{unwords args}"
+  ra <- resolveApp e p
+  case ra.pkg of
+    GitHub {}      => do
+      install e [(Bin,p)]
+      sys "\{pkgExec e ra.name ra.pkg ra.exec} \{unwords args}"
+    Local d ipkg _ => runIpkg (toAbsFile d ipkg) args e
+    Core {}        => throwE (NoApp p)

@@ -17,8 +17,8 @@ import Pack.Database.Types
 
 public export
 data Report : Type where
-  Success : ResolvedPackage -> Report
-  Failure : ResolvedPackage -> List PkgName -> Report
+  Success : LibOrApp -> Report
+  Failure : LibOrApp -> List PkgName -> Report
   Error   : PkgName -> PackErr -> Report
 
 public export
@@ -35,8 +35,8 @@ failingDeps rs = nub $ rs >>=
 record RepLines where
   constructor MkRL
   errs      : SnocList (PkgName, PackErr)
-  failures  : SnocList (ResolvedPackage, List PkgName)
-  successes : SnocList ResolvedPackage
+  failures  : SnocList (LibOrApp, List PkgName)
+  successes : SnocList LibOrApp
 
 Semigroup RepLines where
   MkRL e1 f1 s1 <+> MkRL e2 f2 s2 = MkRL (e1<+>e2) (f1<+>f2) (s1<+>s2)
@@ -52,26 +52,55 @@ ghCommitLink u c@(MkCommit commit)  =
 apiLink : PkgName -> String
 apiLink p = "https://stefan-hoeck.github.io/idris2-pack-docs/docs/\{p}/index.html"
 
-succLine : ResolvedPackage -> Maybe String
-succLine (RGitHub n u c _ _ d) =
-  let desc = fromMaybe "" d.brief
-      api  = apiLink n
-   in Just "| [\{n}](\{u}) | \{desc} | \{ghCommitLink u c} | [docs](\{api}) |"
-succLine _ = Nothing
+pkg : LibOrApp -> Package
+pkg (Left x) = x.pkg
+pkg (Right x) = x.pkg
 
-failLine : (ResolvedPackage, List PkgName) -> Maybe String
-failLine (RGitHub n u c _ _ _, ps) =
-  let deps = fastConcat . intersperse ", " $ map interpolate ps
-  in Just "| [\{n}](\{u}) | \{deps} | \{ghCommitLink u c} |"
-failLine _ = Nothing
+desc : LibOrApp -> PkgDesc
+desc (Left x) = x.desc
+desc (Right x) = x.desc
+
+name : LibOrApp -> PkgName
+name (Left x) = x.name
+name (Right x) = x.name
+
+url : Env s -> Package -> URL
+url e (GitHub u _ _ _) = u
+url e (Local dir ipkg pkgPath) = MkURL "\{dir}"
+url e (Core _) = e.db.idrisURL
+
+commit : Env s -> Package -> Commit
+commit e (GitHub _ c _ _) = c
+commit e (Local dir ipkg pkgPath) = ""
+commit e (Core _) = e.db.idrisCommit
+
+succLine : Env s -> LibOrApp -> String
+succLine e loa =
+  let desc := desc loa
+      pkg  := pkg loa
+      brf  := fromMaybe "" desc.brief
+      nm   := name loa
+      api  := apiLink nm
+      url  := url e pkg
+      com  := commit e pkg
+   in "| [\{nm}](\{url}) | \{brf} | \{ghCommitLink url com} | [docs](\{api}) |"
+
+failLine : Env s -> (LibOrApp, List PkgName) -> String
+failLine e (loa,ps) =
+  let pkg  := pkg loa
+      url  := url e pkg
+      com  := commit e pkg
+      deps := fastConcat . intersperse ", " $ map interpolate ps
+      nm   := name loa
+   in "| [\{nm}](\{url}) | \{deps} | \{ghCommitLink url com} |"
 
 errLine : (PkgName, PackErr) -> String
 errLine (p,err) = "| \{p} | \{printErr err} |"
 
 report : Env e -> RepLines -> String
 report e (MkRL es fs ss) =
-  let succs     = unlines $ mapMaybe succLine (ss <>> Nil)
-      fails     = unlines $ mapMaybe failLine (fs <>> Nil)
+  let succs     = unlines $ map (succLine e) (ss <>> Nil)
+      fails     = unlines $ map (failLine e) (fs <>> Nil)
       errs      = unlines $ map errLine (es <>> Nil)
       idrisLink = ghCommitLink e.db.idrisURL e.db.idrisCommit
    in """
