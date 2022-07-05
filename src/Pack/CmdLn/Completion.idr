@@ -51,13 +51,15 @@ all e = do
 
 -- Lists only installed packages
 installedLibs : HasIO io => Env s -> io (List String)
-installedLibs e =
-  map (value . name . lib) . filter installedLib <$> all e
+installedLibs e = map nameStr . filter installedLib <$> all e
 
 -- Lists only installed packages
 installedApps : HasIO io => Env s -> io (List String)
-installedApps e =
-  map (value . name . lib) . filter installedApp <$> all e
+installedApps e = map nameStr . filter installedApp <$> all e
+
+-- Lists only installed packages
+apps : HasIO io => Env s -> io (List String)
+apps e = map nameStr . filter isApp <$> all e
 
 -- keep only those Strings, of which `x` is a prefix
 prefixOnly : String -> List String -> List String
@@ -92,7 +94,8 @@ codegens =
 
 optionFlags : List String
 optionFlags =
-  [ "build"
+  [ "app-path"
+  , "build"
   , "completion"
   , "completion-script"
   , "data-path"
@@ -113,6 +116,7 @@ optionFlags =
   , "switch"
   , "typecheck"
   , "update-db"
+  , "update"
   ] ++ optionNames
 
 queries : Env s -> List String
@@ -133,6 +137,7 @@ opts x "-p"               e = prefixOnlyIfNonEmpty x <$> collections e
 opts x "--cg"             e = prefixOnlyIfNonEmpty x <$> pure codegens
 
 -- actions
+opts x "app-path"         e = prefixOnlyIfNonEmpty x <$> installedApps e
 opts x "build"            e = prefixOnlyIfNonEmpty x <$> ipkgFiles
 opts x "install-deps"     e = prefixOnlyIfNonEmpty x <$> ipkgFiles
 opts x "query"            e = prefixOnlyIfNonEmpty x <$> pure (queries e)
@@ -142,7 +147,7 @@ opts x "modules"          e = prefixOnlyIfNonEmpty x <$> pure (packages e)
 opts x "check-db"         e = prefixOnlyIfNonEmpty x <$> collections e
 opts x "run"              e = prefixOnlyIfNonEmpty x <$> packagesOrIpkg e
 opts x "install"          e = prefixOnlyIfNonEmpty x <$> pure (packages e)
-opts x "install-app"      e = prefixOnlyIfNonEmpty x <$> pure (packages e)
+opts x "install-app"      e = prefixOnlyIfNonEmpty x <$> apps e
 opts x "remove"           e = prefixOnlyIfNonEmpty x <$> installedLibs e
 opts x "remove-app"       e = prefixOnlyIfNonEmpty x <$> installedApps e
 opts x "switch"           e =   prefixOnlyIfNonEmpty x . ("latest" ::)

@@ -262,17 +262,23 @@ usageInfo = """
       Update the pack data base by downloading the package collections
       from https://github.com/stefan-hoeck/idris2-pack-db.
 
+    update
+      Update the pack installation by downloading and building
+      the current main branch of
+      https://github.com/stefan-hoeck/idris2-pack.
+
+      Note: This uses the current package collection, which might be
+      too outdated to build the latest pack. If this fails, try using
+      the latest nightly.
+
     switch [collection name]
-      Switch to the given package collection. This will make all
-      binaries installed for this collection available in folder
-      `$HOME/.pack/bin`, which you can then include in your
-      `$PATH` variable.
+      Switch to the given package collection. This will adjust your
+      `$PACK_DIR/.pack/user/pack.toml` file to use the given package
+      collection. It will also install all auto libs and apps for the
+      given package collection.
 
       Note: It is also possible to switch to the latest package
-      collection by using "latest" as the collection name. This will
-      automatically update the data collection, select the latest
-      nightly, and change the `collection =` entry in the global
-      `pack.toml` file.
+      collection by using "latest" as the collection name.
 
     info
       Print general information about the current package

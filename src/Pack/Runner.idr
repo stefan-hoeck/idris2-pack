@@ -50,9 +50,7 @@ runCmd = do
     AppPath n          => env c >>= appPath n
     Info               => env c >>= printInfo
     New dir pty p      => idrisEnv c >>= new dir pty p
-    Switch db          => case db == MkDBName "latest" of
-      True  => do
-        env <- idrisEnv c
-        writeCollection env
-        install env []
-      False => idrisEnv c $> ()
+    Switch db          => do
+      env <- idrisEnv c
+      writeCollection env
+      install env []

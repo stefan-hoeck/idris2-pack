@@ -30,6 +30,22 @@ record QPkg where
   lib : ResolvedLib U
   app : Maybe (AppInfo lib.pkg)
 
+export %inline
+name : QPkg -> PkgName
+name = name . lib
+
+export %inline
+nameStr : QPkg -> String
+nameStr = value . name
+
+export %inline
+dependencies : QPkg -> List PkgName
+dependencies = dependencies . lib
+
+export
+isApp : QPkg -> Bool
+isApp (QP _ a) = isJust a
+
 export
 installedLib : QPkg -> Bool
 installedLib qp = case qp.lib.status of
@@ -72,14 +88,11 @@ query_ e q = mapMaybe q <$> resolveAll e
 shortDesc : QPkg -> Maybe String
 shortDesc q = q.lib.desc.desc.brief
 
-deps : QPkg -> List PkgName
-deps = dependencies . lib
-
 modules : QPkg -> List String
 modules = map (show . fst) . modules . desc . desc . lib
 
 prettyDeps : QPkg -> List String
-prettyDeps qp = case deps qp of
+prettyDeps qp = case dependencies qp of
   []     => ["Dependencies :"]
   h :: t => "Dependencies : \{h}" :: map (indent 15 . interpolate) t
 
@@ -126,27 +139,27 @@ details qp = case qp.lib.pkg of
 
 namePlusModules : String -> QPkg -> String
 namePlusModules n qp =
-  unlines $  nameStr qp.lib :: map (indent 2) (prettyModules n qp)
+  unlines $  nameStr qp :: map (indent 2) (prettyModules n qp)
 
 keep : QueryMode -> String -> QPkg -> Bool
-keep PkgName    q p = isInfixOf q (nameStr p.lib)
-keep Dependency q p = any ((q ==) . value) (dependencies p.lib)
+keep PkgName    q p = isInfixOf q (nameStr p)
+keep Dependency q p = any ((q ==) . value) (dependencies p)
 keep Module     q p = any (isInfixOf q . show . fst) (modules p.lib.desc.desc)
 
 resultString :  Env s -> (query : String) -> QueryMode -> QPkg -> String
 resultString e q Module qp = namePlusModules q qp
 resultString e _ _      qp = case e.queryType of
-  NameOnly => nameStr qp.lib
+  NameOnly => nameStr qp
 
   ShortDesc =>
-    let Just d := shortDesc qp | Nothing => nameStr qp.lib
-     in "\{name qp.lib}\n  \{d}\n"
+    let Just d := shortDesc qp | Nothing => nameStr qp
+     in "\{name qp}\n  \{d}\n"
 
   Dependencies =>
-    let ds@(_ :: _) := deps qp | [] => nameStr qp.lib
-     in unlines $  nameStr qp.lib :: map (indent 2 . interpolate) ds
+    let ds@(_ :: _) := dependencies qp | [] => nameStr qp
+     in unlines $  nameStr qp :: map (indent 2 . interpolate) ds
 
-  Details => unlines . (nameStr qp.lib ::) . map (indent 2) $ concat [
+  Details => unlines . (nameStr qp ::) . map (indent 2) $ concat [
       toList (("Brief        : " ++) <$> shortDesc qp)
     , details qp
     , libStatus qp
@@ -154,7 +167,7 @@ resultString e _ _      qp = case e.queryType of
     , prettyDeps qp
     ]
 
-  Ipkg => unlines $ nameStr qp.lib :: map (indent 2) (lines qp.lib.desc.cont)
+  Ipkg => unlines $ nameStr qp :: map (indent 2) (lines qp.lib.desc.cont)
 
 export
 query :  HasIO io
@@ -223,7 +236,7 @@ installedPkgs ns e = do
   all <- filter installedLib <$> resolveAll e
   pure (all, filter inPkgs all)
   where inPkgs : QPkg -> Bool
-        inPkgs qp = isNil ns || elem (name qp.lib) ns
+        inPkgs qp = isNil ns || elem (name qp) ns
 
 imports : QPkg -> String
 imports = unlines . map ("import " ++) . modules
@@ -256,7 +269,7 @@ fuzzyPkg q e allPkgs qp =
    in do
      mkDir dir
      finally (rmDir dir) $ inDir dir $ \d => do
-       putStrLn "\{name qp.lib}:\n"
+       putStrLn "\{name qp}:\n"
        write (MkF d "test.idr") (imports qp)
        write (MkF d "input") ":fs \{q}\n"
 
