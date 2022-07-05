@@ -9,7 +9,9 @@ brief   = "A package manager for Idris2 with curated package collections"
 langversion >= 0.5.1
 
 -- script to run before building
-prebuild = "bash version.sh"
+prebuild = "bash version.sh" >> src/Pack/Version.idr"
+
+postbuild = "git restore src/Pack/Version.idr"
 
 depends = base >= 0.5.1
         , contrib
