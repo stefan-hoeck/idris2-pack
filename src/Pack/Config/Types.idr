@@ -484,11 +484,6 @@ export
 resolvedExec : Env s -> ResolvedApp t -> File Abs
 resolvedExec e (RA p n d _ exe) = pkgExec e n p exe
 
--- ||| `_app` directory of an executable of the given name.
--- export
--- packageAppDir : Env s -> ResolvedPackage -> String -> Path Abs
--- packageAppDir e rp n = packageBinDir e rp <//> "\{n}_app"
-
 export
 libInstallPrefix : Env s -> ResolvedLib t -> List (String,String)
 libInstallPrefix e rl =

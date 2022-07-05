@@ -18,8 +18,8 @@ import Pack.Runner.Database
 
 public export
 data Report : Type where
-  Success : LibOrApp Safe -> Report
-  Failure : LibOrApp Safe -> List PkgName -> Report
+  Success : SafeLib -> Report
+  Failure : SafeLib -> List PkgName -> Report
   Error   : PkgName -> PackErr -> Report
 
 public export
@@ -36,8 +36,8 @@ failingDeps rs = nub $ rs >>=
 record RepLines where
   constructor MkRL
   errs      : SnocList (PkgName, PackErr)
-  failures  : SnocList (LibOrApp Safe, List PkgName)
-  successes : SnocList (LibOrApp Safe)
+  failures  : SnocList (SafeLib, List PkgName)
+  successes : SnocList (SafeLib)
 
 Semigroup RepLines where
   MkRL e1 f1 s1 <+> MkRL e2 f2 s2 = MkRL (e1<+>e2) (f1<+>f2) (s1<+>s2)
@@ -63,24 +63,24 @@ commit e (GitHub _ c _ _) = c
 commit e (Local dir ipkg pkgPath) = ""
 commit e (Core _) = e.db.idrisCommit
 
-succLine : Env s -> LibOrApp Safe -> String
-succLine e loa =
-  let desc := desc loa
-      pkg  := pkg loa
+succLine : Env s -> SafeLib -> String
+succLine e lib =
+  let desc := desc lib
+      pkg  := pkg lib
       brf  := fromMaybe "" desc.desc.brief
-      nm   := name loa
+      nm   := name lib
       api  := apiLink nm
       url  := url e pkg
       com  := commit e pkg
    in "| [\{nm}](\{url}) | \{brf} | \{ghCommitLink url com} | [docs](\{api}) |"
 
-failLine : Env s -> (LibOrApp Safe, List PkgName) -> String
-failLine e (loa,ps) =
-  let pkg  := pkg loa
+failLine : Env s -> (SafeLib, List PkgName) -> String
+failLine e (lib,ps) =
+  let pkg  := pkg lib
       url  := url e pkg
       com  := commit e pkg
       deps := fastConcat . intersperse ", " $ map interpolate ps
-      nm   := name loa
+      nm   := name lib
    in "| [\{nm}](\{url}) | \{deps} | \{ghCommitLink url com} |"
 
 errLine : (PkgName, PackErr) -> String

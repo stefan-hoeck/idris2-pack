@@ -19,7 +19,7 @@ pkgNames e = keys (allPackages e)
 
 query_ :  HasIO io
        => (e : Env s)
-       -> (q : ResolvedLib () -> Maybe b)
+       -> (q : ResolvedLib U -> Maybe b)
        -> EitherT PackErr io (List b)
 query_ e q = mapMaybe id <$> traverse run (pkgNames e)
   where run : PkgName -> EitherT PackErr io (Maybe b)
@@ -185,11 +185,11 @@ printInfo e = do
 installedPkgs :  HasIO io
               => List PkgName
               -> Env HasIdris
-              -> EitherT PackErr io (List $ ResolvedLib (), List $ ResolvedLib ())
+              -> EitherT PackErr io (List $ ResolvedLib U, List $ ResolvedLib U)
 installedPkgs ns e = do
   all <- mapMaybe id <$> traverse run (pkgNames e)
   pure (all, filter inPkgs all)
-  where run : PkgName -> EitherT PackErr io (Maybe $ ResolvedLib ())
+  where run : PkgName -> EitherT PackErr io (Maybe $ ResolvedLib U)
         run n = do
           rl <- resolveLib e n
           b  <- exists (pkgInstallDir e rl.name rl.pkg rl.desc)

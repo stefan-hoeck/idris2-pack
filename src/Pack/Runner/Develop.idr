@@ -18,7 +18,7 @@ runIdrisOn :  HasIO io
            -> EitherT PackErr io ()
 runIdrisOn c e d = do
   installDeps e d
-  idrisPkg e [] c d
+  libPkg e [] c d
 
 findIpkg :  HasIO io
          => WithIpkg
@@ -38,7 +38,7 @@ replOpts :  HasIO io
 replOpts e mf = do
   Just p <- findIpkg e.withIpkg mf | Nothing => pure ("",Nothing)
   info e "Found `.ipkg` file at \{p}"
-  d <- safeParseIpkgFile e p p
+  d <- parseLibIpkg e p p
   let srcDir := maybe "" (\s => "--source-dir \"\{s}\"") d.desc.sourcedir
       pkgs   := unwords $ map (("-p " ++) . value) (dependencies d)
   installDeps e d
@@ -69,21 +69,21 @@ idrisRepl file e = do
 ||| Build a local library given as an `.ipkg` file.
 export covering %inline
 build : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
-build f e = safeParseIpkgFile e f f >>= runIdrisOn "--build" e
+build f e = parseLibIpkg e f f >>= runIdrisOn "--build" e
 
 ||| Install dependencies of a local `.ipkg` file
 export covering
 buildDeps : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
 buildDeps f e = do
-  d <- safeParseIpkgFile e f f
+  d <- parseLibIpkg e f f
   installDeps e d
 
 ||| Typecheck a local library given as an `.ipkg` file.
 export covering %inline
 typecheck : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
-typecheck f e = safeParseIpkgFile e f f >>= runIdrisOn "--typecheck" e
+typecheck f e = parseLibIpkg e f f >>= runIdrisOn "--typecheck" e
 
-||| Install and run an executable given as a package name.
+||| Build and execute a local `.ipkg` file.
 export covering
 runIpkg :  HasIO io
         => File Abs
@@ -91,7 +91,7 @@ runIpkg :  HasIO io
         -> Env HasIdris
         -> EitherT PackErr io ()
 runIpkg p args e = do
-  d        <- safeParseIpkgFile e p p
+  d        <- parseLibIpkg e p p
   Just exe <- pure (execPath d) | Nothing => throwE (NoAppIpkg p)
   build p e
   sys "\{exe} \{unwords args}"

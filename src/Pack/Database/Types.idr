@@ -291,7 +291,7 @@ namespace ResolveApp
   usePackagePath = usePackagePath . pkg
 
 public export
-0 LibOrApp : Type -> Type
+0 LibOrApp : (PkgDesc -> Type) -> Type
 LibOrApp t = Either (ResolvedLib t) (ResolvedApp t)
 
 namespace LibOrApp

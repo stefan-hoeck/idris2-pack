@@ -225,8 +225,10 @@ All = MkDBName "all"
 
 ||| A tagged package desc. We use the tag mainly to make sure that
 ||| the package desc in question has been checked for safety issues.
+||| Since the tag is parameterized by a `PkgDesc`, we make sure
+||| we will not inadvertently use a tag for a different `PkgDesc`.
 public export
-record Desc t where
+record Desc (t : PkgDesc -> Type) where
   constructor MkDesc
   ||| The parsed package desc
   desc : PkgDesc
@@ -238,7 +240,11 @@ record Desc t where
   path : File Abs
 
   ||| Security tag. See `Pack.Runner.Database.check`
-  0 tag : t
+  0 tag : t desc
+
+public export
+0 U : PkgDesc -> Type
+U d = Unit
 
 ||| Lists the dependencies of a package.
 |||

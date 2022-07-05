@@ -23,7 +23,7 @@ updateRep p rep = modify (insert p rep) $> rep
 
 report :  HasIO io
        => PkgName
-       -> LibOrApp Safe
+       -> SafeLib
        -> EitherT PackErr io ()
        -> StateT ReportDB io Report
 report p rp act = do
@@ -33,21 +33,21 @@ report p rp act = do
 covering
 checkPkg :  HasIO io
          => Env HasIdris
-         -> (PkgType,PkgName)
+         -> PkgName
          -> StateT ReportDB io Report
-checkPkg e (t,p) = do
+checkPkg e p = do
   Nothing  <- lookup p <$> get | Just rep => pure rep
   info e "Checking \{p}"
-  Right loa <- toState $ resolveAny e t p >>= checkLOA e
+  Right rl <- toState $ resolveLib e p >>= safeLib e
     | Left err => warn e "Could not resolve \{p}" >>
                   updateRep p (Error p err)
-  [] <- failingDeps <$> traverse (checkPkg e) (map (Lib,) $ dependencies loa)
+  [] <- failingDeps <$> traverse (checkPkg e) (dependencies rl)
     | rs => warn e "\{p} had failing dependencies" >>
-            updateRep p (Failure loa rs)
-  Right () <- toState $ installAny e loa
+            updateRep p (Failure rl rs)
+  Right () <- toState $ installAny e $ Left rl
     | Left err => warn e "Failed to build \{p}" >>
                   updateRep p (Error p err)
-  updateRep p (Success loa)
+  updateRep p (Success rl)
 
 copyDocs :  HasIO io
          => File Abs
@@ -56,7 +56,7 @@ copyDocs :  HasIO io
          -> EitherT PackErr io ()
 copyDocs f e db = traverse_ go db
   where go : Report -> EitherT PackErr io ()
-        go (Success $ Left rl) = do
+        go (Success rl) = do
             installDocs e rl
             copyDir (pkgDocs e rl.name rl.pkg)
                     (f.parent /> "docs" <//> name rl)
@@ -65,10 +65,10 @@ copyDocs f e db = traverse_ go db
 export covering
 checkDB : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
 checkDB p e =
-  let ps := map (\c => (Lib, MkPkgName $ interpolate c)) corePkgs
-         ++ (Bin, "katla")
-         :: map (Lib,) (keys e.db.packages)
+  let ps := map (MkPkgName . interpolate) corePkgs
+         ++ keys e.db.packages
    in do
+     install e [(Bin, "katla")]
      rep <- liftIO $ execStateT empty
                    $ traverse_ (checkPkg e) ps
      write p (printReport e rep)

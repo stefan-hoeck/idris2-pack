@@ -19,23 +19,43 @@ import Pack.Database.Types
 ||| Right now, this is restricted to `.ipkg` files (and thus, resolved
 ||| libs and apps) with custom build and install hooks.
 export
-data Safe = IsSafe
-
-public export
-0 SafeApp : Type
-SafeApp = ResolvedApp Safe
+data Safe : PkgDesc -> Type where
+  IsSafe : Safe d
 
 public export
 0 SafeLib : Type
 SafeLib = ResolvedLib Safe
+
+||| Proof that an app is not pack, i.e. does not have an
+||| executable called pack. We want to make sure that
+||| users don't inadvertently overwrite the pack installation.
+export
+data NotPack : PkgDesc -> Type where
+  IsNotPack : Safe d -> NotPack d
+
+export
+0 toSafe : NotPack d -> Safe d
+toSafe (IsNotPack s) = s
+
+public export
+0 SafeApp : Type
+SafeApp = ResolvedApp NotPack
+
+public export
+0 SafePkg : Type
+SafePkg = Either SafeLib SafeApp
+
+export
+notPackIsSafe : Desc NotPack -> Desc Safe
+notPackIsSafe (MkDesc x y z s) = MkDesc x y z $ toSafe s
 
 ||| check if a package has special build- or install hooks
 ||| defined, and if yes, prompt the user
 ||| before continuing (unless `safetyPrompt` in the
 ||| `Config` is set set to `False`).
 export
-check : HasIO io => Env s -> Desc t -> EitherT PackErr io (Desc Safe)
-check c (MkDesc d s f _) =
+safe : HasIO io => Env s -> Desc t -> EitherT PackErr io (Desc Safe)
+safe c (MkDesc d s f _) =
   let unsafe := isJust
              $   d.prebuild
              <|> d.postbuild
@@ -48,22 +68,45 @@ check c (MkDesc d s f _) =
           "yes" <- trim <$> getLine | _ => throwE SafetyAbort
           pure $ MkDesc d s f IsSafe
 
+||| Like `safe` but verify also that the package does not
+||| produce an executable called "pack"
+export
+notPack : HasIO io => Env s -> Desc t -> EitherT PackErr io (Desc NotPack)
+notPack e d = do
+  MkDesc d s f p <- safe e d
+  case d.executable of
+    Just "pack" => throwE ManualInstallPackApp
+    _           => pure $ MkDesc d s f (IsNotPack p)
+
 ||| Parse an `.ipkg` file and check if it has custom build hooks.
 export
-safeParseIpkgFile :  HasIO io
-                  => Env s
-                  -> (file : File Abs)
-                  -> (loc : File Abs)
-                  -> EitherT PackErr io (Desc Safe)
-safeParseIpkgFile e p loc = parseIpkgFile p loc >>= check e
+parseLibIpkg :  HasIO io
+             => Env s
+             -> (file : File Abs)
+             -> (loc : File Abs)
+             -> EitherT PackErr io (Desc Safe)
+parseLibIpkg e p loc = parseIpkgFile p loc >>= safe e
 
 export
-checkLOA :  HasIO io
-         => Env s
-         -> LibOrApp ()
-         -> EitherT PackErr io (LibOrApp Safe)
-checkLOA e (Left x)  = Left . reTag x <$> check e x.desc
-checkLOA e (Right x) = Right . reTag x <$> check e x.desc
+parseAppIpkg :  HasIO io
+             => Env s
+             -> (file : File Abs)
+             -> (loc : File Abs)
+             -> EitherT PackErr io (Desc NotPack)
+parseAppIpkg e p loc = parseIpkgFile p loc >>= notPack e
+
+export
+safeLib : HasIO io => Env s -> ResolvedLib t -> EitherT PackErr io SafeLib
+safeLib e l  = reTag l <$> safe e l.desc
+
+export
+safeApp : HasIO io => Env s -> ResolvedApp t -> EitherT PackErr io SafeApp
+safeApp e a = reTag a <$> notPack e a.desc
+
+export
+checkLOA : HasIO io => Env s -> LibOrApp U -> EitherT PackErr io SafePkg
+checkLOA e (Left x)  = Left <$> safeLib e x
+checkLOA e (Right x) = Right <$> safeApp e x
 
 --------------------------------------------------------------------------------
 --          Utils
@@ -144,7 +187,7 @@ loadIpkg :  HasIO io
          => Env s
          -> PkgName
          -> Package
-         -> EitherT PackErr io (Desc ())
+         -> EitherT PackErr io (Desc U)
 loadIpkg e n (GitHub u c i _) =
   let cache  := ipkgCachePath e n c i
       tmpLoc := gitDir (tmpDir e) n c </> i
@@ -164,7 +207,7 @@ loadIpkg e n (Core c)         =
      parseIpkgFile cache tmpLoc
 
 export covering
-resolveLib : HasIO io => Env s -> PkgName -> EitherT PackErr io (ResolvedLib ())
+resolveLib : HasIO io => Env s -> PkgName -> EitherT PackErr io (ResolvedLib U)
 resolveLib e n = case lookup n (allPackages e) of
   Nothing => throwE (UnknownPkg n)
   Just p  => do
@@ -173,22 +216,19 @@ resolveLib e n = case lookup n (allPackages e) of
     pure $ RL p n d lib
 
 export covering
-resolveApp : HasIO io => Env s -> PkgName -> EitherT PackErr io (ResolvedApp ())
-resolveApp e "pack" = throwE ManualInstallPackApp
-resolveApp e n = case lookup n (allPackages e) of
-  Nothing => throwE (UnknownPkg n)
-  Just p  => do
-    d        <- loadIpkg e n p
-    Just exe <- pure (exec d) | Nothing => throwE (NoApp n)
-    app      <- appStatus e n p d exe
-    pure $ RA p n d app exe
+resolveApp : HasIO io => Env s -> PkgName -> EitherT PackErr io (ResolvedApp U)
+resolveApp e n = do
+  RL p n d _ <- resolveLib e n
+  case exec d of
+    Nothing  => throwE (NoApp n)
+    Just exe => (\s => RA p n d s exe) <$> appStatus e n p d exe
 
 export covering
 resolveAny :  HasIO io
            => Env s
            -> PkgType
            -> PkgName
-           -> EitherT PackErr io (LibOrApp ())
+           -> EitherT PackErr io (LibOrApp U)
 resolveAny e Lib n = Left  <$> resolveLib e n
 resolveAny e Bin n = Right <$> resolveApp e n
 
@@ -220,7 +260,7 @@ export covering
 plan :  HasIO io
      => Env s
      -> List (PkgType, PkgName)
-     -> EitherT PackErr io (List $ LibOrApp Safe)
+     -> EitherT PackErr io (List SafePkg)
 plan e ps =
   let ps' := Right <$> (Lib, "prelude") :: (Lib, "base") :: ps
    in do
@@ -229,9 +269,9 @@ plan e ps =
      traverse (checkLOA e) loas
   where covering
         go :  (planned  : SortedMap (PkgType, PkgName) ())
-           -> (resolved : SnocList $ LibOrApp ())
-           -> List (Either (LibOrApp ()) (PkgType,PkgName))
-           -> EitherT PackErr io (List $ LibOrApp ())
+           -> (resolved : SnocList $ LibOrApp U)
+           -> List (Either (LibOrApp U) (PkgType,PkgName))
+           -> EitherT PackErr io (List $ LibOrApp U)
         go ps sx []             = pure (sx <>> [])
 
         -- the lib or app has already been resolved and

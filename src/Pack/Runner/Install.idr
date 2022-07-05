@@ -63,15 +63,16 @@ installCmd : (withSrc : Bool) -> String
 installCmd True  = "--install-with-src"
 installCmd False = "--install"
 
-||| Use the installed Idris to run an operation on an `.ipkg` file.
+||| Use the installed Idris to run an operation on
+||| a library `.ipkg` file.
 export
-idrisPkg :  HasIO io
-         => Env HasIdris
-         -> (env  : List (String,String))
-         -> (cmd  : String)
-         -> (desc : Desc Safe)
-         -> EitherT PackErr io ()
-idrisPkg e env cmd desc =
+libPkg :  HasIO io
+       => Env HasIdris
+       -> (env  : List (String,String))
+       -> (cmd  : String)
+       -> (desc : Desc Safe)
+       -> EitherT PackErr io ()
+libPkg e env cmd desc =
   let exe := idrisWithCG e
       pre := env ++ buildEnv e
       s   := "\{exe} \{cmd} \{desc.path}"
@@ -113,8 +114,8 @@ installImpl e rl =
       cmd := installCmd e.withSrc
    in do
      info e "Installing library: \{name rl}"
-     idrisPkg e pre cmd rl.desc
-     when e.withDocs $ idrisPkg e pre "--mkdoc" rl.desc
+     libPkg e pre cmd rl.desc
+     when e.withDocs $ libPkg e pre "--mkdoc" rl.desc
 
 installLib :  HasIO io => Env HasIdris -> SafeLib -> EitherT PackErr io ()
 installLib e rl = case rl.status of
@@ -158,11 +159,11 @@ installApp e ra = case ra.status of
           GitHub u c ipkg b => do
             let cache   := ipkgCachePath e ra.name c ipkg
             copyFile cache ipkgAbs
-            idrisPkg e [] "--build" ra.desc
+            libPkg e [] "--build" (notPackIsSafe ra.desc)
             copyApp e ra
             appLink e ra.exec ra.name (usePackagePath ra)
           Local _ _ b    => do
-            idrisPkg e [] "--build" ra.desc
+            libPkg e [] "--build" (notPackIsSafe ra.desc)
             copyApp e ra
             appLink e ra.exec ra.name (usePackagePath ra)
             write (appTimestamp e ra.name ra.pkg) ""
@@ -171,7 +172,7 @@ installApp e ra = case ra.status of
 export covering
 installAny :  HasIO io
            => Env HasIdris
-           -> LibOrApp Safe
+           -> SafePkg
            -> EitherT PackErr io ()
 installAny e (Left sli)  = installLib e sli
 installAny e (Right sla) = installApp e sla
@@ -216,11 +217,11 @@ katla e = if e.withDocs && e.useKatla then [(Bin, "katla")] else []
 autoPairs : Env e -> List (PkgType, PkgName)
 autoPairs e = map (Lib,) e.autoLibs ++ map (Bin,) e.autoApps
 
-libInfo : List (LibOrApp t) -> List String
+libInfo : List SafePkg -> List String
 libInfo = mapMaybe $ \case Left rl => Just "\{rl.name}"
                            Right _ => Nothing
 
-appInfo : List (LibOrApp t) -> List String
+appInfo : List SafePkg -> List String
 appInfo = mapMaybe $ \case Right ra => Just "\{ra.name}"
                            Left _   => Nothing
 
@@ -263,10 +264,12 @@ update e =
           package collection.
           """
         gitClone packRepo dir
-        desc <- safeParseIpkgFile e ipkg ipkg
+
+        -- we're cheating here...
+        desc <- parseLibIpkg e ipkg ipkg
         installDeps e desc
         inDir dir $ \_ => do
-          idrisPkg e [] "--build" desc
+          libPkg e [] "--build" desc
           mkDir bin
           sys "cp -r build/exec/* \{bin}"
 
