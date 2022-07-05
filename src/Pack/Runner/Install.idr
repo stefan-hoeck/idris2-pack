@@ -271,10 +271,16 @@ update e =
         installDeps e desc
         inDir dir $ \_ => do
           vers <- MkCommit <$> sysRun "git rev-parse HEAD"
-          libPkg e [] "--build" desc
-          mkDir (packInstallDir e vers)
-          sys "cp -r build/exec/* \{packInstallDir e vers}"
-          link (packInstallDir e vers /> "pack") (packExec e)
+          let installDir    := packInstallDir e vers
+              installedExec := installDir /> "pack"
+          ex <- exists installedExec
+          case ex of
+            True  => link installedExec (packExec e)
+            False => do
+              libPkg e [] "--build" desc
+              mkDir installDir
+              sys "cp -r build/exec/* \{installDir}"
+              link installedExec (packExec e)
 
 --------------------------------------------------------------------------------
 --          Removing Libs
