@@ -111,6 +111,8 @@ mkdir -p "$PACK_DIR/bin"
 cp -r build/exec/* "$PACK_DIR/bin"
 popd
 
+pushd "$PACK_DIR/bin"
+
 cat <<EOF >>idris2
 #!/bin/sh
 
