@@ -8,6 +8,9 @@ brief   = "A package manager for Idris2 with curated package collections"
 
 langversion >= 0.5.1
 
+-- script to run before building
+prebuild = "bash version.sh"
+
 depends = base >= 0.5.1
         , contrib
         , idris2
@@ -45,6 +48,3 @@ main       = Main
 executable = pack
 
 sourcedir  = "src"
-
--- script to run before building
-prebuild = "./version.sh"
