@@ -133,6 +133,7 @@ cmd _   []                         = Right PrintHelp
 cmd _   ["help"]                   = Right PrintHelp
 cmd _   ["info"]                   = Right Info
 cmd _   ["update-db"]              = Right UpdateDB
+cmd _   ["update"]                 = Right Update
 cmd _   ["fuzzy", s]               = Right $ Fuzzy [] s
 cmd _   ["fuzzy", p, s]            = Right $ Fuzzy (forget $ map MkPkgName $ split (',' ==) p) s
 cmd _   ["query", s]               = Right $ Query PkgName s
