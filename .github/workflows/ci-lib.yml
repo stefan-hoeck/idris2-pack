@@ -81,6 +81,10 @@ jobs:
         with:
           name: dependencies-for-latest
           path: /root/.idris2/
+      - name: Install git
+        run: |
+          apt-get update
+          apt-get install --yes git
       - name: Build lib
         run: idris2 --build pack.ipkg
       - name: Build admin

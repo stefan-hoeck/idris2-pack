@@ -8,6 +8,11 @@ brief   = "A package manager for Idris2 with curated package collections"
 
 langversion >= 0.5.1
 
+-- script to run before building
+prebuild = "bash version.sh"
+
+postbuild = "bash restore.sh"
+
 depends = base >= 0.5.1
         , contrib
         , idris2
@@ -37,6 +42,8 @@ modules = Pack.CmdLn.Completion
         , Pack.Runner.Develop
         , Pack.Runner.Install
         , Pack.Runner.Query
+
+        , Pack.Version
 
 main       = Main
 

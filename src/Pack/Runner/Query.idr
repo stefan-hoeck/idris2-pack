@@ -11,6 +11,7 @@ import Pack.Core
 import Pack.Database.Types
 import Pack.Runner.Database
 import Pack.Runner.Install
+import Pack.Version
 
 %default total
 
@@ -218,6 +219,7 @@ infoString e ps = """
   Idris2 Version      : \{e.db.idrisVersion}
   Idris2 Commit       : \{e.db.idrisCommit}
   Scheme Executable   : \{e.scheme}
+  Pack Commit         : \{Version.version}
   """ ++ apps ps ++ libs ps
 
 export
