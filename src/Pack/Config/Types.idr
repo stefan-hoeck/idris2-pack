@@ -332,6 +332,10 @@ export
 packBinDir : Config s -> Path Abs
 packBinDir c = c.packDir /> "bin"
 
+export
+packInstallDir : Config s -> Commit -> Path Abs
+packInstallDir c com = c.packDir </> "install/pack" </> cast com
+
 ||| Executable for an application
 export
 pathExec : Config s -> Body -> File Abs

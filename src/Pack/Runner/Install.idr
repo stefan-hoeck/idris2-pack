@@ -270,9 +270,11 @@ update e =
         desc <- parseLibIpkg e ipkg ipkg
         installDeps e desc
         inDir dir $ \_ => do
+          vers <- MkCommit <$> sysRun "git rev-parse HEAD"
           libPkg e [] "--build" desc
-          mkDir bin
-          sys "cp -r build/exec/* \{bin}"
+          mkDir (packInstallDir e vers)
+          sys "cp -r build/exec/* \{packInstallDir e vers}"
+          link (packInstallDir e vers /> "pack") (packExec e)
 
 --------------------------------------------------------------------------------
 --          Removing Libs

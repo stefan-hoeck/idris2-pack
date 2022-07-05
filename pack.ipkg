@@ -38,8 +38,13 @@ modules = Pack.CmdLn.Completion
         , Pack.Runner.Install
         , Pack.Runner.Query
 
+        , Pack.Version
+
 main       = Main
 
 executable = pack
 
 sourcedir  = "src"
+
+-- script to run before building
+prebuild = "./version.sh"
