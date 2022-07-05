@@ -2,6 +2,7 @@ module Pack.Admin.Runner.Check
 
 import Control.Monad.State
 import Data.SortedMap
+import Idris.Package.Types
 import Pack.Admin.Report.Types
 import Pack.Config.Env
 import Pack.Config.Types
@@ -30,6 +31,9 @@ report p rp act = do
   Right _ <- toState act | Left _ => updateRep p (Failure rp [])
   updateRep p (Success rp)
 
+missing : ResolvedLib t -> ResolvedLib t
+missing = {status := Missing}
+
 covering
 checkPkg :  HasIO io
          => Env HasIdris
@@ -38,7 +42,7 @@ checkPkg :  HasIO io
 checkPkg e p = do
   Nothing  <- lookup p <$> get | Just rep => pure rep
   info e "Checking \{p}"
-  Right rl <- toState $ resolveLib e p >>= safeLib e
+  Right rl <- toState $ resolveLib e p >>= safeLib e . missing
     | Left err => warn e "Could not resolve \{p}" >>
                   updateRep p (Error p err)
   [] <- failingDeps <$> traverse (checkPkg e) (dependencies rl)
