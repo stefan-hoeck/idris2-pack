@@ -109,7 +109,7 @@ checkLOA e (Left x)  = Left <$> safeLib e x
 checkLOA e (Right x) = Right <$> safeApp e x
 
 --------------------------------------------------------------------------------
---          Utils
+--          Resolving Packages
 --------------------------------------------------------------------------------
 
 export
@@ -161,7 +161,7 @@ libStatus e n p d = do
           dir := localSrcDir d
        in checkOutdated ts dir Outdated Installed
 
--- checks the status of an application
+export
 appStatus :  HasIO io
           => Env e
           -> PkgName
@@ -238,6 +238,10 @@ appPath "idris2" e = putStrLn "\{idrisExec e}"
 appPath n e = do
   ra <- resolveApp e n
   putStrLn . interpolate $ pkgExec e ra.name ra.pkg ra.exec
+
+--------------------------------------------------------------------------------
+--         Installation Plan
+--------------------------------------------------------------------------------
 
 needsInstalling' : PkgStatus p -> Bool
 needsInstalling' Missing   = True

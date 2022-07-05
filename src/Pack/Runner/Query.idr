@@ -14,38 +14,98 @@ import Pack.Runner.Install
 
 %default total
 
+--------------------------------------------------------------------------------
+--         QPkg
+--------------------------------------------------------------------------------
+
+public export
+record AppInfo (p : Package) where
+  constructor AI
+  exec   : Body
+  status : PkgStatus p
+
+public export
+record QPkg where
+  constructor QP
+  lib : ResolvedLib U
+  app : Maybe (AppInfo lib.pkg)
+
+export
+installedLib : QPkg -> Bool
+installedLib qp = case qp.lib.status of
+  Installed => True
+  Outdated  => True
+  Missing   => False
+
+export
+installedApp : QPkg -> Bool
+installedApp qp = case map status qp.app of
+  Just Installed => True
+  Just Outdated  => True
+  Just Missing   => False
+  Nothing        => False
+
+resolve : HasIO io => Env s -> PkgName -> EitherT PackErr io QPkg
+resolve e n = do
+  lib <- resolveLib e n
+  Just exe <- pure (exec lib.desc) | Nothing => pure (QP lib Nothing)
+  st       <- appStatus e n lib.pkg lib.desc exe
+  pure $ QP lib (Just $ AI exe st)
+
 pkgNames : Env s -> List PkgName
 pkgNames e = keys (allPackages e)
 
+export
+resolveAll : HasIO io => Env s -> EitherT PackErr io (List QPkg)
+resolveAll e = traverse (resolve e) $ pkgNames e
+
+--------------------------------------------------------------------------------
+--         Queries
+--------------------------------------------------------------------------------
+
 query_ :  HasIO io
        => (e : Env s)
-       -> (q : ResolvedLib U -> Maybe b)
+       -> (q : QPkg -> Maybe b)
        -> EitherT PackErr io (List b)
-query_ e q = mapMaybe id <$> traverse run (pkgNames e)
-  where run : PkgName -> EitherT PackErr io (Maybe b)
-        run n = q <$> resolveLib e n
+query_ e q = mapMaybe q <$> resolveAll e
 
-shortDesc : ResolvedLib t -> Maybe String
-shortDesc = brief . desc . desc
+shortDesc : QPkg -> Maybe String
+shortDesc q = q.lib.desc.desc.brief
 
-deps : ResolvedLib t -> List PkgName
-deps = dependencies
+deps : QPkg -> List PkgName
+deps = dependencies . lib
 
-modules : ResolvedLib t -> List String
-modules = map (show . fst) . modules . desc . desc
+modules : QPkg -> List String
+modules = map (show . fst) . modules . desc . desc . lib
 
-prettyDeps : ResolvedLib t -> List String
-prettyDeps rl = case deps rl of
+prettyDeps : QPkg -> List String
+prettyDeps qp = case deps qp of
   []     => ["Dependencies :"]
   h :: t => "Dependencies : \{h}" :: map (indent 15 . interpolate) t
 
-prettyModules : String -> ResolvedLib t -> List String
-prettyModules s rl = case filter (isInfixOf s) (modules rl) of
+prettyModules : String -> QPkg -> List String
+prettyModules s qp = case filter (isInfixOf s) (modules qp) of
   []     => ["Modules :"]
   h :: t => "Modules : \{h}" :: map (indent 10) t
 
-details : ResolvedLib t -> List String
-details rl = case rl.pkg of
+status : PkgStatus p -> String
+status Missing   = "not installed"
+status Installed = "installed"
+status Outdated  = "outdated"
+
+libStatus : QPkg -> List String
+libStatus q = [ "Library      : \{status q.lib.status}" ]
+
+appStatus : QPkg -> List String
+appStatus qp = case qp.app of
+  Nothing          => []
+  Just (AI exe st) =>
+    [ "Executable   : \{exe}"
+    , "App          : \{status st}"
+    ]
+
+details : QPkg -> List String
+details qp = case qp.lib.pkg of
   GitHub url commit ipkg _ => [
     "Type         : GitHub project"
   , "URL          : \{url}"
@@ -64,39 +124,37 @@ details rl = case rl.pkg of
     "Type         : Idris core package"
   ]
 
-namePlusModules : String -> ResolvedLib t -> String
-namePlusModules n rl =
-  unlines $  nameStr rl :: map (indent 2) (prettyModules n rl)
+namePlusModules : String -> QPkg -> String
+namePlusModules n qp =
+  unlines $  nameStr qp.lib :: map (indent 2) (prettyModules n qp)
 
-keep : QueryMode -> String -> ResolvedLib t -> Bool
-keep PkgName    q p = isInfixOf q (nameStr p)
-keep Dependency q p = any ((q ==) . value) (dependencies p)
-keep Module     q p = any (isInfixOf q . show . fst) (modules p.desc.desc)
+keep : QueryMode -> String -> QPkg -> Bool
+keep PkgName    q p = isInfixOf q (nameStr p.lib)
+keep Dependency q p = any ((q ==) . value) (dependencies p.lib)
+keep Module     q p = any (isInfixOf q . show . fst) (modules p.lib.desc.desc)
 
-resultString :  Env s
-             -> (query : String)
-             -> QueryMode
-             -> ResolvedLib t
-             -> String
-resultString e q Module rl = namePlusModules q rl
-resultString e _ _      rl = case e.queryType of
-  NameOnly => nameStr rl
+resultString :  Env s -> (query : String) -> QueryMode -> QPkg -> String
+resultString e q Module qp = namePlusModules q qp
+resultString e _ _      qp = case e.queryType of
+  NameOnly => nameStr qp.lib
 
   ShortDesc =>
-    let Just d := shortDesc rl | Nothing => nameStr rl
-     in "\{name rl}\n  \{d}\n"
+    let Just d := shortDesc qp | Nothing => nameStr qp.lib
+     in "\{name qp.lib}\n  \{d}\n"
 
   Dependencies =>
-    let ds@(_ :: _) := deps rl | [] => nameStr rl
-     in unlines $  nameStr rl :: map (indent 2 . interpolate) ds
+    let ds@(_ :: _) := deps qp | [] => nameStr qp.lib
+     in unlines $  nameStr qp.lib :: map (indent 2 . interpolate) ds
 
-  Details => unlines . (nameStr rl ::) . map (indent 2) $ concat [
-      toList (("Brief        : " ++) <$> shortDesc rl)
-    , details rl
-    , prettyDeps rl
+  Details => unlines . (nameStr qp.lib ::) . map (indent 2) $ concat [
+      toList (("Brief        : " ++) <$> shortDesc qp)
+    , details qp
+    , libStatus qp
+    , appStatus qp
+    , prettyDeps qp
     ]
 
-  Ipkg => unlines $ nameStr rl :: map (indent 2) (lines rl.desc.cont)
+  Ipkg => unlines $ nameStr qp.lib :: map (indent 2) (lines qp.lib.desc.cont)
 
 export
 query :  HasIO io
@@ -112,58 +170,35 @@ query m n e = do
 --          General Info
 --------------------------------------------------------------------------------
 
-public export
-data InstallType = App | AppAndLib | Lib
+instLib : QPkg -> Maybe String
+instLib qp = case qp.lib.status of
+  Installed => Just "\{qp.lib.name}"
+  Outdated  => Just "\{qp.lib.name} (outdated)"
+  Missing   => Nothing
 
-public export
-isApp : InstallType -> Bool
-isApp App       = True
-isApp AppAndLib = True
-isApp Lib       = False
+instApp : QPkg -> Maybe String
+instApp (QP lib $ Just (AI _ st))  = case st of
+  Installed => Just "\{lib.name}"
+  Outdated  => Just "\{lib.name} (outdated)"
+  Missing   => Nothing
+instApp _ = Nothing
 
-public export
-isLib : InstallType -> Bool
-isLib App       = False
-isLib AppAndLib = True
-isLib Lib       = True
-
-public export
-record PkgInfo where
-  constructor MkPkgInfo
-  name    : PkgName
-  type    : InstallType
-  details : Package
-
-toInfo : HasIO io => Env e -> (PkgName,Package) -> io (Maybe PkgInfo)
-toInfo e (n,p) = do
-  isLib <- exists (pkgPathDir e n p)
-  isApp <- exists (pkgBinDir e n p)
-  pure $ case (isLib,isApp) of
-    (True,True)   => Just $ MkPkgInfo n AppAndLib p
-    (False,True)  => Just $ MkPkgInfo n App p
-    (True,False)  => Just $ MkPkgInfo n Lib p
-    (False,False) => Nothing
-
-export
-installed : HasIO io => Env s -> io (List PkgInfo)
-installed e = mapMaybeM (toInfo e) (SortedMap.toList $ allPackages e)
-
-apps : List PkgInfo -> String
-apps ps = case filter (isApp . type) ps of
+apps : List QPkg -> String
+apps ps = case mapMaybe instApp ps of
   []      => ""
   x :: xs => unlines $
-    "\n\nInstalled Apps      : \{x.name}" ::
-    map (indent 22 . value . name) xs
+    "\n\nInstalled Apps      : \{x}" ::
+    map (indent 22) xs
 
-libs : List PkgInfo -> String
-libs ps = case filter (isLib . type) ps of
+libs : List QPkg -> String
+libs ps = case mapMaybe instLib ps of
   []      => ""
   x :: xs => unlines $
-    "\nInstalled Libraries : \{x.name}" ::
-    map (indent 22 . value . name) xs
+    "\nInstalled Libraries : \{x}" ::
+    map (indent 22) xs
 
 export
-infoString : Env s -> List PkgInfo -> String
+infoString : Env s -> List QPkg -> String
 infoString e ps = """
   Package Collection  : \{e.collection}
   Idris2 URL          : \{e.db.idrisURL}
@@ -173,10 +208,8 @@ infoString e ps = """
   """ ++ apps ps ++ libs ps
 
 export
-printInfo : HasIO io => Env s -> io ()
-printInfo e = do
-  ps <- installed e
-  putStrLn $ infoString e ps
+printInfo : HasIO io => Env s -> EitherT PackErr io ()
+printInfo e = resolveAll e >>= putStrLn . infoString e
 
 --------------------------------------------------------------------------------
 --          Fuzzy Search
@@ -185,20 +218,14 @@ printInfo e = do
 installedPkgs :  HasIO io
               => List PkgName
               -> Env HasIdris
-              -> EitherT PackErr io (List $ ResolvedLib U, List $ ResolvedLib U)
+              -> EitherT PackErr io (List QPkg, List QPkg)
 installedPkgs ns e = do
-  all <- mapMaybe id <$> traverse run (pkgNames e)
+  all <- filter installedLib <$> resolveAll e
   pure (all, filter inPkgs all)
-  where run : PkgName -> EitherT PackErr io (Maybe $ ResolvedLib U)
-        run n = do
-          rl <- resolveLib e n
-          b  <- exists (pkgInstallDir e rl.name rl.pkg rl.desc)
-          pure (toMaybe b rl)
+  where inPkgs : QPkg -> Bool
+        inPkgs qp = isNil ns || elem (name qp.lib) ns
 
-        inPkgs : ResolvedLib t -> Bool
-        inPkgs rl = isNil ns || elem (name rl) ns
-
-imports : ResolvedLib t -> String
+imports : QPkg -> String
 imports = unlines . map ("import " ++) . modules
 
 pre : String
@@ -221,19 +248,19 @@ fuzzyTrim = unlines
 fuzzyPkg :  HasIO io
          => String
          -> Env HasIdris
-         -> (allPkgs   : List $ ResolvedLib t)
-         -> ResolvedLib t
+         -> (allPkgs   : List QPkg)
+         -> QPkg
          -> EitherT PackErr io ()
-fuzzyPkg q e allPkgs rl =
+fuzzyPkg q e allPkgs qp =
   let dir = tmpDir e
    in do
      mkDir dir
      finally (rmDir dir) $ inDir dir $ \d => do
-       putStrLn "\{name rl}:\n"
-       write (MkF d "test.idr") (imports rl)
+       putStrLn "\{name qp.lib}:\n"
+       write (MkF d "test.idr") (imports qp)
        write (MkF d "input") ":fs \{q}\n"
 
-       let (cmd,env) := idrisWithPkgs e allPkgs
+       let (cmd,env) := idrisWithPkgs e (map lib allPkgs)
 
        str <- sysRunWithEnv "\{cmd} --quiet --no-prelude --no-banner test.idr < input" env
        case noOut == str of

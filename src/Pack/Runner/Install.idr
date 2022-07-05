@@ -75,9 +75,9 @@ libPkg :  HasIO io
 libPkg e env cmd desc =
   let exe := idrisWithCG e
       pre := env ++ buildEnv e
-      s   := "\{exe} \{cmd} \{desc.path}"
+      s   := "\{exe} \{cmd} \{desc.path.file}"
    in debug e "About to run: \{s}" >>
-      sysWithEnv s pre
+      inDir (desc.path.parent) (\_ => sysWithEnv s pre)
 
 --------------------------------------------------------------------------------
 --          Installing Idris
@@ -117,6 +117,7 @@ installImpl e rl =
      libPkg e pre cmd rl.desc
      when e.withDocs $ libPkg e pre "--mkdoc" rl.desc
 
+export
 installLib :  HasIO io => Env HasIdris -> SafeLib -> EitherT PackErr io ()
 installLib e rl = case rl.status of
   Installed => pure ()

@@ -51,12 +51,12 @@ idrisRepl :  HasIO io
           => (file : Maybe $ File Abs)
           -> Env HasIdris
           -> EitherT PackErr io ()
-idrisRepl file e = do
-  let args := maybe "" interpolate $ file
+idrisRepl mf e = do
+  let args := maybe "" (interpolate . file) $ mf
       pth  := packagePath e
       exe  := idrisWithCG e
 
-  (opts, mp) <- replOpts e file
+  (opts, mp) <- replOpts e mf
 
   cmd <- case e.rlwrap of
     True  => pure "rlwrap \{exe} \{opts} \{args}"
