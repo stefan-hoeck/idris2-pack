@@ -11,7 +11,7 @@ langversion >= 0.5.1
 -- script to run before building
 prebuild = "bash version.sh"
 
-postbuild = "git restore src/Pack/Version.idr"
+postbuild = "bash restore.sh"
 
 depends = base >= 0.5.1
         , contrib
