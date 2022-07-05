@@ -211,13 +211,13 @@ parseIpkg file str =
 
 export covering
 parseIpkgFile :  HasIO io
-              => (file : File Abs)
-              -> (PkgDesc -> a)
-              -> EitherT PackErr io (String, a)
-parseIpkgFile file f = do
+              => (file   : File Abs)
+              -> (tmpLoc : File Abs)
+              -> EitherT PackErr io (Desc U)
+parseIpkgFile file loc = do
   str  <- read file
   desc <- liftEither (parseIpkg file str)
-  pure (str, f desc)
+  pure (MkDesc desc str loc ())
 
 --------------------------------------------------------------------------------
 --          Extracting Infos
@@ -226,25 +226,29 @@ parseIpkgFile file f = do
 ||| Extract the absolute path to the source directory
 ||| from a package description plus its file location.
 export
-sourcePath : (file : File Abs) -> PkgDesc -> Path Abs
-sourcePath f d = maybe f.parent (toAbsPath f.parent . fromString) d.sourcedir
+sourcePath : Desc t -> Path Abs
+sourcePath d = maybe d.path.parent
+                     (toAbsPath d.path.parent . fromString)
+                     d.desc.sourcedir
 
 ||| Extract the absolute path to the build directory
 ||| from a package description plus its file location.
 export
-buildPath : (file : File Abs) -> PkgDesc -> Path Abs
-buildPath f d =
-  maybe (f.parent /> "build") (toAbsPath f.parent . fromString) d.builddir
+buildPath : Desc t -> Path Abs
+buildPath d =
+  maybe (d.path.parent /> "build")
+        (toAbsPath d.path.parent . fromString)
+        d.desc.builddir
 
 export
-exec : PkgDesc -> Maybe Body
-exec d = d.executable >>= parse
+exec : Desc t -> Maybe Body
+exec d = d.desc.executable >>= parse
 
 ||| Extract the absolute path to an application's
 ||| executable in the build directory.
 export
-execPath : (file : File Abs) -> PkgDesc -> (Maybe $ File Abs)
-execPath f d = (MkF $ buildPath f d /> "exec") <$> exec d
+execPath : Desc t -> (Maybe $ File Abs)
+execPath d = (MkF $ buildPath d /> "exec") <$> exec d
 
 --------------------------------------------------------------------------------
 --          Docs
@@ -263,14 +267,14 @@ replaceDot '.' = '/'
 replaceDot c   = c
 
 export
-sourceForDoc : (ipkg : File Abs) -> PkgDesc -> File Abs -> Maybe DocSources
-sourceForDoc ipkg d f = do
+sourceForDoc : Desc t -> File Abs -> Maybe DocSources
+sourceForDoc d f = do
   MkBody cs _ <- fileStem f
   rf          <- RelFile.parse . pack $ map replaceDot cs
   Just $ MkDS {
     htmlDoc = f
-  , srcFile = (sourcePath ipkg d </> rf) <.> "idr"
-  , ttmFile = (buildPath ipkg d </> "ttc" </> rf) <.> "ttm"
+  , srcFile = (sourcePath d </> rf) <.> "idr"
+  , ttmFile = (buildPath d </> "ttc" </> rf) <.> "ttm"
   , srcHtml = MkF (f.parent) (MkBody cs %search <.> "src.html")
   }
 

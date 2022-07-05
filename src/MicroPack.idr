@@ -24,7 +24,6 @@ microInit dir scheme db = MkConfig {
     packDir       = dir
   , collection    = db
   , scheme        = fromString scheme
-  , bootstrap     = True
   , safetyPrompt  = True
   , withSrc       = True
   , withDocs      = False
@@ -32,7 +31,7 @@ microInit dir scheme db = MkConfig {
   , withIpkg      = None
   , rlwrap        = False
   , autoLibs      = []
-  , autoApps      = ["pack"]
+  , autoApps      = []
   , custom        = empty
   , queryType     = NameOnly
   , logLevel      = Info
@@ -58,7 +57,4 @@ main = run $ do
   -- initialize `$HOME/.pack/user/pack.toml`
   write (MkF (dir /> "user") packToml) (initToml scheme db)
 
-  finally (rmDir $ tmpDir conf) $ do
-    e <- idrisEnv conf
-    install e [(Bin, "pack")]
-    links e
+  finally (rmDir $ tmpDir conf) $ idrisEnv conf >>= update

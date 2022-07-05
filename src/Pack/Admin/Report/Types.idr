@@ -8,6 +8,7 @@ import Idris.Package.Types
 import Pack.Core.Types
 import Pack.Config.Types
 import Pack.Database.Types
+import Pack.Runner.Database
 
 %default total
 
@@ -17,8 +18,8 @@ import Pack.Database.Types
 
 public export
 data Report : Type where
-  Success : ResolvedPackage -> Report
-  Failure : ResolvedPackage -> List PkgName -> Report
+  Success : SafeLib -> Report
+  Failure : SafeLib -> List PkgName -> Report
   Error   : PkgName -> PackErr -> Report
 
 public export
@@ -35,8 +36,8 @@ failingDeps rs = nub $ rs >>=
 record RepLines where
   constructor MkRL
   errs      : SnocList (PkgName, PackErr)
-  failures  : SnocList (ResolvedPackage, List PkgName)
-  successes : SnocList ResolvedPackage
+  failures  : SnocList (SafeLib, List PkgName)
+  successes : SnocList (SafeLib)
 
 Semigroup RepLines where
   MkRL e1 f1 s1 <+> MkRL e2 f2 s2 = MkRL (e1<+>e2) (f1<+>f2) (s1<+>s2)
@@ -52,26 +53,43 @@ ghCommitLink u c@(MkCommit commit)  =
 apiLink : PkgName -> String
 apiLink p = "https://stefan-hoeck.github.io/idris2-pack-docs/docs/\{p}/index.html"
 
-succLine : ResolvedPackage -> Maybe String
-succLine (RGitHub n u c _ _ d) =
-  let desc = fromMaybe "" d.brief
-      api  = apiLink n
-   in Just "| [\{n}](\{u}) | \{desc} | \{ghCommitLink u c} | [docs](\{api}) |"
-succLine _ = Nothing
+url : Env s -> Package -> URL
+url e (GitHub u _ _ _) = u
+url e (Local dir ipkg pkgPath) = MkURL "\{dir}"
+url e (Core _) = e.db.idrisURL
 
-failLine : (ResolvedPackage, List PkgName) -> Maybe String
-failLine (RGitHub n u c _ _ _, ps) =
-  let deps = fastConcat . intersperse ", " $ map interpolate ps
-  in Just "| [\{n}](\{u}) | \{deps} | \{ghCommitLink u c} |"
-failLine _ = Nothing
+commit : Env s -> Package -> Commit
+commit e (GitHub _ c _ _) = c
+commit e (Local dir ipkg pkgPath) = ""
+commit e (Core _) = e.db.idrisCommit
+
+succLine : Env s -> SafeLib -> String
+succLine e lib =
+  let desc := desc lib
+      pkg  := pkg lib
+      brf  := fromMaybe "" desc.desc.brief
+      nm   := name lib
+      api  := apiLink nm
+      url  := url e pkg
+      com  := commit e pkg
+   in "| [\{nm}](\{url}) | \{brf} | \{ghCommitLink url com} | [docs](\{api}) |"
+
+failLine : Env s -> (SafeLib, List PkgName) -> String
+failLine e (lib,ps) =
+  let pkg  := pkg lib
+      url  := url e pkg
+      com  := commit e pkg
+      deps := fastConcat . intersperse ", " $ map interpolate ps
+      nm   := name lib
+   in "| [\{nm}](\{url}) | \{deps} | \{ghCommitLink url com} |"
 
 errLine : (PkgName, PackErr) -> String
 errLine (p,err) = "| \{p} | \{printErr err} |"
 
 report : Env e -> RepLines -> String
 report e (MkRL es fs ss) =
-  let succs     = unlines $ mapMaybe succLine (ss <>> Nil)
-      fails     = unlines $ mapMaybe failLine (fs <>> Nil)
+  let succs     = unlines $ map (succLine e) (ss <>> Nil)
+      fails     = unlines $ map (failLine e) (fs <>> Nil)
       errs      = unlines $ map errLine (es <>> Nil)
       idrisLink = ghCommitLink e.db.idrisURL e.db.idrisCommit
    in """

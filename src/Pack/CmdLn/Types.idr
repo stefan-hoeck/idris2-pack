@@ -21,14 +21,16 @@ data Cmd : Type where
 
   -- Package management
   Install          : List (PkgType,PkgName) -> Cmd
-  Remove           : List PkgName -> Cmd
+  Remove           : List (PkgType,PkgName) -> Cmd
   Run              : Either (File Abs) PkgName -> List String -> Cmd
   New              : (cur : Path Abs) -> PkgType -> Body -> Cmd
+  Update           : Cmd
 
   -- Idris environment
   PackagePath      : Cmd
   LibsPath         : Cmd
   DataPath         : Cmd
+  AppPath          : PkgName -> Cmd
 
   -- Managing package collections
   Switch           : DBName -> Cmd
@@ -56,14 +58,16 @@ loglevel (Repl x)               = Warning
 loglevel (Install xs)           = Info
 loglevel (Remove xs)            = Info
 loglevel (Run x strs)           = Warning
-loglevel PackagePath            = Warning
-loglevel LibsPath               = Warning
-loglevel DataPath               = Warning
+loglevel Update                 = Info
+loglevel PackagePath            = Silence
+loglevel LibsPath               = Silence
+loglevel DataPath               = Silence
+loglevel (AppPath x)            = Silence
 loglevel (Switch x)             = Info
 loglevel UpdateDB               = Info
 loglevel Info                   = Warning
 loglevel (Query x str)          = Warning
 loglevel (Fuzzy xs str)         = Warning
-loglevel (Completion str str1)  = Warning
-loglevel (CompletionScript str) = Warning
-loglevel PrintHelp              = Warning
+loglevel (Completion str str1)  = Silence
+loglevel (CompletionScript str) = Silence
+loglevel PrintHelp              = Silence

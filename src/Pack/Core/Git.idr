@@ -13,6 +13,13 @@ export
 dbRepo : URL
 dbRepo = "https://github.com/stefan-hoeck/idris2-pack-db"
 
+||| URL of package collections repository
+|||
+||| TODO: This should become a command line argument
+export
+packRepo : URL
+packRepo = "https://github.com/stefan-hoeck/idris2-pack"
+
 export
 compiler : PkgName
 compiler = "idris2-compiler"

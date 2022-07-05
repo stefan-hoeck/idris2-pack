@@ -16,9 +16,6 @@ AdjConf s = Path Abs -> Config s -> Either PackErr (Config s)
 debug : AdjConf s
 debug _ = Right . {logLevel := Debug}
 
-bootstrap : AdjConf s
-bootstrap _ = Right . {bootstrap := True}
-
 withSrc : AdjConf s
 withSrc _ = Right . {withSrc := True}
 
@@ -80,13 +77,6 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             "Print the dependencies of each query result."
         , MkOpt [] ["ipkg"]   (NoArg $ setQuery Ipkg)
             "Print the full `.ipkg` file of each query result."
-        , MkOpt [] ["bootstrap"]   (NoArg bootstrap)
-            """
-            Use bootstrapping when building the Idris2 compiler.
-            This is for users who don't have a recent version of
-            the Idris2 compiler on their `$PATH`. Compiling Idris2
-            will take considerably longer with this option set.
-            """
         , MkOpt [] ["prompt"]   (NoArg $ setPrompt True)
             """
             Prompt before installing a potentially unsafe package
@@ -156,17 +146,26 @@ cmd dir ("run" :: p :: args)       =
    in case isIpkgBody af.file of
      True  => Right $ Run (Left af) args
      False => deflt
+
 cmd dir ["build", file]            = ipkgFile dir file Build
 cmd dir ["install-deps", file]     = ipkgFile dir file BuildDeps
 cmd dir ["typecheck", file]        = ipkgFile dir file Typecheck
-cmd _   ("install" :: xs)          = Right . Install $ map (\s => (Lib, MkPkgName s)) xs
-cmd _   ("remove" :: xs)           = Right $ Remove (map fromString xs)
-cmd _   ("install-app" :: xs)      = Right . Install $ map (\s => (Bin, MkPkgName s)) xs
+
+cmd _   ("install" :: xs)          =
+  Right . Install $ map (\s => (Lib, MkPkgName s)) xs
+cmd _   ("remove" :: xs)           =
+  Right . Remove $ map (\s => (Lib, MkPkgName s)) xs
+cmd _   ("remove-app" :: xs)           =
+  Right . Remove $ map (\s => (Bin, MkPkgName s)) xs
+cmd _   ("install-app" :: xs)      =
+  Right . Install $ map (\s => (Bin, MkPkgName s)) xs
 cmd _   ["completion",a,b]         = Right $ Completion a b
+
 cmd _   ["completion-script",f]    = Right $ CompletionScript f
 cmd _   ["package-path"]           = Right PackagePath
 cmd _   ["libs-path"]              = Right LibsPath
 cmd _   ["data-path"]              = Right DataPath
+cmd _   ["app-path", n]            = Right $ AppPath (MkPkgName n)
 cmd _   ["switch",db]              = Switch <$> readDBName db
 cmd dir ["new", pty, p]            =
   New dir <$> readPkgType pty <*> readBody p
@@ -254,23 +253,32 @@ usageInfo = """
       will be built and run locally without installing them.
 
     remove [package...]
-      Remove installed libraries and applications.
+      Remove installed libraries.
+
+    remove-app [package...]
+      Remove installed applications.
 
     update-db
       Update the pack data base by downloading the package collections
       from https://github.com/stefan-hoeck/idris2-pack-db.
 
+    update
+      Update the pack installation by downloading and building
+      the current main branch of
+      https://github.com/stefan-hoeck/idris2-pack.
+
+      Note: This uses the current package collection, which might be
+      too outdated to build the latest pack. If this fails, try using
+      the latest nightly.
+
     switch [collection name]
-      Switch to the given package collection. This will make all
-      binaries installed for this collection available in folder
-      `$HOME/.pack/bin`, which you can then include in your
-      `$PATH` variable.
+      Switch to the given package collection. This will adjust your
+      `$PACK_DIR/.pack/user/pack.toml` file to use the given package
+      collection. It will also install all auto libs and apps for the
+      given package collection.
 
       Note: It is also possible to switch to the latest package
-      collection by using "latest" as the collection name. This will
-      automatically update the data collection, select the latest
-      nightly, and change the `collection =` entry in the global
-      `pack.toml` file.
+      collection by using "latest" as the collection name.
 
     info
       Print general information about the current package
@@ -316,4 +324,8 @@ usageInfo = """
     data-path
       Return a colon-separated list of paths where data files
       are installed.
+
+    app-path <pkgname>
+      Return the absolute path to the given application managed by pack.
+      `pack app-path idris2` returns the path to the current Idris compiler
   """

@@ -104,35 +104,25 @@ popd
 
 # Install pack
 
-PACK_COMMIT=$(sed -ne '/^\[db.pack\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p;}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
 git clone https://github.com/stefan-hoeck/idris2-pack.git "$PACK_DIR/clones/idris2-pack"
 pushd "$PACK_DIR/clones/idris2-pack"
-git checkout "$PACK_COMMIT"
 "$BOOT_PATH" --build pack.ipkg
-
-mkdir -p "$PACK_DIR/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin"
-cp -r build/exec/* "$PACK_DIR/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin"
+mkdir -p "$PACK_DIR/bin"
+cp -r build/exec/* "$PACK_DIR/bin"
 popd
-
-# Setup symlinks to binaries
-
-mkdir -p "$PACK_DIR/$PACKAGE_COLLECTION/bin"
-pushd "$PACK_DIR/$PACKAGE_COLLECTION/bin"
-ln -s "$PACK_DIR/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin/pack" pack
 
 cat <<EOF >>idris2
 #!/bin/sh
 
-export IDRIS2_PACKAGE_PATH="\$($PACK_DIR/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin/pack package-path)"
-export IDRIS2_LIBS="\$("$PACK_DIR/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin/pack" libs-path)"
-export IDRIS2_DATA="\$("$PACK_DIR/install/$IDRIS2_COMMIT/pack/$PACK_COMMIT/bin/pack" data-path)"
-"$PACK_DIR/install/$IDRIS2_COMMIT/idris2/bin/idris2" "\$@"
+APPLICATION="\$($PACK_DIR/bin/pack app-path idris2)"
+export IDRIS2_PACKAGE_PATH="\$($PACK_DIR/bin/pack package-path)"
+export IDRIS2_LIBS="\$($PACK_DIR/bin/pack libs-path)"
+export IDRIS2_DATA="\$($PACK_DIR/bin/pack data-path)"
+$APPLICATION "\$@"
 EOF
 
 chmod +x idris2
 popd
-
-ln -s "$PACK_DIR/$PACKAGE_COLLECTION/bin" "$PACK_DIR/bin"
 
 # Initialize `pack.toml`
 
@@ -160,7 +150,7 @@ safety-prompt = true
 
 # Must-have applications. These will be installed automatically
 # when using a new package collection.
-apps       = [ "pack" ]
+# apps       = [ "lsp" ]
 
 [idris2]
 
@@ -209,3 +199,5 @@ EOF
 # Cleanup
 
 rm -rf "$PACK_DIR/clones"
+rm -rf "$PREFIX_PATH/idris2-*/filepath-*"
+rm -rf "$PREFIX_PATH/idris2-*/toml-*"

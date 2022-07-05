@@ -220,6 +220,44 @@ All : DBName
 All = MkDBName "all"
 
 --------------------------------------------------------------------------------
+--          Desc
+--------------------------------------------------------------------------------
+
+||| A tagged package desc. We use the tag mainly to make sure that
+||| the package desc in question has been checked for safety issues.
+||| Since the tag is parameterized by a `PkgDesc`, we make sure
+||| we will not inadvertently use a tag for a different `PkgDesc`.
+public export
+record Desc (t : PkgDesc -> Type) where
+  constructor MkDesc
+  ||| The parsed package desc
+  desc : PkgDesc
+
+  ||| String content of the package desc
+  cont : String
+
+  ||| Path to the file use when reading the package desc
+  path : File Abs
+
+  ||| Security tag. See `Pack.Runner.Database.check`
+  0 tag : t desc
+
+public export
+0 U : PkgDesc -> Type
+U d = Unit
+
+||| Lists the dependencies of a package.
+|||
+||| TODO: The `.ipkg` file of network lists contrib in the
+|||       compiler's command line options instead of its
+|||       depends field. I should file an issue and fix this.
+export
+dependencies : Desc t -> List PkgName
+dependencies d = case d.desc.name of
+  "network" => [ "contrib" ]
+  _         => map (MkPkgName . pkgname) $ d.desc.depends
+
+--------------------------------------------------------------------------------
 --          Errors
 --------------------------------------------------------------------------------
 
@@ -347,6 +385,12 @@ data PackErr : Type where
   ||| Number of failures when building packages.
   BuildFailures : Nat -> PackErr
 
+  ||| User tried to manually install the pack application
+  ManualInstallPackApp : PackErr
+
+  ||| User aborted installation of a lib/app with custom build hooks.
+  SafetyAbort : PackErr
+
 ||| Prints an error that occured during program execution.
 export
 printErr : PackErr -> String
@@ -444,6 +488,18 @@ printErr (BuildFailures 1) = "1 package failed to build."
 
 printErr (BuildFailures n) = "\{show n} packages failed to build."
 
+printErr ManualInstallPackApp = """
+  You are not supposed to manually install or remove the pack
+  application. In order to update pack to latest version from
+  GitHub, run `pack update`.
+
+  Note: If you didn't run `pack install-app pack` or a similar
+  operation, "pack" might be listed in as an auto-install application
+  in one of your pack.toml files. Please remove it from there.
+  """
+
+printErr SafetyAbort = "Installation aborted."
+
 export
 readDBName : String -> Either PackErr DBName
 readDBName s = case Body.parse s of
@@ -473,12 +529,13 @@ readAbsFile cd s = case split $ toAbsPath cd (fromString s) of
 --------------------------------------------------------------------------------
 
 public export
-data LogLevel = Debug | Info | Warning
+data LogLevel = Debug | Info | Warning | Silence
 
 llToNat : LogLevel -> Nat
 llToNat Debug   = 0
 llToNat Info    = 1
 llToNat Warning = 2
+llToNat Silence = 3
 
 export
 Eq LogLevel where (==) = (==) `on` llToNat
@@ -491,3 +548,4 @@ Interpolation LogLevel where
   interpolate Debug   = "debug"
   interpolate Info    = "info"
   interpolate Warning = "warning"
+  interpolate Silence = ""

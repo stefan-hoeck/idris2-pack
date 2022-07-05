@@ -2,6 +2,7 @@ module Pack.Admin.Runner.Check
 
 import Control.Monad.State
 import Data.SortedMap
+import Idris.Package.Types
 import Pack.Admin.Report.Types
 import Pack.Config.Env
 import Pack.Config.Types
@@ -23,38 +24,34 @@ updateRep p rep = modify (insert p rep) $> rep
 
 report :  HasIO io
        => PkgName
-       -> ResolvedPackage
+       -> SafeLib
        -> EitherT PackErr io ()
        -> StateT ReportDB io Report
 report p rp act = do
   Right _ <- toState act | Left _ => updateRep p (Failure rp [])
   updateRep p (Success rp)
 
+missing : ResolvedLib t -> ResolvedLib t
+missing = {status := Missing}
+
 covering
 checkPkg :  HasIO io
          => Env HasIdris
-         -> (PkgType,PkgName)
+         -> PkgName
          -> StateT ReportDB io Report
-checkPkg e (t,p) = do
+checkPkg e p = do
   Nothing  <- lookup p <$> get | Just rep => pure rep
   info e "Checking \{p}"
-  Right rp <- toState $ resolve e p
+  Right rl <- toState $ resolveLib e p >>= safeLib e . missing
     | Left err => warn e "Could not resolve \{p}" >>
                   updateRep p (Error p err)
-  [] <- failingDeps <$> traverse (checkPkg e) (map (Lib,) $ dependencies rp)
+  [] <- failingDeps <$> traverse (checkPkg e) (dependencies rl)
     | rs => warn e "\{p} had failing dependencies" >>
-            updateRep p (Failure rp rs)
-  case t of
-    Lib => do
-      Right () <- toState $ installLib e rp
-        | Left err => warn e "Failed to build \{p}" >>
-                      updateRep p (Error p err)
-      updateRep p (Success rp)
-    Bin => do
-      Right () <- toState $ installApp e rp
-        | Left err => warn e "Failed to build \{p}" >>
-                      updateRep p (Error p err)
-      updateRep p (Success rp)
+            updateRep p (Failure rl rs)
+  Right () <- toState $ installAny e $ Left rl
+    | Left err => warn e "Failed to build \{p}" >>
+                  updateRep p (Error p err)
+  updateRep p (Success rl)
 
 copyDocs :  HasIO io
          => File Abs
@@ -63,18 +60,19 @@ copyDocs :  HasIO io
          -> EitherT PackErr io ()
 copyDocs f e db = traverse_ go db
   where go : Report -> EitherT PackErr io ()
-        go (Success rp) = do
-          installDocs e rp
-          copyDir (packageDocs e rp) (f.parent /> "docs" <//> name rp)
+        go (Success rl) = do
+            installDocs e rl
+            copyDir (pkgDocs e rl.name rl.pkg)
+                    (f.parent /> "docs" <//> name rl)
         go _            = pure ()
 
 export covering
 checkDB : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
 checkDB p e =
-  let ps := map (\c => (Lib, MkPkgName $ interpolate c)) corePkgs
-         ++ (Bin, "katla")
-         :: map (Lib,) (keys e.db.packages)
+  let ps := map (MkPkgName . interpolate) corePkgs
+         ++ keys e.db.packages
    in do
+     install e [(Bin, "katla")]
      rep <- liftIO $ execStateT empty
                    $ traverse_ (checkPkg e) ps
      write p (printReport e rep)
