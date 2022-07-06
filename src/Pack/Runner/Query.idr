@@ -275,7 +275,7 @@ fuzzyPkg q e allPkgs qp =
        write (MkF d "test.idr") (imports qp)
        write (MkF d "input") ":fs \{q}\n"
 
-       let (cmd,env) := idrisWithPkgs e (map lib allPkgs)
+       (cmd,env) <- idrisWithPkgs e (map lib allPkgs)
 
        str <- sysRunWithEnv "\{cmd} --quiet --no-prelude --no-banner test.idr < input" env
        case noOut == str of

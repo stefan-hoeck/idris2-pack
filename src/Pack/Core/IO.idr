@@ -19,6 +19,12 @@ mapMaybeM f (x :: xs) = do
   Just vb <- f x | Nothing => mapMaybeM f xs
   (vb ::) <$> mapMaybeM f xs
 
+export
+filterM : Monad m => (a -> m Bool) -> List a -> m (List a)
+filterM f []        = pure []
+filterM f (x :: xs) = do
+  True <- f x | False => filterM f xs
+  (x ::) <$> filterM f xs
 
 ||| Convert an IO action with the potential of failure
 ||| to an `EitherT PackErr`.

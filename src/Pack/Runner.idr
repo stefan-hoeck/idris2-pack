@@ -44,9 +44,9 @@ runCmd = do
     Install ps         => idrisEnv c >>= \e => install e ps
     Remove ps          => idrisEnv c >>= \e => remove e ps
     Update             => idrisEnv c >>= update
-    PackagePath        => env c >>= putStrLn . packagePathDirs
-    LibsPath           => env c >>= putStrLn . packageLibDirs
-    DataPath           => env c >>= putStrLn . packageDataDirs
+    PackagePath        => env c >>= packagePathDirs >>= putStrLn
+    LibsPath           => env c >>= packageLibDirs >>= putStrLn
+    DataPath           => env c >>= packageDataDirs >>= putStrLn
     AppPath n          => env c >>= appPath n
     Info               => env c >>= printInfo
     New dir pty p      => idrisEnv c >>= new dir pty p
