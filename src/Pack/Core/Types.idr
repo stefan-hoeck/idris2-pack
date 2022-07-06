@@ -11,6 +11,23 @@ import System.File
 
 %default total
 
+----------------------------------------------------------------------------------
+----          Paths
+----------------------------------------------------------------------------------
+
+||| Returns the second path, relative to the first one
+||| For instance, `relativeTo /foo/bar/baz /foo/quux` will return
+||| `../../quux`.
+export
+relativeTo : (origin, target : Path Abs) -> Path Rel
+relativeTo (PAbs sx) (PAbs sy) = PRel $ go (sx <>> []) (sy <>> [])
+  where go : (o,t : List Body) -> SnocList Body
+        go [>]       t  = Lin <>< t
+        go xs        [] = Lin <>< xs $> ".."
+        go (x :: xs) (y :: ys) = case x == y of
+          True  => go xs ys
+          False => Lin <>< (((x :: xs) $> "..") ++ (y :: ys))
+
 ||| True if the given file path body ends on `.ipkg`
 export
 isIpkgBody : Body -> Bool

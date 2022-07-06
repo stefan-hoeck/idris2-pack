@@ -44,6 +44,15 @@ replOpts e mf = do
   installDeps e d
   pure ("\{srcDir} \{pkgs}", Just p)
 
+
+-- return the path of an Idris source file to an `.ipkg` file.
+srcFileRelativeToIpkg : (ipkg,idr : Maybe (File Abs)) -> String
+srcFileRelativeToIpkg _           Nothing    = ""
+srcFileRelativeToIpkg Nothing     (Just idr) = "\{idr}"
+srcFileRelativeToIpkg (Just ipkg) (Just idr) =
+  let rel := relativeTo ipkg.parent idr.parent
+   in "\{MkF rel idr.file}"
+
 ||| Use the installed Idris to start a REPL session with the
 ||| given argument string.
 export covering
@@ -52,11 +61,11 @@ idrisRepl :  HasIO io
           -> Env HasIdris
           -> EitherT PackErr io ()
 idrisRepl mf e = do
-  let args := maybe "" (interpolate . file) $ mf
-      exe  := idrisWithCG e
-
   pth  <- packagePath e
   (opts, mp) <- replOpts e mf
+
+  let args := srcFileRelativeToIpkg mp mf
+      exe  := idrisWithCG e
 
   cmd <- case e.rlwrap of
     True  => pure "rlwrap \{exe} \{opts} \{args}"
