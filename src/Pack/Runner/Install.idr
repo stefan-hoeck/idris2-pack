@@ -108,15 +108,18 @@ mkIdris e = do
 
 installImpl :  HasIO io
             => Env HasIdris
+            -> (dir : Path Abs)
             -> SafeLib
             -> EitherT PackErr io ()
-installImpl e rl =
+installImpl e dir rl =
   let pre := libInstallPrefix e rl
       cmd := installCmd e.withSrc
    in do
      info e "Installing library: \{name rl}"
      libPkg e pre cmd rl.desc
      when e.withDocs $ libPkg e pre "--mkdoc" rl.desc
+     when !(exists $ dir /> "lib") $
+       copyDir (dir /> "lib") (pkgLibDir e rl.name rl.pkg)
 
 export
 installLib :  HasIO io => Env HasIdris -> SafeLib -> EitherT PackErr io ()
@@ -128,10 +131,10 @@ installLib e rl = case rl.status of
           GitHub u c ipkg _ => do
             let cache := ipkgCachePath e rl.name c ipkg
             copyFile cache ipkgAbs
-            installImpl e rl
+            installImpl e dir rl
 
           Local _ _ _ => do
-            installImpl e rl
+            installImpl e dir rl
             write (libTimestamp e rl.name rl.pkg) ""
 
           Core c => do
@@ -140,7 +143,7 @@ installLib e rl = case rl.status of
             case c of
               IdrisApi => sys "make src/IdrisPaths.idr"
               _        => pure ()
-            installImpl e rl
+            installImpl e dir rl
 
 --------------------------------------------------------------------------------
 --          Installing Apps
