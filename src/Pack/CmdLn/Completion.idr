@@ -99,6 +99,7 @@ optionFlags =
   , "completion"
   , "completion-script"
   , "data-path"
+  , "exec"
   , "fuzzy"
   , "help"
   , "info"

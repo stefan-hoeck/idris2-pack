@@ -41,6 +41,7 @@ config dir v =
               (pure Nothing)
               (maybeValAt "idris2.codegen" v)
               (pure Nothing)
+              (pure Nothing)
   |]
 
 export
