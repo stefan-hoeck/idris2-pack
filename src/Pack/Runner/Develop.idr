@@ -75,6 +75,29 @@ idrisRepl mf e = do
     Just af => inDir af.parent $ \_ => sysWithEnv cmd [pth]
     Nothing => sysWithEnv cmd [pth]
 
+||| Use the installed Idris to compile the given source file
+||| and invoke its main function with the given argument list.
+export covering
+exec :  HasIO io
+     => (file : File Abs)
+     -> (args : List String)
+     -> Env HasIdris
+     -> EitherT PackErr io ()
+exec file args e = do
+  pth  <- packagePath e
+  (opts, mp) <- replOpts e (Just file)
+
+  let relFile := srcFileRelativeToIpkg mp (Just file)
+      exe     := idrisWithCG e
+      cmd     := "\{exe} \{opts} -o \{e.output} \{relFile}"
+      run     := "build/exec/\{e.output} \{unwords args}"
+
+  case mp of
+    Just af => inDir af.parent $ \_ => do
+      sysWithEnv cmd [pth]
+      sys run
+    Nothing => sysWithEnv cmd [pth] >> sys run
+
 ||| Build a local library given as an `.ipkg` file.
 export covering %inline
 build : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()

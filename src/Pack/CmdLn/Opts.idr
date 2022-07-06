@@ -28,6 +28,9 @@ useKatla _ = Right . {useKatla := True}
 setDB : String -> AdjConf s
 setDB s _ c = map (\db => {collection := db} c) $ readDBName s
 
+setOutput : String -> AdjConf s
+setOutput s _ c = map (\o => {output := o} c) $ readBody s
+
 setQuery : QueryType -> AdjConf s
 setQuery s _ = Right . {queryType := s}
 
@@ -75,6 +78,11 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             "Print a detailed description of a package known to pack"
         , MkOpt ['d'] ["dependencies"]   (NoArg $ setQuery Dependencies)
             "Print the dependencies of each query result."
+        , MkOpt ['o'] ["output"]   (ReqArg  setOutput "<file>")
+            """
+            Name of the output file when compiling or running single Idris source files
+            This defaults to `_tmppack` if not specified explicitly"
+            """
         , MkOpt [] ["ipkg"]   (NoArg $ setQuery Ipkg)
             "Print the full `.ipkg` file of each query result."
         , MkOpt [] ["prompt"]   (NoArg $ setPrompt True)
@@ -139,6 +147,7 @@ cmd _   ["fuzzy", p, s]            = Right $ Fuzzy (forget $ map MkPkgName $ spl
 cmd _   ["query", s]               = Right $ Query PkgName s
 cmd _   ["query", "dep", s]        = Right $ Query Dependency s
 cmd _   ["query", "module", s]     = Right $ Query Module s
+cmd dir ("exec" :: idr :: args)    = (`Exec` args) <$> readAbsFile dir idr
 cmd _   ["repl"]                   = Right $ Repl Nothing
 cmd dir ["repl", s]                = Repl . Just <$> readAbsFile dir s
 cmd dir ("run" :: p :: args)       =
@@ -219,6 +228,12 @@ usageInfo = """
 
     build <.ipkg file>
       Build a local package given as an `.ipkg` file.
+
+    exec <.idr file> [args...]
+      Compile the given Idris source file and execute its main function
+      with the given list of arguments. This will look for `.ipkg` files
+      in the source file's parent directories and will apply the settings
+      it finds there.
 
     install-deps <.ipkg file>
       Install the dependencies of a local package given as an `.ipkg` file.

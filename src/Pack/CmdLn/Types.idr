@@ -18,6 +18,7 @@ data Cmd : Type where
   BuildDeps        : File Abs -> Cmd
   Typecheck        : File Abs -> Cmd
   Repl             : Maybe (File Abs) -> Cmd
+  Exec             : File Abs -> List String -> Cmd
 
   -- Package management
   Install          : List (PkgType,PkgName) -> Cmd
@@ -53,6 +54,7 @@ loglevel : Cmd -> LogLevel
 loglevel (Build x)              = Info
 loglevel (BuildDeps x)          = Info
 loglevel (Typecheck x)          = Info
+loglevel (Exec _ _)             = Warning
 loglevel (New _ _ _)            = Info
 loglevel (Repl x)               = Warning
 loglevel (Install xs)           = Info

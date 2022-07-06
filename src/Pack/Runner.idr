@@ -36,6 +36,7 @@ runCmd = do
     UpdateDB           => updateDB c
     Run (Right p) args => idrisEnv c >>= execApp p args
     Run (Left p)  args => idrisEnv c >>= runIpkg p args
+    Exec p args        => idrisEnv c >>= exec p args
     Repl p             => idrisEnv c >>= idrisRepl p
     Build p            => idrisEnv c >>= build p
     BuildDeps p        => idrisEnv c >>= buildDeps p

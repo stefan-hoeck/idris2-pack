@@ -176,6 +176,9 @@ record Config_ (c : Type) (f : Type -> Type) (s : Maybe State) where
   ||| Codegen to use
   codegen      : f (Codegen)
 
+  ||| Name of output file when compiling Idris source files
+  output       : f Body
+
   ||| The package collection
   db           : f (DBType s)
 
@@ -239,6 +242,7 @@ init cur dir coll = MkConfig {
   , queryType    = NameOnly
   , logLevel     = Warning
   , codegen      = Default
+  , output       = "_tmppack"
   , db           = ()
   }
 
@@ -263,6 +267,7 @@ update ci cm = MkConfig {
   , queryType    = fromMaybe ci.queryType cm.queryType
   , logLevel     = fromMaybe ci.logLevel cm.logLevel
   , codegen      = fromMaybe ci.codegen cm.codegen
+  , output       = fromMaybe ci.output cm.output
   , db           = ()
   }
 
