@@ -267,8 +267,8 @@ update e =
         gitClone packRepo dir
 
         -- we're cheating here...
-        desc <- parseLibIpkg e ipkg ipkg
-        installDeps e desc
+        d <- parseLibIpkg {s = HasIdris} ({safetyPrompt := False} e) ipkg ipkg
+        installDeps e d
         inDir dir $ \_ => do
           vers <- MkCommit <$> sysRun "git rev-parse HEAD"
           let installDir    := packInstallDir e vers
@@ -277,7 +277,7 @@ update e =
           case ex of
             True  => link installedExec (packExec e)
             False => do
-              libPkg e [] "--build" desc
+              libPkg e [] "--build" d
               mkDir installDir
               sys "cp -r build/exec/* \{installDir}"
               link installedExec (packExec e)
