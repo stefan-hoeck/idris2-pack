@@ -53,9 +53,9 @@ idrisRepl :  HasIO io
           -> EitherT PackErr io ()
 idrisRepl mf e = do
   let args := maybe "" (interpolate . file) $ mf
-      pth  := packagePath e
       exe  := idrisWithCG e
 
+  pth  <- packagePath e
   (opts, mp) <- replOpts e mf
 
   cmd <- case e.rlwrap of

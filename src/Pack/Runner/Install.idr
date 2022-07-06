@@ -74,10 +74,11 @@ libPkg :  HasIO io
        -> EitherT PackErr io ()
 libPkg e env cmd desc =
   let exe := idrisWithCG e
-      pre := env ++ buildEnv e
       s   := "\{exe} \{cmd} \{desc.path.file}"
-   in debug e "About to run: \{s}" >>
-      inDir (desc.path.parent) (\_ => sysWithEnv s pre)
+   in do
+     pre <- (env ++) <$> buildEnv e
+     debug e "About to run: \{s}"
+     inDir (desc.path.parent) (\_ => sysWithEnv s pre)
 
 --------------------------------------------------------------------------------
 --          Installing Idris

@@ -100,6 +100,10 @@ readCorePkg "test"    = Just Test
 readCorePkg "idris2"  = Just IdrisApi
 readCorePkg _         = Nothing
 
+export
+isCorePkg : String -> Bool
+isCorePkg = isJust . readCorePkg
+
 --------------------------------------------------------------------------------
 --          Packages
 --------------------------------------------------------------------------------

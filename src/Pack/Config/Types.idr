@@ -2,7 +2,7 @@ module Pack.Config.Types
 
 import Data.List
 import Data.Maybe
-import Data.SortedMap
+import Data.SortedMap as SM
 import Idris.Package.Types
 import Libraries.Data.List.Extra
 import Pack.Core
@@ -493,42 +493,46 @@ libInstallPrefix : Env s -> ResolvedLib t -> List (String,String)
 libInstallPrefix e rl =
   [("IDRIS2_PREFIX", "\{pkgPrefixDir e rl.name rl.pkg}")]
 
-pathDirs :  Env s
+pathDirs :  HasIO io
+         => Env s
+         -> (pre : String)
          -> (pth : Env s -> PkgName -> Package -> Path Abs)
-         -> String
-pathDirs e pth =
-    fastConcat
-  . intersperse ":"
-  . map (\(n,p) => "\{pth e n p}")
-  $ SortedMap.toList (allPackages e)
+         -> io String
+pathDirs e pre pth = do
+  ps <- filterM (\(n,p) => exists $ pth e n p) (SM.toList $ allPackages e)
+  let ps' := filter (not . isCorePkg . value . fst) ps
+  pure $ fastConcat
+       . intersperse ":"
+       . (pre ::)
+       $ map (\(n,p) => "\{pth e n p}") ps'
 
 export
-packagePathDirs : Env s -> String
-packagePathDirs e = "\{idrisInstallDir e}:\{pathDirs e pkgPathDir}"
+packagePathDirs : HasIO io => Env s -> io String
+packagePathDirs e = pathDirs e "\{idrisInstallDir e}" pkgPathDir
 
 export
-packageLibDirs : Env s -> String
-packageLibDirs e = "\{idrisLibDir e}:\{pathDirs e pkgLibDir}"
+packageLibDirs : HasIO io => Env s -> io String
+packageLibDirs e = pathDirs e "\{idrisLibDir e}" pkgLibDir
 
 export
-packageDataDirs : Env s -> String
-packageDataDirs e = "\{idrisDataDir e}:\{pathDirs e pkgDataDir}"
+packageDataDirs : HasIO io => Env s -> io String
+packageDataDirs e = pathDirs e "\{idrisDataDir e}" pkgDataDir
 
 export
-packagePath : Env s -> (String, String)
-packagePath e = ("IDRIS2_PACKAGE_PATH", packagePathDirs e)
+packagePath : HasIO io => Env s -> io (String, String)
+packagePath e = ("IDRIS2_PACKAGE_PATH",) <$>  packagePathDirs e
 
 export
-libPath : Env s -> (String, String)
-libPath e = ("IDRIS2_LIBS", packageLibDirs e)
+libPath : HasIO io => Env s -> io (String, String)
+libPath e = ("IDRIS2_LIBS",) <$> packageLibDirs e
 
 export
-dataPath : Env s -> (String, String)
-dataPath e = ("IDRIS2_DATA", packageDataDirs e)
+dataPath : HasIO io => Env s -> io (String, String)
+dataPath e = ("IDRIS2_DATA",) <$> packageDataDirs e
 
 export
-buildEnv : Env s -> List (String,String)
-buildEnv e = [packagePath e, libPath e, dataPath e]
+buildEnv : HasIO io => Env s -> io (List (String,String))
+buildEnv e = sequence [packagePath e, libPath e, dataPath e]
 
 ||| Idris executable to use together with the
 ||| `--cg` (codegen) command line option.
@@ -541,19 +545,21 @@ idrisWithCG e = case e.codegen of
 ||| Idris executable loading the given package plus the
 ||| environment variables needed to run it.
 export
-idrisWithPkg :  Env HasIdris
+idrisWithPkg :  HasIO io
+             => Env HasIdris
              -> ResolvedLib t
-             -> (String, List (String,String))
+             -> io (String, List (String,String))
 idrisWithPkg e rl =
-  ("\{idrisWithCG e} -p \{name rl}", buildEnv e)
+  ("\{idrisWithCG e} -p \{name rl}",) <$> buildEnv e
 
 ||| Idris executable loading the given packages plus the
 ||| environment variables needed to run it.
 export
-idrisWithPkgs :  Env HasIdris
+idrisWithPkgs :  HasIO io
+              => Env HasIdris
               -> List (ResolvedLib t)
-              -> (String, List (String,String))
-idrisWithPkgs e [] = (idrisWithCG e, [])
+              -> io (String, List (String,String))
+idrisWithPkgs e [] = pure (idrisWithCG e, [])
 idrisWithPkgs e pkgs =
   let ps = fastConcat $ map (\p => " -p \{name p}") pkgs
-   in ("\{idrisWithCG e}\{ps}", buildEnv e)
+   in ("\{idrisWithCG e}\{ps}",) <$> buildEnv e
