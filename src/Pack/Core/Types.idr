@@ -264,15 +264,9 @@ public export
 U d = Unit
 
 ||| Lists the dependencies of a package.
-|||
-||| TODO: The `.ipkg` file of network lists contrib in the
-|||       compiler's command line options instead of its
-|||       depends field. I should file an issue and fix this.
 export
 dependencies : Desc t -> List PkgName
-dependencies d = case d.desc.name of
-  "network" => [ "contrib" ]
-  _         => map (MkPkgName . pkgname) $ d.desc.depends
+dependencies d = map (MkPkgName . pkgname) $ d.desc.depends
 
 --------------------------------------------------------------------------------
 --          Errors
