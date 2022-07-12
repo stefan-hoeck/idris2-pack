@@ -20,16 +20,19 @@ public export
 data MetaCommit : Type where
   MC     : Commit -> MetaCommit
   Latest : String -> MetaCommit
+  Fetch  : String -> MetaCommit
 
 public export
 FromString MetaCommit where
   fromString s = case forget $ split (':' ==) s of
     ["latest",branch] => Latest branch
+    ["fetch",branch]  => Fetch branch
     _                 => MC $ MkCommit s
 
 export
 Interpolation MetaCommit where
   interpolate (Latest b) = "latest:\{b}"
+  interpolate (Fetch b)  = "fetch:\{b}"
   interpolate (MC c)     = "\{c}"
 
 --------------------------------------------------------------------------------

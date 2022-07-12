@@ -92,12 +92,20 @@ updateDB conf = do
   debug conf "updating data collections"
   updateDB_ conf.packDir
 
-resolveMeta : HasIO io => UserPackage -> EitherT PackErr io Package
-resolveMeta (GitHub u (MC x) i p) = pure $ GitHub u x i p
-resolveMeta (GitHub u (Latest x) i p) =
+resolveMeta :  HasIO io
+            => Path Abs
+            -> PkgName
+            -> UserPackage
+            -> EitherT PackErr io Package
+resolveMeta _   _ (GitHub u (MC x) i p) = pure $ GitHub u x i p
+resolveMeta _   _ (GitHub u (Latest x) i p) =
   map (\c => GitHub u c i p) $ gitLatest u (MkCommit x)
-resolveMeta (Local d i p) = pure $ Local d i p
-resolveMeta (Core c)      = pure $ Core c
+resolveMeta dir n (GitHub u (Fetch x) i p) =
+  let cm  = MkCommit x
+      pth = fetchedCommit dir n cm
+   in map (\c => GitHub u c i p) $ gitFetch u pth cm
+resolveMeta _   _ (Local d i p) = pure $ Local d i p
+resolveMeta _   _ (Core c)      = pure $ Core c
 
 ||| Read application config from command line arguments.
 export covering
@@ -124,8 +132,8 @@ getConfig readCmd dflt dfltLevel adjConf = do
   local'      <- case localToml of
     Just af => readFromTOML af config
     Nothing => readOptionalFromTOML (MkF cur packToml) config
-  global      <- traverse resolveMeta global'
-  local       <- traverse resolveMeta local'
+  global      <- traverse (resolveMeta dir) global'
+  local       <- traverse (resolveMeta dir) local'
 
   let ini = init cur dir coll `update` global `update` local
 

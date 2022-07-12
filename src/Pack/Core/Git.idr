@@ -50,6 +50,19 @@ gitLatest :  HasIO io
 gitLatest url c =
   MkCommit . fst . break isSpace <$> sysRun "git ls-remote \{url} \{c}"
 
+||| Lookup the latest (locally stored) commit of a package.
+export covering
+gitFetch :  HasIO io
+         => (url    : URL)
+         -> (dest   : File Abs)
+         -> (commit : Commit)
+         -> EitherT PackErr io Commit
+gitFetch url dest c = do
+  when !(fileMissing dest) $ do
+    MkCommit cm <- gitLatest url c
+    write dest cm
+  MkCommit . trim <$> read dest
+
 export
 gitDir : (dir : Path Abs) -> (pkg : PkgName) -> (commit : Commit) -> Path Abs
 gitDir dir pkg commit = dir <//> pkg <//> commit

@@ -182,13 +182,21 @@ record Config_ (c : Type) (f : Type -> Type) (s : Maybe State) where
   ||| The package collection
   db           : f (DBType s)
 
+trav :  Applicative f
+     => (PkgName -> Package_ a -> f (Package_ b))
+     -> SortedMap PkgName (Package_ a)
+     -> f (SortedMap PkgName (Package_ b))
+trav g = map SortedMap.fromList . traverse fun . SortedMap.toList
+  where fun : (PkgName,Package_ a) -> f (PkgName,Package_ b)
+        fun (n,p) = (n,) <$> g n p
+
 export
 traverse :  Applicative f
-         => (Package_ a -> f (Package_ b))
+         => (PkgName -> Package_ a -> f (Package_ b))
          -> Config_ a Maybe s
          -> f (Config_ b Maybe s)
 traverse f cfg =
-  let cst = traverse (traverse (traverse f)) cfg.custom
+  let cst = traverse (traverse (trav f)) cfg.custom
    in map (\c => {custom := c} cfg) cst
 
 --------------------------------------------------------------------------------
@@ -303,6 +311,12 @@ dbDir_ packDir = packDir /> "db"
 export
 dbDir : Config s -> Path Abs
 dbDir = dbDir_ . packDir
+
+||| File holding the latest fetched commit of a package
+||| annotated with `fetch:branch`.
+export
+fetchedCommit : (packDir : Path Abs) -> PkgName -> Commit -> File Abs
+fetchedCommit dir n c = dir <//> n <//> c /> "commit"
 
 ||| Directory where databases are stored.
 export
