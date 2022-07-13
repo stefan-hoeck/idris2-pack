@@ -1,6 +1,6 @@
 ||| We work a lot with Strings of distinct semantics.
 ||| Since I've been bitten by this more than once, we wrap
-||| the in single field record types to drastically increase
+||| them in single field record types to drastically increase
 ||| type safety.
 module Pack.Core.Types
 
@@ -151,6 +151,29 @@ Interpolation Commit where interpolate = value
 
 export %inline
 Cast Commit (Path Rel) where
+  cast = toRelPath . value
+
+--------------------------------------------------------------------------------
+--          Branches
+--------------------------------------------------------------------------------
+
+||| A branch in a git repo
+public export
+record Branch where
+  constructor MkBranch
+  value : String
+
+export %inline
+Eq Branch where (==) = (==) `on` value
+
+export %inline
+FromString Branch where fromString = MkBranch
+
+export %inline
+Interpolation Branch where interpolate = value
+
+export %inline
+Cast Branch (Path Rel) where
   cast = toRelPath . value
 
 --------------------------------------------------------------------------------

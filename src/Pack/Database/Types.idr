@@ -19,12 +19,12 @@ import Pack.Core.Types
 public export
 data MetaCommit : Type where
   MC     : Commit -> MetaCommit
-  Latest : String -> MetaCommit
+  Latest : Branch -> MetaCommit
 
 public export
 FromString MetaCommit where
   fromString s = case forget $ split (':' ==) s of
-    ["latest",branch] => Latest branch
+    ["latest",branch] => Latest (MkBranch branch)
     _                 => MC $ MkCommit s
 
 export

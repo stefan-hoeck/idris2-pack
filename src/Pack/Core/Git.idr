@@ -41,14 +41,14 @@ export
 gitCheckout : HasIO io => (commit : Commit) -> EitherT PackErr io ()
 gitCheckout commit = sys "git checkout -q \{commit}"
 
-||| Query GitHub for the latest commit of the main branch.
+||| Query GitHub for the latest commit of the given branch.
 export covering
 gitLatest :  HasIO io
           => (url    : URL)
-          -> (commit : Commit)
+          -> (branch : Branch)
           -> EitherT PackErr io Commit
-gitLatest url c =
-  MkCommit . fst . break isSpace <$> sysRun "git ls-remote \{url} \{c}"
+gitLatest url b =
+  MkCommit . fst . break isSpace <$> sysRun "git ls-remote \{url} \{b}"
 
 export
 gitDir : (dir : Path Abs) -> (pkg : PkgName) -> (commit : Commit) -> Path Abs
