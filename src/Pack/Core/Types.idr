@@ -215,6 +215,29 @@ Cast Commit (Path Rel) where
   cast = toRelPath . value
 
 --------------------------------------------------------------------------------
+--          Branches
+--------------------------------------------------------------------------------
+
+||| A branch in a git repo.
+public export
+record Branch where
+  constructor MkBranch
+  value : String
+
+export %inline
+Eq Branch where (==) = (==) `on` value
+
+export %inline
+FromString Branch where fromString = MkBranch
+
+export %inline
+Interpolation Branch where interpolate = value
+
+export %inline
+Cast Branch (Path Rel) where
+  cast = toRelPath . value
+
+--------------------------------------------------------------------------------
 --          Package Name
 --------------------------------------------------------------------------------
 

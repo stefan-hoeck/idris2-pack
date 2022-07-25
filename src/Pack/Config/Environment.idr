@@ -94,6 +94,14 @@ export
 patchesDir : PackDir => Path Abs
 patchesDir = dbDir /> "patches"
 
+||| Path to file storing the last fetched commit of a GitHub
+||| repo given as a URL and branch name.
+export
+commitFile : PackDir => URL -> Branch -> File Abs
+commitFile url b =
+  let relPath = the (Path Rel) $ cast "\{url}/\{b}"
+   in MkF (cacheDir </> relPath) "commit"
+
 ||| File where the patch (if any) for an `.ipkg` file is stored.
 export
 patchFile : PackDir => (c : Config) => PkgName -> File Rel -> File Abs
@@ -432,14 +440,29 @@ defaultColl = do
     $ foldl max x xs
 
 ||| Resolve a meta commit by fetching the hash of the latest commit
-||| from GitHub in case of an `MC x` commit.
+||| from GitHub in case of an `Fetch x` commit. In case of a `Latest x`
+||| meta commit, the hash is only fetched, if the corresponding commit
+||| file is missing or `fetch` is set to `True`.
 export
-resolveMeta : HasIO io => UserPackage -> EitherT PackErr io Package
-resolveMeta (GitHub u (MC x) i p) = pure $ GitHub u x i p
-resolveMeta (GitHub u (Latest x) i p) =
-  map (\c => GitHub u c i p) $ gitLatest u (MkCommit x)
-resolveMeta (Local d i p) = pure $ Local d i p
-resolveMeta (Core c)      = pure $ Core c
+resolveMeta :  HasIO io
+            => PackDir
+            => (fetch : Bool)
+            -> UserPackage
+            -> EitherT PackErr io Package
+resolveMeta _ (GitHub u (MC x) i p) = pure $ GitHub u x i p
+resolveMeta b (GitHub u (Latest x) i p) = do
+  let cfile := commitFile u x
+  commitMissing <- fileMissing cfile
+  case commitMissing || b of
+    True  => do
+      c <- gitLatest u x
+      write cfile c.value
+      pure $ GitHub u c i p
+    False => map (\s => GitHub u (MkCommit $ trim s) i p) $ read cfile
+resolveMeta _ (GitHub u (Fetch x) i p) =
+  map (\c => GitHub u c i p) $ gitLatest u x
+resolveMeta _ (Local d i p) = pure $ Local d i p
+resolveMeta _ (Core c)      = pure $ Core c
 
 ||| Read application config from command line arguments.
 export covering

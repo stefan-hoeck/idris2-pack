@@ -28,6 +28,7 @@ data Cmd : Type where
   Run              : Either (File Abs) PkgName -> List String -> Cmd
   New              : (cur : CurDir) -> PkgType -> Body -> Cmd
   Update           : Cmd
+  Fetch            : Cmd
 
   -- Idris environment
   PackagePath      : Cmd

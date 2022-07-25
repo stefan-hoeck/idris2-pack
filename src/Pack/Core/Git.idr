@@ -48,10 +48,10 @@ gitCheckout commit = sys "git checkout -q \{commit}"
 export covering
 gitLatest :  HasIO io
           => (url    : URL)
-          -> (commit : Commit)
+          -> (branch : Branch)
           -> EitherT PackErr io Commit
-gitLatest url c =
-  MkCommit . fst . break isSpace <$> sysRun "git ls-remote \{url} \{c}"
+gitLatest url b =
+  MkCommit . fst . break isSpace <$> sysRun "git ls-remote \{url} \{b}"
 
 ||| (Temporary) Directory to use for a Git project.
 export
