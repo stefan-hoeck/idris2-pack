@@ -46,7 +46,7 @@ Command Cmd where
   readCommand_ _  ["info"]                   = Right Info
   readCommand_ _  ["update-db"]              = Right UpdateDB
   readCommand_ _  ["update"]                 = Right Update
-  readCommand_ _  ["fetch"]                  = Right Update
+  readCommand_ _  ["fetch"]                  = Right Fetch
   readCommand_ _  ["fuzzy", s]               = Right $ Fuzzy [] s
   readCommand_ _  ["fuzzy", p, s]            =
     Right $ Fuzzy (forget $ map MkPkgName $ split (',' ==) p) s
