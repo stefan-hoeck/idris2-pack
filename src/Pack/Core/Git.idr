@@ -20,10 +20,13 @@ export
 packRepo : URL
 packRepo = "https://github.com/stefan-hoeck/idris2-pack"
 
+||| Package name we use for temp dirs involving the idris compiler
+||| and its core libraries.
 export
 compiler : PkgName
 compiler = "idris2-compiler"
 
+||| Package name we use for temp dirs involving pack-db project.
 export
 packDB : PkgName
 packDB = "pack-db"
@@ -50,6 +53,7 @@ gitLatest :  HasIO io
 gitLatest url c =
   MkCommit . fst . break isSpace <$> sysRun "git ls-remote \{url} \{c}"
 
+||| (Temporary) Directory to use for a Git project.
 export
 gitDir : (dir : Path Abs) -> (pkg : PkgName) -> (commit : Commit) -> Path Abs
 gitDir dir pkg commit = dir <//> pkg <//> commit

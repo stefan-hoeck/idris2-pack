@@ -58,6 +58,8 @@ run (MkEitherT io) = do
 --          System Commands
 --------------------------------------------------------------------------------
 
+||| Display a list of variable-value pairs in the format
+||| `VAR1="val1" VAR2="val2"`.
 export
 dispEnv : List (String,String) -> String
 dispEnv = unwords . map (\(e,v) => "\{e}=\{quote v}")
