@@ -21,6 +21,7 @@ export
 data Safe : PkgDesc -> Type where
   IsSafe : Safe d
 
+||| Alias for `ResolvedLib Safe`
 public export
 0 SafeLib : Type
 SafeLib = ResolvedLib Safe
@@ -32,23 +33,28 @@ export
 data NotPack : PkgDesc -> Type where
   IsNotPack : Safe d -> NotPack d
 
+||| Extract the `Safe d` wrapped in a `NotPack d`
 export
 0 toSafe : NotPack d -> Safe d
 toSafe (IsNotPack s) = s
 
+||| Alias for `ResolvedApp Safe`
 public export
 0 SafeApp : Type
 SafeApp = ResolvedApp NotPack
 
+||| Alias for `Either SafeLib SafeApp`
 public export
 0 SafePkg : Type
 SafePkg = Either SafeLib SafeApp
 
+||| This holds, sind `NotPack d` implies `Safe d` as shown by
+||| `toSafe`.
 export
 notPackIsSafe : Desc NotPack -> Desc Safe
 notPackIsSafe (MkDesc x y z s) = MkDesc x y z $ toSafe s
 
-||| check if a package has special build- or install hooks
+||| Check if a package has special build- or install hooks
 ||| defined, and if yes, prompt the user
 ||| before continuing (unless `safetyPrompt` in the
 ||| `Config` is set set to `False`).
@@ -86,6 +92,9 @@ parseLibIpkg :  HasIO io
              -> EitherT PackErr io (Desc Safe)
 parseLibIpkg p loc = parseIpkgFile p loc >>= safe
 
+||| Parse an `.ipkg` file representing an application
+||| and check if it has no custom build hooks and does not produce
+||| an executable called "pack".
 export
 parseAppIpkg :  HasIO io
              => Env
@@ -94,14 +103,22 @@ parseAppIpkg :  HasIO io
              -> EitherT PackErr io (Desc NotPack)
 parseAppIpkg p loc = parseIpkgFile p loc >>= notPack
 
+||| Check if a resolved library is safe to install (prompt, if it uses
+||| custom build hooks in its `.ipkg` file).
 export
 safeLib : HasIO io => Env => ResolvedLib t -> EitherT PackErr io SafeLib
 safeLib l  = reTag l <$> safe l.desc
 
+||| Check if a resolved app is safe to install (prompt, if it uses
+||| custom build hooks in its `.ipkg` file).
+|||
+||| This fails if the app produces an executable called "pack": We don't
+||| want to overwrite the pack installation.
 export
 safeApp : HasIO io => Env => ResolvedApp t -> EitherT PackErr io SafeApp
 safeApp a = reTag a <$> notPack a.desc
 
+||| Runs `safeLib` or `safeApp` on a library or app.
 export
 checkLOA : HasIO io => Env => LibOrApp U -> EitherT PackErr io SafePkg
 checkLOA (Left x)  = Left <$> safeLib x
@@ -111,6 +128,7 @@ checkLOA (Right x) = Right <$> safeApp x
 --          Resolving Packages
 --------------------------------------------------------------------------------
 
+||| Run a pack action in the directory of the cloned Idris repository.
 export
 withCoreGit : HasIO io
             => (e : Env)
@@ -118,6 +136,7 @@ withCoreGit : HasIO io
             -> EitherT PackErr io a
 withCoreGit = withGit tmpDir compiler e.db.idrisURL e.db.idrisCommit
 
+||| Run a pack action in the directory of a (possibly cloned) package.
 export
 withPkgEnv :  HasIO io
              => Env
@@ -160,6 +179,7 @@ libStatus n p d = do
           dir := localSrcDir d
        in checkOutdated ts dir Outdated Installed
 
+||| Generates the `PkgStatus` of a package representing an application.
 export
 appStatus :  HasIO io
           => Env
@@ -177,6 +197,8 @@ appStatus n p d exe = do
           src := localSrcDir d
        in checkOutdated ts src Outdated Installed
 
+||| Caches the `.ipkg` files of the core libraries to make them
+||| quickly available when running queries.
 export
 cacheCoreIpkgFiles : HasIO io => Env => Path Abs -> EitherT PackErr io ()
 cacheCoreIpkgFiles dir = for_ corePkgs $ \c =>
@@ -205,6 +227,9 @@ loadIpkg n (Core c)         =
      when !(fileMissing cache) $ withCoreGit cacheCoreIpkgFiles
      parseIpkgFile cache tmpLoc
 
+||| Try to fully resolve a library given as a package name.
+||| This will look up the library in the current package collection
+||| and will fetch and read its (possibly cached) `.ipkg` file.
 export covering
 resolveLib : HasIO io => Env => PkgName -> EitherT PackErr io (ResolvedLib U)
 resolveLib n = case lookup n allPackages of
@@ -214,6 +239,9 @@ resolveLib n = case lookup n allPackages of
     lib <- libStatus n p d
     pure $ RL p n d lib
 
+||| Try to fully resolve an application given as a package name.
+||| This will look up the app in the current package collection
+||| and will fetch and read its (possibly cached) `.ipkg` file.
 export covering
 resolveApp : HasIO io => Env => PkgName -> EitherT PackErr io (ResolvedApp U)
 resolveApp n = do
@@ -222,6 +250,9 @@ resolveApp n = do
     Nothing  => throwE (NoApp n)
     Just exe => (\s => RA p n d s exe) <$> appStatus n p d exe
 
+||| Try to fully resolve an application or library given as a package.
+||| This will look up the package name in the current package collection
+||| and will fetch and read its (possibly cached) `.ipkg` file.
 export covering
 resolveAny :  HasIO io
            => Env
@@ -231,6 +262,10 @@ resolveAny :  HasIO io
 resolveAny Lib n = Left  <$> resolveLib n
 resolveAny Bin n = Right <$> resolveApp n
 
+||| Prints the absolute path of an application's installed executable
+||| to stdout. This is used in the wrapper scripts we use for invoking
+||| the correct version of apps such as `idris2-lsp`, the version of
+||| which depend on the `pack.toml` files currently in scope.
 export covering
 appPath : HasIO io => PkgName -> Env -> EitherT PackErr io ()
 appPath "idris2" e = putStrLn "\{idrisExec}"

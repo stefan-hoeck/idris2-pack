@@ -119,6 +119,7 @@ installImpl dir rl =
      when !(exists $ dir /> "lib") $
        copyDir (dir /> "lib") (pkgLibDir rl.name rl.pkg)
 
+||| Install the given resolved library.
 export
 installLib :  HasIO io => IdrisEnv => SafeLib -> EitherT PackErr io ()
 installLib rl = case rl.status of
@@ -172,6 +173,7 @@ installApp ra = case ra.status of
             write (appTimestamp ra.name ra.pkg) ""
 
 
+||| Install the given resolved library or application.
 export covering
 installAny :  HasIO io
            => IdrisEnv
@@ -208,6 +210,7 @@ docsImpl rl = do
   when !(exists docs) (rmDir docs)
   copyDir docsDir docs
 
+||| Install the API docs for the given resolved library.
 export
 installDocs : HasIO io => IdrisEnv => SafeLib -> EitherT PackErr io ()
 installDocs rl =
@@ -227,6 +230,9 @@ appInfo : List SafePkg -> List String
 appInfo = mapMaybe $ \case Right ra => Just "\{ra.name}"
                            Left _   => Nothing
 
+||| Install the given list of libraries or applications, by first
+||| resolving each of them and then creating a build plan including
+||| all dependencies of the lot.
 export covering
 install :  HasIO io
         => (e : IdrisEnv)
@@ -242,6 +248,8 @@ install ps = do
     for_ all $ \case Left rl => installDocs rl
                      Right _ => pure ()
 
+||| Install the (possibly transitive) dependencies of the given
+||| loaded `.ipkg` file.
 export covering
 installDeps :  HasIO io
             => IdrisEnv
@@ -254,6 +262,7 @@ export covering
 idrisEnv : HasIO io => PackDir => Config => EitherT PackErr io IdrisEnv
 idrisEnv = env >>= (\e => mkIdris)
 
+||| Update the pack installation
 export covering
 update : HasIO io => IdrisEnv -> EitherT PackErr io ()
 update e =
@@ -267,7 +276,6 @@ update e =
           """
         gitClone packRepo dir
 
-        -- we're cheating here...
         d <- parseLibIpkg ipkg ipkg
         installDeps d
         inDir dir $ \_ => do
@@ -300,7 +308,7 @@ removeLib n = do
   info "Removing library \{n}"
   rmDir (pkgInstallDir rl.name rl.pkg rl.desc)
 
-||| Remove a library or executable.
+||| Remove a library or application.
 export
 remove : HasIO io => Env => List (PkgType,PkgName) -> EitherT PackErr io ()
 remove = traverse_ $ \case (Lib,n) => removeLib n

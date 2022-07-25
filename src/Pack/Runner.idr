@@ -99,8 +99,13 @@ Command Cmd where
       latest <- defaultColl
       pure $ {collection := latest} c
     False => pure $ {collection := db} c
-  adjConfig _ c = pure c
 
+  -- we trust pack to be safe to install even though it uses
+  -- custom build hooks
+  adjConfig Update c = pure $ {safetyPrompt := False} c
+  adjConfig _      c = pure c
+
+||| Main application entry point (modulo error handling).
 export covering
 runCmd : HasIO io => EitherT PackErr io ()
 runCmd = do
