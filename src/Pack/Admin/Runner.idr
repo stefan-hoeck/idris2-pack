@@ -4,9 +4,8 @@ import Data.SortedMap
 import Pack.Admin.Runner.Check
 import Pack.CmdLn.Opts
 import Pack.CmdLn.Types
-import Pack.Config.Env
-import Pack.Config.Types
-import Pack.Database.Types
+import Pack.Config
+import Pack.Database
 import Pack.Runner.Install
 import public Pack.Core
 
@@ -15,31 +14,29 @@ data ACmd : Type where
   FromHEAD : (out : File Abs) -> ACmd
   Help     : ACmd
 
-adjConf :  HasIO io
-        => Config Nothing
-        -> ACmd
-        -> EitherT PackErr io (Config Nothing)
-adjConf c (CheckDB db _) = pure $ {
-    collection   := db
-  , withDocs     := True
-  , useKatla     := True
-  , safetyPrompt := False
-  } c
+Command ACmd where
+  defaultLevel (CheckDB x y)  = Info
+  defaultLevel (FromHEAD out) = Info
+  defaultLevel Help           = Warning
 
-adjConf c (FromHEAD p)   = pure $ {collection := MkDBName "HEAD"} c
-adjConf c Help           = pure c
+  readCommand_ _   ["help"]                 = Right Help
+  readCommand_ dir ["extract-from-head",p]  = FromHEAD <$> readAbsFile curDir p
+  readCommand_ dir ["check-collection",n,p] =
+    [| CheckDB (readDBName n) (readAbsFile curDir p) |]
+  readCommand_ _   xs                       = Left $ UnknownCommand xs
 
-loglevel : ACmd -> LogLevel
-loglevel (CheckDB x y)  = Info
-loglevel (FromHEAD out) = Info
-loglevel Help           = Warning
+  adjConfig (CheckDB db _) c = pure $ {
+      collection   := db
+    , withDocs     := True
+    , useKatla     := True
+    , safetyPrompt := False
+    } c
 
-readCmd : Path Abs -> List String -> Either PackErr ACmd
-readCmd _   ["help"]                 = Right Help
-readCmd dir ["extract-from-head",p]  = FromHEAD <$> readAbsFile dir p
-readCmd dir ["check-collection",n,p] =
-  [| CheckDB (readDBName n) (readAbsFile dir p) |]
-readCmd _   xs                       = Left $ UnknownCommand xs
+  adjConfig (FromHEAD p) c = pure $ {collection := MkDBName "HEAD"} c
+  adjConfig Help         c = pure c
+
+  defaultCommand_ = Help
+
 
 covering
 commitOf : HasIO io => Package -> EitherT PackErr io Package
@@ -61,7 +58,7 @@ dbOf (MkDB u commit v ps) = do
 -- package to one holding the latest commit hash for each
 -- and writes the resulting DB to the given file.
 covering
-writeLatestDB : HasIO io => File Abs -> Env s -> EitherT PackErr io ()
+writeLatestDB : HasIO io => File Abs -> Env -> EitherT PackErr io ()
 writeLatestDB path e = do
   ndb <- dbOf e.db
   write path (printDB ndb)
@@ -69,10 +66,13 @@ writeLatestDB path e = do
 export covering
 runCmd : HasIO io => EitherT PackErr io ()
 runCmd = do
-  (c,cmd) <- getConfig readCmd Help loglevel adjConf
+  pd       <- getPackDir
+  pd       <- CD <$> curDir
+  (mc,cmd) <- getConfig ACmd
+  c        <- traverse resolveMeta mc
   case cmd of
-    CheckDB db p       => finally (rmDir $ tmpDir c) $ idrisEnv c >>= checkDB p
-    FromHEAD p         => env c >>= writeLatestDB p
+    CheckDB db p       => finally (rmDir tmpDir) $ idrisEnv >>= checkDB p
+    FromHEAD p         => env >>= writeLatestDB p
     Help               => putStrLn """
       Usage: pack-admin [cmd] [args]
 

@@ -4,10 +4,9 @@ import Core.FC
 import Core.Name.Namespace
 import Data.SortedMap
 import Idris.Package.Types
-import Pack.Config.Env
-import Pack.Config.Types
+import Pack.Config
 import Pack.Core
-import Pack.Database.Types
+import Pack.Database
 
 %default total
 
@@ -54,26 +53,26 @@ notPackIsSafe (MkDesc x y z s) = MkDesc x y z $ toSafe s
 ||| before continuing (unless `safetyPrompt` in the
 ||| `Config` is set set to `False`).
 export
-safe : HasIO io => Env s -> Desc t -> EitherT PackErr io (Desc Safe)
-safe c (MkDesc d s f _) =
+safe : HasIO io => (e : Env) => Desc t -> EitherT PackErr io (Desc Safe)
+safe (MkDesc d s f _) =
   let unsafe := isJust
              $   d.prebuild
              <|> d.postbuild
              <|> d.preinstall
              <|> d.postinstall
-   in case c.safetyPrompt && unsafe of
+   in case e.config.safetyPrompt && unsafe of
         False => pure $ MkDesc d s f IsSafe
         True  => do
-          warn c "Package \{name d} uses custom build hooks. Continue (yes/*no)?"
+          warn "Package \{name d} uses custom build hooks. Continue (yes/*no)?"
           "yes" <- trim <$> getLine | _ => throwE SafetyAbort
           pure $ MkDesc d s f IsSafe
 
 ||| Like `safe` but verify also that the package does not
 ||| produce an executable called "pack"
 export
-notPack : HasIO io => Env s -> Desc t -> EitherT PackErr io (Desc NotPack)
-notPack e d = do
-  MkDesc d s f p <- safe e d
+notPack : HasIO io => Env => Desc t -> EitherT PackErr io (Desc NotPack)
+notPack d = do
+  MkDesc d s f p <- safe d
   case d.executable of
     Just "pack" => throwE ManualInstallPackApp
     _           => pure $ MkDesc d s f (IsNotPack p)
@@ -81,32 +80,32 @@ notPack e d = do
 ||| Parse an `.ipkg` file and check if it has custom build hooks.
 export
 parseLibIpkg :  HasIO io
-             => Env s
-             -> (file : File Abs)
+             => (e : Env)
+             => (file : File Abs)
              -> (loc : File Abs)
              -> EitherT PackErr io (Desc Safe)
-parseLibIpkg e p loc = parseIpkgFile p loc >>= safe e
+parseLibIpkg p loc = parseIpkgFile p loc >>= safe
 
 export
 parseAppIpkg :  HasIO io
-             => Env s
-             -> (file : File Abs)
+             => Env
+             => (file : File Abs)
              -> (loc : File Abs)
              -> EitherT PackErr io (Desc NotPack)
-parseAppIpkg e p loc = parseIpkgFile p loc >>= notPack e
+parseAppIpkg p loc = parseIpkgFile p loc >>= notPack
 
 export
-safeLib : HasIO io => Env s -> ResolvedLib t -> EitherT PackErr io SafeLib
-safeLib e l  = reTag l <$> safe e l.desc
+safeLib : HasIO io => Env => ResolvedLib t -> EitherT PackErr io SafeLib
+safeLib l  = reTag l <$> safe l.desc
 
 export
-safeApp : HasIO io => Env s -> ResolvedApp t -> EitherT PackErr io SafeApp
-safeApp e a = reTag a <$> notPack e a.desc
+safeApp : HasIO io => Env => ResolvedApp t -> EitherT PackErr io SafeApp
+safeApp a = reTag a <$> notPack a.desc
 
 export
-checkLOA : HasIO io => Env s -> LibOrApp U -> EitherT PackErr io SafePkg
-checkLOA e (Left x)  = Left <$> safeLib e x
-checkLOA e (Right x) = Right <$> safeApp e x
+checkLOA : HasIO io => Env => LibOrApp U -> EitherT PackErr io SafePkg
+checkLOA (Left x)  = Left <$> safeLib x
+checkLOA (Right x) = Right <$> safeApp x
 
 --------------------------------------------------------------------------------
 --          Resolving Packages
@@ -114,21 +113,21 @@ checkLOA e (Right x) = Right <$> safeApp e x
 
 export
 withCoreGit : HasIO io
-            => Env e
-            -> (Path Abs -> EitherT PackErr io a)
+            => (e : Env)
+            => (Path Abs -> EitherT PackErr io a)
             -> EitherT PackErr io a
-withCoreGit e = withGit (tmpDir e) compiler e.db.idrisURL e.db.idrisCommit
+withCoreGit = withGit tmpDir compiler e.db.idrisURL e.db.idrisCommit
 
 export
 withPkgEnv :  HasIO io
-             => Env e
-             -> PkgName
+             => Env
+             => PkgName
              -> Package
              -> (Path Abs -> EitherT PackErr io a)
              -> EitherT PackErr io a
-withPkgEnv e n (GitHub u c i _) f = withGit (tmpDir e) n u c f
-withPkgEnv e n (Local d i _)    f = inDir d f
-withPkgEnv e n (Core _)         f = withCoreGit e f
+withPkgEnv n (GitHub u c i _) f = withGit tmpDir n u c f
+withPkgEnv n (Local d i _)    f = inDir d f
+withPkgEnv n (Core _)         f = withCoreGit f
 
 -- tests if the files in a directory are new compare to
 -- a timestamp file, and returns one of two possible results
@@ -146,98 +145,98 @@ checkOutdated ts src o u = do
 
 -- checks the status of a library
 libStatus :  HasIO io
-          => Env e
-          -> PkgName
+          => Env
+          => PkgName
           -> (p : Package)
           -> (d : Desc t)
           -> EitherT PackErr io (PkgStatus p)
-libStatus e n p d = do
-  True <- exists (pkgInstallDir e n p d) | False => pure Missing
-  b    <- exists $ pkgDocs e n p
+libStatus n p d = do
+  True <- exists (pkgInstallDir n p d) | False => pure Missing
+  b    <- exists $ pkgDocs n p
   case isLocal p of
     No c     => pure $ Installed
     Yes ploc =>
-      let ts  := libTimestamp e n p
+      let ts  := libTimestamp n p
           dir := localSrcDir d
        in checkOutdated ts dir Outdated Installed
 
 export
 appStatus :  HasIO io
-          => Env e
-          -> PkgName
+          => Env
+          => PkgName
           -> (p   : Package)
           -> (d   : Desc t)
           -> (exe : Body)
           -> EitherT PackErr io (PkgStatus p)
-appStatus e n p d exe = do
-  True <- fileExists (pkgExec e n p exe) | False => pure Missing
+appStatus n p d exe = do
+  True <- fileExists (pkgExec n p exe) | False => pure Missing
   case isLocal p of
     No c     => pure Installed
     Yes ploc =>
-      let ts  := appTimestamp e n p
+      let ts  := appTimestamp n p
           src := localSrcDir d
        in checkOutdated ts src Outdated Installed
 
 export
-cacheCoreIpkgFiles : HasIO io => Env s -> Path Abs -> EitherT PackErr io ()
-cacheCoreIpkgFiles e dir = for_ corePkgs $ \c =>
-  copyFile (toAbsFile dir (coreIpkgPath c)) (coreCachePath e c)
+cacheCoreIpkgFiles : HasIO io => Env => Path Abs -> EitherT PackErr io ()
+cacheCoreIpkgFiles dir = for_ corePkgs $ \c =>
+  copyFile (toAbsFile dir (coreIpkgPath c)) (coreCachePath c)
 
 loadIpkg :  HasIO io
-         => Env s
-         -> PkgName
+         => (e : Env)
+         => PkgName
          -> Package
          -> EitherT PackErr io (Desc U)
-loadIpkg e n (GitHub u c i _) =
-  let cache  := ipkgCachePath e n c i
-      tmpLoc := gitDir (tmpDir e) n c </> i
+loadIpkg n (GitHub u c i _) =
+  let cache  := ipkgCachePath n c i
+      tmpLoc := gitDir tmpDir n c </> i
    in do
      when !(fileMissing cache) $
-       withGit (tmpDir e) n u c $ \dir => do
-         let pf := patchFile e n i
+       withGit tmpDir n u c $ \dir => do
+         let pf := patchFile n i
          when !(fileExists pf) (patch tmpLoc pf)
          copyFile tmpLoc cache
      parseIpkgFile cache tmpLoc
-loadIpkg e n (Local d i _)    = parseIpkgFile (d </> i) (d </> i)
-loadIpkg e n (Core c)         =
-  let cache  := coreCachePath e c
-      tmpLoc := gitDir (tmpDir e) compiler  e.db.idrisCommit </> coreIpkgPath c
+loadIpkg n (Local d i _)    = parseIpkgFile (d </> i) (d </> i)
+loadIpkg n (Core c)         =
+  let cache  := coreCachePath c
+      tmpLoc := gitDir tmpDir compiler  e.db.idrisCommit </> coreIpkgPath c
    in do
-     when !(fileMissing cache) $ withCoreGit e (cacheCoreIpkgFiles e)
+     when !(fileMissing cache) $ withCoreGit cacheCoreIpkgFiles
      parseIpkgFile cache tmpLoc
 
 export covering
-resolveLib : HasIO io => Env s -> PkgName -> EitherT PackErr io (ResolvedLib U)
-resolveLib e n = case lookup n (allPackages e) of
+resolveLib : HasIO io => Env => PkgName -> EitherT PackErr io (ResolvedLib U)
+resolveLib n = case lookup n allPackages of
   Nothing => throwE (UnknownPkg n)
   Just p  => do
-    d   <- loadIpkg e n p
-    lib <- libStatus e n p d
+    d   <- loadIpkg n p
+    lib <- libStatus n p d
     pure $ RL p n d lib
 
 export covering
-resolveApp : HasIO io => Env s -> PkgName -> EitherT PackErr io (ResolvedApp U)
-resolveApp e n = do
-  RL p n d _ <- resolveLib e n
+resolveApp : HasIO io => Env => PkgName -> EitherT PackErr io (ResolvedApp U)
+resolveApp n = do
+  RL p n d _ <- resolveLib n
   case exec d of
     Nothing  => throwE (NoApp n)
-    Just exe => (\s => RA p n d s exe) <$> appStatus e n p d exe
+    Just exe => (\s => RA p n d s exe) <$> appStatus n p d exe
 
 export covering
 resolveAny :  HasIO io
-           => Env s
-           -> PkgType
+           => Env
+           => PkgType
            -> PkgName
            -> EitherT PackErr io (LibOrApp U)
-resolveAny e Lib n = Left  <$> resolveLib e n
-resolveAny e Bin n = Right <$> resolveApp e n
+resolveAny Lib n = Left  <$> resolveLib n
+resolveAny Bin n = Right <$> resolveApp n
 
 export covering
-appPath : HasIO io => PkgName -> Env s -> EitherT PackErr io ()
-appPath "idris2" e = putStrLn "\{idrisExec e}"
+appPath : HasIO io => PkgName -> Env -> EitherT PackErr io ()
+appPath "idris2" e = putStrLn "\{idrisExec}"
 appPath n e = do
-  ra <- resolveApp e n
-  putStrLn . interpolate $ pkgExec e ra.name ra.pkg ra.exec
+  ra <- resolveApp n
+  putStrLn . interpolate $ pkgExec ra.name ra.pkg ra.exec
 
 --------------------------------------------------------------------------------
 --         Installation Plan
@@ -262,15 +261,15 @@ showPlan = unlines . map (\(t,n) => "\{t} \{n}")
 ||| base, so we make sure these are installed as well.
 export covering
 plan :  HasIO io
-     => Env s
-     -> List (PkgType, PkgName)
+     => Env
+     => List (PkgType, PkgName)
      -> EitherT PackErr io (List SafePkg)
-plan e ps =
+plan ps =
   let ps' := Right <$> (Lib, "prelude") :: (Lib, "base") :: ps
    in do
-     debug e "Building plan for the following libraries: \n \{showPlan ps}"
+     debug "Building plan for the following libraries: \n \{showPlan ps}"
      loas <- filter needsInstalling <$> go empty Lin ps'
-     traverse (checkLOA e) loas
+     traverse checkLOA loas
   where covering
         go :  (planned  : SortedMap (PkgType, PkgName) ())
            -> (resolved : SnocList $ LibOrApp U)
@@ -294,6 +293,6 @@ plan e ps =
         go ps sx (Right p :: xs) = case lookup p ps of
           Just ()  => go ps sx xs
           Nothing  => do
-            loa <- resolveAny e (fst p) (snd p)
+            loa <- resolveAny (fst p) (snd p)
             let deps := (\d => Right (Lib, d)) <$> dependencies loa
             go ps sx $ deps ++ Left loa :: xs

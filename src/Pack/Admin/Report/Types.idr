@@ -5,9 +5,9 @@ import Data.SnocList
 import Data.SortedMap
 import Data.String
 import Idris.Package.Types
-import Pack.Core.Types
-import Pack.Config.Types
-import Pack.Database.Types
+import Pack.Core
+import Pack.Config
+import Pack.Database
 import Pack.Runner.Database
 
 %default total
@@ -53,32 +53,32 @@ ghCommitLink u c@(MkCommit commit)  =
 apiLink : PkgName -> String
 apiLink p = "https://stefan-hoeck.github.io/idris2-pack-docs/docs/\{p}/index.html"
 
-url : Env s -> Package -> URL
-url e (GitHub u _ _ _) = u
-url e (Local dir ipkg pkgPath) = MkURL "\{dir}"
-url e (Core _) = e.db.idrisURL
+url : (e : Env) => Package -> URL
+url (GitHub u _ _ _) = u
+url (Local dir ipkg pkgPath) = MkURL "\{dir}"
+url (Core _) = e.db.idrisURL
 
-commit : Env s -> Package -> Commit
-commit e (GitHub _ c _ _) = c
-commit e (Local dir ipkg pkgPath) = ""
-commit e (Core _) = e.db.idrisCommit
+commit : (e : Env) => Package -> Commit
+commit (GitHub _ c _ _) = c
+commit (Local dir ipkg pkgPath) = ""
+commit (Core _) = e.db.idrisCommit
 
-succLine : Env s -> SafeLib -> String
-succLine e lib =
+succLine : Env => SafeLib -> String
+succLine lib =
   let desc := desc lib
       pkg  := pkg lib
       brf  := fromMaybe "" desc.desc.brief
       nm   := name lib
       api  := apiLink nm
-      url  := url e pkg
-      com  := commit e pkg
+      url  := url pkg
+      com  := commit pkg
    in "| [\{nm}](\{url}) | \{brf} | \{ghCommitLink url com} | [docs](\{api}) |"
 
-failLine : Env s -> (SafeLib, List PkgName) -> String
-failLine e (lib,ps) =
+failLine : Env => (SafeLib, List PkgName) -> String
+failLine (lib,ps) =
   let pkg  := pkg lib
-      url  := url e pkg
-      com  := commit e pkg
+      url  := url pkg
+      com  := commit pkg
       deps := fastConcat . intersperse ", " $ map interpolate ps
       nm   := name lib
    in "| [\{nm}](\{url}) | \{deps} | \{ghCommitLink url com} |"
@@ -86,10 +86,10 @@ failLine e (lib,ps) =
 errLine : (PkgName, PackErr) -> String
 errLine (p,err) = "| \{p} | \{printErr err} |"
 
-report : Env e -> RepLines -> String
-report e (MkRL es fs ss) =
-  let succs     = unlines $ map (succLine e) (ss <>> Nil)
-      fails     = unlines $ map (failLine e) (fs <>> Nil)
+report : (e : Env) => RepLines -> String
+report (MkRL es fs ss) =
+  let succs     = unlines $ map succLine (ss <>> Nil)
+      fails     = unlines $ map failLine (fs <>> Nil)
       errs      = unlines $ map errLine (es <>> Nil)
       idrisLink = ghCommitLink e.db.idrisURL e.db.idrisCommit
    in """
@@ -129,8 +129,8 @@ toRepLines (Error x y) =
   MkRL [< (x,y)] Lin Lin
 
 export
-printReport : Env e -> ReportDB -> String
-printReport e = report e . foldMap toRepLines
+printReport : Env => ReportDB -> String
+printReport = report . foldMap toRepLines
 
 export
 numberOfFailures : ReportDB -> Nat

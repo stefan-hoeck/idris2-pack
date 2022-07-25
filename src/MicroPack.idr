@@ -6,23 +6,19 @@ module MicroPack
 import Data.Maybe
 import Data.SortedMap
 import Data.String
-import Pack.Config.Env
-import Pack.Config.TOML
-import Pack.Config.Types
+import Pack.Config
 import Pack.Core
-import Pack.Database.Types
+import Pack.Database
 import Pack.Runner.Install
 import System
 
 %default total
 
-microInit :  (dir    : Path Abs)
-          -> (scheme : String)
+microInit :  (scheme : String)
           -> (db     : DBName)
-          ->  Config Nothing
-microInit dir scheme db = MkConfig {
-    packDir       = dir
-  , collection    = db
+          ->  Config
+microInit scheme db = MkConfig {
+    collection    = db
   , scheme        = fromString scheme
   , safetyPrompt  = True
   , withSrc       = True
@@ -36,15 +32,15 @@ microInit dir scheme db = MkConfig {
   , queryType     = NameOnly
   , logLevel      = Info
   , codegen       = Chez
-  , db            = ()
+  , output        = "_tmppack"
   }
 
 covering
 main : IO ()
 main = run $ do
-  dir     <- packDir
-  mkDir dir
-  defCol  <- defaultColl dir
+  dir     <- getPackDir
+  mkDir packDir
+  defCol  <- defaultColl
   args    <- getArgs
   scheme  <- fromMaybe "scheme" <$> getEnv "SCHEME"
 
@@ -52,9 +48,9 @@ main = run $ do
         [_,n] => either (const defCol) id $ readDBName n
         _     => defCol
 
-      conf = microInit dir scheme db
+      conf = microInit scheme db
 
   -- initialize `$HOME/.pack/user/pack.toml`
-  write (MkF (dir /> "user") packToml) (initToml scheme db)
+  write (MkF (packDir /> "user") packToml) (initToml scheme db)
 
-  finally (rmDir $ tmpDir conf) $ idrisEnv conf >>= update
+  finally (rmDir tmpDir) $ idrisEnv >>= update

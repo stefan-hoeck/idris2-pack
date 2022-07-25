@@ -5,8 +5,7 @@ import Data.Maybe
 import Data.String
 import Data.String.Extra
 import Idris.Package.Types
-import Pack.Config.Env
-import Pack.Config.Types
+import Pack.Config
 import Pack.Core
 import Core.Name.Namespace
 import Libraries.Text.PrettyPrint.Prettyprinter
@@ -63,33 +62,33 @@ gitIgnoreFile = """
 ||| Create a new package at current location
 export covering
 new :  HasIO io
-    => (curdir : Path Abs)
+    => (curdir : CurDir)
     -> PkgType
     -> (pkgName : Body)
-    -> Env HasIdris
+    -> IdrisEnv
     -> EitherT PackErr io ()
-new curdir pty pkgName e = do
-    debug e "Creating new \{pty} package named \{pkgName}..."
-    debug e "Getting author name from git config"
+new (CD curdir) pty pkgName e = do
+    debug "Creating new \{pty} package named \{pkgName}..."
+    debug "Getting author name from git config"
     user <- trim <$> (sysRun "git config user.name")
-    debug e "Creating PkgDesc"
+    debug "Creating PkgDesc"
     let (mod, modFile) = getModFile pty pkgName
 
     ipkg <- pure $ newPkgDesc pkgName mod user
 
-    debug e "Creating parent and src directories"
+    debug "Creating parent and src directories"
     let pkgRootDir = curdir /> pkgName
     let srcDir = pkgRootDir /> "src"
     mkDir (srcDir)
 
-    debug e "Initializing git repo"
-    eitherT (\err => warn e "Git repo creation failed: \{printErr err}")
+    debug "Initializing git repo"
+    eitherT (\err => warn "Git repo creation failed: \{printErr err}")
             (\_ => write (MkF pkgRootDir ".gitignore") gitIgnoreFile)
             (sys "git init \{pkgRootDir}")
 
-    debug e "Writing ipkg file"
+    debug "Writing ipkg file"
     write (MkF pkgRootDir  (pkgName <+> ".ipkg")) (renderString $ layoutUnbounded $ pretty ipkg)
 
-    debug e "Writing module file"
+    debug "Writing module file"
     write (MkF srcDir $ mod <+> ".idr") modFile
-    info e "Created \{pty} package '\{pkgName}'"
+    info "Created \{pty} package '\{pkgName}'"

@@ -12,6 +12,17 @@ import System.File
 %default total
 
 ----------------------------------------------------------------------------------
+----          Quoted Strings
+----------------------------------------------------------------------------------
+
+||| This puts a value in quotes during interpolation.
+||| Note: If the interpolated string contains additional quote
+||| characters, these will *not* be escaped.
+export
+quote : Interpolation a => a -> String
+quote v = "\"\{v}\""
+
+----------------------------------------------------------------------------------
 ----          Paths
 ----------------------------------------------------------------------------------
 
@@ -97,6 +108,39 @@ toAbsFile dir (MkF p f) = MkF (dir </> p) f
 
 export
 Cast (File t) (Path t) where cast = toPath
+
+----------------------------------------------------------------------------------
+----          CurDir and PackDir
+----------------------------------------------------------------------------------
+
+||| The directory where package collections, global user settings,
+||| and cached `.ipkg` files are stored.
+public export
+data PackDir : Type where
+  [noHints]
+  PD : (dir : Path Abs) -> PackDir
+
+export %inline
+Interpolation PackDir where
+  interpolate (PD dir) = interpolate dir
+
+export %inline
+packDir : (pd : PackDir) => Path Abs
+packDir {pd = PD dir} = dir
+
+||| The directory from which the pack application was invoked.
+public export
+data CurDir : Type where
+  [noHints]
+  CD : (dir : Path Abs) -> CurDir
+
+export %inline
+Interpolation CurDir where
+  interpolate (CD dir) = interpolate dir
+
+export %inline
+curDir : (cd : CurDir) => Path Abs
+curDir {cd = CD dir} = dir
 
 ----------------------------------------------------------------------------------
 ----          Interpolation
@@ -298,7 +342,7 @@ prefixKey k = mapFst $ \case MissingKey p => MissingKey (k :: p)
 public export
 data PackErr : Type where
   ||| Failed to get the path of the current directory.
-  CurDir     : PackErr
+  NoCurDir   : PackErr
 
   ||| Failed to get package directory path
   NoPackDir  : PackErr
@@ -405,7 +449,7 @@ data PackErr : Type where
 ||| Prints an error that occured during program execution.
 export
 printErr : PackErr -> String
-printErr CurDir = "Failed to get current directory."
+printErr NoCurDir = "Failed to get current directory."
 
 printErr NoPackDir = """
   Failed to figure out package directory.
@@ -414,16 +458,16 @@ printErr NoPackDir = """
   """
 
 printErr (MkDir path err) =
-  "Error when creating directory \"\{path}\": \{err}."
+  "Error when creating directory \{quote path}: \{err}."
 
 printErr (ReadFile path err) =
-  "Error when reading file \"\{path}\": \{err}."
+  "Error when reading file \{quote path}: \{err}."
 
 printErr (WriteFile path err) =
-  "Error when writing to file \"\{path}\": \{err}."
+  "Error when writing to file \{quote path}: \{err}."
 
 printErr (DirEntries path err) =
-  "Error when reading directory \"\{path}\": \{err}."
+  "Error when reading directory \{quote path}: \{err}."
 
 printErr (Sys cmd err) = """
   Error when executing system command.
@@ -432,31 +476,31 @@ printErr (Sys cmd err) = """
   """
 
 printErr (ChangeDir path) =
-  "Failed to change to directory \"\{path}\"."
+  "Failed to change to directory \{quote path}."
 
 printErr (InvalidPackageDesc s) = """
-  Invalid package description: \"\{s}\".
+  Invalid package description: \{quote s}.
   This should be of the format \"name,url,commit hash,ipkg file\".
   """
 
 printErr (InvalidDBHeader s) = """
-  Invalid data base header: \"\{s}\".
+  Invalid data base header: \{quote s}.
   This should be of the format \"idris2 commit hash,idris2 version\".
   """
 
 printErr (InvalidDBName s) = """
-  Invalid data collection name: \"\{s}\".
+  Invalid data collection name: \{quote s}.
   This should be a non-empty string without path separators.
   """
 
-printErr (InvalidBody s) = "Invalid file path body: \"\{s}\"."
+printErr (InvalidBody s) = "Invalid file path body: \{quote s}."
 
 printErr (InvalidPkgType s) = """
-  Invalid package type: \"\{s}\".
+  Invalid package type: \{quote s}.
   Valid types are `lib` and `bin`.
   """
 
-printErr (InvalidPkgVersion s) = "Invalid package version: \"\{s}\"."
+printErr (InvalidPkgVersion s) = "Invalid package version: \{quote s}."
 
 printErr (UnknownPkg name) = "Unknown package: \{name}"
 
@@ -470,7 +514,7 @@ printErr (InvalidIpkgFile path) =
   "Failed to parse .ipkg file: \{path}"
 
 printErr (MissingCorePackage nm v c) =
-  "Core package \"\{nm}\" missing for Idris2 version \{v} (commit: \{c})"
+  "Core package \{quote nm} missing for Idris2 version \{v} (commit: \{c})"
 
 printErr (UnknownArg arg) = "Unknown command line arg: \{arg}"
 
@@ -540,7 +584,12 @@ readAbsFile cd s = case split $ toAbsPath cd (fromString s) of
 --------------------------------------------------------------------------------
 
 public export
-data LogLevel = Debug | Info | Warning | Silence
+data LogLevel : Type where
+  [noHints]
+  Debug   : LogLevel
+  Info    : LogLevel
+  Warning : LogLevel
+  Silence : LogLevel
 
 llToNat : LogLevel -> Nat
 llToNat Debug   = 0

@@ -4,10 +4,8 @@ import Data.List1
 import Data.String
 
 import Pack.Config.Types
-import Pack.Core.TOML
-import Pack.Core.Types
-import Pack.Database.TOML
-import Pack.Database.Types
+import Pack.Core
+import Pack.Database
 
 %default total
 
@@ -21,12 +19,16 @@ CustomDB = SortedMap DBName (SortedMap PkgName $ Package_ MetaCommit)
 cstm :  Path Abs -> Value -> Either TOMLErr CustomDB
 cstm = sortedMap (sortedMap package)
 
-||| Adj configuration.
+||| Parse a `UserConfig` from a TOML value.
+|||
+||| @ dir : Parent directory of the `.toml` file we read. This
+|||         is used to turn relative paths in the `.toml` file
+|||         (for instance, relative paths pointing to local Idris
+|||         projects) into absolute file paths.
 export
-config : Path Abs -> Value -> Either TOMLErr (Config_ MetaCommit Maybe Nothing)
+config : (dir : Path Abs) -> Value -> Either TOMLErr UserConfig
 config dir v =
-  [| MkConfig (pure Nothing)
-              (maybeValAt "collection" v)
+  [| MkConfig (maybeValAt "collection" v)
               (maybeValAt "idris2.scheme" v)
               (maybeValAt "install.safety-prompt" v)
               (maybeValAt "install.with-src" v)
@@ -40,7 +42,6 @@ config dir v =
               (pure Nothing)
               (pure Nothing)
               (maybeValAt "idris2.codegen" v)
-              (pure Nothing)
               (pure Nothing)
   |]
 

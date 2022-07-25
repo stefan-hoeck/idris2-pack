@@ -1,7 +1,8 @@
 module Pack.CmdLn.Opts
 
 import Pack.CmdLn.Types
-import Pack.Core.Types
+import Pack.Core
+import Pack.Database
 import Pack.Config.Types
 import System.Console.GetOpt
 
@@ -10,52 +11,52 @@ import System.Console.GetOpt
 -- Function for adjusting the config based on a command
 -- line option. This first argument is the current directory
 -- from which the application was invoked.
-0 AdjConf : Maybe State -> Type
-AdjConf s = Path Abs -> Config s -> Either PackErr (Config s)
+0 AdjConf : Type
+AdjConf = CurDir -> MetaConfig -> Either PackErr MetaConfig
 
-debug : AdjConf s
+debug : AdjConf
 debug _ = Right . {logLevel := Debug}
 
-withSrc : AdjConf s
+withSrc : AdjConf
 withSrc _ = Right . {withSrc := True}
 
-withDocs : AdjConf s
+withDocs : AdjConf
 withDocs _ = Right . {withDocs := True}
 
-useKatla : AdjConf s
+useKatla : AdjConf
 useKatla _ = Right . {useKatla := True}
 
-setDB : String -> AdjConf s
+setDB : String -> AdjConf
 setDB s _ c = map (\db => {collection := db} c) $ readDBName s
 
-setOutput : String -> AdjConf s
+setOutput : String -> AdjConf
 setOutput s _ c = map (\o => {output := o} c) $ readBody s
 
-setQuery : QueryType -> AdjConf s
+setQuery : QueryType -> AdjConf
 setQuery s _ = Right . {queryType := s}
 
-setPrompt : Bool -> AdjConf s
+setPrompt : Bool -> AdjConf
 setPrompt b _ = Right . {safetyPrompt := b}
 
-setScheme : String -> AdjConf s
+setScheme : String -> AdjConf
 setScheme s _ = Right . {scheme := fromString s}
 
-setRlwrap : Bool -> AdjConf s
+setRlwrap : Bool -> AdjConf
 setRlwrap b _ = Right . {rlwrap := b }
 
-setIpkg : String -> AdjConf s
-setIpkg v dir c = case readAbsFile dir v of
+setIpkg : String -> AdjConf
+setIpkg v (CD dir) c = case readAbsFile dir v of
   Right af => Right $ {withIpkg := Use af} c
   Left err => Left err
 
-noIpkg : AdjConf s
+noIpkg : AdjConf
 noIpkg _ = Right . {withIpkg := None}
 
-codegen : String -> AdjConf s
+codegen : String -> AdjConf
 codegen v _ = Right . {codegen := fromString v}
 
 -- command line options with description
-descs : List $ OptDescr (AdjConf Nothing)
+descs : List $ OptDescr AdjConf
 descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             "Set the curated package set to use."
         , MkOpt [] ["cg"]   (ReqArg codegen "<codgen>")
@@ -132,70 +133,36 @@ optionNames = foldMap names descs
         names (MkOpt sns lns _ _) =
           map (\c => "-\{String.singleton c}") sns ++ map ("--" ++) lns
 
-ipkgFile : Path Abs -> String -> (File Abs -> Cmd) -> Either PackErr Cmd
-ipkgFile dir s f = f <$> readAbsFile dir s
-
+||| Given the current directory (from which pack was invoked)
+||| and an initial config assembled from the `pack.toml` files
+||| in scope, generates the application
+||| config and command to run from a list of command
+||| line arguments.
+|||
+||| @ cmd     : Type representing the command to run
+|||             We abstract over this type, because pack and
+|||             pack-admin accept different kinds of commands,
+|||             and both applications use this function to parse
+|||             the command line args
+|||
+||| @ curDir     : Current working directory
+||| @ init       : Initial config (possibly assebled from `pack.toml` files)
+||| @ args       : List of command line arguments
+||| @ readCmd    : Reads the command to run
+||| @ defltLevel : Default log level to use (based on the command to run)
 export
-cmd : Path Abs -> List String -> Either PackErr Cmd
-cmd _   []                         = Right PrintHelp
-cmd _   ["help"]                   = Right PrintHelp
-cmd _   ["info"]                   = Right Info
-cmd _   ["update-db"]              = Right UpdateDB
-cmd _   ["update"]                 = Right Update
-cmd _   ["fuzzy", s]               = Right $ Fuzzy [] s
-cmd _   ["fuzzy", p, s]            = Right $ Fuzzy (forget $ map MkPkgName $ split (',' ==) p) s
-cmd _   ["query", s]               = Right $ Query PkgName s
-cmd _   ["query", "dep", s]        = Right $ Query Dependency s
-cmd _   ["query", "module", s]     = Right $ Query Module s
-cmd dir ("exec" :: idr :: args)    = (`Exec` args) <$> readAbsFile dir idr
-cmd _   ["repl"]                   = Right $ Repl Nothing
-cmd dir ["repl", s]                = Repl . Just <$> readAbsFile dir s
-cmd dir ("run" :: p :: args)       =
-  let deflt   := Right $ Run (Right $ MkPkgName p) args
-      Right af := readAbsFile dir p | Left _ => deflt
-   in case isIpkgBody af.file of
-     True  => Right $ Run (Left af) args
-     False => deflt
-
-cmd dir ["build", file]            = ipkgFile dir file Build
-cmd dir ["install-deps", file]     = ipkgFile dir file BuildDeps
-cmd dir ["typecheck", file]        = ipkgFile dir file Typecheck
-
-cmd _   ("install" :: xs)          =
-  Right . Install $ map (\s => (Lib, MkPkgName s)) xs
-cmd _   ("remove" :: xs)           =
-  Right . Remove $ map (\s => (Lib, MkPkgName s)) xs
-cmd _   ("remove-app" :: xs)           =
-  Right . Remove $ map (\s => (Bin, MkPkgName s)) xs
-cmd _   ("install-app" :: xs)      =
-  Right . Install $ map (\s => (Bin, MkPkgName s)) xs
-cmd _   ["completion",a,b]         = Right $ Completion a b
-
-cmd _   ["completion-script",f]    = Right $ CompletionScript f
-cmd _   ["package-path"]           = Right PackagePath
-cmd _   ["libs-path"]              = Right LibsPath
-cmd _   ["data-path"]              = Right DataPath
-cmd _   ["app-path", n]            = Right $ AppPath (MkPkgName n)
-cmd _   ["switch",db]              = Switch <$> readDBName db
-cmd dir ["new", pty, p]            =
-  New dir <$> readPkgType pty <*> readBody p
-cmd _  xs                          = Left  $ UnknownCommand xs
-
-||| Given a root directory for *pack* and a db version,
-||| generates the application
-||| config from a list of command line arguments.
-export
-applyArgs :  (curDir     : Path Abs)
-          -> (init       : Config Nothing)
+applyArgs :  (0 c : Type)
+          -> Command c
+          => (curDir     : CurDir)
+          -> (init       : MetaConfig)
           -> (args       : List String)
-          -> (readCmd    : List String -> Either PackErr a)
-          -> (defltLevel : a -> LogLevel)
-          -> Either PackErr (Config Nothing, a)
-applyArgs dir init args readCmd defltLevel =
+          -> Either PackErr (MetaConfig, c)
+applyArgs c dir init args =
   case getOpt RequireOrder descs args of
        MkResult opts n  []      []       => do
-         cmd  <- readCmd n
-         conf <- foldlM (\c,f => f dir c) ({logLevel := defltLevel cmd} init) opts
+         cmd  <- readCommand c dir n
+         let init' = {logLevel := defaultLevel cmd} init
+         conf <- foldlM (\c,f => f dir c) init' opts
          Right (conf, cmd)
 
        MkResult _    _ (u :: _) _        => Left (UnknownArg u)
