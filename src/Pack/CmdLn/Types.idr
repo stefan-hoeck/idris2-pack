@@ -5,6 +5,8 @@ import Pack.Database.Types
 
 %default total
 
+||| Mode used for querying the package collection:
+||| By package name, by dependency, or by module name.
 public export
 data QueryMode = PkgName | Dependency | Module
 

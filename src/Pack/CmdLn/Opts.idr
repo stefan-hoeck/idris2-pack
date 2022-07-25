@@ -126,6 +126,9 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             "Print debugging information"
         ]
 
+||| Names of all command line options (prefixed with "-" in case of
+||| single-character option names and with "--" in case of multi-character
+||| option names.
 export
 optionNames : List String
 optionNames = foldMap names descs
@@ -139,17 +142,15 @@ optionNames = foldMap names descs
 ||| config and command to run from a list of command
 ||| line arguments.
 |||
-||| @ cmd     : Type representing the command to run
-|||             We abstract over this type, because pack and
-|||             pack-admin accept different kinds of commands,
-|||             and both applications use this function to parse
-|||             the command line args
+||| @ c      : Type representing the command to run
+|||            We abstract over this type, because pack and
+|||            pack-admin accept different kinds of commands,
+|||            and both applications use this function to parse
+|||            the command line args
 |||
-||| @ curDir     : Current working directory
-||| @ init       : Initial config (possibly assebled from `pack.toml` files)
-||| @ args       : List of command line arguments
-||| @ readCmd    : Reads the command to run
-||| @ defltLevel : Default log level to use (based on the command to run)
+||| @ curDir : Current working directory
+||| @ init   : Initial config (possibly assebled from `pack.toml` files)
+||| @ args   : List of command line arguments
 export
 applyArgs :  (0 c : Type)
           -> Command c
@@ -175,7 +176,7 @@ applyArgs c dir init args =
 progName : String
 progName = "pack"
 
-||| Application info printed with the `--help` action.
+||| Application info printed with the `help` action.
 export
 usageInfo : String
 usageInfo = """

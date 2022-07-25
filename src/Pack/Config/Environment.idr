@@ -16,6 +16,7 @@ import System
 --          Files and Directories
 --------------------------------------------------------------------------------
 
+||| File body of all `pack.toml` files.
 export
 packToml : Body
 packToml = "pack.toml"
@@ -73,6 +74,7 @@ export %inline
 packBinDir : PackDir => Path Abs
 packBinDir = packDir /> "bin"
 
+||| Where the actual pack application is installed.
 export %inline
 packInstallDir : PackDir => Commit -> Path Abs
 packInstallDir com = packDir </> "install/pack" </> cast com
@@ -140,24 +142,35 @@ export %inline
 idrisDataDir : PackDir => DB => Path Abs
 idrisDataDir = idrisInstallDir /> "support"
 
+||| Directory where an installed library or app goes
 export %inline
 pkgPrefixDir : PackDir => DB => PkgName -> Package -> Path Abs
 pkgPrefixDir n (GitHub _ c _ _) = commitDir <//> n <//> c
 pkgPrefixDir n (Local _ _ _)    = commitDir </> "local" <//> n
 pkgPrefixDir n (Core _)         = idrisPrefixDir
 
+||| Directory to be used with the `IDRIS2_PACKAGE_PATH` variable, so that
+||| Idris finds a library even though it is being installed in a
+||| custom location.
 export %inline
 pkgPathDir : PackDir => DB => PkgName -> Package -> Path Abs
 pkgPathDir n p = pkgPrefixDir n p /> idrisDir
 
+||| Directory where the binary of an Idris application is installed.
 export %inline
 pkgBinDir : PackDir => DB => PkgName -> Package -> Path Abs
 pkgBinDir n p = pkgPrefixDir n p /> "bin"
 
+||| Directory to be used with the `IDRIS2_LIBS` variable, so that
+||| Idris finds a libraries `.so` files even though they have been
+||| installed in a custom location.
 export %inline
 pkgLibDir : PackDir => DB => PkgName -> Package -> Path Abs
 pkgLibDir n p = pkgPathDir n p /> "lib"
 
+||| Directory to be used with the `IDRIS2_DATA` variable, so that
+||| Idris finds a libraries support files even though they have been
+||| installed in a custom location.
 export %inline
 pkgDataDir : PackDir => DB => PkgName -> Package -> Path Abs
 pkgDataDir n p = pkgPathDir n p /> "support"
@@ -207,6 +220,7 @@ export
 pkgExec : PackDir => DB => PkgName -> Package -> (exe : Body) -> File Abs
 pkgExec n p exe = MkF (pkgBinDir n p) exe
 
+||| Path to the executable of an Idris application
 export
 resolvedExec : PackDir => DB => ResolvedApp t -> File Abs
 resolvedExec (RA p n d _ exe) = pkgExec n p exe
@@ -223,14 +237,20 @@ pathDirs pre pth = do
        . (pre ::)
        $ map (\(n,p) => "\{pth n p}") ps'
 
+||| Directories to be listed in the `IDRIS2_PACKAGE_PATH` variable, so
+||| that Idris finds all libraries installed by pack in custom locations.
 export
 packagePathDirs : HasIO io => PackDir => Config => DB -> io String
 packagePathDirs _ = pathDirs "\{idrisInstallDir}" pkgPathDir
 
+||| Directories to be listed in the `IDRIS2_LIBS` variable, so
+||| that Idris finds all `.so` files installed by pack in custom locations.
 export
 packageLibDirs : HasIO io => PackDir => Config => DB -> io String
 packageLibDirs _ = pathDirs "\{idrisLibDir}" pkgLibDir
 
+||| Directories to be listed in the `IDRIS2_DATA` variable, so
+||| that Idris finds all support files installed by pack in custom locations.
 export
 packageDataDirs : HasIO io => PackDir => Config => DB -> io String
 packageDataDirs _ = pathDirs "\{idrisDataDir}" pkgDataDir
@@ -254,24 +274,35 @@ export
 schemeVar : (c : Config) => String
 schemeVar = "SCHEME=\{quote c.scheme}"
 
+||| `IDRIS2_PREFIX` to be used with Idris when installing a library
+||| to a custom location.
 export
 libInstallPrefix : PackDir => DB => ResolvedLib t -> List (String,String)
 libInstallPrefix rl =
   [("IDRIS2_PREFIX", "\{pkgPrefixDir rl.name rl.pkg}")]
 
+||| `IDRIS2_PACKAGE_PATH` variable to be used with Idris, so
+||| that it finds all libraries installed by pack in custom locations.
 export
 packagePath : HasIO io => Env => io (String, String)
 packagePath =
   ("IDRIS2_PACKAGE_PATH",) <$>  packagePathDirs %search
 
+||| `IDRIS2_LIBS` variable to be used with Idris, so
+||| that it finds all `.so` files installed by pack in custom locations.
 export
 libPath : HasIO io => Env => io (String, String)
 libPath = ("IDRIS2_LIBS",) <$> packageLibDirs %search
 
+||| `IDRIS2_DATA` variable to be used with Idris, so
+||| that it finds all support files installed by pack in custom locations.
 export
 dataPath : HasIO io => Env => io (String, String)
 dataPath = ("IDRIS2_DATA",) <$> packageDataDirs %search
 
+||| This unifies `packagePath`, `libPath` and `dataPath`,
+||| to generate an environment necessary to build packages with Idris
+||| the dependencies of which are handled by pack.
 export
 buildEnv : HasIO io => Env => io (List (String,String))
 buildEnv = sequence [packagePath, libPath, dataPath]
@@ -310,6 +341,8 @@ idrisWithPkgs pkgs =
 --          Logging
 --------------------------------------------------------------------------------
 
+||| Logs a message to stdout if the log level is greater than or equal
+||| than the reference level `ref`.
 export
 log :  HasIO io
     => (ref : LogLevel)
@@ -319,6 +352,11 @@ log :  HasIO io
 log ref lvl msg =
   when (lvl >= ref) (putStrLn "[ \{lvl} ] \{msg}")
 
+||| Logs an idented list of values to stdout if the given log level
+||| is greater than or equal than the (auto-implicit) reference level `ref`.
+|||
+||| Note: Most of the time `ref` is automatically being extracted from
+||| a value of type `Pack.Config.Types.Config` in scope.
 export
 logMany :  HasIO io
         => (ref  : LogLevel)
@@ -330,14 +368,26 @@ logMany lvl msg msgs =
   when (lvl >= ref && not (null msgs)) $ do
     log ref lvl $ unlines (msg :: map (indent 2) msgs)
 
+||| Alias for `log ref Debug`.
+|||
+||| Note: Most of the time `ref` is automatically being extracted from
+||| a value of type `Pack.Config.Types.Config` in scope.
 export %inline
 debug : HasIO io => (ref : LogLevel) => (msg  : Lazy String) -> io ()
 debug = log ref Debug
 
+||| Alias for `log ref Info`.
+|||
+||| Note: Most of the time `ref` is automatically being extracted from
+||| a value of type `Pack.Config.Types.Config` in scope.
 export %inline
 info : HasIO io => (ref : LogLevel) => (msg  : Lazy String) -> io ()
 info = log ref Info
 
+||| Alias for `log ref Wraning`.
+|||
+||| Note: Most of the time `ref` is automatically being extracted from
+||| a value of type `Pack.Config.Types.Config` in scope.
 export %inline
 warn : HasIO io => (ref : LogLevel) => (msg  : Lazy String) -> io ()
 warn = log ref Warning
@@ -381,6 +431,8 @@ defaultColl = do
     . fileStem
     $ foldl max x xs
 
+||| Resolve a meta commit by fetching the hash of the latest commit
+||| from GitHub in case of an `MC x` commit.
 export
 resolveMeta : HasIO io => UserPackage -> EitherT PackErr io Package
 resolveMeta (GitHub u (MC x) i p) = pure $ GitHub u x i p
@@ -436,6 +488,7 @@ getConfig c = do
 pkgs : SortedMap PkgName Package
 pkgs = fromList $ (\c => (corePkgName c, Core c)) <$> corePkgs
 
+||| Load the package collection as given in the (auto-implicit) user config.
 export covering
 loadDB : HasIO io => PackDir => Config => EitherT PackErr io DB
 loadDB = do
@@ -443,6 +496,8 @@ loadDB = do
   debug "reading package collection"
   readFromTOML DB dbFile
 
+||| Load the package collection as given in the (auto-implicit) user config
+||| and convert the result to a pack environment.
 export covering
 env : HasIO io => (pd : PackDir) => (c : Config) => EitherT PackErr io Env
 env = MkEnv pd c <$> loadDB
@@ -452,6 +507,8 @@ adjCollection db str = case isPrefixOf "collection " str of
   False => str
   True  => "collection = \{quote db}"
 
+||| Update the `collection` field in file `PACK_DIR/user/pack.toml`
+||| with the name of the package collection given in config `c`.
 export covering
 writeCollection :  HasIO io
                 => PackDir

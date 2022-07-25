@@ -123,11 +123,11 @@ optionFlags =
 queries : Env => List String
 queries = ["dep", "module"] ++ packages
 
-||| Given a pair of strings, the first representing the word
-||| actually being edited, the second representing the word
-||| before the one being edited, return a list of possible
-||| completions. If the list of completions is empty, bash
-||| will perform directory completion.
+-- Given a pair of strings, the first representing the word
+-- actually being edited, the second representing the word
+-- before the one being edited, return a list of possible
+-- completions. If the list of completions is empty, bash
+-- will perform directory completion.
 opts : HasIO io => Env => String -> String -> io (List String)
 opts "--" "pack"  = pure optionFlags
 
@@ -163,7 +163,8 @@ opts x _ = pure $ if (x `elem` optionFlags)
                     then Nil
                     else prefixOnly x optionFlags
 
-||| Bash autocompletion script using the given function name
+||| Prints tab-completion options based on the last and second-to-last
+||| command line argument.
 export
 complete : HasIO io => String -> String -> Env -> EitherT PackErr io ()
 complete a b e = do

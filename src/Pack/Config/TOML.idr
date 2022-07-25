@@ -33,6 +33,7 @@ FromTOML UserConfig where
                   (pure Nothing)
       |]
 
+||| Initial content of an auto-generated `PACK_DIR/user/pack.toml` file.
 export
 initToml : (scheme : String) -> (db : DBName) -> String
 initToml scheme db = """
