@@ -183,7 +183,7 @@ configuration. The types involved will be discussed below.
   we need the two parameters. Most of the time, we work with `Config`,
   and alias for `Config_ I Commit`, where all fields are mandatory
   and package commits have been fully resolved.
-*  `Pack.Database.Types.DB`: The package collection to use. This includes
+* `Pack.Database.Types.DB`: The package collection to use. This includes
   the GitHub URL and commit hash of the Idris compiler to use.
 * `Pack.Config.Types.Env`: Most of the time, we need access to `PackDir`,
   `Config`, and `DB` at the same time. `Env` wraps up these three
