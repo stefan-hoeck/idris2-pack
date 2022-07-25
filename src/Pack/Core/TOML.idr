@@ -12,7 +12,7 @@ import Pack.Core.Types
 --          Interface
 --------------------------------------------------------------------------------
 
-||| Interface for using a *pack* data type as a key
+||| Interface for using a pack data type as a key
 ||| in a TOML table.
 public export
 interface Ord a => TOMLKey a where
@@ -28,30 +28,47 @@ TOMLKey DBName where
 export
 TOMLKey PkgName where fromKey = Right . MkPkgName
 
-||| Interface for converting a TOML value to a *pack*
-||| data type.
+||| Interface for converting a TOML value to a pack
+||| data type. We pass the TOML file's absolute path
+||| as an additional argument, since this allows us to
+||| convert relative paths listed in the TOML file
+||| (for instance, the path to a local package) to absolute ones.
 public export
 interface FromTOML a where
   ||| Tries to convert a `Value` to a value of type `a`.
-  fromTOML : (val  : Value) -> Either TOMLErr a
+  fromTOML : File Abs -> (val  : Value) -> Either TOMLErr a
 
 --------------------------------------------------------------------------------
 --          Utilities
 --------------------------------------------------------------------------------
 
 ||| Read a value of type `b` by reading a value of
-||| type `a`.
+||| type `a` and converting it with the given function.
 export
-tmap : FromTOML a => (a -> b) -> Value -> Either TOMLErr b
-tmap f = map f . fromTOML
+tmap : FromTOML a => (a -> b) -> File Abs -> Value -> Either TOMLErr b
+tmap f p = map f . fromTOML p
 
 ||| Read a value of type `b` by refining a value of
 ||| type `a`.
 export
-trefine : FromTOML a => (a -> Either TOMLErr b) -> Value -> Either TOMLErr b
-trefine f v = fromTOML v >>= f
+trefine :  FromTOML a
+        => (a -> Either TOMLErr b)
+        -> File Abs
+        -> Value
+        -> Either TOMLErr b
+trefine f p v = fromTOML p v >>= f
 
 ||| Try to extract a value from a toml `Value`.
+|||
+||| @ get   : Tries to convert the value found at the given `path` to a values of
+|||           the result type.
+||| @ path  : Dot-separated path to the value we'd like to read.
+||| @ deflt : Optional default value to use if there is not entry
+|||           at the given `path`. Note: This will not be used if there
+|||           is an entry at `path`. In this case, the value found will
+|||           always be handed over to `get`, resulting in a failure if
+|||           it can't be properly converted.
+||| @ value : The TOML value we start with.
 export
 valAt' :  (get  : Value -> Either TOMLErr a)
        -> (path : String)
@@ -70,25 +87,30 @@ valAt' get path dflt = go (forget $ split ('.' ==) path)
 
 ||| Extract and convert a mandatory value from a TOML
 ||| value. The `path` string can contain several dot-separated
-||| key names.
+||| key names. See also `valAt'`.
 export %inline
-valAt : FromTOML a => (path : String) -> (val : Value) -> Either TOMLErr a
-valAt path = valAt' fromTOML path Nothing
+valAt :  FromTOML a
+      => (path : String)
+      -> File Abs
+      -> (val : Value)
+      -> Either TOMLErr a
+valAt path f = valAt' (fromTOML f) path Nothing
 
 ||| Extract and convert an optional value from a TOML
 ||| value. The `path` string can contain several dot-separated
-||| key names.
+||| key names. See also `valAt'`.
 export %inline
 optValAt :  FromTOML a
          => (path : String)
+         -> File Abs
          -> (dflt : a)
          -> (val  : Value)
          -> Either TOMLErr a
-optValAt path = valAt' fromTOML path . Just
+optValAt path f = valAt' (fromTOML f) path . Just
 
 ||| Extract and convert an optional value from a TOML
 ||| value. The `path` string can contain several dot-separated
-||| key names.
+||| key names. See also `valAt'`.
 export
 maybeValAt' :  (f    : Value -> Either TOMLErr a)
             -> (path : String)
@@ -98,13 +120,14 @@ maybeValAt' f path = valAt' (map Just . f) path (Just Nothing)
 
 ||| Extract and convert an optional value from a TOML
 ||| value. The `path` string can contain several dot-separated
-||| key names.
+||| key names. See also `valAt'`.
 export %inline
 maybeValAt :  FromTOML a
            => (path : String)
+           -> File Abs
            -> (val  : Value)
            -> Either TOMLErr (Maybe a)
-maybeValAt = maybeValAt' fromTOML
+maybeValAt p f = maybeValAt' (fromTOML f) p
 
 --------------------------------------------------------------------------------
 --          Implementations
@@ -112,8 +135,8 @@ maybeValAt = maybeValAt' fromTOML
 
 export
 FromTOML String where
-  fromTOML (VString s) = Right s
-  fromTOML _           = Left $ WrongType [] "String"
+  fromTOML _ (VString s) = Right s
+  fromTOML _ _           = Left $ WrongType [] "String"
 
 export
 FromTOML PkgName where fromTOML = tmap MkPkgName
@@ -146,13 +169,13 @@ FromTOML DBName where fromTOML = trefine fromKey
 
 export
 FromTOML Bool where
-  fromTOML (VBoolean b) = Right b
-  fromTOML _            = Left $ WrongType [] "Bool"
+  fromTOML _ (VBoolean b) = Right b
+  fromTOML _ _            = Left $ WrongType [] "Bool"
 
 export
 FromTOML a => FromTOML (List a) where
-  fromTOML (VArray vs) = traverse fromTOML vs
-  fromTOML _           = Left $ WrongType [] "Array"
+  fromTOML f (VArray vs) = traverse (fromTOML f) vs
+  fromTOML _ _           = Left $ WrongType [] "Array"
 
 readVersion : String -> Either TOMLErr PkgVersion
 readVersion s = case traverse parsePositive $ split ('.' ==) s of
@@ -169,50 +192,58 @@ keyVal :  TOMLKey k
        -> Either TOMLErr (k,v)
 keyVal f (x,y) = prefixKey x [| MkPair (fromKey x) (f y) |]
 
-export
-sortedMap :  TOMLKey k
-          => (Path Abs -> Value -> Either TOMLErr v)
-          -> Path Abs
-          -> Value
-          -> Either TOMLErr (SortedMap k v)
-sortedMap f dir (VTable m) =
-  M.fromList <$> traverse (keyVal $ f dir) (M.toList m)
-sortedMap _ _    _         = Left $ WrongType [] "Table"
+-- -- TODO: Remove this.
+-- -- export
+-- -- sortedMap :  TOMLKey k
+-- --           => (Path Abs -> Value -> Either TOMLErr v)
+-- --           -> Path Abs
+-- --           -> Value
+-- --           -> Either TOMLErr (SortedMap k v)
+-- -- sortedMap f dir (VTable m) =
+-- --   M.fromList <$> traverse (keyVal $ f dir) (M.toList m)
+-- -- sortedMap _ _    _         = Left $ WrongType [] "Table"
 
 export
 TOMLKey k => FromTOML v => FromTOML (SortedMap k v) where
-  fromTOML (VTable m) = M.fromList <$> traverse (keyVal fromTOML) (M.toList m)
-  fromTOML _          = Left $ WrongType [] "Table"
+  fromTOML f (VTable m) =
+    M.fromList <$> traverse (keyVal $ fromTOML f) (M.toList m)
+  fromTOML _ _          = Left $ WrongType [] "Table"
 
-||| Read an absolute path from a .toml file that could also be given
-||| as a path relative to the .toml file's parent directory. We therefore
-||| need the parent directory as an additional input.
 export
-absPathAt :  (path : String)
-          -> (dir  : Path Abs) -- parent directory of the .toml file we read
-          -> (val  : Value)
-          -> Either TOMLErr (Path Abs)
-absPathAt path dir val = toAbsPath dir <$> valAt path val
+FromTOML (Path Abs) where
+  fromTOML f v = toAbsPath f.parent <$> fromTOML f v
 
-||| Read an absolute file path from a .toml file that could also be given
-||| as a path relative to the .toml file's parent directory. We therefore
-||| need the parent directory as an additional input.
 export
-absFileAt :  (path : String)
-          -> (dir  : Path Abs) -- parent directory of the .toml file we read
-          -> (val  : Value)
-          -> Either TOMLErr (File Abs)
-absFileAt path dir val = toAbsFile dir <$> valAt path val
+FromTOML (File Abs) where
+  fromTOML f v = toAbsFile f.parent <$> fromTOML f v
 
+-- -- ||| Read an absolute path from a .toml file that could also be given
+-- -- ||| as a path relative to the .toml file's parent directory. We therefore
+-- -- ||| need the parent directory as an additional input.
+-- -- export
+-- -- absPathAt :  (path : String)
+-- --           -> (dir  : Path Abs) -- parent directory of the .toml file we read
+-- --           -> (val  : Value)
+-- --           -> Either TOMLErr (Path Abs)
+-- -- absPathAt path dir val = toAbsPath dir <$> valAt path val
+--
+-- -- ||| Read an absolute file path from a .toml file that could also be given
+-- -- ||| as a path relative to the .toml file's parent directory. We therefore
+-- -- ||| need the parent directory as an additional input.
+-- -- export
+-- -- absFileAt :  (path : String)
+-- --           -> (dir  : Path Abs) -- parent directory of the .toml file we read
+-- --           -> (val  : Value)
+-- --           -> Either TOMLErr (File Abs)
+-- -- absFileAt path dir val = toAbsFile dir <$> valAt path val
+--
 --------------------------------------------------------------------------------
 --          Reading a TOML File
 --------------------------------------------------------------------------------
 
 ||| Reads a file and converts its content to a TOML value.
 export covering
-readTOML :  HasIO io
-         => (file : File Abs)
-         -> EitherT PackErr io Value
+readTOML :  HasIO io => File Abs -> EitherT PackErr io Value
 readTOML file = do
   str <- read file
   case parseTOML str of
@@ -221,28 +252,25 @@ readTOML file = do
 
 ||| Reads a file, converts its content to a TOML value, and
 ||| extracts an Idris value from this.
-|||
-||| @ dir  : Parent directory of the .toml file we read
-|||          This is required to convert relative paths
-|||          in the .toml file to absolute ones
-||| @ file : Name of the .toml file to read
 export covering
 readFromTOML :  HasIO io
-             => (file : File Abs)
-             -> (Path Abs -> Value -> Either TOMLErr a)
+             => (0 a : Type)
+             -> FromTOML a
+             => File Abs
              -> EitherT PackErr io a
-readFromTOML file f = do
+readFromTOML _ file = do
   v <- readTOML file
-  liftEither $ mapFst (TOMLFile file) (f file.parent v)
+  liftEither $ mapFst (TOMLFile file) (fromTOML file v)
 
 ||| Reads a file, converts its content to a TOML value, and
 ||| extracts an Idris value from this.
 export covering
 readOptionalFromTOML :  HasIO io
-                     => (file : File Abs)
-                     -> (Path Abs -> Value -> Either TOMLErr a)
+                     => (0 a : Type)
+                     -> FromTOML a
+                     => File Abs
                      -> EitherT PackErr io a
-readOptionalFromTOML file f = do
-  True <- fileExists file
-    | False => liftEither (mapFst (TOMLFile file) . f file.parent $ VTable empty)
-  readFromTOML file f
+readOptionalFromTOML a f = do
+  True <- fileExists f
+    | False => liftEither (mapFst (TOMLFile f) $ fromTOML f (VTable empty))
+  readFromTOML a f

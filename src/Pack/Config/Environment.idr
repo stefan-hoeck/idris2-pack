@@ -406,10 +406,10 @@ getConfig c = do
     write globalPackToml (initToml "scheme" coll)
 
   localToml   <- findInParentDirs ("pack.toml" ==) curDir
-  global      <- readOptionalFromTOML globalPackToml config
+  global      <- readOptionalFromTOML UserConfig globalPackToml
   local       <- case localToml of
-    Just af => readFromTOML af config
-    Nothing => readOptionalFromTOML (MkF curDir packToml) config
+    Just af => readFromTOML UserConfig af
+    Nothing => readOptionalFromTOML UserConfig (MkF curDir packToml)
 
   let ini = init coll `update` global `update` local
 
@@ -441,7 +441,7 @@ loadDB : HasIO io => PackDir => Config => EitherT PackErr io DB
 loadDB = do
   when !(missing dbDir) updateDB
   debug "reading package collection"
-  readFromTOML dbFile db
+  readFromTOML DB dbFile
 
 export covering
 env : HasIO io => (pd : PackDir) => (c : Config) => EitherT PackErr io Env

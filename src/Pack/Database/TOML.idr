@@ -12,23 +12,25 @@ import Pack.Database.Types
 export
 FromTOML MetaCommit where fromTOML = tmap fromString
 
-github : FromTOML c => Value -> Either TOMLErr (Package_ c)
-github v = [| GitHub (valAt "url" v)
-                     (valAt "commit" v)
-                     (valAt "ipkg" v)
-                     (optValAt "packagePath" False v) |]
+github : FromTOML c => File Abs -> Value -> Either TOMLErr (Package_ c)
+github f v = [| GitHub (valAt "url" f v)
+                       (valAt "commit" f v)
+                       (valAt "ipkg" f v)
+                       (optValAt "packagePath" f False v) |]
 
-local : Path Abs -> Value -> Either TOMLErr (Package_ c)
-local dir v = [| Local (absPathAt "path" dir v)
-                       (valAt "ipkg" v)
-                       (optValAt "packagePath" False v) |]
+local : File Abs -> Value -> Either TOMLErr (Package_ c)
+local f v = [| Local (valAt "path" f v)
+                     (valAt "ipkg" f v)
+                     (optValAt "packagePath" f False v) |]
 
-export
-package : FromTOML c => Path Abs -> Value -> Either TOMLErr (Package_ c)
-package dir v = valAt {a = String} "type" v >>=
-  \case "github" => github v
-        "local"  => local dir v
+package : FromTOML c => File Abs -> Value -> Either TOMLErr (Package_ c)
+package f v = valAt {a = String} "type" f v >>=
+  \case "github" => github f v
+        "local"  => local f v
         _        => Left $ WrongType ["type"] "Package Type"
+
+export %inline
+FromTOML c => FromTOML (Package_ c) where fromTOML = package
 
 ||| URL of the Idris repository
 export
@@ -36,8 +38,8 @@ idrisRepo : URL
 idrisRepo = "https://github.com/idris-lang/Idris2.git"
 
 export
-db : Path Abs -> Value -> Either TOMLErr DB
-db dir v = [| MkDB (optValAt "idris2.url" idrisRepo v)
-                   (valAt "idris2.commit" v)
-                   (valAt "idris2.version" v)
-                   (valAt' (sortedMap package dir) "db" (Just empty) v) |]
+FromTOML DB where
+  fromTOML f v = [| MkDB (optValAt "idris2.url" f idrisRepo v)
+                         (valAt "idris2.commit" f v)
+                         (valAt "idris2.version" f v)
+                         (optValAt "db" f empty v) |]

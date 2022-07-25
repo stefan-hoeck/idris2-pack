@@ -13,37 +13,25 @@ export
 FromTOML Codegen where
   fromTOML = tmap Types.fromString
 
-0 CustomDB : Type
-CustomDB = SortedMap DBName (SortedMap PkgName $ Package_ MetaCommit)
-
-cstm :  Path Abs -> Value -> Either TOMLErr CustomDB
-cstm = sortedMap (sortedMap package)
-
-||| Parse a `UserConfig` from a TOML value.
-|||
-||| @ dir : Parent directory of the `.toml` file we read. This
-|||         is used to turn relative paths in the `.toml` file
-|||         (for instance, relative paths pointing to local Idris
-|||         projects) into absolute file paths.
 export
-config : (dir : Path Abs) -> Value -> Either TOMLErr UserConfig
-config dir v =
-  [| MkConfig (maybeValAt "collection" v)
-              (maybeValAt "idris2.scheme" v)
-              (maybeValAt "install.safety-prompt" v)
-              (maybeValAt "install.with-src" v)
-              (maybeValAt "install.with-docs" v)
-              (maybeValAt "install.use-katla" v)
-              (pure Nothing)
-              (maybeValAt "idris2.repl.rlwrap" v)
-              (maybeValAt "install.libs" v)
-              (maybeValAt "install.apps" v)
-              (maybeValAt' (cstm dir) "custom" v)
-              (pure Nothing)
-              (pure Nothing)
-              (maybeValAt "idris2.codegen" v)
-              (pure Nothing)
-  |]
+FromTOML UserConfig where
+  fromTOML f v =
+      [| MkConfig (maybeValAt "collection" f v)
+                  (maybeValAt "idris2.scheme" f v)
+                  (maybeValAt "install.safety-prompt" f v)
+                  (maybeValAt "install.with-src" f v)
+                  (maybeValAt "install.with-docs" f v)
+                  (maybeValAt "install.use-katla" f v)
+                  (pure Nothing)
+                  (maybeValAt "idris2.repl.rlwrap" f v)
+                  (maybeValAt "install.libs" f v)
+                  (maybeValAt "install.apps" f v)
+                  (maybeValAt "custom" f v)
+                  (pure Nothing)
+                  (pure Nothing)
+                  (maybeValAt "idris2.codegen" f v)
+                  (pure Nothing)
+      |]
 
 export
 initToml : (scheme : String) -> (db : DBName) -> String
