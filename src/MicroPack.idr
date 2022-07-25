@@ -20,7 +20,7 @@ microInit :  (scheme : String)
 microInit scheme db = MkConfig {
     collection    = db
   , scheme        = fromString scheme
-  , safetyPrompt  = True
+  , safetyPrompt  = False
   , withSrc       = True
   , withDocs      = False
   , useKatla      = False
