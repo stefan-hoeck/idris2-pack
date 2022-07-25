@@ -4,10 +4,8 @@ import Data.List1
 import Data.String
 
 import Pack.Config.Types
-import Pack.Core.TOML
-import Pack.Core.Types
-import Pack.Database.TOML
-import Pack.Database.Types
+import Pack.Core
+import Pack.Database
 
 %default total
 
@@ -15,35 +13,27 @@ export
 FromTOML Codegen where
   fromTOML = tmap Types.fromString
 
-0 CustomDB : Type
-CustomDB = SortedMap DBName (SortedMap PkgName $ Package_ MetaCommit)
-
-cstm :  Path Abs -> Value -> Either TOMLErr CustomDB
-cstm = sortedMap (sortedMap package)
-
-||| Adj configuration.
 export
-config : Path Abs -> Value -> Either TOMLErr (Config_ MetaCommit Maybe Nothing)
-config dir v =
-  [| MkConfig (pure Nothing)
-              (maybeValAt "collection" v)
-              (maybeValAt "idris2.scheme" v)
-              (maybeValAt "install.safety-prompt" v)
-              (maybeValAt "install.with-src" v)
-              (maybeValAt "install.with-docs" v)
-              (maybeValAt "install.use-katla" v)
-              (pure Nothing)
-              (maybeValAt "idris2.repl.rlwrap" v)
-              (maybeValAt "install.libs" v)
-              (maybeValAt "install.apps" v)
-              (maybeValAt' (cstm dir) "custom" v)
-              (pure Nothing)
-              (pure Nothing)
-              (maybeValAt "idris2.codegen" v)
-              (pure Nothing)
-              (pure Nothing)
-  |]
+FromTOML UserConfig where
+  fromTOML f v =
+      [| MkConfig (maybeValAt "collection" f v)
+                  (maybeValAt "idris2.scheme" f v)
+                  (maybeValAt "install.safety-prompt" f v)
+                  (maybeValAt "install.with-src" f v)
+                  (maybeValAt "install.with-docs" f v)
+                  (maybeValAt "install.use-katla" f v)
+                  (pure Nothing)
+                  (maybeValAt "idris2.repl.rlwrap" f v)
+                  (maybeValAt "install.libs" f v)
+                  (maybeValAt "install.apps" f v)
+                  (maybeValAt "custom" f v)
+                  (pure Nothing)
+                  (pure Nothing)
+                  (maybeValAt "idris2.codegen" f v)
+                  (pure Nothing)
+      |]
 
+||| Initial content of an auto-generated `PACK_DIR/user/pack.toml` file.
 export
 initToml : (scheme : String) -> (db : DBName) -> String
 initToml scheme db = """

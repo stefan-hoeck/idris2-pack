@@ -58,9 +58,11 @@ run (MkEitherT io) = do
 --          System Commands
 --------------------------------------------------------------------------------
 
+||| Display a list of variable-value pairs in the format
+||| `VAR1="val1" VAR2="val2"`.
 export
 dispEnv : List (String,String) -> String
-dispEnv = unwords . map (\(e,v) => "\{e}=\"\{v}\"")
+dispEnv = unwords . map (\(e,v) => "\{e}=\{quote v}")
 
 ||| Tries to run a system command.
 export
@@ -158,10 +160,10 @@ rmDir dir = when !(exists dir) $ sys "rm -rf \{dir}"
 export
 curDir : HasIO io => EitherT PackErr io (Path Abs)
 curDir = do
-  Just s <- currentDir | Nothing => throwE CurDir
+  Just s <- currentDir | Nothing => throwE NoCurDir
   case the FilePath (fromString s) of
     FP (PAbs sx) => pure (PAbs sx)
-    FP (PRel _)  => throwE CurDir
+    FP (PRel _)  => throwE NoCurDir
 
 ||| Changes the working directory
 export

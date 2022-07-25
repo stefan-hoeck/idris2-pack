@@ -240,6 +240,8 @@ buildPath d =
         (toAbsPath d.path.parent . fromString)
         d.desc.builddir
 
+||| Extract the (optional) name of the executable from the
+||| description of an Idris app.
 export
 exec : Desc t -> Maybe Body
 exec d = d.desc.executable >>= parse
@@ -254,6 +256,8 @@ execPath d = (MkF $ buildPath d /> "exec") <$> exec d
 --          Docs
 --------------------------------------------------------------------------------
 
+||| Path to different files relevant during generation of API docs
+||| of a single Idris source file (field `srcFile`).
 public export
 record DocSources where
   constructor MkDS
@@ -266,18 +270,22 @@ replaceDot : Char -> Char
 replaceDot '.' = '/'
 replaceDot c   = c
 
+||| Generates the doc paths based on the package description
+||| (which might use custom source and build directories).
 export
 sourceForDoc : Desc t -> File Abs -> Maybe DocSources
 sourceForDoc d f = do
-  MkBody cs _ <- fileStem f
+  MkBody cs p <- fileStem f
   rf          <- RelFile.parse . pack $ map replaceDot cs
   Just $ MkDS {
     htmlDoc = f
   , srcFile = (sourcePath d </> rf) <.> "idr"
   , ttmFile = (buildPath d </> "ttc" </> rf) <.> "ttm"
-  , srcHtml = MkF (f.parent) (MkBody cs %search <.> "src.html")
+  , srcHtml = MkF (f.parent) (MkBody cs p <.> "src.html")
   }
 
+||| Insert a link to the katla-generated and highlighted
+||| sources to the API docs.
 export covering
 insertSources : HasIO io => DocSources -> EitherT PackErr io ()
 insertSources x = do

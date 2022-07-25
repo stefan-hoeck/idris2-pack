@@ -19,11 +19,13 @@ depends = base >= 0.5.1
         , toml
         , filepath
 
-modules = Pack.CmdLn.Completion
+modules = Pack.CmdLn
+        , Pack.CmdLn.Completion
         , Pack.CmdLn.Opts
         , Pack.CmdLn.Types
 
-        , Pack.Config.Env
+        , Pack.Config
+        , Pack.Config.Environment
         , Pack.Config.TOML
         , Pack.Config.Types
 
@@ -34,6 +36,7 @@ modules = Pack.CmdLn.Completion
         , Pack.Core.TOML
         , Pack.Core.Types
 
+        , Pack.Database
         , Pack.Database.TOML
         , Pack.Database.Types
 

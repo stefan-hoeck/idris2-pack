@@ -6,9 +6,9 @@ import Data.Maybe
 import Data.SortedMap
 import Idris.Package.Types
 import Pack.CmdLn.Types
-import Pack.Config.Types
+import Pack.Config
 import Pack.Core
-import Pack.Database.Types
+import Pack.Database
 import Pack.Runner.Database
 import Pack.Runner.Install
 import Pack.Version
@@ -62,29 +62,29 @@ installedApp qp = case map status qp.app of
   Just Missing   => False
   Nothing        => False
 
-resolve : HasIO io => Env s -> PkgName -> EitherT PackErr io QPkg
-resolve e n = do
-  lib <- resolveLib e n
+resolve : HasIO io => Env => PkgName -> EitherT PackErr io QPkg
+resolve n = do
+  lib <- resolveLib n
   Just exe <- pure (exec lib.desc) | Nothing => pure (QP lib Nothing)
-  st       <- appStatus e n lib.pkg lib.desc exe
+  st       <- appStatus n lib.pkg lib.desc exe
   pure $ QP lib (Just $ AI exe st)
 
-pkgNames : Env s -> List PkgName
-pkgNames e = keys (allPackages e)
+pkgNames : Env => List PkgName
+pkgNames = keys allPackages
 
 export
-resolveAll : HasIO io => Env s -> EitherT PackErr io (List QPkg)
-resolveAll e = traverse (resolve e) $ pkgNames e
+resolveAll : HasIO io => Env => EitherT PackErr io (List QPkg)
+resolveAll = traverse resolve pkgNames
 
 --------------------------------------------------------------------------------
 --         Queries
 --------------------------------------------------------------------------------
 
 query_ :  HasIO io
-       => (e : Env s)
-       -> (q : QPkg -> Maybe b)
+       => Env
+       => (q : QPkg -> Maybe b)
        -> EitherT PackErr io (List b)
-query_ e q = mapMaybe q <$> resolveAll e
+query_ q = mapMaybe q <$> resolveAll
 
 shortDesc : QPkg -> Maybe String
 shortDesc q = q.lib.desc.desc.brief
@@ -147,9 +147,9 @@ keep PkgName    q p = isInfixOf q (nameStr p)
 keep Dependency q p = any ((q ==) . value) (dependencies p)
 keep Module     q p = any (isInfixOf q . show . fst) (modules p.lib.desc.desc)
 
-resultString :  Env s -> (query : String) -> QueryMode -> QPkg -> String
-resultString e q Module qp = namePlusModules q qp
-resultString e _ _      qp = case e.queryType of
+resultString : (c : Config) => (query : String) -> QueryMode -> QPkg -> String
+resultString q Module qp = namePlusModules q qp
+resultString _ _      qp = case c.queryType of
   NameOnly => nameStr qp
 
   ShortDesc =>
@@ -174,10 +174,10 @@ export
 query :  HasIO io
       => QueryMode
       -> String
-      -> (e : Env s)
+      -> Env
       -> EitherT PackErr io ()
 query m n e = do
-  ss <- query_ e $ \p => toMaybe (keep m n p) (resultString e n m p)
+  ss <- query_ $ \p => toMaybe (keep m n p) (resultString n m p)
   putStrLn $ unlines ss
 
 --------------------------------------------------------------------------------
@@ -212,30 +212,30 @@ libs ps = case mapMaybe instLib ps of
     map (indent 22) xs
 
 export
-infoString : Env s -> List QPkg -> String
-infoString e ps = """
-  Package Collection  : \{e.collection}
+infoString : (e : Env) => List QPkg -> String
+infoString ps = """
+  Package Collection  : \{e.config.collection}
   Idris2 URL          : \{e.db.idrisURL}
   Idris2 Version      : \{e.db.idrisVersion}
   Idris2 Commit       : \{e.db.idrisCommit}
-  Scheme Executable   : \{e.scheme}
+  Scheme Executable   : \{e.config.scheme}
   Pack Commit         : \{Version.version}
   """ ++ apps ps ++ libs ps
 
 export
-printInfo : HasIO io => Env s -> EitherT PackErr io ()
-printInfo e = resolveAll e >>= putStrLn . infoString e
+printInfo : HasIO io => Env -> EitherT PackErr io ()
+printInfo e = resolveAll >>= putStrLn . infoString
 
 --------------------------------------------------------------------------------
 --          Fuzzy Search
 --------------------------------------------------------------------------------
 
 installedPkgs :  HasIO io
+              => IdrisEnv
               => List PkgName
-              -> Env HasIdris
               -> EitherT PackErr io (List QPkg, List QPkg)
-installedPkgs ns e = do
-  all <- filter installedLib <$> resolveAll e
+installedPkgs ns = do
+  all <- filter installedLib <$> resolveAll
   pure (all, filter inPkgs all)
   where inPkgs : QPkg -> Bool
         inPkgs qp = isNil ns || elem (name qp) ns
@@ -261,33 +261,31 @@ fuzzyTrim = unlines
           . lines
 
 fuzzyPkg :  HasIO io
+         => IdrisEnv
          => String
-         -> Env HasIdris
          -> (allPkgs   : List QPkg)
          -> QPkg
          -> EitherT PackErr io ()
-fuzzyPkg q e allPkgs qp =
-  let dir = tmpDir e
-   in do
-     mkDir dir
-     finally (rmDir dir) $ inDir dir $ \d => do
-       putStrLn "\{name qp}:\n"
-       write (MkF d "test.idr") (imports qp)
-       write (MkF d "input") ":fs \{q}\n"
+fuzzyPkg q allPkgs qp = do
+  mkDir tmpDir
+  finally (rmDir tmpDir) $ inDir tmpDir $ \d => do
+    putStrLn "\{name qp}:\n"
+    write (MkF d "test.idr") (imports qp)
+    write (MkF d "input") ":fs \{q}\n"
 
-       (cmd,env) <- idrisWithPkgs e (map lib allPkgs)
+    (cmd,env) <- idrisWithPkgs (map lib allPkgs)
 
-       str <- sysRunWithEnv "\{cmd} --quiet --no-prelude --no-banner test.idr < input" env
-       case noOut == str of
-         True  => pure ()
-         False => putStrLn (fuzzyTrim str)
+    str <- sysRunWithEnv "\{cmd} --quiet --no-prelude --no-banner test.idr < input" env
+    case noOut == str of
+      True  => pure ()
+      False => putStrLn (fuzzyTrim str)
 
 export
 fuzzy :  HasIO io
       => List PkgName
       -> String
-      -> Env HasIdris
+      -> IdrisEnv
       -> EitherT PackErr io ()
 fuzzy m q e = do
-  (allPkgs,rps) <- installedPkgs m e
-  traverse_ (fuzzyPkg q e allPkgs) rps
+  (allPkgs,rps) <- installedPkgs m
+  traverse_ (fuzzyPkg q allPkgs) rps

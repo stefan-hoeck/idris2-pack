@@ -5,6 +5,8 @@ import Pack.Database.Types
 
 %default total
 
+||| Mode used for querying the package collection:
+||| By package name, by dependency, or by module name.
 public export
 data QueryMode = PkgName | Dependency | Module
 
@@ -14,17 +16,17 @@ data QueryMode = PkgName | Dependency | Module
 public export
 data Cmd : Type where
   -- Developing Idris libs and apps
-  Build            : File Abs -> Cmd
-  BuildDeps        : File Abs -> Cmd
-  Typecheck        : File Abs -> Cmd
-  Repl             : Maybe (File Abs) -> Cmd
-  Exec             : File Abs -> List String -> Cmd
+  Build            : (ipkg : File Abs) -> Cmd
+  BuildDeps        : (ipkg : File Abs) -> Cmd
+  Typecheck        : (ipkg : File Abs) -> Cmd
+  Repl             : (src : Maybe $ File Abs) -> Cmd
+  Exec             : (srd : File Abs) -> (args : List String) -> Cmd
 
   -- Package management
   Install          : List (PkgType,PkgName) -> Cmd
   Remove           : List (PkgType,PkgName) -> Cmd
   Run              : Either (File Abs) PkgName -> List String -> Cmd
-  New              : (cur : Path Abs) -> PkgType -> Body -> Cmd
+  New              : (cur : CurDir) -> PkgType -> Body -> Cmd
   Update           : Cmd
 
   -- Idris environment
@@ -48,28 +50,3 @@ data Cmd : Type where
 
   -- Help
   PrintHelp        : Cmd
-
-export
-loglevel : Cmd -> LogLevel
-loglevel (Build x)              = Info
-loglevel (BuildDeps x)          = Info
-loglevel (Typecheck x)          = Info
-loglevel (Exec _ _)             = Warning
-loglevel (New _ _ _)            = Info
-loglevel (Repl x)               = Warning
-loglevel (Install xs)           = Info
-loglevel (Remove xs)            = Info
-loglevel (Run x strs)           = Warning
-loglevel Update                 = Info
-loglevel PackagePath            = Silence
-loglevel LibsPath               = Silence
-loglevel DataPath               = Silence
-loglevel (AppPath x)            = Silence
-loglevel (Switch x)             = Info
-loglevel UpdateDB               = Info
-loglevel Info                   = Warning
-loglevel (Query x str)          = Warning
-loglevel (Fuzzy xs str)         = Warning
-loglevel (Completion str str1)  = Silence
-loglevel (CompletionScript str) = Silence
-loglevel PrintHelp              = Silence

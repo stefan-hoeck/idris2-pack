@@ -1,4 +1,4 @@
-# Contributing to *pack*
+# Contributing to pack
 
 Contributions are highly welcome! To help new contributor
 find their way around the codebase and understand, how
@@ -8,11 +8,11 @@ directory.
 
 ## General Recommendations
 
-I'd like to have every aspect of *pack* reasonably well
+I'd like to have every aspect of pack reasonably well
 documented. Contributors are therefore kindly asked to
 consider the following guidelines:
 
-* When adding a new *pack* command, make sure it is
+* When adding a new pack command, make sure it is
   explained in the `README` as well as in the command-line
   help text (see `Pack.CmdLn.Opts.usageInfo`). In addition,
   make sure to support tab completion for the command
@@ -24,13 +24,13 @@ consider the following guidelines:
   users to permanently set this option in the
   `$HOME/.pack/user/pack.toml` file.
 
-* When adding new user settings, *micropack* should include
+* When adding new user settings, micropack should include
   these in its automatically generated `pack.toml` file
   (annotated with a short explanation).
 
 ## Directory Layout
 
-The root directory *pack* works on is located at `$HOME/.pack`,
+The root directory pack works on is located at `$HOME/.pack`,
 although this can be changed by setting environment variable
 `$PACK_DIR`.
 
@@ -87,7 +87,7 @@ $HOME/.pack/patches/[collection name]/[package name]/[name].ipkg.patch
 
 ### Cache
 
-*pack* does not provide `.ipkg` files itself (that would be
+pack does not provide `.ipkg` files itself (that would be
 a duplication of information, which could easily get out of
 sync with upstream), so during package resolution it will have
 to fetch these files from GitHub. Since this can be time
@@ -100,8 +100,8 @@ $HOME/.pack/.cache/[package name]/[commit hash]/[name].ipkg
 
 ### Installed Binaries and Libraries
 
-*pack* installs the Idris2 compiler and libraries in
-directories prefixed with the commit hashes use. Seed the
+pack installs the Idris2 compiler and libraries in
+directories prefixed with the commit hashes used. See the
 README for the details.
 
 ## Map of the Source Code
@@ -130,7 +130,7 @@ probably go back to Idris2 eventually.
 
 #### IO
 
-Most *pack* subprograms run in `EitherT PackErr IO`, where
+Most pack subprograms run in `EitherT PackErr IO`, where
 `PackErr` is an error type defined in `Pack.Core.Types`.
 Module `Pack.Core.IO` provides utility functions for working
 with our IO type, and for handling files and folders as wells
@@ -165,28 +165,34 @@ The result is stored in a
 
 ### Configuration
 
-Most pack actions take a value of type
-`Pack.Config.Types.Config` as an argument. This type is
-indexed over a state type, signalling what kind of
-initialisation actions have already been performed:
+Most pack actions take one or more implicit arguments
+representing the packaging environment and user-defined
+configuration. The types involved will be discussed below.
 
-* `Nothing` : Just the core configuration from command-line
-   options and the settings in `$HOME/.pack/user/pack.toml`
-   have been assembled.
-
-* `Just DBLoaded` : Core configuration has been assembled
-  and the requested package collection has been loaded into
-  memory. This is typically sufficient for querying package
-  collections, but not for using Idris2 for building
-  packages.
-
-* `Just HasIdris` : Like `Just DBLoaded`, but in addition,
-  *pack* verified that the selected package collections already
-  has a local installation of the Idris compiler. If this is
-  not the case, the compiler will be built and installed.
-
-Most functionality for assembling the program environment
-can be found in module `Pack.Config.Env`.
+* `Pack.Core.Types.PackDir`: The directory where pack installs
+  the Idris compiler, packages, apps, and some additional files
+  like package collections, cached `.ipkg` files and temporary
+  directories and data.
+* `Pack.Core.Types.CurDir`: The current directory, from which the
+  pack application was run. This is mostly used to resolve relative
+  paths, if it doesn't make sense to use another parent directory
+  for this purpose.
+* `Pack.Config.Types.Config_`: This represents user-defined settings,
+  either read from one or more `pack.toml` files or directly from
+  command-line options. See the API docs for an explanation why
+  we need the two parameters. Most of the time, we work with `Config`,
+  and alias for `Config_ I Commit`, where all fields are mandatory
+  and package commits have been fully resolved.
+* `Pack.Database.Types.DB`: The package collection to use. This includes
+  the GitHub URL and commit hash of the Idris compiler to use.
+* `Pack.Config.Types.Env`: Most of the time, we need access to `PackDir`,
+  `Config`, and `DB` at the same time. `Env` wraps up these three
+  conveniently. It comes with some hinted convertion functions, which
+  allows us to automatically extract for instance an auto-implic
+  `Config` argument from an `Env` variable in scope.
+* `Pack.Config.Types.IdrisEnv`: This is like `Env` but comes with the
+  additional guarantees that the installation of the required Idris compiler
+  has been verified.
 
 ### Command-Line
 
@@ -200,6 +206,11 @@ different resources is done by the functions in
 module `Pack.Config.Env`.
 
 Finally, tab completion is implemented in `Pack.CmdLn.Completion`.
+
+Note that a type representing supported pack commands must implement
+interface `Pack.Config.Types.Command`, which encapsulates how to parse
+a pack command plus its arguments from a list of command-line arguments,
+and how the given command affects the application config.
 
 ### Running Commands
 

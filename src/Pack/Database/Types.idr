@@ -47,6 +47,7 @@ data CorePkg =
   | Test
   | IdrisApi
 
+||| The list of core packages.
 public export
 corePkgs : List CorePkg
 corePkgs = [Prelude, Base, Contrib, Linear, Network, Test, IdrisApi]
@@ -75,20 +76,25 @@ export %inline
 Cast CorePkg (Path Rel) where
   cast c = PRel [< cast c]
 
+||| Package name of a core package.
 export
 corePkgName : CorePkg -> PkgName
 corePkgName = MkPkgName . interpolate
 
+||| `.ipkg` file name corrsponding to a core package.
 export
 coreIpkgFile : CorePkg -> Body
 coreIpkgFile IdrisApi = "idris2api.ipkg"
 coreIpkgFile c        = cast c <+> ".ipkg"
 
+||| Relative path to the `.ipkg` file corrsponding to a core package
+||| (in the Idris2 project).
 export
 coreIpkgPath : CorePkg -> File Rel
 coreIpkgPath IdrisApi = MkF neutral "idris2api.ipkg"
 coreIpkgPath c        = MkF (neutral /> "libs" //> c) (coreIpkgFile c)
 
+||| Try to convert a string to a core package.
 export
 readCorePkg : String -> Maybe CorePkg
 readCorePkg "prelude" = Just Prelude
@@ -100,6 +106,7 @@ readCorePkg "test"    = Just Test
 readCorePkg "idris2"  = Just IdrisApi
 readCorePkg _         = Nothing
 
+||| True, if the given string corresponds to one of the core packges.
 export
 isCorePkg : String -> Bool
 isCorePkg = isJust . readCorePkg
@@ -139,10 +146,14 @@ data Package_ : (c : Type) -> Type where
   ||| A core package of the Idris2 project
   Core   : (core : CorePkg) -> Package_ c
 
+||| An alias for `Package_ Commit`: A package description with
+||| meta commits already resolved.
 public export
 0 Package : Type
 Package = Package_ Commit
 
+||| An alias for `Package_ MetaCommit`: A package description where
+||| the commit might still contain meta information.
 public export
 0 UserPackage : Type
 UserPackage = Package_ MetaCommit
@@ -229,6 +240,9 @@ ipkg dir (Core c)         = toAbsFile dir (coreIpkgPath c)
 --          Resolved Packages
 --------------------------------------------------------------------------------
 
+||| Installation status of an Idris package. Local packages can be
+||| `Outdated`, if some of their source files contain changes newer
+||| a timestamp created during package installation.
 public export
 data PkgStatus : Package -> Type where
   Missing   :  PkgStatus p
@@ -252,6 +266,7 @@ namespace ResolveLib
   nameStr : ResolvedLib t -> String
   nameStr = value . name
 
+  ||| Change the type-level tag of a resolved library.
   export %inline
   reTag : ResolvedLib s -> Desc t -> ResolvedLib t
   reTag rl d = {desc := d} rl
@@ -284,6 +299,7 @@ namespace ResolveApp
   dependencies : ResolvedApp t -> List PkgName
   dependencies rp = dependencies rp.desc
 
+  ||| Change the type-level tag of a resolved application.
   export %inline
   reTag : ResolvedApp s -> Desc t -> ResolvedApp t
   reTag rl d = {desc := d} rl
@@ -294,25 +310,30 @@ namespace ResolveApp
   usePackagePath : ResolvedApp t -> Bool
   usePackagePath = usePackagePath . pkg
 
+||| Either a resolved library or application tagged with the given tag.
 public export
 0 LibOrApp : (PkgDesc -> Type) -> Type
 LibOrApp t = Either (ResolvedLib t) (ResolvedApp t)
 
 namespace LibOrApp
+  ||| Extract the dependencies of a resolved library or application.
   export
   dependencies : LibOrApp t -> List PkgName
   dependencies = either dependencies dependencies
 
+  ||| Extract the package of a resolved library or application.
   export
   pkg : LibOrApp t -> Package
   pkg (Left x) = x.pkg
   pkg (Right x) = x.pkg
 
+  ||| Extract the description of a resolved library or application.
   export
   desc : LibOrApp t -> Desc t
   desc (Left x) = x.desc
   desc (Right x) = x.desc
 
+  ||| Extract the package name of a resolved library or application.
   export
   name : LibOrApp t -> PkgName
   name (Left x) = x.name
@@ -366,6 +387,7 @@ printPair (x, Core c) =
   type        = "core"
   """
 
+||| Convert a package collection to a valid TOML string.
 export
 printDB : DB -> String
 printDB (MkDB u c v db) =

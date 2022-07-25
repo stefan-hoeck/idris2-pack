@@ -12,6 +12,18 @@ import System.File
 %default total
 
 ----------------------------------------------------------------------------------
+----          Quoted Strings
+----------------------------------------------------------------------------------
+
+||| This puts a value in quotes during interpolation.
+|||
+||| Note: If the interpolated string contains additional quote
+||| characters, these will *not* be escaped.
+export
+quote : Interpolation a => a -> String
+quote v = "\"\{v}\""
+
+----------------------------------------------------------------------------------
 ----          Paths
 ----------------------------------------------------------------------------------
 
@@ -48,14 +60,20 @@ toRelPath s = case the FilePath (fromString s) of
   FP (PAbs sx) => PRel sx
   FP (PRel sx) => PRel sx
 
+||| Converts a `FilePath` - which might hold a relative
+||| or an absolute path - to an absolute path by interpreting
+||| a relative path being relative to the given parent directory.
 export
-toAbsPath : Path Abs -> FilePath -> Path Abs
-toAbsPath dir (FP $ PAbs sx) = PAbs sx
-toAbsPath dir (FP $ PRel sx) = dir </> PRel sx
+toAbsPath : (parent : Path Abs) -> FilePath -> Path Abs
+toAbsPath parent (FP $ PAbs sx) = PAbs sx
+toAbsPath parent (FP $ PRel sx) = parent </> PRel sx
 
+||| Parses a string, converting it to either a relative
+||| or absolute path and using `toAbsPath` to convert the result
+||| to an absolute path.
 export
-parse : String -> Path Abs -> Path Abs
-parse s dir = toAbsPath dir (fromString s)
+parse : String -> (parentDir : Path Abs) -> Path Abs
+parse s parentDir = toAbsPath parentDir (fromString s)
 
 export %inline
 Cast String (Path Rel) where
@@ -63,12 +81,15 @@ Cast String (Path Rel) where
 
 infixl 5 <//>
 
+||| More flexible version of `</>` (path concatenation).
 export %inline
-(<//>) : Cast a (Path Rel) => Path Abs -> a -> Path Abs
+(<//>) : Cast a (Path Rel) => Path t -> a -> Path t
 p <//> v = p </> cast v
 
 infixl 5 //>
 
+||| More flexible version of `//>`
+||| (appending a file path body to an absolute path)
 export %inline
 (//>) : Cast a Body => Path t -> a -> Path t
 p //> v = p /> cast v
@@ -91,12 +112,51 @@ Cast (Maybe PkgVersion) Body where
   cast Nothing  = "0"
   cast (Just v) = cast v
 
+||| Convert a relative file path to an absolute one by appending
+||| it to the given parent directory.
 export %inline
 toAbsFile : Path Abs -> File Rel -> File Abs
-toAbsFile dir (MkF p f) = MkF (dir </> p) f
+toAbsFile parentDir (MkF p f) = MkF (parentDir </> p) f
 
 export
 Cast (File t) (Path t) where cast = toPath
+
+----------------------------------------------------------------------------------
+----          CurDir and PackDir
+----------------------------------------------------------------------------------
+
+||| The directory where package collections, global user settings,
+||| and cached `.ipkg` files are stored.
+public export
+data PackDir : Type where
+  [noHints]
+  PD : (dir : Path Abs) -> PackDir
+
+export %inline
+Interpolation PackDir where
+  interpolate (PD dir) = interpolate dir
+
+||| Use this when you need access to the `PACK_DIR` path with
+||| only a value of type `PackDir` in scope.
+export %inline
+packDir : (pd : PackDir) => Path Abs
+packDir {pd = PD dir} = dir
+
+||| The directory from which the pack application was invoked.
+public export
+data CurDir : Type where
+  [noHints]
+  CD : (dir : Path Abs) -> CurDir
+
+export %inline
+Interpolation CurDir where
+  interpolate (CD dir) = interpolate dir
+
+||| Use this when you need access to the current directory's path with
+||| only a value of type `CurDir` in scope.
+export %inline
+curDir : (cd : CurDir) => Path Abs
+curDir {cd = CD dir} = dir
 
 ----------------------------------------------------------------------------------
 ----          Interpolation
@@ -116,6 +176,7 @@ Interpolation PkgVersion where interpolate = show
 --          URL
 --------------------------------------------------------------------------------
 
+||| URL mostly used to represent repositories on GitHub.
 public export
 record URL where
   constructor MkURL
@@ -183,7 +244,7 @@ Cast PkgName (Path Rel) where
 --          Package Type
 --------------------------------------------------------------------------------
 
-||| Type of an Idris package
+||| Type of an Idris package (either a library or a binary).
 public export
 data PkgType = Lib | Bin
 
@@ -208,7 +269,7 @@ Ord PkgType where
 --          DBName
 --------------------------------------------------------------------------------
 
-||| Name of a package collection. This should be a valid
+||| Name of a package collection. This must be a valid
 ||| file path body.
 public export
 record DBName where
@@ -243,14 +304,15 @@ All = MkDBName "all"
 ||| A tagged package desc. We use the tag mainly to make sure that
 ||| the package desc in question has been checked for safety issues.
 ||| Since the tag is parameterized by a `PkgDesc`, we make sure
-||| we will not inadvertently use a tag for a different `PkgDesc`.
+||| we will not inadvertently use a tag for a `PkgDesc` different to
+||| the one we wrapped.
 public export
 record Desc (t : PkgDesc -> Type) where
   constructor MkDesc
   ||| The parsed package desc
   desc : PkgDesc
 
-  ||| String content of the package desc
+  ||| String content of the `.ipkg` file used when reading the package desc
   cont : String
 
   ||| Path to the file use when reading the package desc
@@ -259,6 +321,7 @@ record Desc (t : PkgDesc -> Type) where
   ||| Security tag. See `Pack.Runner.Database.check`
   0 tag : t desc
 
+||| This is used as a tag for unchecked `Desc`s.
 public export
 0 U : PkgDesc -> Type
 U d = Unit
@@ -272,6 +335,7 @@ dependencies d = map (MkPkgName . pkgname) $ d.desc.depends
 --          Errors
 --------------------------------------------------------------------------------
 
+||| Error during marshalling from TOML to an Idris type.
 public export
 data TOMLErr : Type where
   ||| A mandatory key/value pair in a toml file is
@@ -289,16 +353,18 @@ printTOMLErr (MissingKey path) = "Missing toml key: \{tomlPath path}."
 printTOMLErr (WrongType path type) =
   "Wrong type at \{tomlPath path}. Expect \{type}."
 
+||| Prefix the given TOML key to an error message. This allows us to
+||| specify exactly where in a TOML structure things went wrong.
 export
-prefixKey : String -> Either TOMLErr a -> Either TOMLErr a
+prefixKey : (key : String) -> Either TOMLErr a -> Either TOMLErr a
 prefixKey k = mapFst $ \case MissingKey p => MissingKey (k :: p)
                              WrongType p t => WrongType (k :: p) t
 
-||| Errors that can occur when running *pack* programs.
+||| Errors that can occur when running pack programs.
 public export
 data PackErr : Type where
   ||| Failed to get the path of the current directory.
-  CurDir     : PackErr
+  NoCurDir   : PackErr
 
   ||| Failed to get package directory path
   NoPackDir  : PackErr
@@ -405,7 +471,7 @@ data PackErr : Type where
 ||| Prints an error that occured during program execution.
 export
 printErr : PackErr -> String
-printErr CurDir = "Failed to get current directory."
+printErr NoCurDir = "Failed to get current directory."
 
 printErr NoPackDir = """
   Failed to figure out package directory.
@@ -414,16 +480,16 @@ printErr NoPackDir = """
   """
 
 printErr (MkDir path err) =
-  "Error when creating directory \"\{path}\": \{err}."
+  "Error when creating directory \{quote path}: \{err}."
 
 printErr (ReadFile path err) =
-  "Error when reading file \"\{path}\": \{err}."
+  "Error when reading file \{quote path}: \{err}."
 
 printErr (WriteFile path err) =
-  "Error when writing to file \"\{path}\": \{err}."
+  "Error when writing to file \{quote path}: \{err}."
 
 printErr (DirEntries path err) =
-  "Error when reading directory \"\{path}\": \{err}."
+  "Error when reading directory \{quote path}: \{err}."
 
 printErr (Sys cmd err) = """
   Error when executing system command.
@@ -432,31 +498,31 @@ printErr (Sys cmd err) = """
   """
 
 printErr (ChangeDir path) =
-  "Failed to change to directory \"\{path}\"."
+  "Failed to change to directory \{quote path}."
 
 printErr (InvalidPackageDesc s) = """
-  Invalid package description: \"\{s}\".
+  Invalid package description: \{quote s}.
   This should be of the format \"name,url,commit hash,ipkg file\".
   """
 
 printErr (InvalidDBHeader s) = """
-  Invalid data base header: \"\{s}\".
+  Invalid data base header: \{quote s}.
   This should be of the format \"idris2 commit hash,idris2 version\".
   """
 
 printErr (InvalidDBName s) = """
-  Invalid data collection name: \"\{s}\".
+  Invalid data collection name: \{quote s}.
   This should be a non-empty string without path separators.
   """
 
-printErr (InvalidBody s) = "Invalid file path body: \"\{s}\"."
+printErr (InvalidBody s) = "Invalid file path body: \{quote s}."
 
 printErr (InvalidPkgType s) = """
-  Invalid package type: \"\{s}\".
+  Invalid package type: \{quote s}.
   Valid types are `lib` and `bin`.
   """
 
-printErr (InvalidPkgVersion s) = "Invalid package version: \"\{s}\"."
+printErr (InvalidPkgVersion s) = "Invalid package version: \{quote s}."
 
 printErr (UnknownPkg name) = "Unknown package: \{name}"
 
@@ -470,7 +536,7 @@ printErr (InvalidIpkgFile path) =
   "Failed to parse .ipkg file: \{path}"
 
 printErr (MissingCorePackage nm v c) =
-  "Core package \"\{nm}\" missing for Idris2 version \{v} (commit: \{c})"
+  "Core package \{quote nm} missing for Idris2 version \{v} (commit: \{c})"
 
 printErr (UnknownArg arg) = "Unknown command line arg: \{arg}"
 
@@ -501,34 +567,42 @@ printErr (BuildFailures n) = "\{show n} packages failed to build."
 
 printErr ManualInstallPackApp = """
   You are not supposed to manually install or remove the pack
-  application. In order to update pack to latest version from
+  application. In order to update pack to the latest version on
   GitHub, run `pack update`.
 
   Note: If you didn't run `pack install-app pack` or a similar
-  operation, "pack" might be listed in as an auto-install application
+  operation, "pack" might be listed as an auto-install application
   in one of your pack.toml files. Please remove it from there.
   """
 
 printErr SafetyAbort = "Installation aborted."
 
+||| Tries to convert a string to a `DBName` by first converting
+||| it to a valid file path body.
 export
 readDBName : String -> Either PackErr DBName
 readDBName s = case Body.parse s of
   Just b  => Right $ MkDBName b
   Nothing => Left (InvalidDBName s)
 
+||| Tries to convert a string to a file path body.
 export
 readBody : String -> Either PackErr Body
 readBody s = case Body.parse s of
   Just b  => Right b
   Nothing => Left (InvalidBody s)
 
+||| Tries to convert a string to a package type.
 export
 readPkgType : String -> Either PackErr PkgType
 readPkgType "lib" = Right Lib
 readPkgType "bin" = Right Bin
 readPkgType s     = Left (InvalidPkgType s)
 
+||| Tries to convert a string representing a relative or absolute
+||| file path. This uses `toAbsPath` internally, so it is somewhat
+||| tolerant w.r.t. to dubious file paths. It fails, however, if the
+||| given path does not contain at least one file path body.
 export
 readAbsFile : (curdir : Path Abs) -> String -> Either PackErr (File Abs)
 readAbsFile cd s = case split $ toAbsPath cd (fromString s) of
@@ -539,8 +613,14 @@ readAbsFile cd s = case split $ toAbsPath cd (fromString s) of
 --          Logging
 --------------------------------------------------------------------------------
 
+||| Level used during logging.
 public export
-data LogLevel = Debug | Info | Warning | Silence
+data LogLevel : Type where
+  [noHints]
+  Debug   : LogLevel
+  Info    : LogLevel
+  Warning : LogLevel
+  Silence : LogLevel
 
 llToNat : LogLevel -> Nat
 llToNat Debug   = 0

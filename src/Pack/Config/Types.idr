@@ -10,29 +10,7 @@ import Pack.Database.Types
 
 %default total
 
-||| State of the program configuration.
-||| This is to make sure that
-||| certain necessary checks (if any) have been run.
-public export
-data State : Type where
-  ||| The data collection has been loaded
-  DBLoaded : State
-
-  ||| Idris installation has been verified
-  HasIdris : State
-
-||| The program configuration is indexed over `Maybe State`,
-||| which is used to monitor if the data collection has been
-||| loaded and whether Idris has be verified to be installed.
-|||
-||| Depending on this index, the `db` fields will be of
-||| a different type.
-public export
-0 DBType : Maybe State -> Type
-DBType (Just _) = DB
-DBType Nothing  = ()
-
-||| Results to show when querying the data base
+||| What to show when querying the data base
 public export
 data QueryType : Type where
   ||| Display only the matching packages' names
@@ -91,7 +69,7 @@ fromString x               = Other x
 
 ||| Data type describing whether to search for an `.ipkg`
 ||| file in one of the parent directories (the default), not
-||| using an `.ipkg` file at all, or use the one provided at
+||| to use an `.ipkg` file at all, or to use the one provided at
 ||| the command line.
 |||
 ||| This is only relevant when working with Idris source files
@@ -103,7 +81,7 @@ data WithIpkg : Type where
   ||| of this file will be searched. If no `.idr` file is
   ||| given, the current working directory will be search,
   ||| which is given as an argument to this constructor.
-  Search : (dir : Path Abs) -> WithIpkg
+  Search : (dir : CurDir) -> WithIpkg
 
   ||| Don't use an `.ipkg` file.
   None   : WithIpkg
@@ -117,20 +95,19 @@ public export
 0 I : Type -> Type
 I t = t
 
-||| Program configuration
+||| User-defined configuration
 |||
-||| Parameter `f` is used to represent the context of values.
-||| When we use the config as an environment for running *pack*
-||| programs is, the context will be set to `I`. For updating
-||| the configuration from user config file, we use context
-||| `Maybe`, because all values will be optional.
+||| @ f : This is used to represent the context of values.
+|||       When we use the config as an environment for running pack
+|||       programs, the context will be set to `I` (the identity function
+|||       for types). This means, all fields will be mandatory.
+|||       For updating the configuration from a `pack.toml` file,
+|||       we use context `Maybe`, because all values will be optional.
+|||
+||| @ c : This is the type of commit given for custom packages.
 public export
-record Config_ (c : Type) (f : Type -> Type) (s : Maybe State) where
+record Config_ (f : Type -> Type) (c : Type) where
   constructor MkConfig
-  ||| Directory where the *pack* DB and installed
-  ||| libraries and executables reside
-  packDir      : f (Path Abs)
-
   ||| Package collection to use
   collection   : f DBName
 
@@ -146,11 +123,11 @@ record Config_ (c : Type) (f : Type -> Type) (s : Maybe State) where
   withSrc      : f Bool
 
   ||| Whether to install the library docs as well
-  withDocs      : f Bool
+  withDocs     : f Bool
 
   ||| Whether to use katla to add semantically highlighted source code
   ||| to the library docs.
-  useKatla      : f Bool
+  useKatla     : f Bool
 
   ||| The `.ipkg` file to use (if any) when starting a REPL session
   withIpkg     : f WithIpkg
@@ -179,30 +156,52 @@ record Config_ (c : Type) (f : Type -> Type) (s : Maybe State) where
   ||| Name of output file when compiling Idris source files
   output       : f Body
 
-  ||| The package collection
-  db           : f (DBType s)
+||| Configuration with mandatory fields.
+public export
+0 IConfig : Type -> Type
+IConfig = Config_ I
 
+||| Configuration with optional fields.
+public export
+0 MConfig : Type -> Type
+MConfig = Config_ Maybe
+
+||| Application config with meta commits not yet resolved.
+public export
+0 MetaConfig : Type
+MetaConfig = IConfig MetaCommit
+
+||| Fully resolved application config.
+public export
+0 Config : Type
+Config = IConfig Commit
+
+||| User-defined adjustments to the application config.
+public export
+0 UserConfig : Type
+UserConfig = MConfig MetaCommit
+
+||| Effectfully convert all custom package descriptions
+||| stored in a configuration. This is mainly used to
+||| resolve meta commits to mere commits.
 export
 traverse :  Applicative f
          => (Package_ a -> f (Package_ b))
-         -> Config_ a Maybe s
-         -> f (Config_ b Maybe s)
+         -> Config_ I a
+         -> f (Config_ I b)
 traverse f cfg =
-  let cst = traverse (traverse (traverse f)) cfg.custom
+  let cst = traverse (traverse f) cfg.custom
    in map (\c => {custom := c} cfg) cst
+
+||| This allows us to use a `Config` in scope when we
+||| need an auto-implicit `LogLevel` for logging.
+export %inline %hint
+configToLogLevel : (c : Config) => LogLevel
+configToLogLevel = c.logLevel
 
 --------------------------------------------------------------------------------
 --          Updating the Config
 --------------------------------------------------------------------------------
-
-public export
-0 Config : Maybe State -> Type
-Config = Config_ Commit I
-
-||| Program configuration with data collection
-public export
-0 Env : State -> Type
-Env = Config . Just
 
 infixl 8 `mergeRight`
 
@@ -215,20 +214,17 @@ pkgs = fromList $ (\c => (corePkgName c, Core c)) <$> corePkgs
 ||| Merges the "official" package collection with user
 ||| defined settings, which will take precedence.
 export
-allPackages : Env e -> SortedMap PkgName Package
-allPackages e =
-  let all = fromMaybe empty $ lookup All e.custom
-      loc = fromMaybe empty $ lookup e.collection e.custom
-   in e.db.packages `mergeRight` all `mergeRight` loc `mergeRight` pkgs
+allPackages : (c : Config) => (db : DB) => SortedMap PkgName Package
+allPackages =
+  let all = fromMaybe empty $ lookup All c.custom
+      loc = fromMaybe empty $ lookup c.collection c.custom
+   in db.packages `mergeRight` all `mergeRight` loc `mergeRight` pkgs
 
 ||| Initial config
 export
-init :  (cur, dir : Path Abs)
-     -> (coll : DBName)
-     -> Config_ Commit I Nothing
-init cur dir coll = MkConfig {
-    packDir      = dir
-  , collection   = coll
+init : (cur : CurDir) => (coll : DBName) -> MetaConfig
+init coll = MkConfig {
+    collection   = coll
   , scheme       = "scheme"
   , safetyPrompt = True
   , withSrc      = False
@@ -243,17 +239,15 @@ init cur dir coll = MkConfig {
   , logLevel     = Warning
   , codegen      = Default
   , output       = "_tmppack"
-  , db           = ()
   }
 
 infixl 7 `update`
 
 ||| Update a config with optional settings
 export
-update : Config_ c I Nothing -> Config_ c Maybe Nothing -> Config_ c I Nothing
+update : IConfig c -> MConfig c -> IConfig c
 update ci cm = MkConfig {
-    packDir      = fromMaybe ci.packDir cm.packDir
-  , collection   = fromMaybe ci.collection cm.collection
+    collection   = fromMaybe ci.collection cm.collection
   , scheme       = fromMaybe ci.scheme cm.scheme
   , safetyPrompt = fromMaybe ci.safetyPrompt cm.safetyPrompt
   , withSrc      = fromMaybe ci.withSrc cm.withSrc
@@ -268,303 +262,108 @@ update ci cm = MkConfig {
   , logLevel     = fromMaybe ci.logLevel cm.logLevel
   , codegen      = fromMaybe ci.codegen cm.codegen
   , output       = fromMaybe ci.output cm.output
-  , db           = ()
   }
 
 --------------------------------------------------------------------------------
---          Files and Directories
+--          HasIdris
 --------------------------------------------------------------------------------
 
-export
-packToml : Body
-packToml = "pack.toml"
-
-||| Temporary directory used for building packages.
-export
-tmpDir_ : (packDir : Path Abs) -> Path Abs
-tmpDir_ packDir = packDir /> ".tmp"
-
-||| Temporary directory used for building packages.
-export
-tmpDir : Config s -> Path Abs
-tmpDir c = packDir c /> (".tmp-" <+> cast c.collection)
-
-||| Clone of the pack GitHub repo
-export
-packClone : Config s -> Path Abs
-packClone c = tmpDir c /> "pack"
-
-||| Directory where databases are stored.
-export
-dbDir_ : (packDir : Path Abs) -> Path Abs
-dbDir_ packDir = packDir /> "db"
-
-||| Directory where databases are stored.
-export
-dbDir : Config s -> Path Abs
-dbDir = dbDir_ . packDir
-
-||| Directory where databases are stored.
-export
-cacheDir : Config s -> Path Abs
-cacheDir c = c.packDir /> ".cache"
-
-||| Path to cached `.ipkg` file.
-export
-ipkgCachePath : Config s -> PkgName -> Commit -> File Rel -> File Abs
-ipkgCachePath c p com = toAbsFile (cacheDir c <//> p <//> com)
-
-||| Path to cached core library `.ipkg` file
-export
-coreCachePath : Env s -> CorePkg -> File Abs
-coreCachePath  e n =
-  MkF (cacheDir e <//> n <//> e.db.idrisCommit) (coreIpkgFile n)
-
-||| Directory where user settings are stored.
-export
-userDir : Config s -> Path Abs
-userDir c = c.packDir /> "user"
-
-||| File where package DB is located
-export
-dbFile : Config s -> File Abs
-dbFile c = MkF (dbDir c) $ c.collection.value <+> ".toml"
-
-||| Directory where wrapper scripts to binaries
-||| managed by pack are being stored. The only exception
-||| is pack itself, which is stored as a symbolic link.
-export
-packBinDir : Config s -> Path Abs
-packBinDir c = c.packDir /> "bin"
-
-export
-packInstallDir : Config s -> Commit -> Path Abs
-packInstallDir c com = c.packDir </> "install/pack" </> cast com
-
-||| Executable for an application
-export
-pathExec : Config s -> Body -> File Abs
-pathExec c b = MkF (packBinDir c) b
-
-||| Symbolic link to the current pack executable.
-export
-packExec : Config s -> File Abs
-packExec c = pathExec c "pack"
-
-||| `$SCHEME` variable during Idris2 installation
-export
-schemeVar : Config s -> String
-schemeVar c = "SCHEME=\"\{c.scheme}\""
-
-||| Directory where `.ipkg` patches are stored.
-export
-patchesDir : Config s -> Path Abs
-patchesDir c = dbDir c /> "patches"
-
-||| File where the patch (if any) for an `.ipkg` file is stored.
-export
-patchFile : Config s -> PkgName -> File Rel -> File Abs
-patchFile c n (MkF p b) = MkF
-  (patchesDir c //> c.collection <//> n </> p)
-  (b <+> ".patch")
+||| Proof that we have verified that the required Idris
+||| compiler has been installed.
+public export
+data HasIdris : Config -> DB -> Type where
+  [noHints]
+  ItHasIdris : {0 c : _} -> {0 db : _} -> HasIdris c db
 
 --------------------------------------------------------------------------------
---          Environment
+--          Env
 --------------------------------------------------------------------------------
 
-||| Directory where all packages (and Idris2) built with the
-||| current Idris2 commit will be installed.
-export
-commitDir : Env s -> Path Abs
-commitDir e = e.packDir </> "install" <//> e.db.idrisCommit
+||| Environment used by most pack methods, consisting of
+||| the `PACK_DIR` environment variable, the user-defined
+||| application configuratin, and the data collection to
+||| use.
+public export
+record Env where
+  constructor MkEnv
+  packDir : PackDir
+  config  : Config
+  db      : DB
 
-||| The directory where Idris2 and core libraries will be installed.
-export
-idrisPrefixDir : Env s -> Path Abs
-idrisPrefixDir e = commitDir e /> "idris2"
+||| This allows us to use an `Env` in scope when we
+||| need an auto-implicit `PackDir`.
+export %inline %hint
+envToPackDir : (e : Env) => PackDir
+envToPackDir = e.packDir
 
-||| The directory where the Idris2 binary will be installed.
-export
-idrisBinDir : Env s -> Path Abs
-idrisBinDir c = idrisPrefixDir c /> "bin"
+||| This allows us to use an `Env` in scope when we
+||| need an auto-implicit `Config`.
+export %inline %hint
+envToConfig : (e : Env) => Config
+envToConfig = e.config
 
-||| Location of the Idris2 executable used to build
-||| packages.
-export
-idrisExec : Env s -> File Abs
-idrisExec c = MkF (idrisBinDir c) "idris2"
+||| This allows us to use an `Env` in scope when we
+||| need an auto-implicit `DB`.
+export %inline %hint
+envToDB : (e : Env) => DB
+envToDB = e.db
 
-||| `$PREFIX` variable during Idris2 installation
-export
-prefixVar : Env s -> String
-prefixVar c = "PREFIX=\"\{idrisPrefixDir c}\""
+||| Like `Pack.Config.Types.Env`, but with an erased proof
+||| that the Idris compiler installation has been verified.
+public export
+record IdrisEnv where
+  constructor MkIdrisEnv
+  env   : Env
+  0 prf : HasIdris env.config env.db
 
-||| `$IDRIS2_BOOT` variable during Idris2 installation
-export
-idrisBootVar : Env s -> String
-idrisBootVar c = "IDRIS2_BOOT=\"\{idrisExec c}\""
+||| This allows us to use an `IdrisEnv` in scope when we
+||| need an auto-implicit `Env`.
+export %inline %hint
+idrisEnvToEnv : (e : IdrisEnv) => Env
+idrisEnvToEnv = e.env
 
-idrisDir : Env e -> Body
-idrisDir e = the Body "idris2" <-> e.db.idrisVersion
+--------------------------------------------------------------------------------
+--          Command
+--------------------------------------------------------------------------------
 
-||| The directory where Idris2 packages will be installed.
-export
-idrisInstallDir : Env s -> Path Abs
-idrisInstallDir e = idrisPrefixDir e /> idrisDir e
+||| Interface representing pack commands. We abstract over this
+||| because both pack and pack-admin accept different types of
+||| commands, but both use the same functionality for reading
+||| the application config based on the command they use.
+public export
+interface Command c where
+  ||| The command to use if only command line options but
+  ||| not command is given.
+  defaultCommand_ : c
 
-||| The `lib` directory in the Idris2 installation folder
-export
-idrisLibDir : Env s -> Path Abs
-idrisLibDir e = idrisInstallDir e /> "lib"
+  ||| The default log level to use.
+  defaultLevel    : c -> LogLevel
 
-||| The `support` directory in the Idris2 installation folder
-export
-idrisDataDir : Env s -> Path Abs
-idrisDataDir e = idrisInstallDir e /> "support"
+  ||| Some commands overwrite certain aspects of the user-defined
+  ||| config. For instance, `pack switch latest` must overwrite the
+  ||| package collection read from the `pack.toml` files with the
+  ||| latest package collection available.
+  adjConfig :  HasIO io
+            => PackDir
+            => c
+            -> MetaConfig
+            -> EitherT PackErr io MetaConfig
 
-export
-pkgPrefixDir : Env s -> PkgName -> Package -> Path Abs
-pkgPrefixDir e n (GitHub _ c _ _) = commitDir e <//> n <//> c
-pkgPrefixDir e n (Local _ _ _)    = commitDir e </> "local" <//> n
-pkgPrefixDir e n (Core _)         = idrisPrefixDir e
+  ||| Tries to read a command from a list of command line arguments.
+  readCommand_ : CurDir -> List String -> Either PackErr c
 
+||| Convenience alias for `defaultCommand_` with an explicit
+||| erased argument for the command type.
 export %inline
-pkgPathDir : Env s -> PkgName -> Package -> Path Abs
-pkgPathDir e n p = pkgPrefixDir e n p /> idrisDir e
+defaultCommand : (0 c : Type) -> Command c => c
+defaultCommand _ = defaultCommand_
 
+||| Convenience alias for `readCommand_` with an explicit
+||| erased argument for the command type.
 export %inline
-pkgBinDir : Env s -> PkgName -> Package -> Path Abs
-pkgBinDir e n p = pkgPrefixDir e n p /> "bin"
-
-export %inline
-pkgLibDir : Env s -> PkgName -> Package -> Path Abs
-pkgLibDir e n p = pkgPathDir e n p /> "lib"
-
-export %inline
-pkgDataDir : Env s -> PkgName -> Package -> Path Abs
-pkgDataDir e n p = pkgPathDir e n p /> "support"
-
-||| Directory where the API docs of the package will be installed.
-export %inline
-pkgDocs : Env s -> PkgName -> Package -> Path Abs
-pkgDocs e n p = pkgPrefixDir e n p /> "docs"
-
-||| Timestamp used to monitor if a local library has been
-||| modified and requires reinstalling.
-export %inline
-libTimestamp :  Env s -> PkgName -> Package -> File Abs
-libTimestamp e n p = MkF (pkgPathDir e n p) ".timestamp"
-
-||| Timestamp used to monitor if a local app has been
-||| modified and requires reinstalling.
-export %inline
-appTimestamp :  Env s -> PkgName -> Package -> File Abs
-appTimestamp e n p = MkF (pkgBinDir e n p) ".timestamp"
-
-||| Directory where the sources of a local package are
-||| stored.
-export
-localSrcDir : Desc t -> Path Abs
-localSrcDir d = sourcePath d
-
-pkgRelDir : Desc t -> Path Rel
-pkgRelDir d = case Body.parse d.desc.name of
-  Just b  => neutral /> (b <-> d.desc.version)
-  Nothing => cast d.desc.name //> d.desc.version
-
-||| Returns the directory where a package for the current
-||| package collection is installed.
-export
-pkgInstallDir : Env s -> PkgName -> Package -> Desc t -> Path Abs
-pkgInstallDir e n p d =
-  let vers = e.db.idrisVersion
-      dir  = pkgPrefixDir e n p /> idrisDir e
-   in case p of
-        Core c         => dir /> (c <-> vers)
-        GitHub _ _ _ _ => dir </> pkgRelDir d
-        Local _ _ _    => dir </> pkgRelDir d
-
-||| Location of an executable of the given name.
-export
-pkgExec : Env s -> PkgName -> Package -> (exe : Body) -> File Abs
-pkgExec e n p exe = MkF (pkgBinDir e n p) exe
-
-export
-resolvedExec : Env s -> ResolvedApp t -> File Abs
-resolvedExec e (RA p n d _ exe) = pkgExec e n p exe
-
-export
-libInstallPrefix : Env s -> ResolvedLib t -> List (String,String)
-libInstallPrefix e rl =
-  [("IDRIS2_PREFIX", "\{pkgPrefixDir e rl.name rl.pkg}")]
-
-pathDirs :  HasIO io
-         => Env s
-         -> (pre : String)
-         -> (pth : Env s -> PkgName -> Package -> Path Abs)
-         -> io String
-pathDirs e pre pth = do
-  ps <- filterM (\(n,p) => exists $ pth e n p) (SM.toList $ allPackages e)
-  let ps' := filter (not . isCorePkg . value . fst) ps
-  pure $ fastConcat
-       . intersperse ":"
-       . (pre ::)
-       $ map (\(n,p) => "\{pth e n p}") ps'
-
-export
-packagePathDirs : HasIO io => Env s -> io String
-packagePathDirs e = pathDirs e "\{idrisInstallDir e}" pkgPathDir
-
-export
-packageLibDirs : HasIO io => Env s -> io String
-packageLibDirs e = pathDirs e "\{idrisLibDir e}" pkgLibDir
-
-export
-packageDataDirs : HasIO io => Env s -> io String
-packageDataDirs e = pathDirs e "\{idrisDataDir e}" pkgDataDir
-
-export
-packagePath : HasIO io => Env s -> io (String, String)
-packagePath e = ("IDRIS2_PACKAGE_PATH",) <$>  packagePathDirs e
-
-export
-libPath : HasIO io => Env s -> io (String, String)
-libPath e = ("IDRIS2_LIBS",) <$> packageLibDirs e
-
-export
-dataPath : HasIO io => Env s -> io (String, String)
-dataPath e = ("IDRIS2_DATA",) <$> packageDataDirs e
-
-export
-buildEnv : HasIO io => Env s -> io (List (String,String))
-buildEnv e = sequence [packagePath e, libPath e, dataPath e]
-
-||| Idris executable to use together with the
-||| `--cg` (codegen) command line option.
-export
-idrisWithCG : Env HasIdris -> String
-idrisWithCG e = case e.codegen of
-  Default => "\{idrisExec e}"
-  cg      => "\{idrisExec e} --cg \{cg}"
-
-||| Idris executable loading the given package plus the
-||| environment variables needed to run it.
-export
-idrisWithPkg :  HasIO io
-             => Env HasIdris
-             -> ResolvedLib t
-             -> io (String, List (String,String))
-idrisWithPkg e rl =
-  ("\{idrisWithCG e} -p \{name rl}",) <$> buildEnv e
-
-||| Idris executable loading the given packages plus the
-||| environment variables needed to run it.
-export
-idrisWithPkgs :  HasIO io
-              => Env HasIdris
-              -> List (ResolvedLib t)
-              -> io (String, List (String,String))
-idrisWithPkgs e [] = pure (idrisWithCG e, [])
-idrisWithPkgs e pkgs =
-  let ps = fastConcat $ map (\p => " -p \{name p}") pkgs
-   in ("\{idrisWithCG e}\{ps}",) <$> buildEnv e
+readCommand :  (0 c : Type)
+            -> Command c
+            => CurDir
+            -> List String
+            -> Either PackErr c
+readCommand _ = readCommand_

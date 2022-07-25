@@ -1,10 +1,9 @@
 module Pack.Runner.Develop
 
 import Idris.Package.Types
-import Pack.Config.Env
-import Pack.Config.Types
+import Pack.Config
 import Pack.Core
-import Pack.Database.Types
+import Pack.Database
 import Pack.Runner.Database
 import Pack.Runner.Install
 
@@ -12,19 +11,19 @@ import Pack.Runner.Install
 
 covering
 runIdrisOn :  HasIO io
+           => IdrisEnv
            => (cmd : String)
-           -> Env HasIdris
            -> Desc Safe
            -> EitherT PackErr io ()
-runIdrisOn c e d = do
-  installDeps e d
-  libPkg e [] c d
+runIdrisOn c d = do
+  installDeps d
+  libPkg [] c d
 
 findIpkg :  HasIO io
          => WithIpkg
          -> Maybe (File Abs)
          -> EitherT PackErr io (Maybe $ File Abs)
-findIpkg (Search dir) fi =
+findIpkg (Search $ CD dir) fi =
   let searchDir := maybe dir parent fi
    in findInParentDirs isIpkgBody searchDir
 findIpkg None         _  = pure Nothing
@@ -32,18 +31,17 @@ findIpkg (Use x)      _  = pure (Just x)
 
 covering
 replOpts :  HasIO io
-         => Env HasIdris
-         -> (file : Maybe $ File Abs)
+         => (e : IdrisEnv)
+         => (file : Maybe $ File Abs)
          -> EitherT PackErr io (String, Maybe $ File Abs)
-replOpts e mf = do
-  Just p <- findIpkg e.withIpkg mf | Nothing => pure ("",Nothing)
-  info e "Found `.ipkg` file at \{p}"
-  d <- parseLibIpkg e p p
+replOpts mf = do
+  Just p <- findIpkg e.env.config.withIpkg mf | Nothing => pure ("",Nothing)
+  info "Found `.ipkg` file at \{p}"
+  d <- parseLibIpkg p p
   let srcDir := maybe "" (\s => "--source-dir \"\{s}\"") d.desc.sourcedir
       pkgs   := unwords $ map (("-p " ++) . value) (dependencies d)
-  installDeps e d
+  installDeps d
   pure ("\{srcDir} \{pkgs}", Just p)
-
 
 -- return the path of an Idris source file to an `.ipkg` file.
 srcFileRelativeToIpkg : (ipkg,idr : Maybe (File Abs)) -> String
@@ -58,16 +56,16 @@ srcFileRelativeToIpkg (Just ipkg) (Just idr) =
 export covering
 idrisRepl :  HasIO io
           => (file : Maybe $ File Abs)
-          -> Env HasIdris
+          -> IdrisEnv
           -> EitherT PackErr io ()
 idrisRepl mf e = do
-  pth  <- packagePath e
-  (opts, mp) <- replOpts e mf
+  pth  <- packagePath
+  (opts, mp) <- replOpts mf
 
   let args := srcFileRelativeToIpkg mp mf
-      exe  := idrisWithCG e
+      exe  := idrisWithCG
 
-  cmd <- case e.rlwrap of
+  cmd <- case e.env.config.rlwrap of
     True  => pure "rlwrap \{exe} \{opts} \{args}"
     False => pure "\{exe} \{opts} \{args}"
 
@@ -81,16 +79,16 @@ export covering
 exec :  HasIO io
      => (file : File Abs)
      -> (args : List String)
-     -> Env HasIdris
+     -> IdrisEnv
      -> EitherT PackErr io ()
 exec file args e = do
-  pth  <- packagePath e
-  (opts, mp) <- replOpts e (Just file)
+  pth  <- packagePath
+  (opts, mp) <- replOpts (Just file)
 
   let relFile := srcFileRelativeToIpkg mp (Just file)
-      exe     := idrisWithCG e
-      cmd     := "\{exe} \{opts} -o \{e.output} \{relFile}"
-      run     := "build/exec/\{e.output} \{unwords args}"
+      exe     := idrisWithCG
+      cmd     := "\{exe} \{opts} -o \{e.env.config.output} \{relFile}"
+      run     := "build/exec/\{e.env.config.output} \{unwords args}"
 
   case mp of
     Just af => inDir af.parent $ \_ => do
@@ -100,30 +98,30 @@ exec file args e = do
 
 ||| Build a local library given as an `.ipkg` file.
 export covering %inline
-build : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
-build f e = parseLibIpkg e f f >>= runIdrisOn "--build" e
+build : HasIO io => File Abs -> IdrisEnv -> EitherT PackErr io ()
+build f e = parseLibIpkg f f >>= runIdrisOn "--build"
 
 ||| Install dependencies of a local `.ipkg` file
 export covering
-buildDeps : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
+buildDeps : HasIO io => File Abs -> IdrisEnv -> EitherT PackErr io ()
 buildDeps f e = do
-  d <- parseLibIpkg e f f
-  installDeps e d
+  d <- parseLibIpkg f f
+  installDeps d
 
 ||| Typecheck a local library given as an `.ipkg` file.
 export covering %inline
-typecheck : HasIO io => File Abs -> Env HasIdris -> EitherT PackErr io ()
-typecheck f e = parseLibIpkg e f f >>= runIdrisOn "--typecheck" e
+typecheck : HasIO io => File Abs -> IdrisEnv -> EitherT PackErr io ()
+typecheck f e = parseLibIpkg f f >>= runIdrisOn "--typecheck"
 
 ||| Build and execute a local `.ipkg` file.
 export covering
 runIpkg :  HasIO io
         => File Abs
         -> (args : List String)
-        -> Env HasIdris
+        -> IdrisEnv
         -> EitherT PackErr io ()
 runIpkg p args e = do
-  d        <- parseLibIpkg e p p
+  d        <- parseLibIpkg p p
   Just exe <- pure (execPath d) | Nothing => throwE (NoAppIpkg p)
   build p e
   sys "\{exe} \{unwords args}"
@@ -133,13 +131,13 @@ export covering
 execApp :  HasIO io
         => PkgName
         -> (args : List String)
-        -> Env HasIdris
+        -> IdrisEnv
         -> EitherT PackErr io ()
 execApp p args e = do
-  ra <- resolveApp e p
+  ra <- resolveApp p
   case ra.pkg of
     GitHub {}      => do
-      install e [(Bin,p)]
-      sys "\{pkgExec e ra.name ra.pkg ra.exec} \{unwords args}"
+      install [(Bin,p)]
+      sys "\{pkgExec ra.name ra.pkg ra.exec} \{unwords args}"
     Local d ipkg _ => runIpkg (toAbsFile d ipkg) args e
     Core {}        => throwE (NoApp p)
