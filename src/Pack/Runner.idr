@@ -25,6 +25,7 @@ Command Cmd where
   defaultLevel (Remove xs)            = Info
   defaultLevel (Run x strs)           = Warning
   defaultLevel Update                 = Info
+  defaultLevel Fetch                  = Info
   defaultLevel PackagePath            = Silence
   defaultLevel LibsPath               = Silence
   defaultLevel DataPath               = Silence
@@ -45,6 +46,7 @@ Command Cmd where
   readCommand_ _  ["info"]                   = Right Info
   readCommand_ _  ["update-db"]              = Right UpdateDB
   readCommand_ _  ["update"]                 = Right Update
+  readCommand_ _  ["fetch"]                  = Right Update
   readCommand_ _  ["fuzzy", s]               = Right $ Fuzzy [] s
   readCommand_ _  ["fuzzy", p, s]            =
     Right $ Fuzzy (forget $ map MkPkgName $ split (',' ==) p) s
@@ -105,6 +107,10 @@ Command Cmd where
   adjConfig Update c = pure $ {safetyPrompt := False} c
   adjConfig _      c = pure c
 
+isFetch : Cmd -> Bool
+isFetch Fetch = True
+isFetch _     = False
+
 ||| Main application entry point (modulo error handling).
 export covering
 runCmd : HasIO io => EitherT PackErr io ()
@@ -112,7 +118,7 @@ runCmd = do
   pd       <- getPackDir
   cd       <- CD <$> curDir
   (mc,cmd) <- getConfig Cmd
-  c        <- traverse resolveMeta mc
+  c        <- traverse (resolveMeta $ isFetch cmd) mc
   finally (rmDir tmpDir) $ case cmd of
     Completion a b     => env >>= complete a b
     CompletionScript f => putStrLn (completionScript f)
@@ -130,6 +136,7 @@ runCmd = do
     Install ps         => idrisEnv >>= \e => install ps
     Remove ps          => idrisEnv >>= \e => remove ps
     Update             => idrisEnv >>= update
+    Fetch              => idrisEnv >>= \e => install []
     PackagePath        => loadDB >>= packagePathDirs >>= putStrLn
     LibsPath           => loadDB >>= packageLibDirs  >>= putStrLn
     DataPath           => loadDB >>= packageDataDirs >>= putStrLn

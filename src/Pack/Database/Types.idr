@@ -19,17 +19,20 @@ import Pack.Core.Types
 public export
 data MetaCommit : Type where
   MC     : Commit -> MetaCommit
-  Latest : String -> MetaCommit
+  Latest : Branch -> MetaCommit
+  Fetch  : Branch -> MetaCommit
 
 public export
 FromString MetaCommit where
   fromString s = case forget $ split (':' ==) s of
-    ["latest",branch] => Latest branch
-    _                 => MC $ MkCommit s
+    ["latest",branch]       => Latest $ MkBranch branch
+    ["fetch-latest",branch] => Fetch $ MkBranch branch
+    _                       => MC $ MkCommit s
 
 export
 Interpolation MetaCommit where
   interpolate (Latest b) = "latest:\{b}"
+  interpolate (Fetch b)  = "fetch-latest:\{b}"
   interpolate (MC c)     = "\{c}"
 
 --------------------------------------------------------------------------------

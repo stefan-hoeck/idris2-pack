@@ -255,6 +255,10 @@ usageInfo = """
       too outdated to build the latest pack. If this fails, try using
       the latest nightly.
 
+    fetch
+      Fetch latest commit hashes from GitHub for packages with a
+      commit entry of "latest:branch".
+
     switch [collection name]
       Switch to the given package collection. This will adjust your
       `$PACK_DIR/.pack/user/pack.toml` file to use the given package

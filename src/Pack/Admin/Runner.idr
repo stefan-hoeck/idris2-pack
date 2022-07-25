@@ -41,7 +41,7 @@ Command ACmd where
 covering
 commitOf : HasIO io => Package -> EitherT PackErr io Package
 commitOf (GitHub url branch ipkg pp) = do
-  commit <- gitLatest url branch
+  commit <- gitLatest url (MkBranch branch.value)
   pure $ GitHub url commit ipkg pp
 commitOf p                        = pure p
 
@@ -69,7 +69,7 @@ runCmd = do
   pd       <- getPackDir
   pd       <- CD <$> curDir
   (mc,cmd) <- getConfig ACmd
-  c        <- traverse resolveMeta mc
+  c        <- traverse (resolveMeta True) mc
   case cmd of
     CheckDB db p       => finally (rmDir tmpDir) $ idrisEnv >>= checkDB p
     FromHEAD p         => env >>= writeLatestDB p
