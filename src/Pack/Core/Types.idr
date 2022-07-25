@@ -16,6 +16,7 @@ import System.File
 ----------------------------------------------------------------------------------
 
 ||| This puts a value in quotes during interpolation.
+|||
 ||| Note: If the interpolated string contains additional quote
 ||| characters, these will *not* be escaped.
 export
@@ -59,14 +60,20 @@ toRelPath s = case the FilePath (fromString s) of
   FP (PAbs sx) => PRel sx
   FP (PRel sx) => PRel sx
 
+||| Converts a `FilePath` - which might hold a relative
+||| or an absolute path - to an absolute path by interpreting
+||| a relative path being relative to the given parent directory.
 export
-toAbsPath : Path Abs -> FilePath -> Path Abs
-toAbsPath dir (FP $ PAbs sx) = PAbs sx
-toAbsPath dir (FP $ PRel sx) = dir </> PRel sx
+toAbsPath : (parent : Path Abs) -> FilePath -> Path Abs
+toAbsPath parent (FP $ PAbs sx) = PAbs sx
+toAbsPath parent (FP $ PRel sx) = parent </> PRel sx
 
+||| Parses a string, converting it to either a relative
+||| or absolute path and using `toAbsPath` to convert the result
+||| to an absolute path.
 export
-parse : String -> Path Abs -> Path Abs
-parse s dir = toAbsPath dir (fromString s)
+parse : String -> (parentDir : Path Abs) -> Path Abs
+parse s parentDir = toAbsPath parentDir (fromString s)
 
 export %inline
 Cast String (Path Rel) where
@@ -74,12 +81,15 @@ Cast String (Path Rel) where
 
 infixl 5 <//>
 
+||| More flexible version of `</>` (path concatenation).
 export %inline
-(<//>) : Cast a (Path Rel) => Path Abs -> a -> Path Abs
+(<//>) : Cast a (Path Rel) => Path t -> a -> Path t
 p <//> v = p </> cast v
 
 infixl 5 //>
 
+||| More flexible version of `//>`
+||| (appending a file path body to an absolute path)
 export %inline
 (//>) : Cast a Body => Path t -> a -> Path t
 p //> v = p /> cast v
@@ -102,9 +112,11 @@ Cast (Maybe PkgVersion) Body where
   cast Nothing  = "0"
   cast (Just v) = cast v
 
+||| Convert a relative file path to an absolute one by appending
+||| it to the given parent directory.
 export %inline
 toAbsFile : Path Abs -> File Rel -> File Abs
-toAbsFile dir (MkF p f) = MkF (dir </> p) f
+toAbsFile parentDir (MkF p f) = MkF (parentDir </> p) f
 
 export
 Cast (File t) (Path t) where cast = toPath
@@ -124,6 +136,8 @@ export %inline
 Interpolation PackDir where
   interpolate (PD dir) = interpolate dir
 
+||| Use this when you need access to the `PACK_DIR` path with
+||| only a value of type `PackDir` in scope.
 export %inline
 packDir : (pd : PackDir) => Path Abs
 packDir {pd = PD dir} = dir
@@ -138,6 +152,8 @@ export %inline
 Interpolation CurDir where
   interpolate (CD dir) = interpolate dir
 
+||| Use this when you need access to the current directory's path with
+||| only a value of type `CurDir` in scope.
 export %inline
 curDir : (cd : CurDir) => Path Abs
 curDir {cd = CD dir} = dir
@@ -160,6 +176,7 @@ Interpolation PkgVersion where interpolate = show
 --          URL
 --------------------------------------------------------------------------------
 
+||| URL mostly used to represent repositories on GitHub.
 public export
 record URL where
   constructor MkURL
@@ -227,7 +244,7 @@ Cast PkgName (Path Rel) where
 --          Package Type
 --------------------------------------------------------------------------------
 
-||| Type of an Idris package
+||| Type of an Idris package (either a library or a binary).
 public export
 data PkgType = Lib | Bin
 
@@ -252,7 +269,7 @@ Ord PkgType where
 --          DBName
 --------------------------------------------------------------------------------
 
-||| Name of a package collection. This should be a valid
+||| Name of a package collection. This must be a valid
 ||| file path body.
 public export
 record DBName where
@@ -287,14 +304,15 @@ All = MkDBName "all"
 ||| A tagged package desc. We use the tag mainly to make sure that
 ||| the package desc in question has been checked for safety issues.
 ||| Since the tag is parameterized by a `PkgDesc`, we make sure
-||| we will not inadvertently use a tag for a different `PkgDesc`.
+||| we will not inadvertently use a tag for a `PkgDesc` different to
+||| the one we wrapped.
 public export
 record Desc (t : PkgDesc -> Type) where
   constructor MkDesc
   ||| The parsed package desc
   desc : PkgDesc
 
-  ||| String content of the package desc
+  ||| String content of the `.ipkg` file used when reading the package desc
   cont : String
 
   ||| Path to the file use when reading the package desc
@@ -303,6 +321,7 @@ record Desc (t : PkgDesc -> Type) where
   ||| Security tag. See `Pack.Runner.Database.check`
   0 tag : t desc
 
+||| This is used as a tag for unchecked `Desc`s.
 public export
 0 U : PkgDesc -> Type
 U d = Unit
@@ -316,6 +335,7 @@ dependencies d = map (MkPkgName . pkgname) $ d.desc.depends
 --          Errors
 --------------------------------------------------------------------------------
 
+||| Error during marshalling from TOML to an Idris type.
 public export
 data TOMLErr : Type where
   ||| A mandatory key/value pair in a toml file is
@@ -333,12 +353,14 @@ printTOMLErr (MissingKey path) = "Missing toml key: \{tomlPath path}."
 printTOMLErr (WrongType path type) =
   "Wrong type at \{tomlPath path}. Expect \{type}."
 
+||| Prefix the given TOML key to an error message. This allows us to
+||| specify exactly where in a TOML structure things went wrong.
 export
-prefixKey : String -> Either TOMLErr a -> Either TOMLErr a
+prefixKey : (key : String) -> Either TOMLErr a -> Either TOMLErr a
 prefixKey k = mapFst $ \case MissingKey p => MissingKey (k :: p)
                              WrongType p t => WrongType (k :: p) t
 
-||| Errors that can occur when running *pack* programs.
+||| Errors that can occur when running pack programs.
 public export
 data PackErr : Type where
   ||| Failed to get the path of the current directory.
@@ -555,24 +577,32 @@ printErr ManualInstallPackApp = """
 
 printErr SafetyAbort = "Installation aborted."
 
+||| Tries to convert a string to a `DBName` by first converting
+||| it to a valid file path body.
 export
 readDBName : String -> Either PackErr DBName
 readDBName s = case Body.parse s of
   Just b  => Right $ MkDBName b
   Nothing => Left (InvalidDBName s)
 
+||| Tries to convert a string to a file path body.
 export
 readBody : String -> Either PackErr Body
 readBody s = case Body.parse s of
   Just b  => Right b
   Nothing => Left (InvalidBody s)
 
+||| Tries to convert a string to a package type.
 export
 readPkgType : String -> Either PackErr PkgType
 readPkgType "lib" = Right Lib
 readPkgType "bin" = Right Bin
 readPkgType s     = Left (InvalidPkgType s)
 
+||| Tries to convert a string representing a relative or absolute
+||| file path. This uses `toAbsPath` internally, so it is somewhat
+||| tolerant w.r.t. to dubious file paths. It fails, however, if the
+||| given path does not contain at least one file path body.
 export
 readAbsFile : (curdir : Path Abs) -> String -> Either PackErr (File Abs)
 readAbsFile cd s = case split $ toAbsPath cd (fromString s) of
@@ -583,6 +613,7 @@ readAbsFile cd s = case split $ toAbsPath cd (fromString s) of
 --          Logging
 --------------------------------------------------------------------------------
 
+||| Level used during logging.
 public export
 data LogLevel : Type where
   [noHints]
