@@ -179,7 +179,7 @@ configuration. The types involved will be discussed below.
   for this purpose.
 * `Pack.Config.Types.Config_`: This represents user-defined settings,
   either read from one or more `pack.toml` files or directly from
-  command line options. See the API docs for an explanation why
+  command-line options. See the API docs for an explanation why
   we need the two parameters. Most of the time, we work with `Config`,
   and alias for `Config_ I Commit`, where all fields are mandatory
   and package commits have been fully resolved.
@@ -209,7 +209,7 @@ Finally, tab completion is implemented in `Pack.CmdLn.Completion`.
 
 Note that a type representing supported pack commands must implement
 interface `Pack.Config.Types.Command`, which encapsulates how to parse
-a pack command plus its arguments from a list of command line arguments,
+a pack command plus its arguments from a list of command-line arguments,
 and how the given command affects the application config.
 
 ### Running Commands
