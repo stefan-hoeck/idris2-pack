@@ -181,6 +181,9 @@ public export
 0 UserConfig : Type
 UserConfig = MConfig MetaCommit
 
+||| Effectfully convert all custom package descriptions
+||| stored in a configuration. This is mainly used to
+||| resolve meta commits to mere commits.
 export
 traverse :  Applicative f
          => (Package_ a -> f (Package_ b))

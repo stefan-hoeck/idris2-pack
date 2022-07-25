@@ -567,11 +567,11 @@ printErr (BuildFailures n) = "\{show n} packages failed to build."
 
 printErr ManualInstallPackApp = """
   You are not supposed to manually install or remove the pack
-  application. In order to update pack to latest version from
+  application. In order to update pack to the latest version on
   GitHub, run `pack update`.
 
   Note: If you didn't run `pack install-app pack` or a similar
-  operation, "pack" might be listed in as an auto-install application
+  operation, "pack" might be listed as an auto-install application
   in one of your pack.toml files. Please remove it from there.
   """
 

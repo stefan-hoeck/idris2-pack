@@ -104,6 +104,11 @@ mkIdris = do
 --          Installing Libs
 --------------------------------------------------------------------------------
 
+withSrcStr : (c : Config) => String
+withSrcStr = case c.withSrc of
+  True  => " (with sources)"
+  False => ""
+
 installImpl :  HasIO io
             => (e : IdrisEnv)
             => (dir : Path Abs)
@@ -113,7 +118,7 @@ installImpl dir rl =
   let pre := libInstallPrefix rl
       cmd := installCmd e.env.config.withSrc
    in do
-     info "Installing library: \{name rl}"
+     info "Installing library\{withSrcStr}: \{name rl}"
      libPkg pre cmd rl.desc
      when e.env.config.withDocs $ libPkg pre "--mkdoc" rl.desc
      when !(exists $ dir /> "lib") $
