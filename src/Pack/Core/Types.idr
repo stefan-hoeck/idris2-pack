@@ -122,7 +122,7 @@ export
 Cast (File t) (Path t) where cast = toPath
 
 ----------------------------------------------------------------------------------
-----          CurDir and PackDir
+----          CurDir, PackDir, and TmpDir
 ----------------------------------------------------------------------------------
 
 ||| The directory where package collections, global user settings,
@@ -157,6 +157,23 @@ Interpolation CurDir where
 export %inline
 curDir : (cd : CurDir) => Path Abs
 curDir {cd = CD dir} = dir
+
+||| The directory where temporary files and git repos will be
+||| kept.
+public export
+data TmpDir : Type where
+  [noHints]
+  TD : (dir : Path Abs) -> TmpDir
+
+export %inline
+Interpolation TmpDir where
+  interpolate (TD dir) = interpolate dir
+
+||| Use this when you need access to the `PACK_DIR` path with
+||| only a value of type `PackDir` in scope.
+export %inline
+tmpDir : (td : TmpDir) => Path Abs
+tmpDir {td = TD dir} = dir
 
 ----------------------------------------------------------------------------------
 ----          Interpolation
@@ -392,6 +409,9 @@ data PackErr : Type where
   ||| Failed to get package directory path
   NoPackDir  : PackErr
 
+  ||| Failed to create temporary directory
+  NoTmpDir  : PackErr
+
   ||| Failed to create the given directory
   MkDir      : (path : Path Abs) -> (err : FileError) -> PackErr
 
@@ -500,6 +520,12 @@ printErr NoPackDir = """
   Failed to figure out package directory.
   This means, that neither environment variable \"PACK_DIR\"
   nor environment varaible \"HOME\" was set.
+  """
+
+printErr NoTmpDir = """
+  Failed to create temporary directory.
+  Please check directory `PACK_DIR` and make sure to remove
+  all `.tmpXY` directories you no longer need.
   """
 
 printErr (MkDir path err) =

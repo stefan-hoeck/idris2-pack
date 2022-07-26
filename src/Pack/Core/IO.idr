@@ -233,6 +233,19 @@ findInParentDirs p (PAbs sb) = go sb
              (h :: _) <- filter p <$> entries dir | Nil => go sb
              pure $ Just (MkF dir h)
 
+export
+mkTmpDir : HasIO io => PackDir => EitherT PackErr io TmpDir
+mkTmpDir = go 100 0
+  where go : Nat -> Nat -> EitherT PackErr io TmpDir
+        go 0     _ = throwE NoTmpDir
+        go (S k) n =
+          let Just body := Body.parse ".tmp\{show n}" | Nothing => go k (S n)
+              dir       := packDir /> body
+           in do
+             False <- exists dir | True => go k (S n)
+             mkDir dir
+             pure (TD dir)
+
 --------------------------------------------------------------------------------
 --         File Access
 --------------------------------------------------------------------------------

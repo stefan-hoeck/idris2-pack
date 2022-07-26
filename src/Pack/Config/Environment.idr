@@ -21,14 +21,9 @@ export
 packToml : Body
 packToml = "pack.toml"
 
-||| Temporary directory used for building packages.
-export %inline
-tmpDir : PackDir => Path Abs
-tmpDir = packDir /> ".tmp"
-
 ||| Clone of the pack GitHub repo
 export %inline
-packClone : PackDir => Path Abs
+packClone : TmpDir => Path Abs
 packClone = tmpDir /> "pack"
 
 ||| Directory where databases are stored.
@@ -419,7 +414,7 @@ getPackDir = do
 
 ||| Update the package database.
 export
-updateDB : HasIO io => PackDir => EitherT PackErr io ()
+updateDB : HasIO io => TmpDir => PackDir => EitherT PackErr io ()
 updateDB = do
   rmDir dbDir
   finally (rmDir tmpDir) $
@@ -429,7 +424,7 @@ updateDB = do
 ||| Loads the name of the default collection (currently the latest
 ||| nightly)
 export
-defaultColl : HasIO io => PackDir => EitherT PackErr io DBName
+defaultColl : HasIO io => TmpDir => PackDir => EitherT PackErr io DBName
 defaultColl = do
   when !(missing dbDir) updateDB
   (x :: xs) <- filter ("HEAD.toml" /=) <$> tomlFiles dbDir
@@ -470,6 +465,7 @@ getConfig :  (0 c : Type)
           -> Command c
           => HasIO io
           => (pd        : PackDir)
+          => (td        : TmpDir)
           => (cur       : CurDir)
           => EitherT PackErr io (MetaConfig,c)
 getConfig c = do
@@ -513,7 +509,7 @@ pkgs = fromList $ (\c => (corePkgName c, Core c)) <$> corePkgs
 
 ||| Load the package collection as given in the (auto-implicit) user config.
 export covering
-loadDB : HasIO io => PackDir => Config => EitherT PackErr io DB
+loadDB : HasIO io => TmpDir => PackDir => Config => EitherT PackErr io DB
 loadDB = do
   when !(missing dbDir) updateDB
   debug "reading package collection"
@@ -522,8 +518,12 @@ loadDB = do
 ||| Load the package collection as given in the (auto-implicit) user config
 ||| and convert the result to a pack environment.
 export covering
-env : HasIO io => (pd : PackDir) => (c : Config) => EitherT PackErr io Env
-env = MkEnv pd c <$> loadDB
+env :  HasIO io
+    => (pd : PackDir)
+    => (td : TmpDir)
+    => (c : Config)
+    => EitherT PackErr io Env
+env = MkEnv pd td c <$> loadDB
 
 adjCollection : DBName -> String -> String
 adjCollection db str = case isPrefixOf "collection " str of

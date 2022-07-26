@@ -264,7 +264,11 @@ installDeps = install . map (Lib,) . dependencies
 
 ||| Creates a packaging environment with Idris2 installed.
 export covering
-idrisEnv : HasIO io => PackDir => Config => EitherT PackErr io IdrisEnv
+idrisEnv :  HasIO io
+         => PackDir
+         => TmpDir
+         => Config
+         => EitherT PackErr io IdrisEnv
 idrisEnv = env >>= (\e => mkIdris)
 
 ||| Update the pack installation
