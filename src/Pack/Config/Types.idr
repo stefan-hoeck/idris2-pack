@@ -287,6 +287,7 @@ public export
 record Env where
   constructor MkEnv
   packDir : PackDir
+  tmpDir  : TmpDir
   config  : Config
   db      : DB
 
@@ -295,6 +296,12 @@ record Env where
 export %inline %hint
 envToPackDir : (e : Env) => PackDir
 envToPackDir = e.packDir
+
+||| This allows us to use an `Env` in scope when we
+||| need an auto-implicit `PackDir`.
+export %inline %hint
+envToTmpDir : (e : Env) => TmpDir
+envToTmpDir = e.tmpDir
 
 ||| This allows us to use an `Env` in scope when we
 ||| need an auto-implicit `Config`.
@@ -345,6 +352,7 @@ interface Command c where
   ||| latest package collection available.
   adjConfig :  HasIO io
             => PackDir
+            => TmpDir
             => c
             -> MetaConfig
             -> EitherT PackErr io MetaConfig

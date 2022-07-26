@@ -39,6 +39,7 @@ covering
 main : IO ()
 main = run $ do
   dir     <- getPackDir
+  td      <- mkTmpDir
   mkDir packDir
   defCol  <- defaultColl
   args    <- getArgs

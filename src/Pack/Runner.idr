@@ -116,6 +116,7 @@ export covering
 runCmd : HasIO io => EitherT PackErr io ()
 runCmd = do
   pd       <- getPackDir
+  td       <- mkTmpDir
   cd       <- CD <$> curDir
   (mc,cmd) <- getConfig Cmd
   c        <- traverse (resolveMeta $ isFetch cmd) mc
