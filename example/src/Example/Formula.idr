@@ -1,5 +1,6 @@
 module Example.Formula
 
+import Data.DPair
 import Data.Maybe.NothingMax
 import Data.Nat
 import Data.Prim.Bits64
@@ -219,4 +220,26 @@ parseSingle ('O' ::  t)       = Just (O, t)
 parseSingle ('F' ::  t)       = Just (F, t)
 parseSingle _                 = Nothing
 
-parseNat : List Char -> Maybe (Nat,List Char)
+posNat : List Char -> Maybe (Subset Nat IsSucc)
+posNat = go 0
+  where go : Nat -> List Char -> Maybe (Subset Nat IsSucc)
+        go 0       [] = Nothing
+        go k@(S _) [] = Just $ Element k ItIsSucc
+        go k (x :: xs) = go (k * 10 + cast (ord x - 48)) xs
+
+parseNat : List Char -> Maybe (Subset Nat IsSucc,List Char)
+parseNat cs = case break (not . isDigit) cs of
+  ([], t) => Just (Element 1 ItIsSucc, t)
+  (cs, t) => (,t) <$> posNat cs
+
+export
+readFormula : String -> Maybe Formula
+readFormula = go Lin . unpack
+  where go : SnocList (Elem, Subset Nat IsSucc) -> List Char -> Maybe Formula
+        go sx [] = Just $ foldMap (\(e, Element n _) => singleton e n) sx
+        go sx cs =
+          let Just (e,cs2) = parseSingle cs  | Nothing => Nothing
+              Just (n,cs3) = parseNat    cs2 | Nothing => Nothing
+           in go (sx :< (e,n)) $ assert_smaller cs cs3
+
+
