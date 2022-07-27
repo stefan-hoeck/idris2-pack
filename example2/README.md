@@ -5,7 +5,7 @@ work on several packages in parallel via GitHub. In this case it
 is assumed that several people collaborate on these packages,
 pushing their changes to GitHub on regular occasions. It is
 cumbersome for programmers depending on these libraries to manually
-check for updates and pull the latest commit. We'd rather let
+check for updates and pull the latest commits. We'd rather let
 pack handle the boring stuff.
 
 Here's the project structure:
@@ -13,10 +13,10 @@ Here's the project structure:
 * chem-smiles-example: A simplified SMILES parser for molecules.
   In addition to some officially supported dependencies, this also
   depends on chem-core-example and chem-formula-example from the
-  first example project, but we assume these are maintained by a
-  different programmer in our teams, while we are responsible of
+  first example project, but we assume these are maintained by
+  different programmers in our team, while we are responsible of
   implementing the SMILES parser.
-* chem-smiles-example-test: A small test suite for the SMILE parser.
+* chem-smiles-example-test: A small test suite for the SMILES parser.
 
 As in the first example, we add a `pack.toml` file to the project's
 root directory listing all custom libraries and apps including the
