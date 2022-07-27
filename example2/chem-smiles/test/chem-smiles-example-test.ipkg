@@ -1,0 +1,27 @@
+package chem-smiles-example-test
+
+version = 0.0.1
+
+authors = "Stefan Höck"
+
+brief   = "Property tests for our SMILES parser"
+
+langversion >= 0.5.1
+
+depends = base >= 0.5.1
+        , chem-core-example
+        , chem-formula-example
+        , chem-smiles-example
+        , contrib
+        , elab-util
+        , graph
+        , hedgehog
+        , pretty-show
+        , prim
+        , sop
+
+sourcedir  = "src"
+
+main       = Main
+
+executable = smiles-test
