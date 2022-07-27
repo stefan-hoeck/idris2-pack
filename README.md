@@ -14,7 +14,7 @@ that's a bug in the package collection). This is similar to what
 There is a second GitHub repository containing the package collections:
 [idris2-pack-db](https://github.com/stefan-hoeck/idris2-pack-db).
 See instructions there if you want to make your own packages
-available to *pack*. The list of currently available packages plus
+available to pack. The list of currently available packages plus
 their current build status can also be found
 [here](https://github.com/stefan-hoeck/idris2-pack-db/blob/main/STATUS.md).
 
@@ -22,7 +22,7 @@ their current build status can also be found
 
 For detailed instructions and prerequisites, see [installation](INSTALL.md).
 Assuming, you have already installed Chez Scheme
-you can set up *pack* and the corresponding Idris2
+you can set up pack and the corresponding Idris2
 compiler with the following command:
 
 ```sh
@@ -43,7 +43,7 @@ pack help
 
 In the following sections, we assume the `$PACK_DIR/bin` folder
 is on your path and you have installed
-*pack* as described under [installation](INSTALL.md).
+pack as described under [installation](INSTALL.md).
 To install a library from the package collection, run
 
 ```sh
@@ -69,7 +69,7 @@ pack remove katla
 ```
 
 It is also possible to work with local `.ipkg` files as long
-as they depend on packages known to *pack*:
+as they depend on packages known to pack:
 
 ```sh
 pack build json.ipkg
@@ -86,7 +86,7 @@ pack run test.ipkg -n 50
 pack run katla --help
 ```
 
-You can use *pack* to start an Idris REPL session, optionally
+You can use pack to start an Idris REPL session, optionally
 with making dependencies listed in an `.ipkg` file available
 (these will first be built and installed if necessary):
 
@@ -113,7 +113,7 @@ collection = "nightly-220507"
 
 It is also possible to add local projects as well as GitHub
 projects not yet managed by your package collection of choice
-to the set of packages known to *pack*. For instance, assuming you
+to the set of packages known to pack. For instance, assuming you
 have a local project called `hello` located in directory
 `/data/me/idris/hello` with `.ipkg` file `hello.ipkg`,
 and you want to make this available to all package collections
@@ -137,7 +137,7 @@ path = "/data/me/idris/hello"
 ipkg = "hello.ipkg"
 ```
 
-Likewise, you could at a GitHub project not yet known to *pack*
+Likewise, you could at a GitHub project not yet known to pack
 to one or all of the package collections:
 
 ```toml
@@ -167,7 +167,7 @@ at the first one it finds.
 
 ## Directory Structure
 
-It is important to understand, how *pack* keeps track of the
+It is important to understand, how pack keeps track of the
 libraries it installed, where it looks for user settings
 and package collections, and how it reuses existing
 versions of the Idris2 compiler and libraries.
@@ -219,14 +219,14 @@ $HOME/.pack/install/7a8635/local/chem
 ### Application Binaries
 
 These will be installed in subfolder `bin` of the directories
-listed above. In addition, a symlink will be added to the
+listed above. In addition, a wrapper script will be added to the
 package collection's `bin` folder, which can be found at
 
 ```sh
 $HOME/.pack/[collection]/bin
 ```
 
-This will be enough for executing an application via *pack*,
+This will be enough for executing an application via pack,
 for instance by running
 
 ```sh
@@ -243,6 +243,14 @@ pack switch nightly-220518
 
 And second, add directory `$HOME/.pack/bin` to your `$PATH`
 variable.
+
+## Developing Applications
+
+There are two example projects explaining in detail how to use
+pack to develop groups of related projects. The first, which
+can be found in the `example1` subfolder, sets up
+two libraries plus a test suite. A detailed description how it
+works can be found [here](example1/README.md).
 
 ## Stuff still Missing
 

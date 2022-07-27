@@ -1,0 +1,17 @@
+package chem-formula-example
+
+version = 0.0.1
+
+authors = "Stefan Höck"
+
+brief   = "A simple data type for provably sorted molecular formulae"
+
+langversion >= 0.5.1
+
+depends = base >= 0.5.1
+        , chem-core-example
+        , prim
+
+modules = Chem.Formula
+
+sourcedir  = "src"

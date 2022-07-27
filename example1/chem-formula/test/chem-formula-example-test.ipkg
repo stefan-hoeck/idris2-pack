@@ -1,0 +1,25 @@
+package chem-formula-example-test
+
+version = 0.0.1
+
+authors = "Stefan Höck"
+
+brief   = "Test suite for the chem-formula project"
+
+langversion >= 0.5.1
+
+depends = base >= 0.5.1
+        , chem-core-example
+        , chem-formula-example
+        , contrib
+        , elab-util
+        , hedgehog
+        , pretty-show
+        , prim
+        , sop
+
+sourcedir  = "src"
+
+main       = Main
+
+executable = formula-test
