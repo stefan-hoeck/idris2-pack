@@ -249,8 +249,12 @@ variable.
 There are two example projects explaining in detail how to use
 pack to develop groups of related projects. The first, which
 can be found in the `example1` subfolder, sets up
-two libraries plus a test suite. A detailed description how it
-works can be found [here](example1/README.md).
+two libraries plus a test suite for local development.
+A detailed description how it works can be found [here](example1/README.md).
+
+The second example in folder `example2` explain how to collaborate
+on several packages in parallel via GitHub. Details can be found
+[here](example2/README.md).
 
 ## Stuff still Missing
 

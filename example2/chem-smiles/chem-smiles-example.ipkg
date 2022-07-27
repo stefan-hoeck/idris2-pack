@@ -1,0 +1,22 @@
+package chem-smiles-example
+
+version = 0.0.1
+
+authors = "Stefan Höck"
+
+brief   = "A simplified SMILES parser for molecules"
+
+langversion >= 0.5.1
+
+depends = base >= 0.5.1
+        , chem-core-example
+        , chem-formula-example
+        , graph
+        , prim
+
+modules = Data.List.Suffix
+        , Text.Parser.Util
+        , Text.Smiles.Parser
+        , Text.Smiles.Types
+
+sourcedir  = "src"

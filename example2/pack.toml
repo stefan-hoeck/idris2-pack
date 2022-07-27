@@ -1,0 +1,30 @@
+# This links to the latest commit of the main branch
+# of pack's GitHub repository. The commit to use will be
+# updated, whenever `pack fetch` is invoked.
+[custom.all.chem-core-example]
+type   = "github"
+url    = "https://github.com/stefan-hoeck/idris2-pack"
+commit = "latest:main"
+ipkg   = "example1/chem-core/chem-core-example.ipkg"
+
+# This links to the latest commit of the main branch
+# of pack's GitHub repository. The commit to use will be
+# updated every time pack is run.
+#
+# Note: Only use `fetch-latest` if you truly need it, as it
+# can significantly increase pack's startup time.
+[custom.all.chem-formula-example]
+type   = "github"
+url    = "https://github.com/stefan-hoeck/idris2-pack"
+commit = "fetch-latest:main"
+ipkg   = "example1/chem-formula/chem-formula-example.ipkg"
+
+[custom.all.chem-smiles-example]
+type   = "local"
+path   = "chem-smiles"
+ipkg   = "chem-smiles-example.ipkg"
+
+[custom.all.chem-smiles-example-test]
+type   = "local"
+path   = "chem-smiles/test"
+ipkg   = "chem-smiles-example-test.ipkg"

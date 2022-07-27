@@ -106,6 +106,12 @@ jobs:
           echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
       - name: Install application
         run: pack install graph
+      - name: Run examples
+        run: |
+          cd example1
+          pack run chem-formula-example-test -n 1000
+          cd ../example2
+          pack run chem-smiles-example-test -n 1000
 
   shellscript:
     name: Bootstrap with the shell script
@@ -123,3 +129,9 @@ jobs:
           echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
       - name: Install application
         run: pack install graph
+      - name: Run examples
+        run: |
+          cd example1
+          pack run chem-formula-example-test -n 1000
+          cd ../example2
+          pack run chem-smiles-example-test -n 1000
