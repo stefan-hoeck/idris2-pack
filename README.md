@@ -244,7 +244,7 @@ pack switch nightly-220518
 And second, add directory `$HOME/.pack/bin` to your `$PATH`
 variable.
 
-## Developing Application
+## Developing Applications
 
 There are two example projects explaining in detail how to use
 pack to develop groups of related projects. The first, which

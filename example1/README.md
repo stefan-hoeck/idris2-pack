@@ -40,30 +40,32 @@ Type-checking an Idris package with pack is straightforward:
 pack typecheck chem-formula/chem-formula-example.ipkg
 ```
 
-Pack will automatically install all the necessary dependencies
-(including the local ones). Likewise, we can build a project:
+Note, how pack will automatically build and install all the
+necessary dependencies (including the local ones). Likewise,
+we can build a project:
 
 ```sh
 pack build chem-formula/test/chem-formula-example-test.ipkg
 ```
 
 In case of applications, it is also possible to build and run
-them. For instance, to run the test suite for molecular formulae:
+them directly. For instance, the following runs the test suite
+for molecular formulae:
 
 ```sh
 pack run chem-formula-example-test
 ```
 
-We can also pass additional command line arguments to an
+We can also pass additional command-line arguments to an
 executable:
 
 ```sh
-pack run chem-formula-example-test -n 1000
+pack run chem-formula-example-test -n 10000
 ```
 
-Finally, we can also use pack to start a REPL session. If
+Finally, we can also use pack to start REPL sessions. If
 we load a specific Idris source file, pack will look for an
-`.ipkg` file in the source file's parent directories and will
+`.ipkg` file in the file's parent directories and will
 automatically install the required dependencies first.
 Let's try this by first removing package *chem-core-example*:
 
@@ -79,14 +81,14 @@ pack repl chem-formula/src/Chem/Formula.idr
 ```
 
 Note, how pack will first re-install *chem-core-example*. It will
-do the same thing in case of an outdated library (see next section).
+do the same thing in case of outdated dependencies (see next section).
 
 ## Outdated Packages
 
 When we work on several local libraries in parallel, pack keeps
 track of our changes and will reinstall any outdated dependencies
 automatically. For instance, if you have *chem-core-example* already installed
-and update the time stamp of one of its source files, pack will
+and update the timestamp of one of its source files, pack will
 list the package as being "outdated" when you run `pack info`.
 If you try to build *chem-formula-example* or its test suite again,
 the outdated library will first be rebuilt and installed. All
