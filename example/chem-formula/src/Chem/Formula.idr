@@ -1,52 +1,38 @@
-module Example.Formula
+module Chem.Formula
 
+import Chem.Elem
 import Data.DPair
+import Data.List
 import Data.Maybe.NothingMax
 import Data.Nat
-import Data.Prim.Bits64
-
-import Generics.Derive
+import Data.Prim.String
+import Data.SnocList
 
 %default total
 
-%language ElabReflection
-
-||| A subset of the chemical elements
-public export
-data Elem = H | He | Li | Be | B | C | N | O | F | Ne
-
-%runElab derive "Example.Formula.Elem" [Generic,Meta,Eq,Ord,Show]
-
 ||| Ordering elements by Hill notation
 public export
-hill : Elem -> Bits64
-hill C  = 0
-hill H  = 1
-hill B  = 2
-hill Be = 3
-hill F  = 4
-hill He = 5
-hill Li = 6
-hill N  = 7
-hill Ne = 8
-hill O  = 9
+hill : Elem -> String
+hill C  = ""
+hill H  = " "
+hill e  = symbol e
 
 --------------------------------------------------------------------------------
 --          Representation of Molecular Formulae
 --------------------------------------------------------------------------------
 
 public export
-0 (<): Maybe Bits64 -> Maybe Bits64 -> Type
+0 (<): Maybe String -> Maybe String -> Type
 (<) = LT (<)
 
 public export
-0 (<=): Maybe Bits64 -> Maybe Bits64 -> Type
+0 (<=): Maybe String -> Maybe String -> Type
 m1 <= m2 = Either (m1 < m2) (m1 === m2)
 
 ||| A provably sorted, normalized representation
 ||| of molecular formulae.
 public export
-data Repr : (ix : Maybe Bits64) -> Type where
+data Repr : (ix : Maybe String) -> Type where
   Nil : Repr Nothing
   (::) :  {0 ix : _}
        -> (p     : (Elem,Nat))
@@ -63,9 +49,9 @@ data Repr : (ix : Maybe Bits64) -> Type where
 ||| elem indices `e1` and `e2`. The result's elem index is equal to either
 ||| `e1` or `e2`
 public export
-record MergeRes (h1,h2 : Maybe Bits64) where
+record MergeRes (h1,h2 : Maybe String) where
   constructor MR
-  {0 hx  : Maybe Bits64}
+  {0 hx  : Maybe String}
   repr   : Repr hx
   0 prf  : Either (h1 === hx) (h2 === hx)
 
@@ -92,7 +78,7 @@ prepGT p (MR ps prf) =
    in MR (p :: ps) (Right Refl)
 
 %inline
-prepEQ :  {0 x : Maybe Bits64}
+prepEQ :  {0 x : Maybe String}
        -> (p : (Elem,Nat))
        -> (0 eq  : hill (fst p) === k)
        -> MergeRes h1 h2
@@ -162,11 +148,12 @@ contains_ [] _  = False
 --          Formula
 --------------------------------------------------------------------------------
 
+||| A data type for canonical molecular formula.
+||| This is just a convenient wrapper around `Repr minIndex`.
 public export
 record Formula where
   constructor FO
-  {0 mx : Maybe Bits64}
-  pairs : Repr mx
+  pairs : Repr minIndex
 
 public export %inline
 Eq Formula where
@@ -209,16 +196,11 @@ contains (FO x) (FO y) = contains_ x y
 --------------------------------------------------------------------------------
 
 parseSingle : List Char -> Maybe (Elem,List Char)
-parseSingle ('H' :: 'e' :: t) = Just (He, t)
-parseSingle ('N' :: 'e' :: t) = Just (Ne, t)
-parseSingle ('B' :: 'e' :: t) = Just (Be, t)
-parseSingle ('L' :: 'i' :: t) = Just (Li, t)
-parseSingle ('H' ::  t)       = Just (H, t)
-parseSingle ('N' ::  t)       = Just (N, t)
-parseSingle ('B' ::  t)       = Just (B, t)
-parseSingle ('O' ::  t)       = Just (O, t)
-parseSingle ('F' ::  t)       = Just (F, t)
-parseSingle _                 = Nothing
+parseSingle (x :: y :: t) = case isLower y of
+  True  => (,t)      <$> fromSymbol (pack [x,y])
+  False => (,y :: t) <$> fromSymbol (pack [x])
+parseSingle (x :: [])     = (,[]) <$> fromSymbol (pack [x])
+parseSingle []            = Nothing
 
 posNat : List Char -> Maybe (Subset Nat IsSucc)
 posNat = go 0
@@ -242,4 +224,17 @@ readFormula = go Lin . unpack
               Just (n,cs3) = parseNat    cs2 | Nothing => Nothing
            in go (sx :< (e,n)) $ assert_smaller cs cs3
 
+--------------------------------------------------------------------------------
+--          Examples
+--------------------------------------------------------------------------------
 
+ethanol : Formula
+ethanol = FO [ (C,2), (H,6), (O,1) ]
+
+failing "Can't find an implementation for LT (<)"
+  ethanolWrong : Formula
+  ethanolWrong = FO [ (O,1), (C,2), (H,6) ]
+
+failing "Can't find an implementation for IsSucc"
+  ethanolWrong2 : Formula
+  ethanolWrong2 = FO [ (C,2), (H,6), (O,1), (P,0) ]

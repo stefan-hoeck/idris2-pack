@@ -1,0 +1,24 @@
+# This adds a local package to pack's package collection, whenever
+# this `pack.toml` file is in scope.
+[custom.all.chem-core-example]
+type = "local"
+
+# Paths to a local project's root folder can be absolute or
+# relative to the current `pack.toml` file.
+path = "chem-core"
+
+# Paths to `.ipkg` files are relative to the project's
+# root folder as given in `path`.
+ipkg = "chem-core-example.ipkg"
+
+[custom.all.chem-formula-example]
+type = "local"
+path = "chem-formula"
+ipkg = "chem-formula-example.ipkg"
+
+# The `chem-formula` sub-project comes with its own small
+# test suite.
+[custom.all.chem-formula-example-test]
+type = "local"
+path = "chem-formula/test"
+ipkg = "chem-formula-example-test.ipkg"
