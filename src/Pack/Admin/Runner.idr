@@ -19,6 +19,7 @@ Command ACmd where
   defaultLevel (FromHEAD out) = Info
   defaultLevel Help           = Warning
 
+  readCommand_ _   []                       = Right Help
   readCommand_ _   ["help"]                 = Right Help
   readCommand_ dir ["extract-from-head",p]  = FromHEAD <$> readAbsFile curDir p
   readCommand_ dir ["check-collection",n,p] =
@@ -64,17 +65,8 @@ writeLatestDB path e = do
   write path (printDB ndb)
 
 export covering
-runCmd : HasIO io => EitherT PackErr io ()
-runCmd = do
-  pd       <- getPackDir
-  td       <- mkTmpDir
-  cd       <- CD <$> curDir
-  (mc,cmd) <- getConfig ACmd
-  c        <- traverse (resolveMeta True) mc
-  case cmd of
-    CheckDB db p       => finally (rmDir tmpDir) $ idrisEnv >>= checkDB p
-    FromHEAD p         => env >>= writeLatestDB p
-    Help               => putStrLn """
+printUsage : HasIO io => io ()
+printUsage = putStrLn """
       Usage: pack-admin [cmd] [args]
 
       Commands:
@@ -92,3 +84,16 @@ runCmd = do
         help
           Print this help text.
       """
+
+export covering
+runCmd : HasIO io => EitherT PackErr io ()
+runCmd = do
+  pd       <- getPackDir
+  td       <- mkTmpDir
+  cd       <- CD <$> curDir
+  (mc,cmd) <- getConfig ACmd
+  c        <- traverse (resolveMeta True) mc
+  case cmd of
+    CheckDB db p       => finally (rmDir tmpDir) $ idrisEnv >>= checkDB p
+    FromHEAD p         => env >>= writeLatestDB p
+    Help               => printUsage
