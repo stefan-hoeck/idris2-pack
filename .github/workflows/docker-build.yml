@@ -32,6 +32,7 @@ jobs:
 
       - name: Build Docker Image
         run: |
+          export NO_CACHE="${{ github.ref == 'refs/heads/main' }}"
           DB="$DB_VERSION" make docker-build
 
       - name: Log in to registry
