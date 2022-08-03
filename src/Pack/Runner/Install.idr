@@ -267,9 +267,10 @@ export covering
 idrisEnv :  HasIO io
          => PackDir
          => TmpDir
-         => Config
-         => EitherT PackErr io IdrisEnv
-idrisEnv = env >>= (\e => mkIdris)
+         => MetaConfig
+         -> (fetch : Bool)
+         -> EitherT PackErr io IdrisEnv
+idrisEnv mc fetch = env mc fetch >>= (\e => mkIdris)
 
 ||| Update the pack installation
 export covering
@@ -284,6 +285,7 @@ update e =
           package collection.
           """
         gitClone packRepo dir
+        traverse_ (\c => inDir dir $ \_ => gitCheckout c) packCommit
 
         d <- parseLibIpkg ipkg ipkg
         installDeps d
