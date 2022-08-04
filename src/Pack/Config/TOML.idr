@@ -17,6 +17,10 @@ export
 FromTOML UserConfig where
   fromTOML f v =
       [| MkConfig (maybeValAt "collection" f v)
+                  (maybeValAt "idris2.url" f v)
+                  (maybeValAt "idris2.commit" f v)
+                  (maybeValAt "pack.url" f v)
+                  (maybeValAt "pack.commit" f v)
                   (maybeValAt "idris2.scheme" f v)
                   (maybeValAt "install.safety-prompt" f v)
                   (maybeValAt "install.with-src" f v)
@@ -69,6 +73,14 @@ initToml scheme db = """
   # when using a new package collection.
   # apps       = [ "lsp" ]
 
+  [pack]
+
+  # Override this to use a custom GitHub repo for pack
+  # url = "https://github.com/stefan-hoeck/idris2-pack"
+
+  # Override this to use a custom commit and branch for pack
+  # commit = "latest:main"
+
   [idris2]
 
   # Whether to build Idris2 with its bootstrap compiler.
@@ -87,6 +99,12 @@ initToml scheme db = """
   # `rlwrap`. This will give you additional features such as a
   # command history.
   repl.rlwrap = false
+
+  # Override this to use a custom GitHub repo for the Idris compiler
+  # url = "https://github.com/idris-lang/Idris2"
+
+  # Override this to use a custom commit and branch for the Idris compiler
+  # commit = "latest:main"
 
   # Below are some examples for custom packages
 

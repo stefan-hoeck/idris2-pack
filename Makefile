@@ -4,6 +4,7 @@ export LD_LIBRARY_PATH = micropack
 export DYLD_LIBRARY_PATH = micropack
 
 DOCKER_IMAGE = ghcr.io/stefan-hoeck/idris2-pack
+NO_CACHE ?= false
 
 .PHONY: micropack
 
@@ -17,7 +18,7 @@ install-lib:
 
 .PHONY: docker-build
 docker-build:
-	docker build -t ${DOCKER_IMAGE}:latest .
+	docker build --no-cache=${NO_CACHE} -t ${DOCKER_IMAGE}:latest .
 
 .PHONY: docker-run
 docker-run:

@@ -59,7 +59,7 @@ globalPackToml = MkF userDir packToml
 
 ||| File where package DB is located
 export
-dbFile : PackDir => (c : Config) => File Abs
+dbFile : PackDir => (c : MetaConfig) => File Abs
 dbFile = MkF dbDir $ c.collection.value <+> ".toml"
 
 ||| Directory where wrapper scripts to binaries
@@ -243,20 +243,30 @@ pathDirs pre pth = do
 ||| Directories to be listed in the `IDRIS2_PACKAGE_PATH` variable, so
 ||| that Idris finds all libraries installed by pack in custom locations.
 export
-packagePathDirs : HasIO io => PackDir => Config => DB -> io String
+packagePathDirs : HasIO io => Env -> io String
 packagePathDirs _ = pathDirs "\{idrisInstallDir}" pkgPathDir
 
 ||| Directories to be listed in the `IDRIS2_LIBS` variable, so
 ||| that Idris finds all `.so` files installed by pack in custom locations.
 export
-packageLibDirs : HasIO io => PackDir => Config => DB -> io String
+packageLibDirs : HasIO io => Env -> io String
 packageLibDirs _ = pathDirs "\{idrisLibDir}" pkgLibDir
 
 ||| Directories to be listed in the `IDRIS2_DATA` variable, so
 ||| that Idris finds all support files installed by pack in custom locations.
 export
-packageDataDirs : HasIO io => PackDir => Config => DB -> io String
+packageDataDirs : HasIO io => Env -> io String
 packageDataDirs _ = pathDirs "\{idrisDataDir}" pkgDataDir
+
+||| URL of the pack repository to use
+export
+packRepo : (c : Config) => URL
+packRepo = fromMaybe defaultPackRepo c.packURL
+
+||| URL of the pack repository to use
+export
+packCommit : (c : Config) => Maybe Commit
+packCommit = c.packCommit
 
 --------------------------------------------------------------------------------
 --          Environment Variables
@@ -442,22 +452,20 @@ export
 resolveMeta :  HasIO io
             => PackDir
             => (fetch : Bool)
-            -> UserPackage
-            -> EitherT PackErr io Package
-resolveMeta _ (GitHub u (MC x) i p) = pure $ GitHub u x i p
-resolveMeta b (GitHub u (Latest x) i p) = do
+            -> URL
+            -> MetaCommit
+            -> EitherT PackErr io Commit
+resolveMeta _ u (MC x)     = pure x
+resolveMeta _ u (Fetch x)  = gitLatest u x
+resolveMeta b u (Latest x) = do
   let cfile := commitFile u x
   commitMissing <- fileMissing cfile
   case commitMissing || b of
     True  => do
       c <- gitLatest u x
       write cfile c.value
-      pure $ GitHub u c i p
-    False => map (\s => GitHub u (MkCommit $ trim s) i p) $ read cfile
-resolveMeta _ (GitHub u (Fetch x) i p) =
-  map (\c => GitHub u c i p) $ gitLatest u x
-resolveMeta _ (Local d i p) = pure $ Local d i p
-resolveMeta _ (Core c)      = pure $ Core c
+      pure c
+    False => (\s => MkCommit $ trim s) <$> read cfile
 
 ||| Read application config from command line arguments.
 export covering
@@ -509,8 +517,8 @@ pkgs = fromList $ (\c => (corePkgName c, Core c)) <$> corePkgs
 
 ||| Load the package collection as given in the (auto-implicit) user config.
 export covering
-loadDB : HasIO io => TmpDir => PackDir => Config => EitherT PackErr io DB
-loadDB = do
+loadDB : HasIO io => TmpDir => PackDir => MetaConfig -> EitherT PackErr io DB
+loadDB mc = do
   when !(missing dbDir) updateDB
   debug "reading package collection"
   readFromTOML DB dbFile
@@ -519,11 +527,20 @@ loadDB = do
 ||| and convert the result to a pack environment.
 export covering
 env :  HasIO io
-    => (pd : PackDir)
-    => (td : TmpDir)
-    => (c : Config)
-    => EitherT PackErr io Env
-env = MkEnv pd td c <$> loadDB
+    => (pd    : PackDir)
+    => (td    : TmpDir)
+    => (c     : MetaConfig)
+    -> (fetch : Bool)
+    -> EitherT PackErr io Env
+env mc fetch = do
+  db <- loadDB mc
+  c  <- traverse (resolveMeta fetch) db.idrisURL mc
+
+  let url    := fromMaybe db.idrisURL c.idrisURL
+      commit := fromMaybe db.idrisCommit c.idrisCommit
+
+  -- adjust the idrisCommit and URL to use according to user overrides
+  pure $ MkEnv pd td c ({idrisURL := url, idrisCommit := commit} db)
 
 adjCollection : DBName -> String -> String
 adjCollection db str = case isPrefixOf "collection " str of

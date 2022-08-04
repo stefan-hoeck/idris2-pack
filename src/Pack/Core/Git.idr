@@ -13,12 +13,15 @@ export
 dbRepo : URL
 dbRepo = "https://github.com/stefan-hoeck/idris2-pack-db"
 
-||| URL of package collections repository
-|||
-||| TODO: This should become a command line argument
+||| Default URL of pack repository
 export
-packRepo : URL
-packRepo = "https://github.com/stefan-hoeck/idris2-pack"
+defaultPackRepo : URL
+defaultPackRepo = "https://github.com/stefan-hoeck/idris2-pack"
+
+||| Default branch of the pack repository
+export
+defaultPackBranch : Branch
+defaultPackBranch = "main"
 
 ||| Package name we use for temp dirs involving the idris compiler
 ||| and its core libraries.

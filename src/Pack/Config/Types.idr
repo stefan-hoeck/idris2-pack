@@ -111,6 +111,22 @@ record Config_ (f : Type -> Type) (c : Type) where
   ||| Package collection to use
   collection   : f DBName
 
+  ||| URL to a custom Idris repo
+  ||| This overrides the one from the package collection if not
+  ||| set to `Nothing`.
+  idrisURL     : Maybe URL
+
+  ||| Custom Idris commit
+  ||| This overrides the one from the package collection if not
+  ||| set to `Nothing`.
+  idrisCommit  : Maybe c
+
+  ||| Custom pack repo
+  packURL      : Maybe URL
+
+  ||| Custom pack branch to use (default is `main`)
+  packCommit   : Maybe c
+
   ||| Scheme executable to use
   scheme       : f FilePath
 
@@ -186,18 +202,34 @@ UserConfig = MConfig MetaCommit
 ||| resolve meta commits to mere commits.
 export
 traverse :  Applicative f
-         => (Package_ a -> f (Package_ b))
+         => (URL -> a -> f b)
+         -> (idrisURL : URL)
          -> Config_ I a
          -> f (Config_ I b)
-traverse f cfg =
-  let cst = traverse (traverse f) cfg.custom
-   in map (\c => {custom := c} cfg) cst
+traverse g idrisURL cfg =
+  let iurl = fromMaybe idrisURL cfg.idrisURL
+      purl = fromMaybe defaultPackRepo cfg.packURL
+      cst = traverse (traverse $ traverse g) cfg.custom
+      ic  = traverse (g iurl) cfg.idrisCommit
+      pc  = traverse (g purl) cfg.packCommit
+   in [| adj ic pc cst |]
+    where adj :  (idrisCommit : Maybe b)
+              -> (packCommit  : Maybe b)
+              -> SortedMap DBName (SortedMap PkgName $ Package_ b)
+              -> Config_ I b
+          adj ic pc cb = {idrisCommit := ic, packCommit := pc, custom := cb} cfg
 
 ||| This allows us to use a `Config` in scope when we
 ||| need an auto-implicit `LogLevel` for logging.
 export %inline %hint
 configToLogLevel : (c : Config) => LogLevel
 configToLogLevel = c.logLevel
+
+||| This allows us to use a `MetaConfig` in scope when we
+||| need an auto-implicit `LogLevel` for logging.
+export %inline %hint
+metaConfigToLogLevel : (c : MetaConfig) => LogLevel
+metaConfigToLogLevel = c.logLevel
 
 --------------------------------------------------------------------------------
 --          Updating the Config
@@ -225,6 +257,10 @@ export
 init : (cur : CurDir) => (coll : DBName) -> MetaConfig
 init coll = MkConfig {
     collection   = coll
+  , idrisURL     = Nothing
+  , idrisCommit  = Nothing
+  , packURL      = Nothing
+  , packCommit   = Nothing
   , scheme       = "scheme"
   , safetyPrompt = True
   , withSrc      = False
@@ -248,6 +284,10 @@ export
 update : IConfig c -> MConfig c -> IConfig c
 update ci cm = MkConfig {
     collection   = fromMaybe ci.collection cm.collection
+  , idrisURL     = cm.idrisURL <|> ci.idrisURL
+  , idrisCommit  = cm.idrisCommit <|> ci.idrisCommit
+  , packURL      = cm.packURL <|> ci.packURL
+  , packCommit   = cm.packCommit <|> ci.packCommit
   , scheme       = fromMaybe ci.scheme cm.scheme
   , safetyPrompt = fromMaybe ci.safetyPrompt cm.safetyPrompt
   , withSrc      = fromMaybe ci.withSrc cm.withSrc
