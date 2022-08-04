@@ -149,6 +149,12 @@ data Package_ : (c : Type) -> Type where
   ||| A core package of the Idris2 project
   Core   : (core : CorePkg) -> Package_ c
 
+export
+traverse : Applicative f => (URL -> a -> f b) -> Package_ a -> f (Package_ b)
+traverse g (GitHub u c i p) = (\c' => GitHub u c' i p) <$> g u c
+traverse _ (Local d i p)    = pure $ Local d i p
+traverse _ (Core c)         = pure $ Core c
+
 ||| An alias for `Package_ Commit`: A package description with
 ||| meta commits already resolved.
 public export

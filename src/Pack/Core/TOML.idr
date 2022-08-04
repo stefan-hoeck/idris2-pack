@@ -145,6 +145,9 @@ export
 FromTOML URL where fromTOML = tmap MkURL
 
 export
+FromTOML Branch where fromTOML = tmap MkBranch
+
+export
 FromTOML Commit where fromTOML = tmap MkCommit
 
 export

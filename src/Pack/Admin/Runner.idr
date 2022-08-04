@@ -70,10 +70,9 @@ runCmd = do
   td       <- mkTmpDir
   cd       <- CD <$> curDir
   (mc,cmd) <- getConfig ACmd
-  c        <- traverse (resolveMeta True) mc
   case cmd of
-    CheckDB db p       => finally (rmDir tmpDir) $ idrisEnv >>= checkDB p
-    FromHEAD p         => env >>= writeLatestDB p
+    CheckDB db p       => finally (rmDir tmpDir) $ idrisEnv mc True >>= checkDB p
+    FromHEAD p         => env mc True >>= writeLatestDB p
     Help               => putStrLn """
       Usage: pack-admin [cmd] [args]
 

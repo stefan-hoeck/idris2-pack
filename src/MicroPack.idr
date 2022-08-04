@@ -16,9 +16,13 @@ import System
 
 microInit :  (scheme : String)
           -> (db     : DBName)
-          ->  Config
+          ->  MetaConfig
 microInit scheme db = MkConfig {
     collection    = db
+  , idrisURL      = Nothing
+  , idrisCommit   = Nothing
+  , packURL       = Nothing
+  , packCommit    = Nothing
   , scheme        = fromString scheme
   , safetyPrompt  = False
   , withSrc       = True
@@ -54,4 +58,4 @@ main = run $ do
   -- initialize `$HOME/.pack/user/pack.toml`
   write (MkF (packDir /> "user") packToml) (initToml scheme db)
 
-  finally (rmDir tmpDir) $ idrisEnv >>= update
+  finally (rmDir tmpDir) $ idrisEnv conf True >>= update

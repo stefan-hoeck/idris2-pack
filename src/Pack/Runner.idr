@@ -119,32 +119,32 @@ runCmd = do
   td       <- mkTmpDir
   cd       <- CD <$> curDir
   (mc,cmd) <- getConfig Cmd
-  c        <- traverse (resolveMeta $ isFetch cmd) mc
+  let fetch := isFetch cmd
   finally (rmDir tmpDir) $ case cmd of
-    Completion a b     => env >>= complete a b
+    Completion a b     => env mc fetch >>= complete a b
     CompletionScript f => putStrLn (completionScript f)
-    Query m s          => env >>= query m s
-    Fuzzy m s          => idrisEnv >>= fuzzy m s
+    Query m s          => env mc fetch >>= query m s
+    Fuzzy m s          => idrisEnv mc fetch >>= fuzzy m s
     UpdateDB           => updateDB
-    Run (Right p) args => idrisEnv >>= execApp p args
-    Run (Left p)  args => idrisEnv >>= runIpkg p args
-    Exec p args        => idrisEnv >>= exec p args
-    Repl p             => idrisEnv >>= idrisRepl p
-    Build p            => idrisEnv >>= build p
-    BuildDeps p        => idrisEnv >>= buildDeps p
-    Typecheck p        => idrisEnv >>= typecheck p
+    Run (Right p) args => idrisEnv mc fetch >>= execApp p args
+    Run (Left p)  args => idrisEnv mc fetch >>= runIpkg p args
+    Exec p args        => idrisEnv mc fetch >>= exec p args
+    Repl p             => idrisEnv mc fetch >>= idrisRepl p
+    Build p            => idrisEnv mc fetch >>= build p
+    BuildDeps p        => idrisEnv mc fetch >>= buildDeps p
+    Typecheck p        => idrisEnv mc fetch >>= typecheck p
     PrintHelp          => putStrLn usageInfo
-    Install ps         => idrisEnv >>= \e => install ps
-    Remove ps          => idrisEnv >>= \e => remove ps
-    Update             => idrisEnv >>= update
-    Fetch              => idrisEnv >>= \e => install []
-    PackagePath        => loadDB >>= packagePathDirs >>= putStrLn
-    LibsPath           => loadDB >>= packageLibDirs  >>= putStrLn
-    DataPath           => loadDB >>= packageDataDirs >>= putStrLn
-    AppPath n          => env >>= appPath n
-    Info               => env >>= printInfo
-    New dir pty p      => idrisEnv >>= new dir pty p
+    Install ps         => idrisEnv mc fetch >>= \e => install ps
+    Remove ps          => idrisEnv mc fetch >>= \e => remove ps
+    Update             => idrisEnv mc fetch >>= update
+    Fetch              => idrisEnv mc fetch >>= \e => install []
+    PackagePath        => env mc fetch >>= packagePathDirs >>= putStrLn
+    LibsPath           => env mc fetch >>= packageLibDirs  >>= putStrLn
+    DataPath           => env mc fetch >>= packageDataDirs >>= putStrLn
+    AppPath n          => env mc fetch >>= appPath n
+    Info               => env mc fetch >>= printInfo
+    New dir pty p      => idrisEnv mc fetch >>= new dir pty p
     Switch db          => do
-      env <- idrisEnv
+      env <- idrisEnv mc fetch
       writeCollection
       install []
