@@ -23,7 +23,7 @@ data Cmd : Type where
   Exec             : (srd : File Abs) -> (args : List String) -> Cmd
 
   -- Package management
-  Install          : List (PkgType,PkgName) -> Cmd
+  Install          : List (InstallType,PkgName) -> Cmd
   Remove           : List (PkgType,PkgName) -> Cmd
   Run              : Either (File Abs) PkgName -> List String -> Cmd
   New              : (cur : CurDir) -> PkgType -> Body -> Cmd

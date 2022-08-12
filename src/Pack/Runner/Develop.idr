@@ -135,9 +135,5 @@ execApp :  HasIO io
         -> EitherT PackErr io ()
 execApp p args e = do
   ra <- resolveApp p
-  case ra.pkg of
-    GitHub {}      => do
-      install [(Bin,p)]
-      sys "\{pkgExec ra.name ra.pkg ra.exec} \{unwords args}"
-    Local d ipkg _ => runIpkg (toAbsFile d ipkg) args e
-    Core {}        => throwE (NoApp p)
+  install [(App False,p)]
+  sys "\{pkgExec ra.name ra.pkg ra.exec} \{unwords args}"

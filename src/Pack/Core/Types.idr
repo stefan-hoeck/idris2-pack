@@ -306,6 +306,36 @@ Ord PkgType where
   compare _   _   = EQ
 
 --------------------------------------------------------------------------------
+--          Install Type
+--------------------------------------------------------------------------------
+
+||| What we want to install: A library, an application to
+||| run it from within pack, or an application, which should
+||| be available via the `PATH` variable.
+public export
+data InstallType : Type where
+  Library : InstallType
+  App     : (withWrapperScript : Bool) -> InstallType
+
+export %inline
+Interpolation InstallType where
+  interpolate Library = "library"
+  interpolate (App b) = "app"
+
+export
+Eq InstallType where
+  Library == Library = True
+  App b1  == App b2  = b1 == b2
+  _       == _       = False
+
+export
+Ord InstallType where
+  compare Library  (App _)  = LT
+  compare (App _)  Library  = GT
+  compare Library  Library  = EQ
+  compare (App b1) (App b2) = compare b1 b2
+
+--------------------------------------------------------------------------------
 --          DBName
 --------------------------------------------------------------------------------
 

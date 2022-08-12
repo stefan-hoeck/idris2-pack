@@ -71,7 +71,7 @@ Command Cmd where
   readCommand_ cd ["install-deps", file]     = ipkgFile cd file BuildDeps
   readCommand_ cd ["typecheck", file]        = ipkgFile cd file Typecheck
   readCommand_ _  ("install" :: xs)          =
-    Right . Install $ map (\s => (Lib, MkPkgName s)) xs
+    Right . Install $ map (\s => (Library, MkPkgName s)) xs
 
   readCommand_ _  ("remove" :: xs)           =
     Right . Remove $ map (\s => (Lib, MkPkgName s)) xs
@@ -80,7 +80,7 @@ Command Cmd where
     Right . Remove $ map (\s => (Bin, MkPkgName s)) xs
 
   readCommand_ _  ("install-app" :: xs)      =
-    Right . Install $ map (\s => (Bin, MkPkgName s)) xs
+    Right . Install $ map (\s => (App True, MkPkgName s)) xs
 
   readCommand_ _  ["completion",a,b]         = Right $ Completion a b
 

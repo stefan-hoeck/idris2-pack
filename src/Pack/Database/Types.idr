@@ -285,6 +285,26 @@ namespace ResolveLib
   dependencies : ResolvedLib t -> List PkgName
   dependencies rp = dependencies rp.desc
 
+namespace AppStatus
+  ||| Installation status of an Idris app. Local apps can be
+  ||| `Outdated`, if some of their source files contain changes newer
+  ||| a timestamp created during package installation.
+  public export
+  data AppStatus : Package -> Type where
+    ||| The app has not been compiled and is therfore missing
+    Missing      :  AppStatus p
+
+    ||| The app has been built but is not on the `PATH`.
+    Installed    :  AppStatus p
+
+    ||| The app has been built and a wrapper script has been added
+    ||| to `$PACK_DIR/bin`, so it should be on the `PATH`.
+    BinInstalled :  AppStatus p
+
+    ||| The local app has changes in its source files, which have
+    ||| not yet been included in the installed version.
+    Outdated     :  (0 isLocal : IsLocal p) => AppStatus p
+
 ||| A resolved application, which was downloaded from GitHub
 ||| or looked up in the local file system. This comes with
 ||| a fully parsed `PkgDesc` (representing the `.ipkg` file).
@@ -294,7 +314,7 @@ record ResolvedApp t where
   pkg     : Package
   name    : PkgName
   desc    : Desc t
-  status  : PkgStatus pkg
+  status  : AppStatus pkg
   exec    : Body
 
 namespace ResolveApp
@@ -320,33 +340,37 @@ namespace ResolveApp
   usePackagePath = usePackagePath . pkg
 
 ||| Either a resolved library or application tagged with the given tag.
+||| This is to be used in build plans, so applications come with the
+||| additional info whether we want to install a wrapper script or not.
 public export
-0 LibOrApp : (PkgDesc -> Type) -> Type
-LibOrApp t = Either (ResolvedLib t) (ResolvedApp t)
+data LibOrApp : (t,s : PkgDesc -> Type) -> Type where
+  Lib : ResolvedLib t -> LibOrApp t s
+  App : (withWrapperScript : Bool) -> ResolvedApp s -> LibOrApp t s
 
 namespace LibOrApp
   ||| Extract the dependencies of a resolved library or application.
   export
-  dependencies : LibOrApp t -> List PkgName
-  dependencies = either dependencies dependencies
+  dependencies : LibOrApp t s -> List PkgName
+  dependencies (Lib x)   = dependencies x
+  dependencies (App _ x) = dependencies x
 
   ||| Extract the package of a resolved library or application.
   export
-  pkg : LibOrApp t -> Package
-  pkg (Left x) = x.pkg
-  pkg (Right x) = x.pkg
+  pkg : LibOrApp t s -> Package
+  pkg (Lib x)   = x.pkg
+  pkg (App _ x) = x.pkg
 
   ||| Extract the description of a resolved library or application.
   export
-  desc : LibOrApp t -> Desc t
-  desc (Left x) = x.desc
-  desc (Right x) = x.desc
+  desc : LibOrApp t t -> Desc t
+  desc (Lib x)   = x.desc
+  desc (App _ x) = x.desc
 
   ||| Extract the package name of a resolved library or application.
   export
-  name : LibOrApp t -> PkgName
-  name (Left x) = x.name
-  name (Right x) = x.name
+  name : LibOrApp t s -> PkgName
+  name (Lib x)   = x.name
+  name (App _ x) = x.name
 
 --------------------------------------------------------------------------------
 --          Package Database

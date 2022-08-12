@@ -23,7 +23,7 @@ public export
 record AppInfo (p : Package) where
   constructor AI
   exec   : Body
-  status : PkgStatus p
+  status : AppStatus p
 
 public export
 record QPkg where
@@ -57,10 +57,11 @@ installedLib qp = case qp.lib.status of
 export
 installedApp : QPkg -> Bool
 installedApp qp = case map status qp.app of
-  Just Installed => True
-  Just Outdated  => True
-  Just Missing   => False
-  Nothing        => False
+  Just Installed    => True
+  Just BinInstalled => True
+  Just Outdated     => True
+  Just Missing      => False
+  Nothing           => False
 
 resolve : HasIO io => Env => PkgName -> EitherT PackErr io QPkg
 resolve n = do
@@ -107,6 +108,12 @@ status Missing   = "not installed"
 status Installed = "installed"
 status Outdated  = "outdated"
 
+status' : AppStatus p -> String
+status' Missing      = "not installed"
+status' Installed    = "installed"
+status' BinInstalled = "installed and on `$PATH`"
+status' Outdated     = "outdated"
+
 libStatus : QPkg -> List String
 libStatus q = [ "Library      : \{status q.lib.status}" ]
 
@@ -115,7 +122,7 @@ appStatus qp = case qp.app of
   Nothing          => []
   Just (AI exe st) =>
     [ "Executable   : \{exe}"
-    , "App          : \{status st}"
+    , "App          : \{status' st}"
     ]
 
 details : QPkg -> List String
@@ -192,9 +199,10 @@ instLib qp = case qp.lib.status of
 
 instApp : QPkg -> Maybe String
 instApp (QP lib $ Just (AI _ st))  = case st of
-  Installed => Just "\{lib.name}"
-  Outdated  => Just "\{lib.name} (outdated)"
-  Missing   => Nothing
+  Installed    => Just "\{lib.name} (not on `$PATH`)"
+  BinInstalled => Just "\{lib.name}"
+  Outdated     => Just "\{lib.name} (outdated)"
+  Missing      => Nothing
 instApp _ = Nothing
 
 apps : List QPkg -> String
