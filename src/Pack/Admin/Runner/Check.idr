@@ -47,7 +47,7 @@ checkPkg p = do
   [] <- failingDeps <$> traverse checkPkg (dependencies rl)
     | rs => warn "\{p} had failing dependencies" >>
             updateRep p (Failure rl rs)
-  Right () <- toState $ installAny $ Left rl
+  Right () <- toState $ installAny $ Lib rl
     | Left err => warn "Failed to build \{p}" >>
                   updateRep p (Error p err)
   updateRep p (Success rl)
@@ -71,7 +71,7 @@ checkDB p e =
   let ps := map (MkPkgName . interpolate) corePkgs
          ++ keys e.env.db.packages
    in do
-     install [(Bin, "katla")]
+     install [(App False, "katla")]
      rep <- liftIO $ execStateT empty
                    $ traverse_ checkPkg ps
      write p (printReport rep)

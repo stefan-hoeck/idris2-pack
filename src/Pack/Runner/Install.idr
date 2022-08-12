@@ -154,12 +154,14 @@ installLib rl = case rl.status of
 --------------------------------------------------------------------------------
 
 ||| Install an Idris application given as a package name
+||| TODO: Install wrapper script only if necessary
 export covering
 installApp :  HasIO io
            => IdrisEnv
-           => SafeApp
+           => (withWrapperScript : Bool)
+           -> SafeApp
            -> EitherT PackErr io ()
-installApp ra = case ra.status of
+installApp b ra = case ra.status of
   Installed => pure ()
   _         => withPkgEnv ra.name ra.pkg $ \dir =>
     let ipkgAbs := ipkg dir ra.pkg
@@ -184,8 +186,8 @@ installAny :  HasIO io
            => IdrisEnv
            => SafePkg
            -> EitherT PackErr io ()
-installAny (Left sli)  = installLib sli
-installAny (Right sla) = installApp sla
+installAny (Lib sli)   = installLib sli
+installAny (App b sla) = installApp b sla
 
 --------------------------------------------------------------------------------
 --          Generating API Docs
@@ -221,19 +223,20 @@ installDocs : HasIO io => IdrisEnv => SafeLib -> EitherT PackErr io ()
 installDocs rl =
   withPkgEnv rl.name rl.pkg $ \dir => docsImpl rl
 
-katla : (c : Config) => List (PkgType, PkgName)
-katla = if c.withDocs && c.useKatla then [(Bin, "katla")] else []
+katla : (c : Config) => List (InstallType, PkgName)
+katla = if c.withDocs && c.useKatla then [(App False, "katla")] else []
 
-autoPairs : (c : Config) => List (PkgType, PkgName)
-autoPairs = map (Lib,) c.autoLibs ++ map (Bin,) c.autoApps
+autoPairs : (c : Config) => List (InstallType, PkgName)
+autoPairs = map (Library,) c.autoLibs ++
+            map (App True,) c.autoApps
 
 libInfo : List SafePkg -> List String
-libInfo = mapMaybe $ \case Left rl => Just "\{rl.name}"
-                           Right _ => Nothing
+libInfo = mapMaybe $ \case Lib rl  => Just "\{rl.name}"
+                           App _ _ => Nothing
 
 appInfo : List SafePkg -> List String
-appInfo = mapMaybe $ \case Right ra => Just "\{ra.name}"
-                           Left _   => Nothing
+appInfo = mapMaybe $ \case App _ ra => Just "\{ra.name}"
+                           Lib _    => Nothing
 
 ||| Install the given list of libraries or applications, by first
 ||| resolving each of them and then creating a build plan including
@@ -241,7 +244,7 @@ appInfo = mapMaybe $ \case Right ra => Just "\{ra.name}"
 export covering
 install :  HasIO io
         => (e : IdrisEnv)
-        => List (PkgType, PkgName)
+        => List (InstallType, PkgName)
         -> EitherT PackErr io ()
 install ps = do
   all <- plan $ katla <+> autoPairs <+> ps
@@ -250,8 +253,8 @@ install ps = do
   for_ all installAny
 
   when e.env.config.withDocs $
-    for_ all $ \case Left rl => installDocs rl
-                     Right _ => pure ()
+    for_ all $ \case Lib rl  => installDocs rl
+                     App _ _ => pure ()
 
 ||| Install the (possibly transitive) dependencies of the given
 ||| loaded `.ipkg` file.
@@ -260,7 +263,7 @@ installDeps :  HasIO io
             => IdrisEnv
             => Desc Safe
             -> EitherT PackErr io ()
-installDeps = install . map (Lib,) . dependencies
+installDeps = install . map (Library,) . dependencies
 
 ||| Creates a packaging environment with Idris2 installed.
 export covering

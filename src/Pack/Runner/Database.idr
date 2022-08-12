@@ -46,7 +46,7 @@ SafeApp = ResolvedApp NotPack
 ||| Alias for `Either SafeLib SafeApp`
 public export
 0 SafePkg : Type
-SafePkg = Either SafeLib SafeApp
+SafePkg = LibOrApp Safe NotPack
 
 ||| This holds, sind `NotPack d` implies `Safe d` as shown by
 ||| `toSafe`.
@@ -120,9 +120,9 @@ safeApp a = reTag a <$> notPack a.desc
 
 ||| Runs `safeLib` or `safeApp` on a library or app.
 export
-checkLOA : HasIO io => Env => LibOrApp U -> EitherT PackErr io SafePkg
-checkLOA (Left x)  = Left <$> safeLib x
-checkLOA (Right x) = Right <$> safeApp x
+checkLOA : HasIO io => Env => LibOrApp U U -> EitherT PackErr io SafePkg
+checkLOA (Lib x)   = Lib <$> safeLib x
+checkLOA (App b x) = App b <$> safeApp x
 
 --------------------------------------------------------------------------------
 --          Resolving Packages
@@ -179,7 +179,8 @@ libStatus n p d = do
           dir := localSrcDir d
        in checkOutdated ts dir Outdated Installed
 
-||| Generates the `PkgStatus` of a package representing an application.
+||| Generates the `AppStatus` of a package representing an application.
+||| TODO: Handle `Installed` and `BinInstalled` correctly
 export
 appStatus :  HasIO io
           => Env
@@ -187,7 +188,7 @@ appStatus :  HasIO io
           -> (p   : Package)
           -> (d   : Desc t)
           -> (exe : Body)
-          -> EitherT PackErr io (PkgStatus p)
+          -> EitherT PackErr io (AppStatus p)
 appStatus n p d exe = do
   True <- fileExists (pkgExec n p exe) | False => pure Missing
   case isLocal p of
@@ -248,7 +249,8 @@ resolveApp n = do
   RL p n d _ <- resolveLib n
   case exec d of
     Nothing  => throwE (NoApp n)
-    Just exe => (\s => RA p n d s exe) <$> appStatus n p d exe
+    Just exe => do
+      (\s => RA p n d s exe) <$> appStatus n p d exe
 
 ||| Try to fully resolve an application or library given as a package.
 ||| This will look up the package name in the current package collection
@@ -256,11 +258,11 @@ resolveApp n = do
 export covering
 resolveAny :  HasIO io
            => Env
-           => PkgType
+           => InstallType
            -> PkgName
-           -> EitherT PackErr io (LibOrApp U)
-resolveAny Lib n = Left  <$> resolveLib n
-resolveAny Bin n = Right <$> resolveApp n
+           -> EitherT PackErr io (LibOrApp U U)
+resolveAny Library n = Lib   <$> resolveLib n
+resolveAny (App b) n = App b <$> resolveApp n
 
 ||| Prints the absolute path of an application's installed executable
 ||| to stdout. This is used in the wrapper scripts we use for invoking
@@ -277,16 +279,22 @@ appPath n e = do
 --         Installation Plan
 --------------------------------------------------------------------------------
 
-needsInstalling' : PkgStatus p -> Bool
-needsInstalling' Missing   = True
-needsInstalling' Installed = False
-needsInstalling' Outdated  = True
+pkgNeedsInstalling : PkgStatus p -> Bool
+pkgNeedsInstalling Missing   = True
+pkgNeedsInstalling Installed = False
+pkgNeedsInstalling Outdated  = True
 
-needsInstalling : LibOrApp t -> Bool
-needsInstalling (Left x)  = needsInstalling' x.status
-needsInstalling (Right x) = needsInstalling' x.status
+appNeedsInstalling : (withWrapperScript : Bool) -> AppStatus p -> Bool
+appNeedsInstalling _ Missing      = True
+appNeedsInstalling b Installed    = b
+appNeedsInstalling _ Outdated     = True
+appNeedsInstalling _ BinInstalled = False
 
-showPlan : List (PkgType, PkgName) -> String
+needsInstalling : LibOrApp t s -> Bool
+needsInstalling (Lib x)   = pkgNeedsInstalling x.status
+needsInstalling (App b x) = appNeedsInstalling b x.status
+
+showPlan : List (InstallType, PkgName) -> String
 showPlan = unlines . map (\(t,n) => "\{t} \{n}")
 
 ||| Create a build plan for the given list of packages and apps
@@ -297,30 +305,30 @@ showPlan = unlines . map (\(t,n) => "\{t} \{n}")
 export covering
 plan :  HasIO io
      => Env
-     => List (PkgType, PkgName)
+     => List (InstallType, PkgName)
      -> EitherT PackErr io (List SafePkg)
 plan ps =
-  let ps' := Right <$> (Lib, "prelude") :: (Lib, "base") :: ps
+  let ps' := Right <$> (Library, "prelude") :: (Library, "base") :: ps
    in do
      debug "Building plan for the following libraries: \n \{showPlan ps}"
      loas <- filter needsInstalling <$> go empty Lin ps'
      traverse checkLOA loas
   where covering
-        go :  (planned  : SortedMap (PkgType, PkgName) ())
-           -> (resolved : SnocList $ LibOrApp U)
-           -> List (Either (LibOrApp U) (PkgType,PkgName))
-           -> EitherT PackErr io (List $ LibOrApp U)
+        go :  (planned  : SortedMap (InstallType, PkgName) ())
+           -> (resolved : SnocList $ LibOrApp U U)
+           -> List (Either (LibOrApp U U) (InstallType,PkgName))
+           -> EitherT PackErr io (List $ LibOrApp U U)
         go ps sx []             = pure (sx <>> [])
 
         -- the lib or app has already been resolved and
         -- its dependencies are already part of the build plan `sx`
         -- We make sure its not added as a dep again and add
         -- it to the list of handled packages.
-        go ps sx (Left (Left lib) :: xs) =
-          go (insert (Lib, name lib) () ps) (sx :< Left lib) xs
+        go ps sx (Left (Lib lib) :: xs) =
+          go (insert (Library, name lib) () ps) (sx :< Lib lib) xs
 
-        go ps sx (Left (Right app) :: xs) =
-          go (insert (Bin, name app) () ps) (sx :< Right app) xs
+        go ps sx (Left (App b app) :: xs) =
+          go (insert (App b, name app) () ps) (sx :< App b app) xs
 
         -- the package `p` might have been resolved already
         -- if it was a dependency of another package
@@ -329,5 +337,5 @@ plan ps =
           Just ()  => go ps sx xs
           Nothing  => do
             loa <- resolveAny (fst p) (snd p)
-            let deps := (\d => Right (Lib, d)) <$> dependencies loa
+            let deps := (\d => Right (Library, d)) <$> dependencies loa
             go ps sx $ deps ++ Left loa :: xs
