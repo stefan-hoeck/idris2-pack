@@ -175,11 +175,11 @@ installApp b ra = case ra.status of
             copyFile cache ipkgAbs
             libPkg [] "--build" (notPackIsSafe ra.desc)
             copyApp ra
-            appLink ra.exec ra.name (usePackagePath ra)
+            when b $ appLink ra.exec ra.name (usePackagePath ra)
           Local _ _ b    => do
             libPkg [] "--build" (notPackIsSafe ra.desc)
             copyApp ra
-            appLink ra.exec ra.name (usePackagePath ra)
+            when b $ appLink ra.exec ra.name (usePackagePath ra)
             write (appTimestamp ra.name ra.pkg) ""
 
 
