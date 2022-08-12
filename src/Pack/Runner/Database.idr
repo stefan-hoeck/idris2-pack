@@ -180,7 +180,6 @@ libStatus n p d = do
        in checkOutdated ts dir Outdated Installed
 
 ||| Generates the `AppStatus` of a package representing an application.
-||| TODO: Handle `Installed` and `BinInstalled` correctly
 export
 appStatus :  HasIO io
           => Env
@@ -190,13 +189,16 @@ appStatus :  HasIO io
           -> (exe : Body)
           -> EitherT PackErr io (AppStatus p)
 appStatus n p d exe = do
-  True <- fileExists (pkgExec n p exe) | False => pure Missing
+  True      <- fileExists (pkgExec n p exe) | False => pure Missing
+  installed <- do
+    True <- fileExists (pathExec exe) | False => pure Installed
+    pure BinInstalled
   case isLocal p of
-    No c     => pure Installed
+    No c     => pure installed
     Yes ploc =>
       let ts  := appTimestamp n p
           src := localSrcDir d
-       in checkOutdated ts src Outdated Installed
+       in checkOutdated ts src Outdated installed
 
 ||| Caches the `.ipkg` files of the core libraries to make them
 ||| quickly available when running queries.
