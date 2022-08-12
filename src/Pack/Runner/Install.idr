@@ -166,7 +166,7 @@ installApp b ra = case ra.status of
   Installed    => case b of
     False => pure ()
     True  => appLink ra.exec ra.name (usePackagePath ra)
-  _         => withPkgEnv ra.name ra.pkg $ \dir =>
+  _            => withPkgEnv ra.name ra.pkg $ \dir =>
     let ipkgAbs := ipkg dir ra.pkg
      in case ra.pkg of
           Core _            => pure ()
