@@ -49,7 +49,7 @@ checkPkg p = do
             updateRep p (Failure rl rs)
   Right () <- toState $ installAny $ Lib rl
     | Left err => warn "Failed to build \{p}" >>
-                  updateRep p (Error p err)
+                  updateRep p (Failure rl [])
   updateRep p (Success rl)
 
 copyDocs :  HasIO io
