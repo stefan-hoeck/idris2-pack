@@ -111,7 +111,7 @@ status Outdated  = "outdated"
 status' : AppStatus p -> String
 status' Missing      = "not installed"
 status' Installed    = "installed"
-status' BinInstalled = "installed and on `$PATH`"
+status' BinInstalled = "installed and on $PATH"
 status' Outdated     = "outdated"
 
 libStatus : QPkg -> List String
@@ -199,7 +199,7 @@ instLib qp = case qp.lib.status of
 
 instApp : QPkg -> Maybe String
 instApp (QP lib $ Just (AI _ st))  = case st of
-  Installed    => Just "\{lib.name} (not on `$PATH`)"
+  Installed    => Just "\{lib.name} (not on $PATH)"
   BinInstalled => Just "\{lib.name}"
   Outdated     => Just "\{lib.name} (outdated)"
   Missing      => Nothing
