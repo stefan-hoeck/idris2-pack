@@ -146,5 +146,5 @@ runCmd = do
     New dir pty p      => idrisEnv mc fetch >>= new dir pty p
     Switch db          => do
       env <- idrisEnv mc fetch
-      writeCollection
       install []
+      writeCollection
