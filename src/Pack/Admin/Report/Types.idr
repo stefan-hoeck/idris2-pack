@@ -30,6 +30,7 @@ export
 failingDeps : List Report -> List PkgName
 failingDeps rs = nub $ rs >>=
   \case Success _    => []
+        Failure s [] => [name s]
         Failure _ ss => ss
         Error s err  => [s]
 
