@@ -41,20 +41,25 @@ pthStr True = """
 -- before invoking the binary. For both cases, we let pack
 -- decide which version to use.
 appLink :  HasIO io
+        => (e: Env)
         => PackDir
         => (exec        : Body)
         -> (app         : PkgName)
         -> (withPkgPath : Bool)
         -> EitherT PackErr io ()
 appLink exec app withPkgPath =
-  let target  := MkF packBinDir exec
+  let
+      interp  := case e.config.codegen of
+        Node => "node "
+        _ => ""
+      target  := MkF packBinDir exec
       content := """
       #!/bin/sh
 
       APPLICATION="$(\{packExec} app-path \{app})"
       \{pthStr withPkgPath}
 
-      $APPLICATION "$@"
+      \{interp}$APPLICATION "$@"
       """
    in write target content >> sys "chmod +x \{target}"
 

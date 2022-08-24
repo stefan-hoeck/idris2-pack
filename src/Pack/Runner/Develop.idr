@@ -1,6 +1,7 @@
 module Pack.Runner.Develop
 
 import Data.IORef
+import Core.FC
 import Idris.Package.Types
 import Pack.Config
 import Pack.Core
@@ -134,7 +135,10 @@ runIpkg p args e = do
   d        <- parseLibIpkg p p
   Just exe <- pure (execPath d) | Nothing => throwE (NoAppIpkg p)
   build (Left p) e
-  sys "\{exe} \{unwords args}"
+  case e.env.config.codegen of
+    Node => sys "node \{exe} \{unwords args}"
+    _ =>  sys "\{exe} \{unwords args}"
+
 
 ||| Install and run an executable given as a package name.
 export covering
