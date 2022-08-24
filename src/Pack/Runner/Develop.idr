@@ -1,7 +1,6 @@
 module Pack.Runner.Develop
 
 import Data.IORef
-import Core.FC
 import Idris.Package.Types
 import Pack.Config
 import Pack.Core
