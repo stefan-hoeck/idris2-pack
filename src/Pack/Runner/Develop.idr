@@ -87,10 +87,14 @@ exec file args e = do
   pth  <- packagePath
   (opts, mp) <- replOpts (Just file)
 
-  let relFile := srcFileRelativeToIpkg mp (Just file)
+
+  let interp = case e.env.config.codegen of
+                  Node => "node "
+                  _ =>  ""
+      relFile := srcFileRelativeToIpkg mp (Just file)
       exe     := idrisWithCG
       cmd     := "\{exe} \{opts} -o \{e.env.config.output} \{relFile}"
-      run     := "build/exec/\{e.env.config.output} \{unwords args}"
+      run     := "\{interp} build/exec/\{e.env.config.output} \{unwords args}"
 
   case mp of
     Just af => inDir af.parent $ \_ => do
@@ -151,4 +155,6 @@ execApp p args e = do
   ref <- emptyCache
   ra <- resolveApp p
   install [(App False,p)]
-  sys "\{pkgExec ra.name ra.pkg ra.exec} \{unwords args}"
+  case e.env.config.codegen of
+    Node => sys "node \{pkgExec ra.name ra.pkg ra.exec} \{unwords args}"
+    _ => sys "\{pkgExec ra.name ra.pkg ra.exec} \{unwords args}"
