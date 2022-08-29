@@ -14,6 +14,16 @@ import Pack.Runner.New
 ipkgFile : CurDir -> String -> (File Abs -> Cmd) -> Either PackErr Cmd
 ipkgFile (CD dir) s f = f <$> readAbsFile dir s
 
+pkgOrIpkg :  CurDir
+          -> String
+          -> (Either (File Abs) PkgName -> Cmd)
+          -> Either PackErr Cmd
+pkgOrIpkg (CD dir) s f = case readAbsFile dir s of
+  Left  _    => Right (f . Right $ MkPkgName s)
+  Right file => if isIpkgBody file.file
+                   then Right (f $ Left file)
+                   else Right (f . Right $ MkPkgName s)
+
 Command Cmd where
   defaultLevel (Build x)              = Info
   defaultLevel (BuildDeps x)          = Info
@@ -60,16 +70,11 @@ Command Cmd where
   readCommand_ _  ["repl"]                   = Right $ Repl Nothing
   readCommand_ cd ["repl", s]                =
     Repl . Just <$> readAbsFile curDir s
-  readCommand_ cd ("run" :: p :: args)       =
-    let deflt    := Right $ Run (Right $ MkPkgName p) args
-        Right af := readAbsFile curDir p | Left _ => deflt
-     in case isIpkgBody af.file of
-       True  => Right $ Run (Left af) args
-       False => deflt
+  readCommand_ cd ("run" :: p :: args)       = pkgOrIpkg cd p (`Run` args)
 
-  readCommand_ cd ["build", file]            = ipkgFile cd file Build
-  readCommand_ cd ["install-deps", file]     = ipkgFile cd file BuildDeps
-  readCommand_ cd ["typecheck", file]        = ipkgFile cd file Typecheck
+  readCommand_ cd ["build", file]            = pkgOrIpkg cd file Build
+  readCommand_ cd ["install-deps", file]     = pkgOrIpkg cd file BuildDeps
+  readCommand_ cd ["typecheck", file]        = pkgOrIpkg cd file Typecheck
   readCommand_ _  ("install" :: xs)          =
     Right . Install $ map (\s => (Library, MkPkgName s)) xs
 
