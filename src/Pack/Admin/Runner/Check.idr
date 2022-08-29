@@ -1,6 +1,7 @@
 module Pack.Admin.Runner.Check
 
 import Control.Monad.State
+import Data.IORef
 import Data.SortedMap
 import Idris.Package.Types
 import Pack.Admin.Report.Types
@@ -36,6 +37,7 @@ missing = {status := Missing}
 covering
 checkPkg :  HasIO io
          => IdrisEnv
+         => LibCache
          => PkgName
          -> StateT ReportDB io Report
 checkPkg p = do
@@ -52,8 +54,10 @@ checkPkg p = do
                   updateRep p (Failure rl [])
   updateRep p (Success rl)
 
+covering
 copyDocs :  HasIO io
          => IdrisEnv
+         => LibCache
          => File Abs
          -> ReportDB
          -> EitherT PackErr io ()
@@ -71,6 +75,7 @@ checkDB p e =
   let ps := map (MkPkgName . interpolate) corePkgs
          ++ keys e.env.db.packages
    in do
+     ref <- emptyCache
      install [(App False, "katla")]
      rep <- liftIO $ execStateT empty
                    $ traverse_ checkPkg ps

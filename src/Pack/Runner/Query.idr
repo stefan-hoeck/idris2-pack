@@ -2,6 +2,7 @@ module Pack.Runner.Query
 
 import Core.Name.Namespace
 import Data.List
+import Data.IORef
 import Data.Maybe
 import Data.SortedMap
 import Idris.Package.Types
@@ -63,24 +64,28 @@ installedApp qp = case map status qp.app of
   Just Missing      => False
   Nothing           => False
 
-resolve : HasIO io => Env => PkgName -> EitherT PackErr io QPkg
+covering
+resolve : HasIO io => LibCache => Env => PkgName -> EitherT PackErr io QPkg
 resolve n = do
   lib <- resolveLib n
   Just exe <- pure (exec lib.desc) | Nothing => pure (QP lib Nothing)
-  st       <- appStatus n lib.pkg lib.desc exe
+  st       <- appStatus n lib.pkg lib.desc lib.deps exe
   pure $ QP lib (Just $ AI exe st)
 
 pkgNames : Env => List PkgName
 pkgNames = keys allPackages
 
-export
+export covering
 resolveAll : HasIO io => Env => EitherT PackErr io (List QPkg)
-resolveAll = traverse resolve pkgNames
+resolveAll = do
+  ref <- emptyCache
+  traverse resolve pkgNames
 
 --------------------------------------------------------------------------------
 --         Queries
 --------------------------------------------------------------------------------
 
+covering
 query_ :  HasIO io
        => Env
        => (q : QPkg -> Maybe b)
@@ -177,7 +182,7 @@ resultString _ _      qp = case c.queryType of
 
   Ipkg => unlines $ nameStr qp :: map (indent 2) (lines qp.lib.desc.cont)
 
-export
+export covering
 query :  HasIO io
       => QueryMode
       -> String
@@ -230,7 +235,7 @@ infoString ps = """
   Pack Commit         : \{Version.version}
   """ ++ apps ps ++ libs ps
 
-export
+export covering
 printInfo : HasIO io => Env -> EitherT PackErr io ()
 printInfo e = resolveAll >>= putStrLn . infoString
 
@@ -238,6 +243,7 @@ printInfo e = resolveAll >>= putStrLn . infoString
 --          Fuzzy Search
 --------------------------------------------------------------------------------
 
+covering
 installedPkgs :  HasIO io
               => IdrisEnv
               => List PkgName
@@ -288,7 +294,7 @@ fuzzyPkg q allPkgs qp = do
       True  => pure ()
       False => putStrLn (fuzzyTrim str)
 
-export
+export covering
 fuzzy :  HasIO io
       => List PkgName
       -> String

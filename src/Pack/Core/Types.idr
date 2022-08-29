@@ -396,10 +396,16 @@ public export
 0 U : PkgDesc -> Type
 U d = Unit
 
+namespace PkgDesc
+  ||| Lists the dependencies of a package.
+  export
+  dependencies : PkgDesc -> List PkgName
+  dependencies d = map (MkPkgName . pkgname) $ d.depends
+
 ||| Lists the dependencies of a package.
 export
 dependencies : Desc t -> List PkgName
-dependencies d = map (MkPkgName . pkgname) $ d.desc.depends
+dependencies d = dependencies d.desc
 
 --------------------------------------------------------------------------------
 --          Errors

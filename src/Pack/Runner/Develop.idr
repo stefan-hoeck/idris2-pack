@@ -1,5 +1,6 @@
 module Pack.Runner.Develop
 
+import Data.IORef
 import Idris.Package.Types
 import Pack.Config
 import Pack.Core
@@ -134,6 +135,7 @@ execApp :  HasIO io
         -> IdrisEnv
         -> EitherT PackErr io ()
 execApp p args e = do
+  ref <- emptyCache
   ra <- resolveApp p
   install [(App False,p)]
   sys "\{pkgExec ra.name ra.pkg ra.exec} \{unwords args}"
