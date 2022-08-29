@@ -1,6 +1,7 @@
 module Pack.Runner.Install
 
 import Core.FC
+import Data.IORef
 import Data.Maybe
 import Idris.Package.Types
 import Pack.Config
@@ -197,7 +198,11 @@ installAny (App b sla) = installApp b sla
 --------------------------------------------------------------------------------
 
 covering
-docsImpl : HasIO io => (e : IdrisEnv) => SafeLib -> EitherT PackErr io ()
+docsImpl :  HasIO io
+         => (e : IdrisEnv)
+         => LibCache
+         => SafeLib
+         -> EitherT PackErr io ()
 docsImpl rl = do
   let docsDir : Path Abs
       docsDir = buildPath rl.desc /> "docs"
@@ -221,9 +226,13 @@ docsImpl rl = do
   copyDir docsDir docs
 
 ||| Install the API docs for the given resolved library.
-export
-installDocs : HasIO io => IdrisEnv => SafeLib -> EitherT PackErr io ()
-installDocs rl =
+export covering
+installDocs :  HasIO io
+            => LibCache
+            => IdrisEnv
+            => SafeLib
+            -> EitherT PackErr io ()
+installDocs rl = do
   withPkgEnv rl.name rl.pkg $ \dir => docsImpl rl
 
 katla : (c : Config) => List (InstallType, PkgName)
@@ -250,6 +259,7 @@ install :  HasIO io
         => List (InstallType, PkgName)
         -> EitherT PackErr io ()
 install ps = do
+  c   <- emptyCache
   all <- plan $ katla <+> autoPairs <+> ps
   logMany Info "Installing libraries:" (libInfo all)
   logMany Info "Installing apps:" (appInfo all)
@@ -312,21 +322,25 @@ update e =
 --          Removing Libs
 --------------------------------------------------------------------------------
 
-removeApp : HasIO io => Env => PkgName -> EitherT PackErr io ()
+covering
+removeApp : HasIO io => LibCache => Env => PkgName -> EitherT PackErr io ()
 removeApp n = do
   info "Removing application \{n}"
   ra <- resolveApp n
   rmFile (pathExec ra.exec)
   rmDir (pkgBinDir ra.name ra.pkg)
 
-removeLib : HasIO io => Env => PkgName -> EitherT PackErr io ()
+covering
+removeLib : HasIO io => LibCache => Env => PkgName -> EitherT PackErr io ()
 removeLib n = do
   rl <- resolveLib n
   info "Removing library \{n}"
   rmDir (pkgInstallDir rl.name rl.pkg rl.desc)
 
 ||| Remove a library or application.
-export
+export covering
 remove : HasIO io => Env => List (PkgType,PkgName) -> EitherT PackErr io ()
-remove = traverse_ $ \case (Lib,n) => removeLib n
-                           (Bin,n) => removeApp n
+remove ps = do
+  ref <- emptyCache
+  for_ ps  $ \case (Lib,n) => removeLib n
+                   (Bin,n) => removeApp n

@@ -268,6 +268,7 @@ record ResolvedLib t where
   name    : PkgName
   desc    : Desc t
   status  : PkgStatus pkg
+  deps    : List (DPair Package PkgStatus)
 
 namespace ResolveLib
   ||| Extracts the package name from a resolved library.
@@ -316,6 +317,7 @@ record ResolvedApp t where
   desc    : Desc t
   status  : AppStatus pkg
   exec    : Body
+  deps    : List (DPair Package PkgStatus)
 
 namespace ResolveApp
   ||| Extracts the package name from a resolved application.

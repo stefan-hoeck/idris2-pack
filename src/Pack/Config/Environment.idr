@@ -226,7 +226,7 @@ pkgExec n p exe = MkF (pkgBinDir n p) exe
 ||| Path to the executable of an Idris application
 export
 resolvedExec : PackDir => DB => ResolvedApp t -> File Abs
-resolvedExec (RA p n d _ exe) = pkgExec n p exe
+resolvedExec (RA p n d _ exe _) = pkgExec n p exe
 
 pathDirs :  (HasIO io, PackDir, DB, Config)
          => (pre : String)

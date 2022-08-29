@@ -3,12 +3,33 @@ module Pack.Runner.Database
 import Core.FC
 import Core.Name.Namespace
 import Data.SortedMap
+import Data.IORef
 import Idris.Package.Types
 import Pack.Config
 import Pack.Core
 import Pack.Database
 
 %default total
+
+--------------------------------------------------------------------------------
+--          State
+--------------------------------------------------------------------------------
+
+||| Cache used during package resolution
+public export
+0 LibCache : Type
+LibCache = IORef (SortedMap PkgName $ ResolvedLib U)
+
+export
+emptyCache : HasIO io => io LibCache
+emptyCache = newIORef SortedMap.empty
+
+cache :  HasIO io
+      => (ref : LibCache)
+      => PkgName
+      -> ResolvedLib U
+      -> io (ResolvedLib U)
+cache n lib = modifyIORef ref (insert n lib) $> lib
 
 --------------------------------------------------------------------------------
 --          Safe
@@ -148,28 +169,37 @@ withPkgEnv n (GitHub u c i _) f = withGit tmpDir n u c f
 withPkgEnv n (Local d i _)    f = inDir d f
 withPkgEnv n (Core _)         f = withCoreGit f
 
+isOutdated : DPair Package PkgStatus -> Bool
+isOutdated (fst ** Outdated) = True
+isOutdated _                 = False
+
 -- tests if the files in a directory are new compare to
 -- a timestamp file, and returns one of two possible results
 -- accordingly
 checkOutdated :  HasIO io
               => (ts         : File Abs)
               -> (dir        : Path Abs)
+              -> (deps       : List (DPair Package PkgStatus))
               -> (ifOutdated : a)
               -> (ifUpToDate : a)
               -> EitherT PackErr io a
-checkOutdated ts src o u = do
-  True <- fileExists ts | False => pure o
-  ""   <- trim <$> sysRun "find \{src} -newer \{ts}" | _ => pure o
-  pure u
+checkOutdated ts src deps o u =
+  if any isOutdated deps
+    then pure o
+    else do
+      True <- fileExists ts | False => pure o
+      ""   <- trim <$> sysRun "find \{src} -newer \{ts}" | _ => pure o
+      pure u
 
 -- checks the status of a library
 libStatus :  HasIO io
           => Env
           => PkgName
-          -> (p : Package)
-          -> (d : Desc t)
+          -> (p    : Package)
+          -> (d    : Desc t)
+          -> (deps : List (DPair Package PkgStatus))
           -> EitherT PackErr io (PkgStatus p)
-libStatus n p d = do
+libStatus n p d deps = do
   True <- exists (pkgInstallDir n p d) | False => pure Missing
   b    <- exists $ pkgDocs n p
   case isLocal p of
@@ -177,18 +207,19 @@ libStatus n p d = do
     Yes ploc =>
       let ts  := libTimestamp n p
           dir := localSrcDir d
-       in checkOutdated ts dir Outdated Installed
+       in checkOutdated ts dir deps Outdated Installed
 
 ||| Generates the `AppStatus` of a package representing an application.
 export
 appStatus :  HasIO io
           => Env
           => PkgName
-          -> (p   : Package)
-          -> (d   : Desc t)
-          -> (exe : Body)
+          -> (p    : Package)
+          -> (d    : Desc t)
+          -> (deps : List (DPair Package PkgStatus))
+          -> (exe  : Body)
           -> EitherT PackErr io (AppStatus p)
-appStatus n p d exe = do
+appStatus n p d deps exe = do
   True      <- fileExists (pkgExec n p exe) | False => pure Missing
   installed <- do
     True <- fileExists (pathExec exe) | False => pure Installed
@@ -198,7 +229,7 @@ appStatus n p d exe = do
     Yes ploc =>
       let ts  := appTimestamp n p
           src := localSrcDir d
-       in checkOutdated ts src Outdated installed
+       in checkOutdated ts src deps Outdated installed
 
 ||| Caches the `.ipkg` files of the core libraries to make them
 ||| quickly available when running queries.
@@ -234,31 +265,49 @@ loadIpkg n (Core c)         =
 ||| This will look up the library in the current package collection
 ||| and will fetch and read its (possibly cached) `.ipkg` file.
 export covering
-resolveLib : HasIO io => Env => PkgName -> EitherT PackErr io (ResolvedLib U)
-resolveLib n = case lookup n allPackages of
-  Nothing => throwE (UnknownPkg n)
-  Just p  => do
-    d   <- loadIpkg n p
-    lib <- libStatus n p d
-    pure $ RL p n d lib
+resolveLib :  HasIO io
+           => (ref : LibCache)
+           => Env
+           => PkgName
+           -> EitherT PackErr io (ResolvedLib U)
+resolveLib n = do
+  Nothing <- lookup n <$> readIORef ref | Just pkg => pure pkg
+  case lookup n allPackages of
+    Nothing => throwE (UnknownPkg n)
+    Just p  => do
+      d    <- loadIpkg n p
+      deps <- traverse resolveDep $ dependencies d
+      lib  <- libStatus n p d deps
+      cache n $ RL p n d lib deps
+
+  where
+    resolveDep : PkgName -> EitherT PackErr io (DPair Package PkgStatus)
+    resolveDep n = do
+      rl <- resolveLib n
+      pure (MkDPair rl.pkg rl.status)
 
 ||| Try to fully resolve an application given as a package name.
 ||| This will look up the app in the current package collection
 ||| and will fetch and read its (possibly cached) `.ipkg` file.
 export covering
-resolveApp : HasIO io => Env => PkgName -> EitherT PackErr io (ResolvedApp U)
+resolveApp :  HasIO io
+           => LibCache
+           => Env
+           => PkgName
+           -> EitherT PackErr io (ResolvedApp U)
 resolveApp n = do
-  RL p n d _ <- resolveLib n
+  RL p n d _ ds <- resolveLib n
   case exec d of
     Nothing  => throwE (NoApp n)
     Just exe => do
-      (\s => RA p n d s exe) <$> appStatus n p d exe
+      (\s => RA p n d s exe ds) <$> appStatus n p d ds exe
 
 ||| Try to fully resolve an application or library given as a package.
 ||| This will look up the package name in the current package collection
 ||| and will fetch and read its (possibly cached) `.ipkg` file.
 export covering
 resolveAny :  HasIO io
+           => LibCache
            => Env
            => InstallType
            -> PkgName
@@ -274,6 +323,7 @@ export covering
 appPath : HasIO io => PkgName -> Env -> EitherT PackErr io ()
 appPath "idris2" e = putStrLn "\{idrisExec}"
 appPath n e = do
+  ref <- emptyCache
   ra <- resolveApp n
   putStrLn . interpolate $ pkgExec ra.name ra.pkg ra.exec
 
@@ -306,6 +356,7 @@ showPlan = unlines . map (\(t,n) => "\{t} \{n}")
 ||| base, so we make sure these are installed as well.
 export covering
 plan :  HasIO io
+     => LibCache
      => Env
      => List (InstallType, PkgName)
      -> EitherT PackErr io (List SafePkg)
