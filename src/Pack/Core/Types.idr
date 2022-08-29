@@ -469,6 +469,9 @@ data PackErr : Type where
   ||| The given package is not in the package data base
   UnknownPkg : (name : PkgName) -> PackErr
 
+  ||| The given package is not a local package
+  NotLocalPkg : (name : PkgName) -> PackErr
+
   ||| The given package is not an applicatio
   ||| (No executable name set in the `.ipkg` file)
   NoApp      : (rep : PkgName) -> PackErr
@@ -610,6 +613,8 @@ printErr (InvalidPkgType s) = """
 printErr (InvalidPkgVersion s) = "Invalid package version: \{quote s}."
 
 printErr (UnknownPkg name) = "Unknown package: \{name}"
+
+printErr (NotLocalPkg name) = "Not a local package: \{name}"
 
 printErr (NoApp rep) = "Package \{rep} is not an application"
 

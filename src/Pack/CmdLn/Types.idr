@@ -16,9 +16,9 @@ data QueryMode = PkgName | Dependency | Module
 public export
 data Cmd : Type where
   -- Developing Idris libs and apps
-  Build            : (ipkg : File Abs) -> Cmd
-  BuildDeps        : (ipkg : File Abs) -> Cmd
-  Typecheck        : (ipkg : File Abs) -> Cmd
+  Build            : Either (File Abs) PkgName -> Cmd
+  BuildDeps        : Either (File Abs) PkgName -> Cmd
+  Typecheck        : Either (File Abs) PkgName -> Cmd
   Repl             : (src : Maybe $ File Abs) -> Cmd
   Exec             : (srd : File Abs) -> (args : List String) -> Cmd
 

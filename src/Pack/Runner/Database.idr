@@ -113,6 +113,21 @@ parseLibIpkg :  HasIO io
              -> EitherT PackErr io (Desc Safe)
 parseLibIpkg p loc = parseIpkgFile p loc >>= safe
 
+||| Parse an `.ipkg` file from a command line arg or a local
+||| package given as a package name and check if it has custom build hooks.
+export
+findAndParseLocalIpkg :  HasIO io
+                      => (e    : Env)
+                      => (file : Either (File Abs) PkgName)
+                      -> EitherT PackErr io (Desc Safe)
+findAndParseLocalIpkg (Left p)  = parseLibIpkg p p
+findAndParseLocalIpkg (Right n) =
+  case lookup n allPackages of
+    Nothing                 => throwE (UnknownPkg n)
+    Just (Local dir ipkg _) => let p = dir </> ipkg in parseLibIpkg p p
+    Just _                  => throwE (NotLocalPkg n)
+
+
 ||| Parse an `.ipkg` file representing an application
 ||| and check if it has no custom build hooks and does not produce
 ||| an executable called "pack".

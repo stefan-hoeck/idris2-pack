@@ -194,8 +194,8 @@ usageInfo = """
       consisting of a source directory, default module and a .ipkg file.
       A git repository will be initialized.
 
-    build <.ipkg file>
-      Build a local package given as an `.ipkg` file.
+    build <.ipkg file or local pkg name>
+      Build a local package given as an `.ipkg` file or package name.
 
     exec <.idr file> [args...]
       Compile the given Idris source file and execute its main function
@@ -203,11 +203,12 @@ usageInfo = """
       in the source file's parent directories and will apply the settings
       it finds there.
 
-    install-deps <.ipkg file>
-      Install the dependencies of a local package given as an `.ipkg` file.
+    install-deps <.ipkg file or local pkg name>
+      Install the dependencies of a local package given as an `.ipkg` file
+      or package name.
 
-    typecheck <.ipkg file>
-      Typecheck a local package given as an `.ipkg` file.
+    typecheck <.ipkg file or local pkg name>
+      Typecheck a local package given as an `.ipkg` file or package name.
 
     repl [.idr file]
       Start a REPL session loading an optional `.idr` file.
