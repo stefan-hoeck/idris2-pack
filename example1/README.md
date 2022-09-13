@@ -1,7 +1,7 @@
 # Developing Libraries and Apps with Pack: Part 1
 
 In this example project, we setup two Idris libraries plus a
-test suite, which we plan to developed locally in parallel:
+test suite, which we plan to develop locally in parallel:
 
 * chem-core-example: Provides some essential data types used
   in cheminformatics. It depends on package *prim*, a library
