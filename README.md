@@ -62,6 +62,17 @@ run
 pack install-app katla
 ```
 
+> **Note**
+>
+> Idris packages can contain additional instructions to run before and after build and installation of a package,
+> we call them *custom build hooks*.
+> This can be potentially dangerous because hooks may invoke arbitrary code in your system.
+> By default pack prompts for continuation in case when requested package contains them, e.g.
+>
+> ```sh
+> Package lsp uses custom build hooks. Continue (yes/*no)?
+> ```
+
 If you no longer require *katla* and want to remove it, run
 
 ```sh
