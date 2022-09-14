@@ -12,7 +12,7 @@ Here's the project structure:
 
 * chem-smiles-example: A simplified SMILES parser for molecules.
   In addition to some officially supported dependencies, this also
-  depends on chem-core-example and chem-formula-example from the
+  depends on *chem-core-example* and *chem-formula-example* from the
   first example project, but we assume these are maintained by
   different programmers in our team, while we are responsible of
   implementing the SMILES parser.
@@ -21,7 +21,7 @@ Here's the project structure:
 As in the first example, we add a `pack.toml` file to the project's
 root directory listing all custom libraries and apps including the
 one we are developing at the moment plus its test suite. Note, how
-we specify the chem-core-example dependency:
+we specify the *chem-core-example* dependency:
 
 ```toml
 [custom.all.chem-core-example]
@@ -40,7 +40,7 @@ startup times for pack. Pack will therefore only fetch the
 commit hash if it hasn't done so before, or if it is being told
 to do so explicitly by invoking `pack fetch`.
 
-The chem-formula-example dependency is almost identical, but
+The *chem-formula-example* dependency is almost identical, but
 this time we want to make sure we never miss any updates:
 The `fetch-latest:main` meta commit tells pack to fetch
 the latest commit hash from the main branch on every startup.
