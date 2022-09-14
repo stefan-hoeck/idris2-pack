@@ -220,7 +220,7 @@ usageInfo = """
 
       In order to start the REPL session with `rlwrap`, use the `--rlwrap`
       option or set flag `repl.rlwrap` in file
-      `$HOME./pack/user/pack.toml` to `true`.
+      `$HOME/.pack/user/pack.toml` to `true`.
 
     install [package...]
       Install the given packages.
@@ -262,7 +262,7 @@ usageInfo = """
 
     switch [collection name]
       Switch to the given package collection. This will adjust your
-      `$PACK_DIR/.pack/user/pack.toml` file to use the given package
+      `$HOME/.pack/user/pack.toml` file to use the given package
       collection. It will also install all auto libs and apps for the
       given package collection.
 
