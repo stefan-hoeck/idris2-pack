@@ -15,6 +15,19 @@ import Pack.Runner.Database
 --          Utilities
 --------------------------------------------------------------------------------
 
+export
+ipkgCodeGen : (e : Env) => PkgDesc -> Codegen
+ipkgCodeGen desc = case e.config.codegen of
+  Default => getCG (maybe [] (filter (not . null) . words . snd) desc.options)
+  cg      => cg
+
+  where getCG : List String -> Codegen
+        getCG ("--cg"      :: cg :: _) = fromString cg
+        getCG ("--codegen" :: cg :: _) = fromString cg
+        getCG [_]                      = Default
+        getCG []                       = Default
+        getCG (h :: t)                 = getCG t
+
 coreGitDir : (e : Env) => Path Abs
 coreGitDir = gitDir tmpDir compiler e.db.idrisCommit
 
@@ -33,6 +46,7 @@ pthStr True = """
   export IDRIS2_LIBS="$(\{packExec} libs-path)"
   export IDRIS2_DATA="$(\{packExec} data-path)"
   """
+
 -- When linking to a binary from pack's `bin` directory,
 -- we distinguish between applications,
 -- which need acceess to the Idris package path and those,
@@ -46,10 +60,11 @@ appLink :  HasIO io
         => (exec        : Body)
         -> (app         : PkgName)
         -> (withPkgPath : Bool)
+        -> (codeGen     : Codegen)
         -> EitherT PackErr io ()
-appLink exec app withPkgPath =
+appLink exec app withPkgPath cg =
   let
-      interp  := case e.config.codegen of
+      interp  := case cg of
         Node => "node "
         _ => ""
       target  := MkF packBinDir exec
@@ -103,7 +118,7 @@ mkIdris = do
       sys "rm -r build/ttc build/exec"
       cacheCoreIpkgFiles dir
 
-  appLink "idris2" "idris2" True
+  appLink "idris2" "idris2" True Default
   pure $ MkIdrisEnv %search ItHasIdris
 
 --------------------------------------------------------------------------------
@@ -167,26 +182,28 @@ installApp :  HasIO io
            => (withWrapperScript : Bool)
            -> SafeApp
            -> EitherT PackErr io ()
-installApp b ra = case ra.status of
-  BinInstalled => pure ()
-  Installed    => case b of
-    False => pure ()
-    True  => appLink ra.exec ra.name (usePackagePath ra)
-  _            => withPkgEnv ra.name ra.pkg $ \dir =>
-    let ipkgAbs := ipkg dir ra.pkg
-     in case ra.pkg of
-          Core _            => pure ()
-          GitHub u c ipkg b => do
-            let cache   := ipkgCachePath ra.name c ipkg
-            copyFile cache ipkgAbs
-            libPkg [] "--build" (notPackIsSafe ra.desc)
-            copyApp ra
-            when b $ appLink ra.exec ra.name (usePackagePath ra)
-          Local _ _ b    => do
-            libPkg [] "--build" (notPackIsSafe ra.desc)
-            copyApp ra
-            when b $ appLink ra.exec ra.name (usePackagePath ra)
-            write (appTimestamp ra.name ra.pkg) ""
+installApp b ra =
+  let cg := ipkgCodeGen ra.desc.desc
+  in case ra.status of
+    BinInstalled => pure ()
+    Installed    => case b of
+      False => pure ()
+      True  => appLink ra.exec ra.name (usePackagePath ra) cg
+    _            => withPkgEnv ra.name ra.pkg $ \dir =>
+      let ipkgAbs := ipkg dir ra.pkg
+       in case ra.pkg of
+            Core _            => pure ()
+            GitHub u c ipkg b => do
+              let cache   := ipkgCachePath ra.name c ipkg
+              copyFile cache ipkgAbs
+              libPkg [] "--build" (notPackIsSafe ra.desc)
+              copyApp ra
+              when b $ appLink ra.exec ra.name (usePackagePath ra) cg
+            Local _ _ b    => do
+              libPkg [] "--build" (notPackIsSafe ra.desc)
+              copyApp ra
+              when b $ appLink ra.exec ra.name (usePackagePath ra) cg
+              write (appTimestamp ra.name ra.pkg) ""
 
 
 ||| Install the given resolved library or application.

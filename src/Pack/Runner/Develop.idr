@@ -138,7 +138,7 @@ runIpkg p args e = do
   d        <- parseLibIpkg p p
   Just exe <- pure (execPath d) | Nothing => throwE (NoAppIpkg p)
   build (Left p) e
-  case e.env.config.codegen of
+  case ipkgCodeGen d.desc of
     Node => sys "node \{exe} \{unwords args}"
     _ =>  sys "\{exe} \{unwords args}"
 
@@ -154,6 +154,6 @@ execApp p args e = do
   ref <- emptyCache
   ra <- resolveApp p
   install [(App False,p)]
-  case e.env.config.codegen of
+  case ipkgCodeGen ra.desc.desc of
     Node => sys "node \{pkgExec ra.name ra.pkg ra.exec} \{unwords args}"
     _ => sys "\{pkgExec ra.name ra.pkg ra.exec} \{unwords args}"
