@@ -34,15 +34,20 @@ covering
 replOpts :  HasIO io
          => (e : IdrisEnv)
          => (file : Maybe $ File Abs)
-         -> EitherT PackErr io (String, Maybe $ File Abs)
+         -> EitherT PackErr io (String, Codegen, Maybe $ File Abs)
 replOpts mf = do
-  Just p <- findIpkg e.env.config.withIpkg mf | Nothing => pure ("",Nothing)
+  Just p <- findIpkg e.env.config.withIpkg mf
+    | Nothing => pure ("",e.env.config.codegen,Nothing)
   info "Found `.ipkg` file at \{p}"
   d <- parseLibIpkg p p
   let srcDir := maybe "" (\s => "--source-dir \"\{s}\"") d.desc.sourcedir
       pkgs   := unwords $ map (("-p " ++) . value) (dependencies d)
+      cg     := ipkgCodeGen d.desc
+      cgOpt  := case cg of
+                  Default => ""
+                  _       => "--cg \{cg}"
   installDeps d
-  pure ("\{srcDir} \{pkgs}", Just p)
+  pure ("\{srcDir} \{cgOpt} \{pkgs}", cg, Just p)
 
 -- return the path of an Idris source file to an `.ipkg` file.
 srcFileRelativeToIpkg : (ipkg,idr : Maybe (File Abs)) -> String
@@ -61,7 +66,7 @@ idrisRepl :  HasIO io
           -> EitherT PackErr io ()
 idrisRepl mf e = do
   pth  <- packagePath
-  (opts, mp) <- replOpts mf
+  (opts, _, mp) <- replOpts mf
 
   let args := srcFileRelativeToIpkg mp mf
       exe  := idrisWithCG
@@ -84,12 +89,16 @@ exec :  HasIO io
      -> EitherT PackErr io ()
 exec file args e = do
   pth  <- packagePath
-  (opts, mp) <- replOpts (Just file)
+  (opts, cg, mp) <- replOpts (Just file)
 
-  let relFile := srcFileRelativeToIpkg mp (Just file)
+
+  let interp = case cg of
+                  Node => "node "
+                  _ =>  ""
+      relFile := srcFileRelativeToIpkg mp (Just file)
       exe     := idrisWithCG
       cmd     := "\{exe} \{opts} -o \{e.env.config.output} \{relFile}"
-      run     := "build/exec/\{e.env.config.output} \{unwords args}"
+      run     := "\{interp} build/exec/\{e.env.config.output} \{unwords args}"
 
   case mp of
     Just af => inDir af.parent $ \_ => do
@@ -134,7 +143,10 @@ runIpkg p args e = do
   d        <- parseLibIpkg p p
   Just exe <- pure (execPath d) | Nothing => throwE (NoAppIpkg p)
   build (Left p) e
-  sys "\{exe} \{unwords args}"
+  case ipkgCodeGen d.desc of
+    Node => sys "node \{exe} \{unwords args}"
+    _ =>  sys "\{exe} \{unwords args}"
+
 
 ||| Install and run an executable given as a package name.
 export covering
@@ -147,4 +159,6 @@ execApp p args e = do
   ref <- emptyCache
   ra <- resolveApp p
   install [(App False,p)]
-  sys "\{pkgExec ra.name ra.pkg ra.exec} \{unwords args}"
+  case ipkgCodeGen ra.desc.desc of
+    Node => sys "node \{pkgExec ra.name ra.pkg ra.exec} \{unwords args}"
+    _ => sys "\{pkgExec ra.name ra.pkg ra.exec} \{unwords args}"
