@@ -83,8 +83,8 @@ idrisRepl :  HasIO io
           -> IdrisEnv
           -> EitherT PackErr io ()
 idrisRepl mf e = do
-  pth  <- packagePath
   (opts, _, mp) <- replOpts mf
+  pth  <- packagePath
 
   let args := srcFileRelativeToIpkg mp mf
       exe  := idrisWithCG
@@ -106,8 +106,8 @@ exec :  HasIO io
      -> IdrisEnv
      -> EitherT PackErr io ()
 exec file args e = do
-  pth  <- packagePath
   (opts, cg, mp) <- replOpts (Just file)
+  pth  <- packagePath
 
 
   let interp = case cg of

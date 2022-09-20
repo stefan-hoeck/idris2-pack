@@ -75,7 +75,7 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             Sets the scheme executable for installing the Idris2 compiler.
             As a default, this is set to `scheme`.
             """
-        , MkOpt ['P'] ["--packages"]  (ReqArg setPkgs "<packages>")
+        , MkOpt ['P'] ["packages"]  (ReqArg setPkgs "<packages>")
             """
             Load the given (comma-separated) list of packages into the REPL
             session.
