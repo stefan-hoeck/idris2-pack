@@ -1,5 +1,6 @@
 module Pack.Admin.Runner
 
+import Data.IORef
 import Data.SortedMap
 import Pack.Admin.Runner.Check
 import Pack.CmdLn.Opts
@@ -69,6 +70,7 @@ runCmd = do
   pd       <- getPackDir
   td       <- mkTmpDir
   cd       <- CD <$> curDir
+  cache    <- emptyCache
   (mc,cmd) <- getConfig ACmd
   case cmd of
     CheckDB db p       => finally (rmDir tmpDir) $ idrisEnv mc True >>= checkDB p

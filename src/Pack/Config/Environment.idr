@@ -529,6 +529,7 @@ export covering
 env :  HasIO io
     => (pd    : PackDir)
     => (td    : TmpDir)
+    => (ch    : LibCache)
     => (c     : MetaConfig)
     -> (fetch : Bool)
     -> EitherT PackErr io Env
@@ -540,7 +541,7 @@ env mc fetch = do
       commit := fromMaybe db.idrisCommit c.idrisCommit
 
   -- adjust the idrisCommit and URL to use according to user overrides
-  pure $ MkEnv pd td c ({idrisURL := url, idrisCommit := commit} db)
+  pure $ MkEnv pd td c ch ({idrisURL := url, idrisCommit := commit} db)
 
 adjCollection : DBName -> String -> String
 adjCollection db str = case isPrefixOf "collection " str of

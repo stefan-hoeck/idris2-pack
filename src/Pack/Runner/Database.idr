@@ -12,26 +12,6 @@ import Pack.Database
 %default total
 
 --------------------------------------------------------------------------------
---          State
---------------------------------------------------------------------------------
-
-||| Cache used during package resolution
-public export
-0 LibCache : Type
-LibCache = IORef (SortedMap PkgName $ ResolvedLib U)
-
-export
-emptyCache : HasIO io => io LibCache
-emptyCache = newIORef SortedMap.empty
-
-cache :  HasIO io
-      => (ref : LibCache)
-      => PkgName
-      -> ResolvedLib U
-      -> io (ResolvedLib U)
-cache n lib = modifyIORef ref (insert n lib) $> lib
-
---------------------------------------------------------------------------------
 --          Safe
 --------------------------------------------------------------------------------
 
@@ -280,20 +260,16 @@ loadIpkg n (Core c)         =
 ||| This will look up the library in the current package collection
 ||| and will fetch and read its (possibly cached) `.ipkg` file.
 export covering
-resolveLib :  HasIO io
-           => (ref : LibCache)
-           => Env
-           => PkgName
-           -> EitherT PackErr io (ResolvedLib U)
+resolveLib : HasIO io => Env => PkgName -> EitherT PackErr io (ResolvedLib U)
 resolveLib n = do
-  Nothing <- lookup n <$> readIORef ref | Just pkg => pure pkg
+  Nothing <- lookupLib n | Just pkg => pure pkg
   case lookup n allPackages of
     Nothing => throwE (UnknownPkg n)
     Just p  => do
       d    <- loadIpkg n p
       deps <- traverse resolveDep $ dependencies d
       lib  <- libStatus n p d deps
-      cache n $ RL p n d lib deps
+      cacheLib n $ RL p n d lib deps
 
   where
     resolveDep : PkgName -> EitherT PackErr io (DPair Package PkgStatus)
@@ -305,11 +281,7 @@ resolveLib n = do
 ||| This will look up the app in the current package collection
 ||| and will fetch and read its (possibly cached) `.ipkg` file.
 export covering
-resolveApp :  HasIO io
-           => LibCache
-           => Env
-           => PkgName
-           -> EitherT PackErr io (ResolvedApp U)
+resolveApp : HasIO io => Env => PkgName -> EitherT PackErr io (ResolvedApp U)
 resolveApp n = do
   RL p n d _ ds <- resolveLib n
   case exec d of
@@ -322,7 +294,6 @@ resolveApp n = do
 ||| and will fetch and read its (possibly cached) `.ipkg` file.
 export covering
 resolveAny :  HasIO io
-           => LibCache
            => Env
            => InstallType
            -> PkgName
@@ -364,23 +335,13 @@ needsInstalling (App b x) = appNeedsInstalling b x.status
 showPlan : List (InstallType, PkgName) -> String
 showPlan = unlines . map (\(t,n) => "\{t} \{n}")
 
-||| Create a build plan for the given list of packages and apps
-||| plus their dependencies.
-|||
-||| All packages depend on the prelude and
-||| base, so we make sure these are installed as well.
+||| Resolve the (transitive) dependencies of the given libs and apps.
 export covering
-plan :  HasIO io
-     => LibCache
-     => Env
-     => List (InstallType, PkgName)
-     -> EitherT PackErr io (List SafePkg)
-plan ps =
-  let ps' := Right <$> (Library, "prelude") :: (Library, "base") :: ps
-   in do
-     debug "Building plan for the following libraries: \n \{showPlan ps}"
-     loas <- filter needsInstalling <$> go empty Lin ps'
-     traverse checkLOA loas
+transitiveDeps :  HasIO io
+               => Env
+               => List (InstallType, PkgName)
+               -> EitherT PackErr io (List $ LibOrApp U U)
+transitiveDeps ps = go empty Lin (map Right ps)
   where covering
         go :  (planned  : SortedMap (InstallType, PkgName) ())
            -> (resolved : SnocList $ LibOrApp U U)
@@ -407,3 +368,20 @@ plan ps =
             loa <- resolveAny (fst p) (snd p)
             let deps := (\d => Right (Library, d)) <$> dependencies loa
             go ps sx $ deps ++ Left loa :: xs
+
+||| Create a build plan for the given list of packages and apps
+||| plus their dependencies.
+|||
+||| All packages depend on the prelude and
+||| base, so we make sure these are installed as well.
+export covering
+plan :  HasIO io
+     => Env
+     => List (InstallType, PkgName)
+     -> EitherT PackErr io (List SafePkg)
+plan ps =
+  let ps' := (Library, "prelude") :: (Library, "base") :: ps
+   in do
+     debug "Building plan for the following libraries: \n \{showPlan ps}"
+     loas <- filter needsInstalling <$> transitiveDeps ps'
+     traverse checkLOA loas

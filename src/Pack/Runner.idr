@@ -1,5 +1,6 @@
 module Pack.Runner
 
+import Data.IORef
 import Pack.CmdLn
 import Pack.CmdLn.Completion
 import Pack.Config
@@ -123,6 +124,7 @@ runCmd = do
   pd       <- getPackDir
   td       <- mkTmpDir
   cd       <- CD <$> curDir
+  cache    <- emptyCache
   (mc,cmd) <- getConfig Cmd
   let fetch := isFetch cmd
   finally (rmDir tmpDir) $ case cmd of

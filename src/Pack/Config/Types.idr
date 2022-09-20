@@ -1,6 +1,7 @@
 module Pack.Config.Types
 
 import Data.List
+import Data.IORef
 import Data.Maybe
 import Data.SortedMap as SM
 import Idris.Package.Types
@@ -9,6 +10,27 @@ import Pack.Core
 import Pack.Database.Types
 
 %default total
+
+||| Packages to automatically load in a REPL session
+||| in absence of an `.ipkg` file in scope.
+public export
+data Autoload : Type where
+  ||| Don't load any packages automatically (the default)
+  NoPkgs    : Autoload
+
+  ||| Load all installed packages of the current scope
+  Installed : Autoload
+
+  ||| Use the packages from the list of packages to be installed
+  ||| automatically
+  AutoLibs  : Autoload
+
+  ||| Use the given explicit list of packages
+  AutoPkgs  : List PkgName -> Autoload
+
+  ||| Use the given explicit list of packages even in the
+  ||| precense of an `.ipkg` file.
+  ForcePkgs : List PkgName -> Autoload
 
 ||| What to show when querying the data base
 public export
@@ -157,6 +179,9 @@ record Config_ (f : Type -> Type) (c : Type) where
   ||| Applications to install automatically
   autoApps     : f (List PkgName)
 
+  ||| Libraries to automatically load in a REPL session
+  autoLoad     : f Autoload
+
   ||| Customizations to the package data base
   custom       : f (SortedMap DBName (SortedMap PkgName $ Package_ c))
 
@@ -270,6 +295,7 @@ init coll = MkConfig {
   , rlwrap       = False
   , autoLibs     = []
   , autoApps     = []
+  , autoLoad     = NoPkgs
   , custom       = empty
   , queryType    = NameOnly
   , logLevel     = Warning
@@ -297,6 +323,7 @@ update ci cm = MkConfig {
   , rlwrap       = fromMaybe ci.rlwrap cm.rlwrap
   , autoLibs     = sortedNub (ci.autoLibs ++ concat cm.autoLibs)
   , autoApps     = sortedNub (ci.autoApps ++ concat cm.autoApps)
+  , autoLoad     = fromMaybe ci.autoLoad cm.autoLoad
   , custom       = mergeWith mergeRight ci.custom (fromMaybe empty cm.custom)
   , queryType    = fromMaybe ci.queryType cm.queryType
   , logLevel     = fromMaybe ci.logLevel cm.logLevel
@@ -319,6 +346,33 @@ data HasIdris : Config -> DB -> Type where
 --          Env
 --------------------------------------------------------------------------------
 
+||| Cache used during package resolution
+public export
+0 LibCache : Type
+LibCache = IORef (SortedMap PkgName $ ResolvedLib U)
+
+||| Create an empty library cache
+export
+emptyCache : HasIO io => io LibCache
+emptyCache = newIORef SortedMap.empty
+
+||| Cache a resolved library
+export
+cacheLib :  HasIO io
+         => (ref : LibCache)
+         => PkgName
+         -> ResolvedLib U
+         -> io (ResolvedLib U)
+cacheLib n lib = modifyIORef ref (insert n lib) $> lib
+
+||| Lookup a library in the cache
+export
+lookupLib :  HasIO io
+          => (ref : LibCache)
+          => PkgName
+          -> io (Maybe $ ResolvedLib U)
+lookupLib n = lookup n <$> readIORef ref
+
 ||| Environment used by most pack methods, consisting of
 ||| the `PACK_DIR` environment variable, the user-defined
 ||| application configuratin, and the data collection to
@@ -329,6 +383,7 @@ record Env where
   packDir : PackDir
   tmpDir  : TmpDir
   config  : Config
+  cache   : LibCache
   db      : DB
 
 ||| This allows us to use an `Env` in scope when we
@@ -342,6 +397,12 @@ envToPackDir = e.packDir
 export %inline %hint
 envToTmpDir : (e : Env) => TmpDir
 envToTmpDir = e.tmpDir
+
+||| This allows us to use an `Env` in scope when we
+||| need an auto-implicit `LibCache`.
+export %inline %hint
+envToCache : (e : Env) => LibCache
+envToCache = e.cache
 
 ||| This allows us to use an `Env` in scope when we
 ||| need an auto-implicit `Config`.

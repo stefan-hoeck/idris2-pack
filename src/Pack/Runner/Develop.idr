@@ -7,6 +7,7 @@ import Pack.Core
 import Pack.Database
 import Pack.Runner.Database
 import Pack.Runner.Install
+import Pack.Runner.Query
 
 %default total
 
@@ -30,24 +31,41 @@ findIpkg (Search $ CD dir) fi =
 findIpkg None         _  = pure Nothing
 findIpkg (Use x)      _  = pure (Just x)
 
+-- returns the direct dependencies to be included in a REPL session
+covering
+replDeps :  HasIO io
+         => (e : IdrisEnv)
+         => Maybe (Desc Safe)
+         -> Autoload
+         -> EitherT PackErr io (List PkgName)
+replDeps _        (ForcePkgs ps) = pure ps
+replDeps (Just d) _              = pure $ dependencies d
+replDeps Nothing  NoPkgs         = pure $ []
+replDeps Nothing  AutoLibs       = pure $ e.env.config.autoLibs
+replDeps Nothing  (AutoPkgs ps)  = pure $ ps
+replDeps Nothing  Installed      =
+  map name . filter installedLib <$> resolveAll
+
 covering
 replOpts :  HasIO io
          => (e : IdrisEnv)
          => (file : Maybe $ File Abs)
          -> EitherT PackErr io (String, Codegen, Maybe $ File Abs)
 replOpts mf = do
-  Just p <- findIpkg e.env.config.withIpkg mf
-    | Nothing => pure ("",e.env.config.codegen,Nothing)
-  info "Found `.ipkg` file at \{p}"
-  d <- parseLibIpkg p p
-  let srcDir := maybe "" (\s => "--source-dir \"\{s}\"") d.desc.sourcedir
-      pkgs   := unwords $ map (("-p " ++) . value) (dependencies d)
-      cg     := ipkgCodeGen d.desc
+  mp   <- findIpkg e.env.config.withIpkg mf
+  for_ mp $ \p => info "Found `.ipkg` file at \{p}"
+  md   <- traverse (\p => parseLibIpkg p p) mp
+  libs <- map (Library,) <$> replDeps md e.env.config.autoLoad
+  tds  <- mapMaybe libName <$> transitiveDeps libs
+
+  let srcDir := maybe "" (\s => "--source-dir \"\{s}\"") (md >>= sourcedir . desc)
+      pkgs   := unwords $ map (("-p " ++) . value) tds
+      cg     := maybe e.env.config.codegen (ipkgCodeGen . desc) md
       cgOpt  := case cg of
                   Default => ""
                   _       => "--cg \{cg}"
-  installDeps d
-  pure ("\{srcDir} \{cgOpt} \{pkgs}", cg, Just p)
+  install libs
+  pure ("\{srcDir} \{cgOpt} \{pkgs}", cg, mp)
 
 -- return the path of an Idris source file to an `.ipkg` file.
 srcFileRelativeToIpkg : (ipkg,idr : Maybe (File Abs)) -> String

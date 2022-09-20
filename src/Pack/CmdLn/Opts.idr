@@ -49,6 +49,11 @@ setIpkg v (CD dir) c = case readAbsFile dir v of
   Right af => Right $ {withIpkg := Use af} c
   Left err => Left err
 
+setPkgs : String -> AdjConf
+setPkgs str _ c =
+  let ps = map MkPkgName . forget $ split (',' ==) str
+   in Right $ {autoLoad := ForcePkgs ps} c
+
 noIpkg : AdjConf
 noIpkg _ = Right . {withIpkg := None}
 
@@ -69,6 +74,11 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             """
             Sets the scheme executable for installing the Idris2 compiler.
             As a default, this is set to `scheme`.
+            """
+        , MkOpt ['p'] ["--packages"]  (ReqArg setPkgs "<packages>")
+            """
+            Load the given (comma-separated) list of packages into the REPL
+            session.
             """
         , MkOpt ['s'] ["short-desc"]   (NoArg $ setQuery ShortDesc)
             """

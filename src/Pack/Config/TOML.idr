@@ -10,6 +10,14 @@ import Pack.Database
 %default total
 
 export
+FromTOML Autoload where
+  fromTOML dir v = case v of
+    VString "none"      => Right NoPkgs
+    VString "installed" => Right Installed
+    VString "autolibs"  => Right AutoLibs
+    _                   => AutoPkgs <$> fromTOML dir v
+
+export
 FromTOML Codegen where
   fromTOML = tmap Types.fromString
 
@@ -30,6 +38,7 @@ FromTOML UserConfig where
                   (maybeValAt "idris2.repl.rlwrap" f v)
                   (maybeValAt "install.libs" f v)
                   (maybeValAt "install.apps" f v)
+                  (maybeValAt "install.autoload" f v)
                   (maybeValAt "custom" f v)
                   (pure Nothing)
                   (pure Nothing)
@@ -72,6 +81,13 @@ initToml scheme db = """
   # Must-have applications. These will be installed automatically
   # when using a new package collection.
   # apps       = [ "lsp" ]
+
+  # Packages to load automatically when starting a REPL session
+  # without an `.ipkg` file in scope. This defaults to "none".
+  # Note: Uncomment only one of the following examples:
+  # autoload   = "installed"
+  # autoload   = "autolibs"
+  # autoload   = [ "sop", "toml" ]
 
   [pack]
 
