@@ -3,6 +3,7 @@
 ||| pack.
 module MicroPack
 
+import Data.IORef
 import Data.Maybe
 import Data.SortedMap
 import Data.String
@@ -32,6 +33,7 @@ microInit scheme db = MkConfig {
   , rlwrap        = False
   , autoLibs      = []
   , autoApps      = []
+  , autoLoad      = NoPkgs
   , custom        = empty
   , queryType     = NameOnly
   , logLevel      = Info
@@ -44,6 +46,7 @@ main : IO ()
 main = run $ do
   dir     <- getPackDir
   td      <- mkTmpDir
+  cache   <- emptyCache
   mkDir packDir
   defCol  <- defaultColl
   args    <- getArgs

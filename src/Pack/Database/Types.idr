@@ -374,6 +374,12 @@ namespace LibOrApp
   name (Lib x)   = x.name
   name (App _ x) = x.name
 
+  ||| Try to extract the package name of a resolved library.
+  export
+  libName : LibOrApp t s -> Maybe PkgName
+  libName (Lib x)   = Just x.name
+  libName (App _ _) = Nothing
+
 --------------------------------------------------------------------------------
 --          Package Database
 --------------------------------------------------------------------------------

@@ -136,6 +136,8 @@ opts "--" "pack"  = pure optionFlags
 opts x "--package-set"    = prefixOnlyIfNonEmpty x <$> collections
 opts x "--with-ipkg"      = prefixOnlyIfNonEmpty x <$> ipkgFiles
 opts x "-p"               = prefixOnlyIfNonEmpty x <$> collections
+opts x "-P"               = prefixOnlyIfNonEmpty x <$> pure packages
+opts x "--packages"       = prefixOnlyIfNonEmpty x <$> pure packages
 opts x "--cg"             = prefixOnlyIfNonEmpty x <$> pure codegens
 
 -- actions

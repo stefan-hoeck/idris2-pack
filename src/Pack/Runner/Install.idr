@@ -222,7 +222,6 @@ installAny (App b sla) = installApp b sla
 covering
 docsImpl :  HasIO io
          => (e : IdrisEnv)
-         => LibCache
          => SafeLib
          -> EitherT PackErr io ()
 docsImpl rl = do
@@ -250,7 +249,6 @@ docsImpl rl = do
 ||| Install the API docs for the given resolved library.
 export covering
 installDocs :  HasIO io
-            => LibCache
             => IdrisEnv
             => SafeLib
             -> EitherT PackErr io ()
@@ -281,7 +279,6 @@ install :  HasIO io
         => List (InstallType, PkgName)
         -> EitherT PackErr io ()
 install ps = do
-  c   <- emptyCache
   all <- plan $ katla <+> autoPairs <+> ps
   logMany Info "Installing libraries:" (libInfo all)
   logMany Info "Installing apps:" (appInfo all)
@@ -305,6 +302,7 @@ export covering
 idrisEnv :  HasIO io
          => PackDir
          => TmpDir
+         => LibCache
          => MetaConfig
          -> (fetch : Bool)
          -> EitherT PackErr io IdrisEnv
@@ -345,7 +343,7 @@ update e =
 --------------------------------------------------------------------------------
 
 covering
-removeApp : HasIO io => LibCache => Env => PkgName -> EitherT PackErr io ()
+removeApp : HasIO io => Env => PkgName -> EitherT PackErr io ()
 removeApp n = do
   info "Removing application \{n}"
   ra <- resolveApp n
@@ -353,7 +351,7 @@ removeApp n = do
   rmDir (pkgBinDir ra.name ra.pkg)
 
 covering
-removeLib : HasIO io => LibCache => Env => PkgName -> EitherT PackErr io ()
+removeLib : HasIO io => Env => PkgName -> EitherT PackErr io ()
 removeLib n = do
   rl <- resolveLib n
   info "Removing library \{n}"

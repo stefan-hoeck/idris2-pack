@@ -10,6 +10,14 @@ import Pack.Database
 %default total
 
 export
+FromTOML Autoload where
+  fromTOML dir v = case v of
+    VString "none"      => Right NoPkgs
+    VString "installed" => Right Installed
+    VString "autolibs"  => Right AutoLibs
+    _                   => AutoPkgs <$> fromTOML dir v
+
+export
 FromTOML Codegen where
   fromTOML = tmap Types.fromString
 
@@ -30,6 +38,7 @@ FromTOML UserConfig where
                   (maybeValAt "idris2.repl.rlwrap" f v)
                   (maybeValAt "install.libs" f v)
                   (maybeValAt "install.apps" f v)
+                  (maybeValAt "idris2.repl.autoload" f v)
                   (maybeValAt "custom" f v)
                   (pure Nothing)
                   (pure Nothing)
@@ -99,6 +108,13 @@ initToml scheme db = """
   # `rlwrap`. This will give you additional features such as a
   # command history.
   repl.rlwrap = false
+
+  # Packages to load automatically when starting a REPL session
+  # without an `.ipkg` file in scope. This defaults to "none".
+  # Note: Uncomment only one of the following examples:
+  # repl.autoload   = "installed"
+  # repl.autoload   = "autolibs"
+  # repl.autoload   = [ "sop", "toml" ]
 
   # Override this to use a custom GitHub repo for the Idris compiler
   # url = "https://github.com/idris-lang/Idris2"
