@@ -19,6 +19,7 @@ data Cmd : Type where
   Build            : Either (File Abs) PkgName -> Cmd
   BuildDeps        : Either (File Abs) PkgName -> Cmd
   Typecheck        : Either (File Abs) PkgName -> Cmd
+  Clean            : Either (File Abs) PkgName -> Cmd
   Repl             : (src : Maybe $ File Abs) -> Cmd
   Exec             : (srd : File Abs) -> (args : List String) -> Cmd
 

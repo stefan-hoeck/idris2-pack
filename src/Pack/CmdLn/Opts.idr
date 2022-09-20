@@ -220,6 +220,10 @@ usageInfo = """
     typecheck <.ipkg file or local pkg name>
       Typecheck a local package given as an `.ipkg` file or package name.
 
+    clean <.ipkg file or local pkg name>
+      Clean up a local package by invoking `idris2 --clean` on its
+      `.ipkg` file
+
     repl [.idr file]
       Start a REPL session loading an optional `.idr` file.
       Use command line option `--with-ipkg` to load settings
