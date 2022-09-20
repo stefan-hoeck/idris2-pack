@@ -29,6 +29,7 @@ Command Cmd where
   defaultLevel (Build x)              = Info
   defaultLevel (BuildDeps x)          = Info
   defaultLevel (Typecheck x)          = Info
+  defaultLevel (Clean x)              = Info
   defaultLevel (Exec _ _)             = Warning
   defaultLevel (New _ _ _)            = Info
   defaultLevel (Repl x)               = Warning
@@ -76,6 +77,7 @@ Command Cmd where
   readCommand_ cd ["build", file]            = pkgOrIpkg cd file Build
   readCommand_ cd ["install-deps", file]     = pkgOrIpkg cd file BuildDeps
   readCommand_ cd ["typecheck", file]        = pkgOrIpkg cd file Typecheck
+  readCommand_ cd ["clean", file]            = pkgOrIpkg cd file Clean
   readCommand_ _  ("install" :: xs)          =
     Right . Install $ map (\s => (Library, MkPkgName s)) xs
 
@@ -140,6 +142,7 @@ runCmd = do
     Build p            => idrisEnv mc fetch >>= build p
     BuildDeps p        => idrisEnv mc fetch >>= buildDeps p
     Typecheck p        => idrisEnv mc fetch >>= typecheck p
+    Clean p            => idrisEnv mc fetch >>= clean p
     PrintHelp          => putStrLn usageInfo
     Install ps         => idrisEnv mc fetch >>= \e => install ps
     Remove ps          => idrisEnv mc fetch >>= \e => remove ps

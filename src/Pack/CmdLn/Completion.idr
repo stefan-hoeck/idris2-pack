@@ -96,6 +96,7 @@ optionFlags : List String
 optionFlags =
   [ "app-path"
   , "build"
+  , "clean"
   , "completion"
   , "completion-script"
   , "data-path"
@@ -156,6 +157,7 @@ opts x "remove"           = prefixOnlyIfNonEmpty x <$> installedLibs
 opts x "remove-app"       = prefixOnlyIfNonEmpty x <$> installedApps
 opts x "switch"           =   prefixOnlyIfNonEmpty x . ("latest" ::)
                             <$> collections
+opts x "clean"            = prefixOnlyIfNonEmpty x <$> ipkgFiles
 opts x "typecheck"        = prefixOnlyIfNonEmpty x <$> ipkgFiles
 opts x "new"              = prefixOnlyIfNonEmpty x <$> pure (packageTypes)
 

@@ -132,7 +132,7 @@ build :  HasIO io
       -> EitherT PackErr io ()
 build f e = findAndParseLocalIpkg f >>= runIdrisOn "--build"
 
-||| Install dependencies of a local `.ipkg` file
+||| Install dependencies of a local `.ipkg` file or package name
 export covering
 buildDeps :  HasIO io
           => Either (File Abs) PkgName
@@ -142,13 +142,21 @@ buildDeps f e = do
   d <- findAndParseLocalIpkg f
   installDeps d
 
-||| Typecheck a local library given as an `.ipkg` file.
+||| Typecheck a local library given as an `.ipkg` file or package name
 export covering %inline
 typecheck :  HasIO io
           => Either (File Abs) PkgName
           -> IdrisEnv
           -> EitherT PackErr io ()
 typecheck f e = findAndParseLocalIpkg f >>= runIdrisOn "--typecheck"
+
+||| Cleanup a local library given as an `.ipkg` file or package name
+export covering %inline
+clean :  HasIO io
+          => Either (File Abs) PkgName
+          -> IdrisEnv
+          -> EitherT PackErr io ()
+clean f e = findAndParseLocalIpkg f >>= libPkg [] "--clean"
 
 ||| Build and execute a local `.ipkg` file.
 export covering
