@@ -88,7 +88,9 @@ sysWithEnv :  HasIO io
            => (cmd : String)
            -> (env : List (String,String))
            -> EitherT PackErr io ()
-sysWithEnv = sys .: cmdWithEnv
+sysWithEnv cmd env = do
+  0 <- system (cmdWithEnv cmd env) | n => throwE (Sys cmd n)
+  pure ()
 
 ||| Tries to run a system command returning its output.
 export covering
@@ -110,7 +112,9 @@ sysRunWithEnv :  HasIO io
               => (cmd : String)
               -> (env : List (String,String))
               -> EitherT PackErr io String
-sysRunWithEnv = sysRun .: cmdWithEnv
+sysRunWithEnv cmd env = do
+  (res,0) <- System.run (cmdWithEnv cmd env) | (_,n) => throwE (Sys cmd n)
+  pure res
 
 --------------------------------------------------------------------------------
 --         Working with Directories
