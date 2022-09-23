@@ -44,6 +44,7 @@ modules = Pack.CmdLn
         , Pack.Runner.Database
         , Pack.Runner.Develop
         , Pack.Runner.Install
+        , Pack.Runner.New
         , Pack.Runner.Query
 
         , Pack.Version
