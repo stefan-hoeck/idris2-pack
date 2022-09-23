@@ -2,6 +2,7 @@ module Pack.Config.Environment
 
 import Data.Maybe
 import Data.SortedMap as SM
+import Data.String
 import Idris.Package.Types
 import Pack.CmdLn
 import Pack.Config.TOML
@@ -356,6 +357,8 @@ idrisWithPkgs pkgs =
 
 ||| Logs a message to stdout if the log level is greater than or equal
 ||| than the reference level `ref`.
+||| If the given string contains newlines, all lines are printed idented
+||| to the beginning of the first one.
 export
 log :  HasIO io
     => (ref : LogLevel)
@@ -363,7 +366,14 @@ log :  HasIO io
     -> (msg : Lazy String)
     -> io ()
 log ref lvl msg =
-  when (lvl >= ref) (putStrLn "[ \{lvl} ] \{msg}")
+  when (lvl >= ref) $ do
+    let (s::ss) = lines msg
+      | [] => pure ()
+    let prefx = "[ \{lvl} ] "
+    putStrLn "\{prefx}\{s}"
+    when (not $ null ss) $ do
+      let prefx = replicate (length prefx) ' '
+      for_ ss $ \s => putStrLn "\{prefx}\{s}"
 
 ||| Logs an idented list of values to stdout if the given log level
 ||| is greater than or equal than the (auto-implicit) reference level `ref`.
