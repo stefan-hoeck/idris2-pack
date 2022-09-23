@@ -324,10 +324,10 @@ buildEnv = sequence [packagePath, libPath, dataPath]
 ||| Idris executable to use together with the
 ||| `--cg` (codegen) command line option.
 export
-idrisWithCG : (e : Env) => String
+idrisWithCG : (e : Env) => List String
 idrisWithCG = case e.config.codegen of
-  Default => "\{idrisExec}"
-  cg      => "\{idrisExec} --cg \{cg}"
+  Default => ["\{idrisExec}"]
+  cg      => ["\{idrisExec}", "--cg", "\{cg}"]
 
 ||| Idris executable loading the given package plus the
 ||| environment variables needed to run it.
@@ -335,9 +335,9 @@ export
 idrisWithPkg :  HasIO io
              => IdrisEnv
              => ResolvedLib t
-             -> io (String, List (String,String))
+             -> io (List String, List (String,String))
 idrisWithPkg rl =
-  ("\{idrisWithCG} -p \{name rl}",) <$> buildEnv
+  (idrisWithCG ++ ["-p", "\{name rl}"],) <$> buildEnv
 
 ||| Idris executable loading the given packages plus the
 ||| environment variables needed to run it.
@@ -345,11 +345,11 @@ export
 idrisWithPkgs :  HasIO io
               => IdrisEnv
               => List (ResolvedLib t)
-              -> io (String, List (String,String))
+              -> io (List String, List (String,String))
 idrisWithPkgs [] = pure (idrisWithCG, [])
 idrisWithPkgs pkgs =
-  let ps = fastConcat $ map (\p => " -p \{name p}") pkgs
-   in ("\{idrisWithCG}\{ps}",) <$> buildEnv
+  let ps = concatMap (\p => ["-p", "\{name p}"]) pkgs
+   in (idrisWithCG ++ ps,) <$> buildEnv
 
 --------------------------------------------------------------------------------
 --          Environment

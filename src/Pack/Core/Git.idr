@@ -40,12 +40,12 @@ gitClone :  HasIO io
          => (url  : URL)
          -> (dest : Path Abs)
          -> EitherT PackErr io ()
-gitClone url dest = sys "git clone -q \{url} \{dest}"
+gitClone url dest = sys ["git", "clone", "-q", "\{url}", "\{dest}"]
 
 ||| Checkout to the given commit
 export
 gitCheckout : HasIO io => (commit : Commit) -> EitherT PackErr io ()
-gitCheckout commit = sys "git checkout -q \{commit}"
+gitCheckout commit = sys ["git", "checkout", "-q", "\{commit}"]
 
 ||| Query GitHub for the latest commit of the main branch.
 export covering
@@ -54,7 +54,7 @@ gitLatest :  HasIO io
           -> (branch : Branch)
           -> EitherT PackErr io Commit
 gitLatest url b =
-  MkCommit . fst . break isSpace <$> sysRun "git ls-remote \{url} \{b}"
+  MkCommit . fst . break isSpace <$> sysRun ["git", "ls-remote", "\{url}", "\{b}"]
 
 ||| (Temporary) Directory to use for a Git project.
 export

@@ -461,7 +461,7 @@ data PackErr : Type where
   DirEntries : (path : Path Abs) -> (err : FileError) -> PackErr
 
   ||| Error when running the given system command
-  Sys        : (cmd : String) -> (err : Int) -> PackErr
+  Sys        : (cmd : List String) -> (err : Int) -> PackErr
 
   ||| Error when changing into the given directory
   ChangeDir  : (path : Path Abs) -> PackErr
@@ -584,7 +584,7 @@ printErr (DirEntries path err) =
 
 printErr (Sys cmd err) = """
   Error when executing system command.
-  Command: \{cmd}
+  Command: \{escapeCmd cmd}
   Error code: \{show err}
   """
 
