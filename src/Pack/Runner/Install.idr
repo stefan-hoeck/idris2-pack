@@ -316,10 +316,7 @@ update e =
       ipkg := MkF dir "pack.ipkg"
       bin  := packBinDir
    in finally (rmDir dir) $ do
-        info """
-          Updating pack. If this fails, try switching to the latest
-          package collection.
-          """
+        info "Updating pack. If this fails, try switching to the latest package collection."
         gitClone packRepo dir
         traverse_ (\c => inDir dir $ \_ => gitCheckout c) packCommit
 
