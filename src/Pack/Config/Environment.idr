@@ -355,9 +355,30 @@ idrisWithPkgs pkgs =
 --          Logging
 --------------------------------------------------------------------------------
 
+printLogMessage :  HasIO io
+                => (lvl : LogLevel)
+                -> (msg : String)
+                -> (msgs : List String)
+                -> io ()
+printLogMessage lvl msg msgs = do
+  let prefx = "[ \{lvl} ] "
+  let baseIndent = replicate (length prefx) ' '
+  printMultilineIndented prefx baseIndent msg
+  for_ msgs $ printMultilineIndented "\{baseIndent}- " "\{baseIndent}  "
+
+  where
+    printMultilineIndented :  (fstPrefix, restPrefix : String)
+                           -> (msg : String)
+                           -> io ()
+    printMultilineIndented fstPrefix restPrefix msg = do
+      let (s::ss) = lines msg
+        | [] => putStrLn "\{fstPrefix}"
+      putStrLn "\{fstPrefix}\{s}"
+      for_ ss $ \s => putStrLn "\{restPrefix}\{s}"
+
 ||| Logs a message to stdout if the log level is greater than or equal
 ||| than the reference level `ref`.
-||| If the given string contains newlines, all lines are printed idented
+||| If the given string contains newlines, all lines are printed indented
 ||| to the beginning of the first one.
 export
 log :  HasIO io
@@ -366,17 +387,11 @@ log :  HasIO io
     -> (msg : Lazy String)
     -> io ()
 log ref lvl msg =
-  when (lvl >= ref) $ do
-    let (s::ss) = lines msg
-      | [] => pure ()
-    let prefx = "[ \{lvl} ] "
-    putStrLn "\{prefx}\{s}"
-    when (not $ null ss) $ do
-      let prefx = replicate (length prefx) ' '
-      for_ ss $ \s => putStrLn "\{prefx}\{s}"
+  when (lvl >= ref) $ printLogMessage lvl msg []
 
 ||| Logs an idented list of values to stdout if the given log level
 ||| is greater than or equal than the (auto-implicit) reference level `ref`.
+||| If messages list is empty, no log message is printed.
 |||
 ||| Note: Most of the time `ref` is automatically being extracted from
 ||| a value of type `Pack.Config.Types.Config` in scope.
@@ -388,8 +403,7 @@ logMany :  HasIO io
         -> (msgs : Lazy (List String))
         -> io ()
 logMany lvl msg msgs =
-  when (lvl >= ref && not (null msgs)) $ do
-    log ref lvl $ unlines (msg :: map (indent 2) msgs)
+  when (lvl >= ref && not (null msgs)) $ printLogMessage lvl msg msgs
 
 ||| Alias for `log ref Debug`.
 |||
