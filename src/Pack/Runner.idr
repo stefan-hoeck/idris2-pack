@@ -26,24 +26,24 @@ pkgOrIpkg (CD dir) s f = case readAbsFile dir s of
                    else Right (f . Right $ MkPkgName s)
 
 Command Cmd where
-  defaultLevel (Build x)              = Info
-  defaultLevel (BuildDeps x)          = Info
-  defaultLevel (Typecheck x)          = Info
-  defaultLevel (Clean x)              = Info
+  defaultLevel (Build x)              = Build
+  defaultLevel (BuildDeps x)          = Build
+  defaultLevel (Typecheck x)          = Build
+  defaultLevel (Clean x)              = Build
   defaultLevel (Exec _ _)             = Warning
-  defaultLevel (New _ _ _)            = Info
+  defaultLevel (New _ _ _)            = Build
   defaultLevel (Repl x)               = Warning
-  defaultLevel (Install xs)           = Info
-  defaultLevel (Remove xs)            = Info
+  defaultLevel (Install xs)           = Build
+  defaultLevel (Remove xs)            = Build
   defaultLevel (Run x strs)           = Warning
-  defaultLevel Update                 = Info
-  defaultLevel Fetch                  = Info
+  defaultLevel Update                 = Build
+  defaultLevel Fetch                  = Build
   defaultLevel PackagePath            = Silence
   defaultLevel LibsPath               = Silence
   defaultLevel DataPath               = Silence
   defaultLevel (AppPath x)            = Silence
-  defaultLevel (Switch x)             = Info
-  defaultLevel UpdateDB               = Info
+  defaultLevel (Switch x)             = Build
+  defaultLevel UpdateDB               = Build
   defaultLevel Info                   = Warning
   defaultLevel (Query x str)          = Warning
   defaultLevel (Fuzzy xs str)         = Warning
