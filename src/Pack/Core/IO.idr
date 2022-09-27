@@ -1,6 +1,7 @@
 module Pack.Core.IO
 
 import public Control.Monad.Either
+import Pack.Core.Logging
 import Pack.Core.Types
 import System
 import System.Directory
@@ -71,6 +72,17 @@ sys cmd = do
   0 <- system cmd | n => throwE (Sys cmd n)
   pure ()
 
+logCmdOutput : HasIO io => (ref, lvl : LogLevel) -> (msg : String) -> io ()
+logCmdOutput ref lvl msg =
+  when (msg /= "") $ log ref lvl msg
+
+||| Tries to run a system command while logging its output.
+export covering
+sysAndLog : HasIO io => (ref : LogLevel) => (lvl : LogLevel) -> (cmd : String) -> EitherT PackErr io ()
+sysAndLog lvl cmd = do
+  0 <- System.runProcessingOutput (logCmdOutput ref lvl) cmd | n => throwE (Sys cmd n)
+  pure ()
+
 cmdWithEnv : String -> List (String,String) -> String
 cmdWithEnv cmd []  = cmd
 cmdWithEnv cmd env = "\{dispEnv env} \{cmd}"
@@ -90,6 +102,17 @@ sysWithEnv :  HasIO io
            -> EitherT PackErr io ()
 sysWithEnv cmd env = do
   0 <- system (cmdWithEnv cmd env) | n => throwE (Sys cmd n)
+  pure ()
+
+export covering
+sysWithEnvAndLog :  HasIO io
+                 => (ref : LogLevel)
+                 => (lvl : LogLevel)
+                 -> (cmd : String)
+                 -> (env : List (String,String))
+                 -> EitherT PackErr io ()
+sysWithEnvAndLog lvl cmd env = do
+  0 <- System.runProcessingOutput (logCmdOutput ref lvl) (cmdWithEnv cmd env) | n => throwE (Sys cmd n)
   pure ()
 
 ||| Tries to run a system command returning its output.
