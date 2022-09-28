@@ -120,9 +120,9 @@ exec file args e = do
 
   case mp of
     Just af => inDir af.parent $ \_ => do
-      sysWithEnv cmd [pth]
+      sysWithEnvAndLog Build cmd [pth]
       sys run
-    Nothing => sysWithEnv cmd [pth] >> sys run
+    Nothing => sysWithEnvAndLog Build cmd [pth] >> sys run
 
 ||| Build a local library given as an `.ipkg` file.
 export covering %inline
