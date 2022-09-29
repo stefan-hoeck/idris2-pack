@@ -80,7 +80,7 @@ logCmdOutput ref lvl msg =
 export covering
 sysAndLog : HasIO io => (ref : LogLevel) => (lvl : LogLevel) -> (cmd : CmdArgList) -> EitherT PackErr io ()
 sysAndLog lvl cmd = do
-  0 <- runProcessingOutput (logCmdOutput ref lvl) (escapeCmd cmd) | n => throwE (Sys cmd n)
+  0 <- runProcessingOutput (logCmdOutput ref lvl) (escapeCmd $ ["stdbuf", "-oL"] ++ cmd) | n => throwE (Sys cmd n)
   pure ()
 
 cmdWithEnv : CmdArgList -> List (String,String) -> String
@@ -112,7 +112,7 @@ sysWithEnvAndLog :  HasIO io
                  -> (env : List (String,String))
                  -> EitherT PackErr io ()
 sysWithEnvAndLog lvl cmd env = do
-  0 <- System.runProcessingOutput (logCmdOutput ref lvl) (cmdWithEnv cmd env) | n => throwE (Sys cmd n)
+  0 <- System.runProcessingOutput (logCmdOutput ref lvl) (cmdWithEnv (["stdbuf", "-oL"] ++ cmd) env) | n => throwE (Sys cmd n)
   pure ()
 
 ||| Tries to run a system command returning its output.
