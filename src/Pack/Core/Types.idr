@@ -498,6 +498,9 @@ data PackErr : Type where
   ||| Invalid package version
   InvalidPkgVersion : (s : String) -> PackErr
 
+  ||| Invalid log level
+  InvalidLogLevel : (s : String) -> PackErr
+
   ||| Failed to parse an .ipkg file
   InvalidIpkgFile  : (path : File Abs) -> PackErr
 
@@ -611,6 +614,15 @@ printErr (InvalidPkgType s) = """
   """
 
 printErr (InvalidPkgVersion s) = "Invalid package version: \{quote s}."
+
+printErr (InvalidLogLevel s) = """
+  Invalid log level: \{quote s}. Valid values are
+    debug
+    build
+    info
+    warning
+    silence
+  """
 
 printErr (UnknownPkg name) = "Unknown package: \{name}"
 
@@ -733,3 +745,12 @@ Interpolation LogLevel where
   interpolate Info    = "info"
   interpolate Warning = "warning"
   interpolate Silence = ""
+
+export
+readLogLevel : String -> Either PackErr LogLevel
+readLogLevel "debug"   = Right Debug
+readLogLevel "build"   = Right Build
+readLogLevel "info"    = Right Info
+readLogLevel "warning" = Right Warning
+readLogLevel "silence" = Right Silence
+readLogLevel str       = Left (InvalidLogLevel str)
