@@ -97,7 +97,7 @@ libPkg env cmd desc =
    in do
      pre <- (env ++) <$> buildEnv
      debug "About to run: \{s}"
-     inDir (desc.path.parent) (\_ => sysWithEnv s pre)
+     inDir (desc.path.parent) (\_ => sysWithEnvAndLog Build s pre)
 
 --------------------------------------------------------------------------------
 --          Installing Idris
@@ -111,11 +111,11 @@ mkIdris = do
   when !(missing idrisInstallDir) $ do
     debug "No Idris compiler found. Installing..."
     withCoreGit $ \dir => do
-      sys "make bootstrap \{prefixVar} \{schemeVar}"
-      sys "make install-support \{prefixVar}"
-      sys "make install-idris2 \{prefixVar}"
-      sys "make clean-libs"
-      sys "rm -r build/ttc build/exec"
+      sysAndLog Build "make bootstrap \{prefixVar} \{schemeVar}"
+      sysAndLog Build "make install-support \{prefixVar}"
+      sysAndLog Build "make install-idris2 \{prefixVar}"
+      sysAndLog Build "make clean-libs"
+      sysAndLog Build "rm -r build/ttc build/exec"
       cacheCoreIpkgFiles dir
 
   appLink "idris2" "idris2" True Default
@@ -166,7 +166,7 @@ installLib rl = case rl.status of
             let cache   := coreCachePath c
             copyFile cache ipkgAbs
             case c of
-              IdrisApi => sys "make src/IdrisPaths.idr"
+              IdrisApi => sysAndLog Build "make src/IdrisPaths.idr"
               _        => pure ()
             installImpl dir rl
 
@@ -239,7 +239,7 @@ docsImpl rl = do
     for_ fs $ \htmlFile =>
       let Just ds@(MkDS _ src ttm srcHtml) := sourceForDoc rl.desc htmlFile
             | Nothing => pure ()
-       in sys "\{katla} html \{src} \{ttm} > \{srcHtml}" >>
+       in sysAndLog Build "\{katla} html \{src} \{ttm} > \{srcHtml}" >>
           insertSources ds
 
   let docs := pkgDocs rl.name rl.pkg

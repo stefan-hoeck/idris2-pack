@@ -33,6 +33,7 @@ modules = Pack.CmdLn
         , Pack.Core.Git
         , Pack.Core.IO
         , Pack.Core.Ipkg
+        , Pack.Core.Logging
         , Pack.Core.TOML
         , Pack.Core.Types
 
