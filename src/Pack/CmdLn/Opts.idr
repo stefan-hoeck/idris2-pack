@@ -17,6 +17,12 @@ AdjConf = CurDir -> MetaConfig -> Either PackErr MetaConfig
 debug : AdjConf
 debug _ = Right . {logLevel := Debug}
 
+quiet : AdjConf
+quiet _ = Right . {logLevel := Silence}
+
+loglevel : String -> AdjConf
+loglevel str _ c = map (\ll => {logLevel := ll} c) (readLogLevel str)
+
 withSrc : AdjConf
 withSrc _ = Right . {withSrc := True}
 
@@ -134,6 +140,13 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             "Run a REPL session in `rlwrap`."
         , MkOpt ['v'] ["verbose"]   (NoArg debug)
             "Print debugging information"
+        , MkOpt ['q'] ["quiet"]   (NoArg quiet)
+            "Quiet mode"
+        , MkOpt [] ["log-level"]   (ReqArg loglevel "<log level>")
+            """
+            Specify the logging level to use. Accepted values are:
+            "debug", "build", "info", "warning", and "silence".
+            """
         ]
 
 ||| Names of all command line options (prefixed with "-" in case of
