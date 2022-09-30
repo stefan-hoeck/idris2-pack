@@ -273,20 +273,20 @@ packCommit = c.packCommit
 --          Environment Variables
 --------------------------------------------------------------------------------
 
-||| `$PREFIX` variable during Idris2 installation
+||| `$PREFIX` variable during Idris2 installation, unquoted
 export
 prefixVar : PackDir => DB => String
-prefixVar = "PREFIX=\{quote idrisPrefixDir}"
+prefixVar = "PREFIX=\{idrisPrefixDir}"
 
-||| `$IDRIS2_BOOT` variable during Idris2 installation
+||| `$IDRIS2_BOOT` variable during Idris2 installation, unquoted
 export
 idrisBootVar : PackDir => DB => String
-idrisBootVar = "IDRIS2_BOOT=\{quote idrisExec}"
+idrisBootVar = "IDRIS2_BOOT=\{idrisExec}"
 
-||| `$SCHEME` variable during Idris2 installation
+||| `$SCHEME` variable during Idris2 installation, unquoted
 export
 schemeVar : (c : Config) => String
-schemeVar = "SCHEME=\{quote c.scheme}"
+schemeVar = "SCHEME=\{c.scheme}"
 
 ||| `IDRIS2_PREFIX` to be used with Idris when installing a library
 ||| to a custom location.
