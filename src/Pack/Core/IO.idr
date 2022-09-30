@@ -9,6 +9,8 @@ import System.File
 
 %default total
 
+%ambiguity_depth 4
+
 --------------------------------------------------------------------------------
 --          Utilities
 --------------------------------------------------------------------------------
@@ -67,9 +69,9 @@ dispEnv = unwords . map (\(e,v) => "\{e}=\{quote v}")
 
 ||| Tries to run a system command.
 export
-sys : HasIO io => (cmd : List String) -> EitherT PackErr io ()
+sys : HasIO io => (cmd : CmdArgList) -> EitherT PackErr io ()
 sys cmd = do
-  0 <- system cmd | n => throwE (Sys cmd n)
+  0 <- system $ escapeCmd cmd | n => throwE (Sys cmd n)
   pure ()
 
 logCmdOutput : HasIO io => (ref, lvl : LogLevel) -> (msg : String) -> io ()
@@ -78,12 +80,12 @@ logCmdOutput ref lvl msg =
 
 ||| Tries to run a system command while logging its output.
 export covering
-sysAndLog : HasIO io => (ref : LogLevel) => (lvl : LogLevel) -> (cmd : List String) -> EitherT PackErr io ()
+sysAndLog : HasIO io => (ref : LogLevel) => (lvl : LogLevel) -> (cmd : CmdArgList) -> EitherT PackErr io ()
 sysAndLog lvl cmd = do
-  0 <- runProcessingOutput (logCmdOutput ref lvl) cmd | n => throwE (Sys cmd n)
+  0 <- runProcessingOutput (logCmdOutput ref lvl) (escapeCmd cmd) | n => throwE (Sys cmd n)
   pure ()
 
-cmdWithEnv : List String -> List (String,String) -> String
+cmdWithEnv : CmdArgList -> List (String,String) -> String
 cmdWithEnv cmd []  = escapeCmd cmd
 cmdWithEnv cmd env = "\{dispEnv env} \{escapeCmd cmd}"
 
@@ -97,7 +99,7 @@ cmdWithEnv cmd env = "\{dispEnv env} \{escapeCmd cmd}"
 ||| error message, just prefix `cmd` accordingly and use `sys`.
 export
 sysWithEnv :  HasIO io
-           => (cmd : List String)
+           => (cmd : CmdArgList)
            -> (env : List (String,String))
            -> EitherT PackErr io ()
 sysWithEnv cmd env = do
@@ -108,7 +110,7 @@ export covering
 sysWithEnvAndLog :  HasIO io
                  => (ref : LogLevel)
                  => (lvl : LogLevel)
-                 -> (cmd : List String)
+                 -> (cmd : CmdArgList)
                  -> (env : List (String,String))
                  -> EitherT PackErr io ()
 sysWithEnvAndLog lvl cmd env = do
@@ -117,9 +119,9 @@ sysWithEnvAndLog lvl cmd env = do
 
 ||| Tries to run a system command returning its output.
 export covering
-sysRun : HasIO io => (cmd : List String) -> EitherT PackErr io String
+sysRun : HasIO io => (cmd : CmdArgList) -> EitherT PackErr io String
 sysRun cmd = do
-  (res,0) <- run cmd | (_,n) => throwE (Sys cmd n)
+  (res,0) <- run (escapeCmd cmd) | (_,n) => throwE (Sys cmd n)
   pure res
 
 ||| Tries to run a system command prefixed with the given
@@ -132,7 +134,7 @@ sysRun cmd = do
 ||| error message, just prefix `cmd` accordingly and use `sys`.
 export covering
 sysRunWithEnv :  HasIO io
-              => (cmd : List String)
+              => (cmd : CmdArgList)
               -> (env : List (String,String))
               -> EitherT PackErr io String
 sysRunWithEnv cmd env = do

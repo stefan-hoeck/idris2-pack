@@ -408,6 +408,75 @@ dependencies : Desc t -> List PkgName
 dependencies d = dependencies d.desc
 
 --------------------------------------------------------------------------------
+--          CmdArg
+--------------------------------------------------------------------------------
+
+public export
+data CmdArg = Escapable String | NoEscape String
+
+public export
+record CmdArgList where
+  constructor MkCmdArgList
+  cmdArgList : List CmdArg
+
+export
+escapeCmd : CmdArgList -> String
+escapeCmd = unwords . map manageArg . cmdArgList where
+  manageArg : CmdArg -> String
+  manageArg $ Escapable s = escapeArg s
+  manageArg $ NoEscape s  = s
+
+namespace CmdArg
+
+  fromString : String -> CmdArg
+  fromString = Escapable
+
+  export
+  (++) : CmdArg -> CmdArg -> CmdArg
+  Escapable x ++ Escapable y = Escapable $ x ++ y
+  Escapable x ++ NoEscape y  = NoEscape $ escapeArg x ++ y
+  NoEscape x  ++ Escapable y = NoEscape $ x ++ escapeArg y
+  NoEscape x  ++ NoEscape y  = NoEscape $ x ++ y
+
+namespace CmdArgList
+
+  export
+  Nil : CmdArgList
+  Nil = MkCmdArgList []
+
+  export
+  (++) : CmdArgList -> CmdArgList -> CmdArgList
+  xs ++ ys = MkCmdArgList $ xs.cmdArgList ++ ys.cmdArgList
+
+  export
+  Semigroup CmdArgList where
+    (<+>) = (++)
+
+  export
+  Monoid CmdArgList where
+    neutral = []
+
+  export
+  concatMap : Monoid m => (CmdArg -> m) -> CmdArgList -> m
+  concatMap f = concatMap f . cmdArgList
+
+  export
+  fromStrList : List String -> CmdArgList
+  fromStrList = MkCmdArgList . map Escapable
+
+  namespace CmdArg
+
+    export
+    (::) : CmdArg -> CmdArgList -> CmdArgList
+    x :: xs = MkCmdArgList $ x :: xs.cmdArgList
+
+  namespace String
+
+    export
+    (::) : String -> CmdArgList -> CmdArgList
+    x :: xs = Escapable x :: xs
+
+--------------------------------------------------------------------------------
 --          Errors
 --------------------------------------------------------------------------------
 
@@ -461,7 +530,7 @@ data PackErr : Type where
   DirEntries : (path : Path Abs) -> (err : FileError) -> PackErr
 
   ||| Error when running the given system command
-  Sys        : (cmd : List String) -> (err : Int) -> PackErr
+  Sys        : (cmd : CmdArgList) -> (err : Int) -> PackErr
 
   ||| Error when changing into the given directory
   ChangeDir  : (path : Path Abs) -> PackErr

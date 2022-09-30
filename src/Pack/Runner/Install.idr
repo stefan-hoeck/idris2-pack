@@ -12,6 +12,8 @@ import System.Escape
 
 %default total
 
+%ambiguity_depth 6
+
 --------------------------------------------------------------------------------
 --          Utilities
 --------------------------------------------------------------------------------
@@ -38,7 +40,7 @@ copyApp ra =
    in do
      debug "Copying application to \{dir}"
      mkDir dir
-     sys ["cp", "-r", "\{buildPath ra.desc}/exec/*", "\{dir}"]
+     sys ["cp", "-r", Escapable "\{buildPath ra.desc}/exec/" ++ NoEscape "*", "\{dir}"]
 
 pthStr : PackDir => Bool -> String
 pthStr False = ""
@@ -79,7 +81,7 @@ appLink exec app withPkgPath cg =
       """
    in write target content >> sys ["chmod", "+x", "\{target}"]
 
-installCmd : (withSrc : Bool) -> List String
+installCmd : (withSrc : Bool) -> CmdArgList
 installCmd True  = ["--install-with-src"]
 installCmd False = ["--install"]
 
@@ -89,7 +91,7 @@ export
 libPkg :  HasIO io
        => IdrisEnv
        => (env  : List (String,String))
-       -> (cmd  : List String)
+       -> (cmd  : CmdArgList)
        -> (desc : Desc Safe)
        -> EitherT PackErr io ()
 libPkg env cmd desc =
@@ -240,7 +242,7 @@ docsImpl rl = do
     for_ fs $ \htmlFile =>
       let Just ds@(MkDS _ src ttm srcHtml) := sourceForDoc rl.desc htmlFile
             | Nothing => pure ()
-       in sysAndLog Build ["\{katla}", "html", "\{src}", "\{ttm}", ">", "\{srcHtml}"] >>
+       in sysAndLog Build ["\{katla}", "html", "\{src}", "\{ttm}", NoEscape ">", "\{srcHtml}"] >>
           insertSources ds
 
   let docs := pkgDocs rl.name rl.pkg
@@ -333,7 +335,7 @@ update e =
             False => do
               libPkg [] ["--build"] d
               mkDir installDir
-              sys ["cp", "-r", "build/exec/*", "\{installDir}"]
+              sys ["cp", "-r", NoEscape "build/exec/*", "\{installDir}"]
               link installedExec packExec
 
 --------------------------------------------------------------------------------

@@ -13,6 +13,8 @@ import System
 
 %default total
 
+%ambiguity_depth 4
+
 --------------------------------------------------------------------------------
 --          Files and Directories
 --------------------------------------------------------------------------------
@@ -324,7 +326,7 @@ buildEnv = sequence [packagePath, libPath, dataPath]
 ||| Idris executable to use together with the
 ||| `--cg` (codegen) command line option.
 export
-idrisWithCG : (e : Env) => List String
+idrisWithCG : (e : Env) => CmdArgList
 idrisWithCG = case e.config.codegen of
   Default => ["\{idrisExec}"]
   cg      => ["\{idrisExec}", "--cg", "\{cg}"]
@@ -335,7 +337,7 @@ export
 idrisWithPkg :  HasIO io
              => IdrisEnv
              => ResolvedLib t
-             -> io (List String, List (String,String))
+             -> io (CmdArgList, List (String,String))
 idrisWithPkg rl =
   (idrisWithCG ++ ["-p", "\{name rl}"],) <$> buildEnv
 
@@ -345,7 +347,7 @@ export
 idrisWithPkgs :  HasIO io
               => IdrisEnv
               => List (ResolvedLib t)
-              -> io (List String, List (String,String))
+              -> io (CmdArgList, List (String,String))
 idrisWithPkgs [] = pure (idrisWithCG, [])
 idrisWithPkgs pkgs =
   let ps = concatMap (\p => ["-p", "\{name p}"]) pkgs

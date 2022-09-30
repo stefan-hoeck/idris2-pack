@@ -11,10 +11,12 @@ import Pack.Runner.Query
 
 %default total
 
+%ambiguity_depth 4
+
 covering
 runIdrisOn :  HasIO io
            => IdrisEnv
-           => (cmd : List String)
+           => (cmd : CmdArgList)
            -> Desc Safe
            -> EitherT PackErr io ()
 runIdrisOn c d = do
@@ -50,7 +52,7 @@ covering
 replOpts :  HasIO io
          => (e : IdrisEnv)
          => (file : Maybe $ File Abs)
-         -> EitherT PackErr io (List String, Codegen, Maybe $ File Abs)
+         -> EitherT PackErr io (CmdArgList, Codegen, Maybe $ File Abs)
 replOpts mf = do
   mp   <- findIpkg e.env.config.withIpkg mf
   for_ mp $ \p => info "Found `.ipkg` file at \{p}"
@@ -59,7 +61,7 @@ replOpts mf = do
   tds  <- mapMaybe libName <$> transitiveDeps libs
 
   let srcDir := maybe [] (\s => ["--source-dir", "\{s}"]) (md >>= sourcedir . desc)
-      pkgs   := tds >>= \s => ["-p", value s]
+      pkgs   := concatMap (\td => ["-p", value td]) tds
       cg     := maybe e.env.config.codegen (ipkgCodeGen . desc) md
       cgOpt  := case cg of
                   Default => []
@@ -102,7 +104,7 @@ idrisRepl mf e = do
 export covering
 exec :  HasIO io
      => (file : File Abs)
-     -> (args : List String)
+     -> (args : CmdArgList)
      -> IdrisEnv
      -> EitherT PackErr io ()
 exec file args e = do
@@ -112,7 +114,7 @@ exec file args e = do
 
   let interp = case cg of
                   Node => ["node"]
-                  _ =>  []
+                  _    => []
       relFile := srcFileRelativeToIpkg mp (Just file)
       exe     := idrisWithCG
       cmd     := exe ++ opts ++ ["-o", "\{e.env.config.output}", "\{relFile}"]
@@ -162,7 +164,7 @@ clean f e = findAndParseLocalIpkg f >>= libPkg [] ["--clean"]
 export covering
 runIpkg :  HasIO io
         => File Abs
-        -> (args : List String)
+        -> (args : CmdArgList)
         -> IdrisEnv
         -> EitherT PackErr io ()
 runIpkg p args e = do
@@ -177,7 +179,7 @@ runIpkg p args e = do
 export covering
 execApp :  HasIO io
         => PkgName
-        -> (args : List String)
+        -> (args : CmdArgList)
         -> IdrisEnv
         -> EitherT PackErr io ()
 execApp p args e = do
