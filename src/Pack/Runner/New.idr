@@ -84,7 +84,7 @@ new (CD curdir) pty pkgName e = do
     debug "Initializing git repo"
     eitherT (\err => warn "Git repo creation failed: \{printErr err}")
             (\_ => write (MkF pkgRootDir ".gitignore") gitIgnoreFile)
-            (sysAndLog Info ["git", "init", "\{pkgRootDir}"])
+            (sysAndLog Info ["git", "init", pkgRootDir])
 
     debug "Writing ipkg file"
     write (MkF pkgRootDir  (pkgName <+> ".ipkg")) (renderString $ layoutUnbounded $ pretty ipkg)

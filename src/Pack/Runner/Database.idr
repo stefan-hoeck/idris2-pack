@@ -183,7 +183,7 @@ checkOutdated ts src deps o u =
     then pure o
     else do
       True <- fileExists ts | False => pure o
-      ""   <- trim <$> sysRun ["find", "\{src}", "-newer", "\{ts}"] | _ => pure o
+      ""   <- trim <$> sysRun ["find", src, "-newer", ts] | _ => pure o
       pure u
 
 -- checks the status of a library

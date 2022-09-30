@@ -326,8 +326,8 @@ buildEnv = sequence [packagePath, libPath, dataPath]
 export
 idrisWithCG : (e : Env) => CmdArgList
 idrisWithCG = case e.config.codegen of
-  Default => ["\{idrisExec}"]
-  cg      => ["\{idrisExec}", "--cg", "\{cg}"]
+  Default => [idrisExec]
+  cg      => [idrisExec, "--cg", cg]
 
 ||| Idris executable loading the given package plus the
 ||| environment variables needed to run it.
@@ -337,7 +337,7 @@ idrisWithPkg :  HasIO io
              => ResolvedLib t
              -> io (CmdArgList, List (String,String))
 idrisWithPkg rl =
-  (idrisWithCG ++ ["-p", "\{name rl}"],) <$> buildEnv
+  (idrisWithCG ++ ["-p", name rl],) <$> buildEnv
 
 ||| Idris executable loading the given packages plus the
 ||| environment variables needed to run it.
@@ -348,7 +348,7 @@ idrisWithPkgs :  HasIO io
               -> io (CmdArgList, List (String,String))
 idrisWithPkgs [] = pure (idrisWithCG, [])
 idrisWithPkgs pkgs =
-  let ps = concatMap (\p => ["-p", "\{name p}"]) pkgs
+  let ps = concatMap (\p => ["-p", name p]) pkgs
    in (idrisWithCG ++ ps,) <$> buildEnv
 
 --------------------------------------------------------------------------------

@@ -58,12 +58,12 @@ replOpts mf = do
   libs <- map (Library,) <$> replDeps md e.env.config.autoLoad
   tds  <- mapMaybe libName <$> transitiveDeps libs
 
-  let srcDir := maybe [] (\s => ["--source-dir", "\{s}"]) (md >>= sourcedir . desc)
+  let srcDir := maybe [] (\s => ["--source-dir", s]) (md >>= sourcedir . desc)
       pkgs   := concatMap (\td => ["-p", value td]) tds
       cg     := maybe e.env.config.codegen (ipkgCodeGen . desc) md
       cgOpt  := case cg of
                   Default => []
-                  _       => ["--cg", "\{cg}"]
+                  _       => ["--cg", cg]
   install libs
   pure (srcDir ++ cgOpt ++ pkgs, cg, mp)
 
@@ -115,7 +115,7 @@ exec file args e = do
                   _    => []
       relFile := srcFileRelativeToIpkg mp (Just file)
       exe     := idrisWithCG
-      cmd     := exe ++ opts ++ ["-o", "\{e.env.config.output}", "\{relFile}"]
+      cmd     := exe ++ opts ++ ["-o", e.env.config.output, relFile]
       run     := interp ++ ["build/exec/\{e.env.config.output}"] ++ args
 
   case mp of
@@ -170,8 +170,8 @@ runIpkg p args e = do
   Just exe <- pure (execPath d) | Nothing => throwE (NoAppIpkg p)
   build (Left p) e
   case ipkgCodeGen d.desc of
-    Node => sys $ ["node", "\{exe}"] ++ args
-    _    => sys $ ["\{exe}"] ++ args
+    Node => sys $ ["node", exe] ++ args
+    _    => sys $ [exe] ++ args
 
 ||| Install and run an executable given as a package name.
 export covering
@@ -185,5 +185,5 @@ execApp p args e = do
   ra <- resolveApp p
   install [(App False,p)]
   case ipkgCodeGen ra.desc.desc of
-    Node => sys $ ["node", "\{pkgExec ra.name ra.pkg ra.exec}"] ++ args
-    _ => sys $ ["\{pkgExec ra.name ra.pkg ra.exec}"] ++ args
+    Node => sys $ ["node", pkgExec ra.name ra.pkg ra.exec] ++ args
+    _    => sys $ [pkgExec ra.name ra.pkg ra.exec] ++ args

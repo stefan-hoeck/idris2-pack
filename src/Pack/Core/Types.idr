@@ -423,8 +423,8 @@ CmdArgable CmdArg where
   toCmdArg = id
 
 export %inline
-CmdArgable String where
-  toCmdArg = Escapable
+Interpolation a => CmdArgable a where
+  toCmdArg = Escapable . interpolate
 
 public export
 data CmdArgList : Type where

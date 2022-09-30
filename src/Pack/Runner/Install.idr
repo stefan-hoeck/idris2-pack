@@ -38,7 +38,7 @@ copyApp ra =
    in do
      debug "Copying application to \{dir}"
      mkDir dir
-     sys ["cp", "-r", Escapable "\{buildPath ra.desc}/exec/" ++ NoEscape "*", "\{dir}"]
+     sys ["cp", "-r", Escapable "\{buildPath ra.desc}/exec/" ++ NoEscape "*", dir]
 
 pthStr : PackDir => Bool -> String
 pthStr False = ""
@@ -77,7 +77,7 @@ appLink exec app withPkgPath cg =
 
       \{interp}$APPLICATION "$@"
       """
-   in write target content >> sys ["chmod", "+x", "\{target}"]
+   in write target content >> sys ["chmod", "+x", target]
 
 installCmd : (withSrc : Bool) -> CmdArgList
 installCmd True  = ["--install-with-src"]
@@ -94,7 +94,7 @@ libPkg :  HasIO io
        -> EitherT PackErr io ()
 libPkg env cmd desc =
   let exe := idrisWithCG
-      s   := exe ++ cmd ++ ["\{desc.path.file}"]
+      s   := exe ++ cmd ++ [desc.path.file]
    in do
      pre <- (env ++) <$> buildEnv
      debug "About to run: \{escapeCmd s}"
@@ -112,9 +112,9 @@ mkIdris = do
   when !(missing idrisInstallDir) $ do
     debug "No Idris compiler found. Installing..."
     withCoreGit $ \dir => do
-      sysAndLog Build ["make", "bootstrap", "\{prefixVar}", "\{schemeVar}"]
-      sysAndLog Build ["make", "install-support", "\{prefixVar}"]
-      sysAndLog Build ["make", "install-idris2", "\{prefixVar}"]
+      sysAndLog Build ["make", "bootstrap", prefixVar, schemeVar]
+      sysAndLog Build ["make", "install-support", prefixVar]
+      sysAndLog Build ["make", "install-idris2", prefixVar]
       sysAndLog Build ["make", "clean-libs"]
       sysAndLog Build ["rm", "-r", "build/ttc", "build/exec"]
       cacheCoreIpkgFiles dir
@@ -240,7 +240,7 @@ docsImpl rl = do
     for_ fs $ \htmlFile =>
       let Just ds@(MkDS _ src ttm srcHtml) := sourceForDoc rl.desc htmlFile
             | Nothing => pure ()
-       in sysAndLog Build ["\{katla}", "html", "\{src}", "\{ttm}", NoEscape ">", "\{srcHtml}"] >>
+       in sysAndLog Build [katla, "html", src, ttm, NoEscape ">", srcHtml] >>
           insertSources ds
 
   let docs := pkgDocs rl.name rl.pkg
@@ -333,7 +333,7 @@ update e =
             False => do
               libPkg [] ["--build"] d
               mkDir installDir
-              sys ["cp", "-r", NoEscape "build/exec/*", "\{installDir}"]
+              sys ["cp", "-r", NoEscape "build/exec/*", installDir]
               link installedExec packExec
 
 --------------------------------------------------------------------------------
