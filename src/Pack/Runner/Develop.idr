@@ -11,8 +11,6 @@ import Pack.Runner.Query
 
 %default total
 
-%ambiguity_depth 4
-
 covering
 runIdrisOn :  HasIO io
            => IdrisEnv

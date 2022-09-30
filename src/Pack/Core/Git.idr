@@ -6,8 +6,6 @@ import Pack.Core.Types
 
 %default total
 
-%ambiguity_depth 5
-
 ||| URL of package collections repository
 |||
 ||| TODO: This should become a command line argument

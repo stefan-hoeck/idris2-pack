@@ -415,9 +415,25 @@ public export
 data CmdArg = Escapable String | NoEscape String
 
 public export
-record CmdArgList where
-  constructor MkCmdArgList
-  cmdArgList : List CmdArg
+interface CmdArgable a where
+  toCmdArg : a -> CmdArg
+
+export %inline
+CmdArgable CmdArg where
+  toCmdArg = id
+
+export %inline
+CmdArgable String where
+  toCmdArg = Escapable
+
+public export
+data CmdArgList : Type where
+  Nil  : CmdArgList
+  (::) : CmdArgable a => a -> CmdArgList -> CmdArgList
+
+cmdArgList : CmdArgList -> List CmdArg
+cmdArgList []      = []
+cmdArgList (x::xs) = toCmdArg x :: cmdArgList xs
 
 export
 escapeCmd : CmdArgList -> String
@@ -427,9 +443,6 @@ escapeCmd = unwords . map manageArg . cmdArgList where
   manageArg $ NoEscape s  = s
 
 namespace CmdArg
-
-  fromString : String -> CmdArg
-  fromString = Escapable
 
   export
   (++) : CmdArg -> CmdArg -> CmdArg
@@ -441,12 +454,9 @@ namespace CmdArg
 namespace CmdArgList
 
   export
-  Nil : CmdArgList
-  Nil = MkCmdArgList []
-
-  export
   (++) : CmdArgList -> CmdArgList -> CmdArgList
-  xs ++ ys = MkCmdArgList $ xs.cmdArgList ++ ys.cmdArgList
+  []      ++ ys = ys
+  (x::xs) ++ ys = x :: xs ++ ys
 
   export
   Semigroup CmdArgList where
@@ -458,23 +468,12 @@ namespace CmdArgList
 
   export
   concatMap : Monoid m => (CmdArg -> m) -> CmdArgList -> m
-  concatMap f = concatMap f . cmdArgList
+  concatMap f []      = neutral
+  concatMap f (x::xs) = f (toCmdArg x) <+> concatMap f xs
 
   export
   fromStrList : List String -> CmdArgList
-  fromStrList = MkCmdArgList . map Escapable
-
-  namespace CmdArg
-
-    export
-    (::) : CmdArg -> CmdArgList -> CmdArgList
-    x :: xs = MkCmdArgList $ x :: xs.cmdArgList
-
-  namespace String
-
-    export
-    (::) : String -> CmdArgList -> CmdArgList
-    x :: xs = Escapable x :: xs
+  fromStrList = foldr (\x, xs => x::xs) Nil
 
 --------------------------------------------------------------------------------
 --          Errors
