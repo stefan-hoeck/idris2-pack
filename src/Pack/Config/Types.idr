@@ -1,12 +1,14 @@
 module Pack.Config.Types
 
+import Control.Monad.Either
 import Data.List
 import Data.IORef
 import Data.Maybe
 import Data.SortedMap as SM
 import Idris.Package.Types
 import Libraries.Data.List.Extra
-import Pack.Core
+import Pack.Core.Git.Consts
+import Pack.Core.Types
 import Pack.Database.Types
 
 %default total

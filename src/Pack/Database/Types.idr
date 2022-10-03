@@ -6,7 +6,6 @@ import Data.List.Elem
 import Data.SortedMap
 import Data.String
 import Idris.Package.Types
-import Pack.Core.Ipkg
 import Pack.Core.Types
 
 %default total
