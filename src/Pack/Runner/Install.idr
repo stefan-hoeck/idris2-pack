@@ -8,6 +8,7 @@ import Pack.Config
 import Pack.Core
 import Pack.Database
 import Pack.Runner.Database
+import System.Escape
 
 %default total
 
@@ -37,7 +38,7 @@ copyApp ra =
    in do
      debug "Copying application to \{dir}"
      mkDir dir
-     sys "cp -r \{buildPath ra.desc}/exec/* \{dir}"
+     sys ["cp", "-r", Escapable "\{buildPath ra.desc}/exec/" ++ NoEscape "*", dir]
 
 pthStr : PackDir => Bool -> String
 pthStr False = ""
@@ -76,11 +77,11 @@ appLink exec app withPkgPath cg =
 
       \{interp}$APPLICATION "$@"
       """
-   in write target content >> sys "chmod +x \{target}"
+   in write target content >> sys ["chmod", "+x", target]
 
-installCmd : (withSrc : Bool) -> String
-installCmd True  = "--install-with-src"
-installCmd False = "--install"
+installCmd : (withSrc : Bool) -> CmdArgList
+installCmd True  = ["--install-with-src"]
+installCmd False = ["--install"]
 
 ||| Use the installed Idris to run an operation on
 ||| a library `.ipkg` file.
@@ -88,15 +89,15 @@ export
 libPkg :  HasIO io
        => IdrisEnv
        => (env  : List (String,String))
-       -> (cmd  : String)
+       -> (cmd  : CmdArgList)
        -> (desc : Desc Safe)
        -> EitherT PackErr io ()
 libPkg env cmd desc =
   let exe := idrisWithCG
-      s   := "\{exe} \{cmd} \{desc.path.file}"
+      s   := exe ++ cmd ++ [desc.path.file]
    in do
      pre <- (env ++) <$> buildEnv
-     debug "About to run: \{s}"
+     debug "About to run: \{escapeCmd s}"
      inDir (desc.path.parent) (\_ => sysWithEnvAndLog Build s pre)
 
 --------------------------------------------------------------------------------
@@ -111,11 +112,11 @@ mkIdris = do
   when !(missing idrisInstallDir) $ do
     debug "No Idris compiler found. Installing..."
     withCoreGit $ \dir => do
-      sysAndLog Build "make bootstrap \{prefixVar} \{schemeVar}"
-      sysAndLog Build "make install-support \{prefixVar}"
-      sysAndLog Build "make install-idris2 \{prefixVar}"
-      sysAndLog Build "make clean-libs"
-      sysAndLog Build "rm -r build/ttc build/exec"
+      sysAndLog Build ["make", "bootstrap", prefixVar, schemeVar]
+      sysAndLog Build ["make", "install-support", prefixVar]
+      sysAndLog Build ["make", "install-idris2", prefixVar]
+      sysAndLog Build ["make", "clean-libs"]
+      sysAndLog Build ["rm", "-r", "build/ttc", "build/exec"]
       cacheCoreIpkgFiles dir
 
   appLink "idris2" "idris2" True Default
@@ -141,7 +142,7 @@ installImpl dir rl =
    in do
      info "Installing library\{withSrcStr}: \{name rl}"
      libPkg pre cmd rl.desc
-     when e.env.config.withDocs $ libPkg pre "--mkdoc" rl.desc
+     when e.env.config.withDocs $ libPkg pre ["--mkdoc"] rl.desc
      when !(exists $ dir /> "lib") $
        copyDir (dir /> "lib") (pkgLibDir rl.name rl.pkg)
 
@@ -166,7 +167,7 @@ installLib rl = case rl.status of
             let cache   := coreCachePath c
             copyFile cache ipkgAbs
             case c of
-              IdrisApi => sysAndLog Build "make src/IdrisPaths.idr"
+              IdrisApi => sysAndLog Build ["make", "src/IdrisPaths.idr"]
               _        => pure ()
             installImpl dir rl
 
@@ -196,11 +197,11 @@ installApp b ra =
             GitHub u c ipkg b => do
               let cache   := ipkgCachePath ra.name c ipkg
               copyFile cache ipkgAbs
-              libPkg [] "--build" (notPackIsSafe ra.desc)
+              libPkg [] ["--build"] (notPackIsSafe ra.desc)
               copyApp ra
               when b $ appLink ra.exec ra.name (usePackagePath ra) cg
             Local _ _ b    => do
-              libPkg [] "--build" (notPackIsSafe ra.desc)
+              libPkg [] ["--build"] (notPackIsSafe ra.desc)
               copyApp ra
               when b $ appLink ra.exec ra.name (usePackagePath ra) cg
               write (appTimestamp ra.name ra.pkg) ""
@@ -239,7 +240,7 @@ docsImpl rl = do
     for_ fs $ \htmlFile =>
       let Just ds@(MkDS _ src ttm srcHtml) := sourceForDoc rl.desc htmlFile
             | Nothing => pure ()
-       in sysAndLog Build "\{katla} html \{src} \{ttm} > \{srcHtml}" >>
+       in sysAndLog Build [katla, "html", src, ttm, NoEscape ">", srcHtml] >>
           insertSources ds
 
   let docs := pkgDocs rl.name rl.pkg
@@ -323,16 +324,16 @@ update e =
         d <- parseLibIpkg ipkg ipkg
         installDeps d
         inDir dir $ \_ => do
-          vers <- MkCommit <$> sysRun "git rev-parse HEAD"
+          vers <- MkCommit <$> sysRun ["git", "rev-parse", "HEAD"]
           let installDir    := packInstallDir vers
               installedExec := installDir /> "pack"
           ex <- exists installedExec
           case ex of
             True  => link installedExec packExec
             False => do
-              libPkg [] "--build" d
+              libPkg [] ["--build"] d
               mkDir installDir
-              sys "cp -r build/exec/* \{installDir}"
+              sys ["cp", "-r", NoEscape "build/exec/*", installDir]
               link installedExec packExec
 
 --------------------------------------------------------------------------------

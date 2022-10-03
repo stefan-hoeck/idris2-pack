@@ -21,12 +21,12 @@ data Cmd : Type where
   Typecheck        : Either (File Abs) PkgName -> Cmd
   Clean            : Either (File Abs) PkgName -> Cmd
   Repl             : (src : Maybe $ File Abs) -> Cmd
-  Exec             : (srd : File Abs) -> (args : List String) -> Cmd
+  Exec             : (srd : File Abs) -> (args : CmdArgList) -> Cmd
 
   -- Package management
   Install          : List (InstallType,PkgName) -> Cmd
   Remove           : List (PkgType,PkgName) -> Cmd
-  Run              : Either (File Abs) PkgName -> List String -> Cmd
+  Run              : Either (File Abs) PkgName -> CmdArgList -> Cmd
   New              : (cur : CurDir) -> PkgType -> Body -> Cmd
   Update           : Cmd
   Fetch            : Cmd

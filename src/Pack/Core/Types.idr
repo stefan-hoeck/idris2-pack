@@ -408,6 +408,122 @@ dependencies : Desc t -> List PkgName
 dependencies d = dependencies d.desc
 
 --------------------------------------------------------------------------------
+--          CmdArg
+--------------------------------------------------------------------------------
+
+||| A command line argument of a call to the system shell.
+public export
+data CmdArg : Type where
+
+  ||| Escapable alternative represents a string that should be understood as a
+  ||| single argument disregarding its contents, i.e. the whole string should
+  ||| be passed as an argument even if it contains spaces or characters that
+  ||| are normally understood specially by shell.
+  Escapable : String -> CmdArg
+
+  ||| No escape alternative represents a raw string that is used "as is" at the
+  ||| shell call, thus allowing to pass commands to the shell itself.
+  ||| Be aware that spaces inside these strings would form several actual
+  ||| arguments and quotation marks and backslash symbols may interfere with
+  ||| escaping of other arguments.
+  NoEscape : String -> CmdArg
+
+||| Interface that is used to mark which types can be used as a source for
+||| command line arguments when building lists of such.
+||| This allows to be able to pass different literals and expressions without
+||| explicit wrapping them into the `CmdArg` type.
+public export
+interface CmdArgable a where
+  toCmdArg : a -> CmdArg
+
+export %inline
+CmdArgable CmdArg where
+  toCmdArg = id
+
+||| Implementation that allows any type implementing `Interpolation` interface
+||| to be used as an escapable command line argument.
+export %inline
+Interpolation a => CmdArgable a where
+  toCmdArg = Escapable . interpolate
+
+||| A list of command line arguments.
+|||
+||| This type is meant to look syntacitcally as a simple list, however
+||| containing possibly values of different types which can form a command
+||| line argument.
+|||
+||| For example, a call to some command with redirection may look like this:
+||| `sys ["echo", "a", NoEscape ">", file]`,
+||| when, say, `file` is a value of type `File Abs`.
+public export
+data CmdArgList : Type where
+  Nil  : CmdArgList
+  (::) : CmdArgable a => a -> CmdArgList -> CmdArgList
+
+cmdArgList : CmdArgList -> List CmdArg
+cmdArgList []      = []
+cmdArgList (x::xs) = toCmdArg x :: cmdArgList xs
+
+||| Converts a list of command line arguments to a single string
+||| while putting spaces between arguments and escaping appropriate ones.
+|||
+||| For example, call `escapeCmd ["echo", "&&", NoEscape "&&", "echo", "yes"]`
+||| would return a string equivalent to the literal
+||| `#""echo" "&&" && "echo" "yes""#`.
+export
+escapeCmd : CmdArgList -> String
+escapeCmd = unwords . map manageArg . cmdArgList where
+  manageArg : CmdArg -> String
+  manageArg $ Escapable s = escapeArg s
+  manageArg $ NoEscape s  = s
+
+namespace CmdArg
+
+  ||| Concatenate two command line arguments into one.
+  |||
+  ||| This operation respects meaning of the contents of each argument,
+  ||| whether they should be escaped or not.
+  ||| This allows, say, to form an argument which partially contains something
+  ||| escapable and partially contains a special shell argument, for example
+  ||| `sys ["cp", "-r", Escapable "\{dirName}/" ++ NoEscape "*", dest]` would
+  ||| list files with shell's `*` even if `dirName` contains spaces.
+  export
+  (++) : CmdArg -> CmdArg -> CmdArg
+  Escapable x ++ Escapable y = Escapable $ x ++ y
+  Escapable x ++ NoEscape y  = NoEscape $ escapeArg x ++ y
+  NoEscape x  ++ Escapable y = NoEscape $ x ++ escapeArg y
+  NoEscape x  ++ NoEscape y  = NoEscape $ x ++ y
+
+namespace CmdArgList
+
+  ||| Concatenation operation for command line argument lists.
+  export
+  (++) : CmdArgList -> CmdArgList -> CmdArgList
+  []      ++ ys = ys
+  (x::xs) ++ ys = x :: xs ++ ys
+
+  export
+  Semigroup CmdArgList where
+    (<+>) = (++)
+
+  export
+  Monoid CmdArgList where
+    neutral = []
+
+  ||| Specialised version of `concatMap` from `Foldable` for `CmdArgList`,
+  ||| since `CmdArgList` cannot implement `Foldable`.
+  export
+  concatMap : Monoid m => (CmdArg -> m) -> CmdArgList -> m
+  concatMap f []      = neutral
+  concatMap f (x::xs) = f (toCmdArg x) <+> concatMap f xs
+
+  ||| Function that forms a command line arguments list from a raw list of
+  ||| strings, treating each string as a single escapable argument.
+  export
+  fromStrList : List String -> CmdArgList
+  fromStrList = foldr (\x, xs => x::xs) Nil
+
+--------------------------------------------------------------------------------
 --          Errors
 --------------------------------------------------------------------------------
 
@@ -461,7 +577,7 @@ data PackErr : Type where
   DirEntries : (path : Path Abs) -> (err : FileError) -> PackErr
 
   ||| Error when running the given system command
-  Sys        : (cmd : String) -> (err : Int) -> PackErr
+  Sys        : (cmd : CmdArgList) -> (err : Int) -> PackErr
 
   ||| Error when changing into the given directory
   ChangeDir  : (path : Path Abs) -> PackErr
@@ -584,7 +700,7 @@ printErr (DirEntries path err) =
 
 printErr (Sys cmd err) = """
   Error when executing system command.
-  Command: \{cmd}
+  Command: \{escapeCmd cmd}
   Error code: \{show err}
   """
 

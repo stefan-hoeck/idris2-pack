@@ -289,7 +289,7 @@ fuzzyPkg q allPkgs qp = do
 
     (cmd,env) <- idrisWithPkgs (map lib allPkgs)
 
-    str <- sysRunWithEnv "\{cmd} --quiet --no-prelude --no-banner test.idr < input" env
+    str <- sysRunWithEnv (cmd ++ ["--quiet", "--no-prelude", "--no-banner", "test.idr", NoEscape "<", "input"]) env
     case noOut == str of
       True  => pure ()
       False => putStrLn (fuzzyTrim str)

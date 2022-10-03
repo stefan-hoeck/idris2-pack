@@ -67,9 +67,9 @@ dispEnv = unwords . map (\(e,v) => "\{e}=\{quote v}")
 
 ||| Tries to run a system command.
 export
-sys : HasIO io => (cmd : String) -> EitherT PackErr io ()
+sys : HasIO io => (cmd : CmdArgList) -> EitherT PackErr io ()
 sys cmd = do
-  0 <- system cmd | n => throwE (Sys cmd n)
+  0 <- system $ escapeCmd cmd | n => throwE (Sys cmd n)
   pure ()
 
 logCmdOutput : HasIO io => (ref, lvl : LogLevel) -> (msg : String) -> io ()
@@ -78,14 +78,14 @@ logCmdOutput ref lvl msg =
 
 ||| Tries to run a system command while logging its output.
 export covering
-sysAndLog : HasIO io => (ref : LogLevel) => (lvl : LogLevel) -> (cmd : String) -> EitherT PackErr io ()
+sysAndLog : HasIO io => (ref : LogLevel) => (lvl : LogLevel) -> (cmd : CmdArgList) -> EitherT PackErr io ()
 sysAndLog lvl cmd = do
-  0 <- System.runProcessingOutput (logCmdOutput ref lvl) cmd | n => throwE (Sys cmd n)
+  0 <- runProcessingOutput (logCmdOutput ref lvl) (escapeCmd cmd) | n => throwE (Sys cmd n)
   pure ()
 
-cmdWithEnv : String -> List (String,String) -> String
-cmdWithEnv cmd []  = cmd
-cmdWithEnv cmd env = "\{dispEnv env} \{cmd}"
+cmdWithEnv : CmdArgList -> List (String,String) -> String
+cmdWithEnv cmd []  = escapeCmd cmd
+cmdWithEnv cmd env = "\{dispEnv env} \{escapeCmd cmd}"
 
 ||| Tries to run a system command prefixed with the given
 ||| environment variables.
@@ -97,7 +97,7 @@ cmdWithEnv cmd env = "\{dispEnv env} \{cmd}"
 ||| error message, just prefix `cmd` accordingly and use `sys`.
 export
 sysWithEnv :  HasIO io
-           => (cmd : String)
+           => (cmd : CmdArgList)
            -> (env : List (String,String))
            -> EitherT PackErr io ()
 sysWithEnv cmd env = do
@@ -108,7 +108,7 @@ export covering
 sysWithEnvAndLog :  HasIO io
                  => (ref : LogLevel)
                  => (lvl : LogLevel)
-                 -> (cmd : String)
+                 -> (cmd : CmdArgList)
                  -> (env : List (String,String))
                  -> EitherT PackErr io ()
 sysWithEnvAndLog lvl cmd env = do
@@ -117,9 +117,9 @@ sysWithEnvAndLog lvl cmd env = do
 
 ||| Tries to run a system command returning its output.
 export covering
-sysRun : HasIO io => (cmd : String) -> EitherT PackErr io String
+sysRun : HasIO io => (cmd : CmdArgList) -> EitherT PackErr io String
 sysRun cmd = do
-  (res,0) <- System.run cmd | (_,n) => throwE (Sys cmd n)
+  (res,0) <- run (escapeCmd cmd) | (_,n) => throwE (Sys cmd n)
   pure res
 
 ||| Tries to run a system command prefixed with the given
@@ -132,7 +132,7 @@ sysRun cmd = do
 ||| error message, just prefix `cmd` accordingly and use `sys`.
 export covering
 sysRunWithEnv :  HasIO io
-              => (cmd : String)
+              => (cmd : CmdArgList)
               -> (env : List (String,String))
               -> EitherT PackErr io String
 sysRunWithEnv cmd env = do
@@ -167,7 +167,7 @@ fileMissing = map not . fileExists
 export
 mkDir : HasIO io => (dir : Path Abs) -> EitherT PackErr io ()
 mkDir (PAbs [<]) = pure ()
-mkDir d          = sys "mkdir -p \{d}"
+mkDir d          = sys ["mkdir", "-p", d]
 
 ||| Creates a parent directory of a (file) path
 export
@@ -177,7 +177,7 @@ mkParentDir p = whenJust (parentDir p) mkDir
 ||| Forcefully deletes a directory with all its content
 export
 rmDir : HasIO io => (dir : Path Abs) -> EitherT PackErr io ()
-rmDir dir = when !(exists dir) $ sys "rm -rf \{dir}"
+rmDir dir = when !(exists dir) $ sys ["rm", "-rf", dir]
 
 ||| Returns the current directory's path.
 export
@@ -238,7 +238,7 @@ export
 copyDir : HasIO io => (from,to : Path Abs) -> EitherT PackErr io ()
 copyDir from to = do
   mkParentDir to
-  sys "cp -r \{from} \{to}"
+  sys ["cp", "-r", from, to]
 
 ||| Tries to fine a file, the body of which returns `True` for
 ||| the given prediccate.
@@ -276,7 +276,7 @@ mkTmpDir = go 100 0
 ||| Delete a file.
 export
 rmFile : HasIO io => (f : File Abs) -> EitherT PackErr io ()
-rmFile f = when !(fileExists f) $ sys "rm \{f}"
+rmFile f = when !(fileExists f) $ sys ["rm", f]
 
 ||| Tries to read the content of a file
 export covering
@@ -310,14 +310,14 @@ link : HasIO io => (from : Path Abs) -> (to : File Abs) -> EitherT PackErr io ()
 link from to = do
   rmFile to
   mkDir to.parent
-  sys "ln -s \{from} \{to}"
+  sys ["ln", "-s", from, to]
 
 ||| Copy a file.
 export
 copyFile : HasIO io => (from,to : File Abs) -> EitherT PackErr io ()
 copyFile from to = do
   mkDir to.parent
-  sys "cp \{from} \{to}"
+  sys ["cp", from, to]
 
 ||| Patch a file
 export
@@ -325,4 +325,4 @@ patch :  HasIO io
       => (original : File Abs)
       -> (patch    : File Abs)
       -> EitherT PackErr io ()
-patch o p = sys "patch \{o} \{p}"
+patch o p = sys ["patch", o, p]

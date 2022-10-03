@@ -70,7 +70,7 @@ new :  HasIO io
 new (CD curdir) pty pkgName e = do
     debug "Creating new \{pty} package named \{pkgName}..."
     debug "Getting author name from git config"
-    user <- trim <$> (sysRun "git config user.name")
+    user <- trim <$> sysRun ["git", "config", "user.name"]
     debug "Creating PkgDesc"
     let (mod, modFile) = getModFile pty pkgName
 
@@ -84,7 +84,7 @@ new (CD curdir) pty pkgName e = do
     debug "Initializing git repo"
     eitherT (\err => warn "Git repo creation failed: \{printErr err}")
             (\_ => write (MkF pkgRootDir ".gitignore") gitIgnoreFile)
-            (sysAndLog Info "git init \{pkgRootDir}")
+            (sysAndLog Info ["git", "init", pkgRootDir])
 
     debug "Writing ipkg file"
     write (MkF pkgRootDir  (pkgName <+> ".ipkg")) (renderString $ layoutUnbounded $ pretty ipkg)

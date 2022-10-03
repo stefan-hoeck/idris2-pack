@@ -67,12 +67,12 @@ Command Cmd where
   readCommand_ _  ["query", "dep", s]        = Right $ Query Dependency s
   readCommand_ _  ["query", "module", s]     = Right $ Query Module s
   readCommand_ cd ("exec" :: idr :: args)    =
-    (`Exec` args) <$> readAbsFile curDir idr
+    (`Exec` fromStrList args) <$> readAbsFile curDir idr
 
   readCommand_ _  ["repl"]                   = Right $ Repl Nothing
   readCommand_ cd ["repl", s]                =
     Repl . Just <$> readAbsFile curDir s
-  readCommand_ cd ("run" :: p :: args)       = pkgOrIpkg cd p (`Run` args)
+  readCommand_ cd ("run" :: p :: args)       = pkgOrIpkg cd p (`Run` fromStrList args)
 
   readCommand_ cd ["build", file]            = pkgOrIpkg cd file Build
   readCommand_ cd ["install-deps", file]     = pkgOrIpkg cd file BuildDeps
