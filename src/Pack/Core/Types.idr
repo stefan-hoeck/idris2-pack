@@ -524,6 +524,18 @@ namespace CmdArgList
   fromStrList = foldr (\x, xs => x::xs) Nil
 
 --------------------------------------------------------------------------------
+--          LineBufferingCmd
+--------------------------------------------------------------------------------
+
+||| A wrapper for a command list of a shell command which allows to do
+||| line buffering.
+public export
+record LineBufferingCmd where
+  [noHints]
+  constructor MkLineBufferingCmd
+  lineBufferingCmd : CmdArgList
+
+--------------------------------------------------------------------------------
 --          Errors
 --------------------------------------------------------------------------------
 

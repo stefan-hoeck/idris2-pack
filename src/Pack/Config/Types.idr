@@ -387,6 +387,7 @@ record Env where
   config  : Config
   cache   : LibCache
   db      : DB
+  linebuf : LineBufferingCmd
 
 ||| This allows us to use an `Env` in scope when we
 ||| need an auto-implicit `PackDir`.
@@ -417,6 +418,12 @@ envToConfig = e.config
 export %inline %hint
 envToDB : (e : Env) => DB
 envToDB = e.db
+
+||| This allows us to use an `Env` in scope when we
+||| need an auto-implicit `LineBufferingCmd`.
+export %inline %hint
+envToLinebuf : (e : Env) => LineBufferingCmd
+envToLinebuf = e.linebuf
 
 ||| Like `Pack.Config.Types.Env`, but with an erased proof
 ||| that the Idris compiler installation has been verified.
