@@ -5,6 +5,7 @@
 module Pack.Core.Types
 
 import public Data.FilePath.File
+import Data.Either
 import Data.Maybe
 import Idris.Package.Types
 import System.File
@@ -745,11 +746,7 @@ printErr (InvalidPkgVersion s) = "Invalid package version: \{quote s}."
 
 printErr (InvalidLogLevel s) = """
   Invalid log level: \{quote s}. Valid values are
-    debug
-    build
-    info
-    warning
-    silence
+  \{joinBy "\n" $ ("- " ++) . fst <$> logLevels}
   """
 
 printErr (UnknownPkg name) = "Unknown package: \{name}"
@@ -875,10 +872,15 @@ Interpolation LogLevel where
   interpolate Silence = ""
 
 export
+logLevels : List (String, LogLevel)
+logLevels =
+  [ ("debug"  , Debug  )
+  , ("build"  , Build  )
+  , ("info"   , Info   )
+  , ("warning", Warning)
+  , ("silence", Silence)
+  ]
+
+export
 readLogLevel : String -> Either PackErr LogLevel
-readLogLevel "debug"   = Right Debug
-readLogLevel "build"   = Right Build
-readLogLevel "info"    = Right Info
-readLogLevel "warning" = Right Warning
-readLogLevel "silence" = Right Silence
-readLogLevel str       = Left (InvalidLogLevel str)
+readLogLevel str = maybeToEither (InvalidLogLevel str) $ lookup str logLevels
