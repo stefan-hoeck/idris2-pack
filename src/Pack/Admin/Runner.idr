@@ -72,6 +72,7 @@ runCmd = do
   cd       <- CD <$> curDir
   cache    <- emptyCache
   (mc,cmd) <- getConfig ACmd
+  linebuf  <- getLineBufferingCmd
   case cmd of
     CheckDB db p       => finally (rmDir tmpDir) $ idrisEnv mc True >>= checkDB p
     FromHEAD p         => env mc True >>= writeLatestDB p

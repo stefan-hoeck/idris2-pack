@@ -304,6 +304,7 @@ idrisEnv :  HasIO io
          => PackDir
          => TmpDir
          => LibCache
+         => LineBufferingCmd
          => MetaConfig
          -> (fetch : Bool)
          -> EitherT PackErr io IdrisEnv

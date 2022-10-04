@@ -1,38 +1,11 @@
 module Pack.Core.Git
 
 import Data.String
+import public Pack.Core.Git.Consts
 import Pack.Core.IO
 import Pack.Core.Types
 
 %default total
-
-||| URL of package collections repository
-|||
-||| TODO: This should become a command line argument
-export
-dbRepo : URL
-dbRepo = "https://github.com/stefan-hoeck/idris2-pack-db"
-
-||| Default URL of pack repository
-export
-defaultPackRepo : URL
-defaultPackRepo = "https://github.com/stefan-hoeck/idris2-pack"
-
-||| Default branch of the pack repository
-export
-defaultPackBranch : Branch
-defaultPackBranch = "main"
-
-||| Package name we use for temp dirs involving the idris compiler
-||| and its core libraries.
-export
-compiler : PkgName
-compiler = "idris2-compiler"
-
-||| Package name we use for temp dirs involving pack-db project.
-export
-packDB : PkgName
-packDB = "pack-db"
 
 ||| Clones a GitHub repository to the given destination
 export

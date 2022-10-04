@@ -129,6 +129,7 @@ runCmd = do
   cache    <- emptyCache
   (mc,cmd) <- getConfig Cmd
   let fetch := isFetch cmd
+  linebuf  <- getLineBufferingCmd
   finally (rmDir tmpDir) $ case cmd of
     Completion a b     => env mc fetch >>= complete a b
     CompletionScript f => putStrLn (completionScript f)

@@ -51,6 +51,7 @@ main = run $ do
   defCol  <- defaultColl
   args    <- getArgs
   scheme  <- fromMaybe "scheme" <$> getEnv "SCHEME"
+  linebuf <- getLineBufferingCmd
 
   let db   = case args of
         [_,n] => either (const defCol) id $ readDBName n

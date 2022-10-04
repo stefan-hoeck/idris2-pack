@@ -454,6 +454,23 @@ getConfig c = do
   mkDir packDir
   pure (conf,cmd)
 
+export
+getLineBufferingCmd : HasIO io => io LineBufferingCmd
+getLineBufferingCmd = findCmd variants
+  where
+    findCmd : List (String, CmdArgList) -> io LineBufferingCmd
+    findCmd [] = pure $ MkLineBufferingCmd []
+    findCmd ((cmd, args)::rest) = do
+      0 <- system $ escapeCmd
+             ["type", cmd, NoEscape ">", "/dev/null", NoEscape "2>", "/dev/null"]
+        | _ => findCmd rest
+      pure $ MkLineBufferingCmd $ [cmd] ++ args
+
+    variants : List (String, CmdArgList)
+    variants = [ ("stdbuf",  ["-oL"])
+               , ("gstdbuf", ["-oL"])
+               ]
+
 --------------------------------------------------------------------------------
 --          Environment
 --------------------------------------------------------------------------------
@@ -476,6 +493,7 @@ env :  HasIO io
     => (pd    : PackDir)
     => (td    : TmpDir)
     => (ch    : LibCache)
+    => (lbf   : LineBufferingCmd)
     => (c     : MetaConfig)
     -> (fetch : Bool)
     -> EitherT PackErr io Env
@@ -487,7 +505,7 @@ env mc fetch = do
       commit := fromMaybe db.idrisCommit c.idrisCommit
 
   -- adjust the idrisCommit and URL to use according to user overrides
-  pure $ MkEnv pd td c ch ({idrisURL := url, idrisCommit := commit} db)
+  pure $ MkEnv pd td c ch ({idrisURL := url, idrisCommit := commit} db) lbf
 
 adjCollection : DBName -> String -> String
 adjCollection db str = case isPrefixOf "collection " str of
