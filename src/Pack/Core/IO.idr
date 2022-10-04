@@ -52,9 +52,7 @@ finally cleanup act = MkEitherT $ do
 ||| Runs a *pack* program, printing errors to standard out.
 export
 run : EitherT PackErr IO () -> IO ()
-run (MkEitherT io) = do
-  Left err <- io | Right () => pure ()
-  die (printErr err)
+run (MkEitherT io) = io >>= either fatal pure
 
 --------------------------------------------------------------------------------
 --          System Commands

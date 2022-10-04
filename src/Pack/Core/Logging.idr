@@ -2,6 +2,8 @@ module Pack.Core.Logging
 
 import Pack.Core.Types
 
+import System
+
 %default total
 
 --------------------------------------------------------------------------------
@@ -9,7 +11,8 @@ import Pack.Core.Types
 --------------------------------------------------------------------------------
 
 printLogMessage :  HasIO io
-                => (lvl : LogLevel)
+                => Interpolation logLevel
+                => (lvl : logLevel)
                 -> (msg : String)
                 -> (msgs : List String)
                 -> io ()
@@ -81,3 +84,11 @@ info = log ref Info
 export %inline
 warn : HasIO io => (ref : LogLevel) => (msg  : Lazy String) -> io ()
 warn = log ref Warning
+
+||| Fail fatally with error message logged.
+||| This is like `System.die` but with error printer like a log message.
+export
+fatal : HasIO io => (err : PackErr) -> io a
+fatal err = do
+  printLogMessage "fatal" (printErr err) []
+  exitFailure
