@@ -92,9 +92,6 @@ codegens =
   , "vmcode-interp"
   ]
 
-logLevels : List String
-logLevels = [ "debug", "build", "info", "warning", "silence" ]
-
 optionFlags : List String
 optionFlags =
   [ "app-path"
@@ -143,7 +140,7 @@ opts x "-p"               = prefixOnlyIfNonEmpty x <$> collections
 opts x "-P"               = prefixOnlyIfNonEmpty x <$> pure packages
 opts x "--packages"       = prefixOnlyIfNonEmpty x <$> pure packages
 opts x "--cg"             = prefixOnlyIfNonEmpty x <$> pure codegens
-opts x "--log-level"      = prefixOnlyIfNonEmpty x <$> pure logLevels
+opts x "--log-level"      = prefixOnlyIfNonEmpty x <$> pure (fst <$> logLevels)
 
 -- actions
 opts x "app-path"         = prefixOnlyIfNonEmpty x <$> installedApps
@@ -159,7 +156,7 @@ opts x "install"          = prefixOnlyIfNonEmpty x <$> pure packages
 opts x "install-app"      = prefixOnlyIfNonEmpty x <$> apps
 opts x "remove"           = prefixOnlyIfNonEmpty x <$> installedLibs
 opts x "remove-app"       = prefixOnlyIfNonEmpty x <$> installedApps
-opts x "switch"           =   prefixOnlyIfNonEmpty x . ("latest" ::)
+opts x "switch"           = prefixOnlyIfNonEmpty x . ("latest" ::)
                             <$> collections
 opts x "clean"            = prefixOnlyIfNonEmpty x <$> ipkgFiles
 opts x "typecheck"        = prefixOnlyIfNonEmpty x <$> ipkgFiles

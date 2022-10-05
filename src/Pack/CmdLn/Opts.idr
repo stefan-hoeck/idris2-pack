@@ -145,7 +145,7 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
         , MkOpt [] ["log-level"]   (ReqArg loglevel "<log level>")
             """
             Specify the logging level to use. Accepted values are:
-            "debug", "build", "info", "warning", and "silence".
+            \{joinBy ", " $ show . fst <$> logLevels}.
             """
         ]
 

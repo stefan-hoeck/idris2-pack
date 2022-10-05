@@ -5,6 +5,7 @@
 module Pack.Core.Types
 
 import public Data.FilePath.File
+import Data.Either
 import Data.Maybe
 import Idris.Package.Types
 import System.File
@@ -536,6 +537,51 @@ record LineBufferingCmd where
   lineBufferingCmd : CmdArgList
 
 --------------------------------------------------------------------------------
+--          Logging
+--------------------------------------------------------------------------------
+
+||| Level used during logging.
+public export
+data LogLevel : Type where
+  [noHints]
+  Debug   : LogLevel
+  Build   : LogLevel
+  Info    : LogLevel
+  Warning : LogLevel
+  Silence : LogLevel
+
+llToNat : LogLevel -> Nat
+llToNat Debug   = 0
+llToNat Build   = 1
+llToNat Info    = 2
+llToNat Warning = 3
+llToNat Silence = 4
+
+export
+Eq LogLevel where (==) = (==) `on` llToNat
+
+export
+Ord LogLevel where compare = compare `on` llToNat
+
+export
+Interpolation LogLevel where
+  interpolate Debug   = "debug"
+  interpolate Build   = "build"
+  interpolate Info    = "info"
+  interpolate Warning = "warning"
+  interpolate Silence = ""
+
+export
+logLevels : List (String, LogLevel)
+logLevels =
+  [ ("debug"  , Debug  )
+  , ("build"  , Build  )
+  , ("info"   , Info   )
+  , ("warning", Warning)
+  , ("silence", Silence)
+  ]
+
+--------------------------------------------------------------------------------
 --          Errors
 --------------------------------------------------------------------------------
 
@@ -745,11 +791,7 @@ printErr (InvalidPkgVersion s) = "Invalid package version: \{quote s}."
 
 printErr (InvalidLogLevel s) = """
   Invalid log level: \{quote s}. Valid values are
-    debug
-    build
-    info
-    warning
-    silence
+  \{joinBy "\n" $ ("- " ++) . fst <$> logLevels}
   """
 
 printErr (UnknownPkg name) = "Unknown package: \{name}"
@@ -839,46 +881,6 @@ readAbsFile cd s = case split $ toAbsPath cd (fromString s) of
   Just (p,b) => Right $ MkF p b
   Nothing    => Left (NoFilePath s)
 
---------------------------------------------------------------------------------
---          Logging
---------------------------------------------------------------------------------
-
-||| Level used during logging.
-public export
-data LogLevel : Type where
-  [noHints]
-  Debug   : LogLevel
-  Build   : LogLevel
-  Info    : LogLevel
-  Warning : LogLevel
-  Silence : LogLevel
-
-llToNat : LogLevel -> Nat
-llToNat Debug   = 0
-llToNat Build   = 1
-llToNat Info    = 2
-llToNat Warning = 3
-llToNat Silence = 4
-
-export
-Eq LogLevel where (==) = (==) `on` llToNat
-
-export
-Ord LogLevel where compare = compare `on` llToNat
-
-export
-Interpolation LogLevel where
-  interpolate Debug   = "debug"
-  interpolate Build   = "build"
-  interpolate Info    = "info"
-  interpolate Warning = "warning"
-  interpolate Silence = ""
-
 export
 readLogLevel : String -> Either PackErr LogLevel
-readLogLevel "debug"   = Right Debug
-readLogLevel "build"   = Right Build
-readLogLevel "info"    = Right Info
-readLogLevel "warning" = Right Warning
-readLogLevel "silence" = Right Silence
-readLogLevel str       = Left (InvalidLogLevel str)
+readLogLevel str = maybeToEither (InvalidLogLevel str) $ lookup str logLevels
