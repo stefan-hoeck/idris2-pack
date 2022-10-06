@@ -16,37 +16,48 @@ import Libraries.Text.PrettyPrint.Prettyprinter.Render.String
 %default total
 
 newPkgDesc : (name : Body) -> (mod : Body) -> (user: String) -> PkgDesc
-newPkgDesc name mod user = let ipkg = initPkgDesc "\{name}"
-                              in { authors := Just user,
-                                   version := Just (MkPkgVersion (0 ::: [1, 0])),
-                                   mainmod := toMaybe (mod == "Main") (nsAsModuleIdent $ mkNamespace "\{mod}", ""),
-                                   executable := toMaybe (mod == "Main") "\{name}",
-                                   sourcedir := Just "src" } ipkg
+newPkgDesc name mod user =
+  let modName := (nsAsModuleIdent $ mkNamespace "\{mod}", "")
+   in {
+        authors := Just user
+      , version := Just (MkPkgVersion (0 ::: [1, 0]))
+      , mainmod := toMaybe (mod == "Main") modName
+      , executable := toMaybe (mod == "Main") "\{name}"
+      , modules := guard (mod /= "Main") *> [modName]
+      , sourcedir := Just "src"
+      } (initPkgDesc "\{name}")
+
+toModuleName : List Char -> List Char
+toModuleName [] = []
+toModuleName (h :: t) = toUpper h :: map adjHyphen t
+  where adjHyphen : Char -> Char
+        adjHyphen '-' = '_'
+        adjHyphen c   = c
 
 -- Helper to capitalize the first letter of a Body
+-- and replace hyphens with underscores
 capitalize : Body -> Body
-capitalize (MkBody [] prf) impossible
-capitalize (MkBody (x :: xs) prf) = case fromChars (toUpper x :: xs) of
-  Just b  => b
-  Nothing => MkBody (x :: xs) prf
+capitalize b@(MkBody xs prf) = fromMaybe b $ fromChars (toModuleName xs)
 
 mainModFile : String
-mainModFile = """
-              module Main
+mainModFile =
+  """
+  module Main
 
-              main : IO ()
-              main = putStrLn "Hello from Idris2!"
+  main : IO ()
+  main = putStrLn "Hello from Idris2!"
 
-              """
+  """
 
 libModFile : Body -> String
-libModFile name = """
-                  module \{name}
+libModFile name =
+  """
+  module \{name}
 
-                  test : String
-                  test = "Hello from Idris2!"
+  test : String
+  test = "Hello from Idris2!"
 
-                  """
+  """
 
 -- Returns module name and module file
 getModFile : PkgType -> Body -> (Body, String)
@@ -54,10 +65,12 @@ getModFile Lib pkgName = let mod = capitalize pkgName in (mod, libModFile mod)
 getModFile Bin pkgName = ("Main", mainModFile)
 
 gitIgnoreFile : String
-gitIgnoreFile = """
-                build/
-                *.*~
-                """
+gitIgnoreFile =
+  """
+  build/
+  *.*~
+
+  """
 
 ||| Create a new package at current location
 export covering
@@ -87,7 +100,8 @@ new (CD curdir) pty pkgName e = do
             (sysAndLog Info ["git", "init", pkgRootDir])
 
     debug "Writing ipkg file"
-    write (MkF pkgRootDir  (pkgName <+> ".ipkg")) (renderString $ layoutUnbounded $ pretty ipkg)
+    write (MkF pkgRootDir  (pkgName <+> ".ipkg"))
+          (renderString (layoutUnbounded $ pretty ipkg) ++ "\n")
 
     debug "Writing module file"
     write (MkF srcDir $ mod <+> ".idr") modFile
