@@ -159,6 +159,11 @@ record Config_ (f : Type -> Type) (c : Type) where
   ||| build or install hooks.
   safetyPrompt : f Bool
 
+  ||| List of package names, for which we will not issue a safety prompt
+  ||| in case of custom `.ipkg` hooks, even if `safetyPrompt` is set
+  ||| to `True`
+  whitelist    : f (List PkgName)
+
   ||| Whether to install the library sources as well
   withSrc      : f Bool
 
@@ -290,6 +295,7 @@ init coll = MkConfig {
   , packCommit   = Nothing
   , scheme       = "scheme"
   , safetyPrompt = True
+  , whitelist    = []
   , withSrc      = False
   , withDocs     = False
   , useKatla     = False
@@ -323,6 +329,7 @@ update ci cm = MkConfig {
   , useKatla     = fromMaybe ci.useKatla cm.useKatla
   , withIpkg     = fromMaybe ci.withIpkg cm.withIpkg
   , rlwrap       = fromMaybe ci.rlwrap cm.rlwrap
+  , whitelist    = sortedNub (ci.whitelist ++ concat cm.whitelist)
   , autoLibs     = sortedNub (ci.autoLibs ++ concat cm.autoLibs)
   , autoApps     = sortedNub (ci.autoApps ++ concat cm.autoApps)
   , autoLoad     = fromMaybe ci.autoLoad cm.autoLoad

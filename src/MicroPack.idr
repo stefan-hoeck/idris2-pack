@@ -26,6 +26,7 @@ microInit scheme db = MkConfig {
   , packCommit    = Nothing
   , scheme        = fromString scheme
   , safetyPrompt  = False
+  , whitelist     = []
   , withSrc       = True
   , withDocs      = False
   , useKatla      = False

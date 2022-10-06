@@ -31,6 +31,7 @@ FromTOML UserConfig where
                   (maybeValAt "pack.commit" f v)
                   (maybeValAt "idris2.scheme" f v)
                   (maybeValAt "install.safety-prompt" f v)
+                  (maybeValAt "install.whitelist" f v)
                   (maybeValAt "install.with-src" f v)
                   (maybeValAt "install.with-docs" f v)
                   (maybeValAt "install.use-katla" f v)
@@ -73,6 +74,11 @@ initToml scheme db = """
   # packages or applications with custom build hooks in their
   # `.ipkg` file.
   safety-prompt = true
+
+  # List of packages and apps with custom build hooks we trust to
+  # be safe. This gives more fine grained control over package safety
+  # than `safety-prompt`.
+  whitelist = [ "pack", "lsp" ]
 
   # Must-have libraries. These will be installed automatically
   # when using a new package collection.
