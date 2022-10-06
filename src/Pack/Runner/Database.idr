@@ -58,7 +58,8 @@ notPackIsSafe (MkDesc x y z s) = MkDesc x y z $ toSafe s
 ||| Check if a package has special build- or install hooks
 ||| defined, and if yes, prompt the user
 ||| before continuing (unless `safetyPrompt` in the
-||| `Config` is set set to `False`).
+||| `Config` is set to `False` or the package's name is listed
+||| in the white list of safe packages).
 export
 safe : HasIO io => (e : Env) => Desc t -> EitherT PackErr io (Desc Safe)
 safe (MkDesc d s f _) =
@@ -67,7 +68,9 @@ safe (MkDesc d s f _) =
              <|> d.postbuild
              <|> d.preinstall
              <|> d.postinstall
-   in case e.config.safetyPrompt && unsafe of
+   in case e.config.safetyPrompt &&
+           unsafe &&
+           not (MkPkgName d.name `elem` e.config.whitelist) of
         False => pure $ MkDesc d s f IsSafe
         True  => do
           warn "Package \{name d} uses custom build hooks. Continue (yes/*no)?"
