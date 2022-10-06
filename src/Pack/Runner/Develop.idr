@@ -68,12 +68,12 @@ replOpts mf = do
   pure (srcDir ++ cgOpt ++ pkgs, cg, mp)
 
 -- return the path of an Idris source file to an `.ipkg` file.
-srcFileRelativeToIpkg : (ipkg,idr : Maybe (File Abs)) -> String
-srcFileRelativeToIpkg _           Nothing    = ""
-srcFileRelativeToIpkg Nothing     (Just idr) = "\{idr}"
+srcFileRelativeToIpkg : (ipkg,idr : Maybe (File Abs)) -> CmdArgList
+srcFileRelativeToIpkg _           Nothing    = []
+srcFileRelativeToIpkg Nothing     (Just idr) = [ idr ]
 srcFileRelativeToIpkg (Just ipkg) (Just idr) =
   let rel := relativeTo ipkg.parent idr.parent
-   in "\{MkF rel idr.file}"
+   in [ MkF rel idr.file ]
 
 ||| Use the installed Idris to start a REPL session with the
 ||| given argument string.
@@ -90,8 +90,8 @@ idrisRepl mf e = do
       exe := idrisWithCG
 
   cmd <- case e.env.config.rlwrap of
-    True  => pure $ ["rlwrap"] ++ exe ++ opts ++ [arg]
-    False => pure $ exe ++ opts ++ [arg]
+    True  => pure $ ["rlwrap"] ++ exe ++ opts ++ arg
+    False => pure $ exe ++ opts ++ arg
 
   case mp of
     Just af => inDir af.parent $ \_ => sysWithEnv cmd [pth]
@@ -115,7 +115,7 @@ exec file args e = do
                   _    => []
       relFile := srcFileRelativeToIpkg mp (Just file)
       exe     := idrisWithCG
-      cmd     := exe ++ opts ++ ["-o", e.env.config.output, relFile]
+      cmd     := exe ++ opts ++ ["-o", e.env.config.output] ++ relFile
       run     := interp ++ ["build/exec/\{e.env.config.output}"] ++ args
 
   case mp of
