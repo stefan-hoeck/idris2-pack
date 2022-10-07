@@ -22,6 +22,15 @@ FromTOML Codegen where
   fromTOML = tmap Types.fromString
 
 export
+FromTOML RlwrapConfig where
+  fromTOML _ (VBoolean x)  = Right $ if x then UseRlwrap [] else DoNotUseRlwrap
+  fromTOML _ (VString str) = Right $ UseRlwrap [NoEscape str]
+  fromTOML _ (VArray xs)   = map (UseRlwrap . fromStrList) $ for xs $ \case
+                               VString s => Right s
+                               _         => Left $ WrongType [] "array of strings"
+  fromTOML _ _             = Left $ WrongType [] "boolean, string or array of strings"
+
+export
 FromTOML UserConfig where
   fromTOML f v =
       [| MkConfig (maybeValAt "collection" f v)
@@ -113,6 +122,9 @@ initToml scheme db = """
   # Set this to `true` in order to run REPL sessions from within
   # `rlwrap`. This will give you additional features such as a
   # command history.
+  # Alternatively, you can pass additional command-line arguments
+  # to `rlwrap` by setting this to a string or an array of strings,
+  # e.g. to "-pGreen -aN" or ["-pGreen", "--no-children"].
   repl.rlwrap = false
 
   # Packages to load automatically when starting a REPL session

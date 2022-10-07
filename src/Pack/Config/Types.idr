@@ -114,6 +114,17 @@ data WithIpkg : Type where
   ||| argument.
   Use    : (ipkg : File Abs) -> WithIpkg
 
+||| Data type describing whether `rlwrap` command should be used
+||| and which additional arguments should be passed to it.
+|||
+||| This is basically equivalent to `Maybe CmdArgList`, but
+||| separate type disallows confusion with `Maybe` from `MConfig`,
+||| i.e. between not being set and set to not to use `rlwrap`.
+public export
+data RlwrapConfig : Type where
+  DoNotUseRlwrap : RlwrapConfig
+  UseRlwrap      : CmdArgList -> RlwrapConfig
+
 ||| Type-level identity
 public export
 0 I : Type -> Type
@@ -178,7 +189,7 @@ record Config_ (f : Type -> Type) (c : Type) where
   withIpkg     : f WithIpkg
 
   ||| Whether to use `rlwrap` to run a REPL session
-  rlwrap       : f Bool
+  rlwrap       : f RlwrapConfig
 
   ||| Libraries to install automatically
   autoLibs     : f (List PkgName)
@@ -300,7 +311,7 @@ init coll = MkConfig {
   , withDocs     = False
   , useKatla     = False
   , withIpkg     = Search cur
-  , rlwrap       = False
+  , rlwrap       = DoNotUseRlwrap
   , autoLibs     = []
   , autoApps     = []
   , autoLoad     = NoPkgs

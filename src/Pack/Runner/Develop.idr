@@ -90,8 +90,8 @@ idrisRepl mf e = do
       exe := idrisWithCG
 
   cmd <- case e.env.config.rlwrap of
-    True  => pure $ ["rlwrap"] ++ exe ++ opts ++ arg
-    False => pure $ exe ++ opts ++ arg
+    UseRlwrap rargs => pure $ ["rlwrap"] ++ rargs ++ exe ++ opts ++ arg
+    DoNotUseRlwrap  => pure $ exe ++ opts ++ arg
 
   case mp of
     Just af => inDir af.parent $ \_ => sysWithEnv cmd [pth]

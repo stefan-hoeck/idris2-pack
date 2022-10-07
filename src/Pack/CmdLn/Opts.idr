@@ -47,8 +47,8 @@ setPrompt b _ = Right . {safetyPrompt := b}
 setScheme : String -> AdjConf
 setScheme s _ = Right . {scheme := fromString s}
 
-setRlwrap : Bool -> AdjConf
-setRlwrap b _ = Right . {rlwrap := b }
+setRlwrap : Maybe String -> AdjConf
+setRlwrap args _ = Right . {rlwrap := UseRlwrap $ maybe [] (\s => [NoEscape s]) args}
 
 setIpkg : String -> AdjConf
 setIpkg v (CD dir) c = case readAbsFile dir v of
@@ -136,7 +136,7 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             """
             Don't look for an `.ipkg` file in scope when starting a REPL session.
             """
-        , MkOpt [] ["rlwrap"]   (NoArg $ setRlwrap True)
+        , MkOpt [] ["rlwrap"]   (OptArg setRlwrap "<rlwrap args>")
             "Run a REPL session in `rlwrap`."
         , MkOpt ['v'] ["verbose"]   (NoArg debug)
             "Print debugging information"
