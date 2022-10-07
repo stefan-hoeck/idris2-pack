@@ -413,6 +413,28 @@ resolveMeta b u (Latest x) = do
       pure c
     False => (\s => MkCommit $ trim s) <$> read cfile
 
+covering
+findLocalTOMLs :  HasIO io
+               => List (File Abs, UserConfig)
+               -> Path Abs
+               -> EitherT PackErr io $ List (File Abs, UserConfig)
+findLocalTOMLs presentConf currD = do
+  Just af <- findInParentDirs (packToml ==) currD
+    | Nothing => case presentConf of
+                   -- No local `pack.toml` found and it is okay
+                   []   => pure []
+                   -- No local toplevel `pack.toml` is found
+                   _::_ => throwError $ TopLevelConfigExpected currD $ fst <$> presentConf
+  local <- readFromTOML UserConfig af
+  let nextConf = (af, local) :: presentConf
+  if local.toplevel /= Just False
+    then pure nextConf
+    else do
+      let Just parentD = parentDir $ parent af
+          -- No local toplevel `pack.toml` is found and nowhere to look for it
+        | Nothing => throwError $ TopLevelConfigExpected currD $ fst <$> nextConf
+      findLocalTOMLs nextConf parentD
+
 ||| Read application config from command line arguments.
 export covering
 getConfig :  (0 c : Type)
@@ -430,13 +452,10 @@ getConfig c = do
   when !(fileMissing globalPackToml) $
     write globalPackToml (initToml "scheme" coll)
 
-  localToml   <- findInParentDirs ("pack.toml" ==) curDir
+  (localTOMLs, localConfs) <- unzip <$> findLocalTOMLs [] curDir
   global      <- readOptionalFromTOML UserConfig globalPackToml
-  local       <- case localToml of
-    Just af => readFromTOML UserConfig af
-    Nothing => readOptionalFromTOML UserConfig (MkF curDir packToml)
 
-  let ini = init coll `update` global `update` local
+  let ini = foldl update (init coll `update` global) localConfs
 
   pn :: args  <- getArgs | Nil => pure (ini, defaultCommand c)
   (conf',cmd) <- liftEither $ applyArgs c cur ini args
@@ -446,9 +465,9 @@ getConfig c = do
 
   debug "Pack home is \{pd}"
   debug "Current directory is \{cur}"
-  case localToml of
-    Just af => info "Found local config at \{af}"
-    Nothing => debug "No local config found"
+  case localTOMLs of
+    _::_ => info "Found local config at \{joinBy ", " $ interpolate <$> localTOMLs}"
+    []   => debug "No local config found"
   info "Using package collection \{conf.collection}"
   debug "Config loaded"
   mkDir packDir

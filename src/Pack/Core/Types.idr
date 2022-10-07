@@ -727,6 +727,12 @@ data PackErr : Type where
   ||| User aborted installation of a lib/app with custom build hooks.
   SafetyAbort : PackErr
 
+  ||| No toplevel local configuration is found,
+  ||| when non-toplevel local configuration is present
+  TopLevelConfigExpected :  (dir : Path Abs)
+                         -> (nonTopLevels : List $ File Abs)
+                         -> PackErr
+
 ||| Prints an error that occured during program execution.
 export
 printErr : PackErr -> String
@@ -848,6 +854,12 @@ printErr ManualInstallPackApp = """
   """
 
 printErr SafetyAbort = "Installation aborted."
+
+printErr (TopLevelConfigExpected d cs) = """
+  No top-level configuration file was found in \{d} or above.
+  It is needed for the following non-toplevel configuration files:
+  \{joinBy "\n" $ cs <&> \c => "- \{c}"}
+  """
 
 ||| Tries to convert a string to a `DBName` by first converting
 ||| it to a valid file path body.

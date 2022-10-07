@@ -204,6 +204,9 @@ record Config_ (f : Type -> Type) (c : Type) where
   ||| Name of output file when compiling Idris source files
   output       : f Body
 
+  ||| Whether this configuration is toplevel, or a patch to upper config
+  toplevel     : f Bool
+
 ||| Configuration with mandatory fields.
 public export
 0 IConfig : Type -> Type
@@ -309,6 +312,7 @@ init coll = MkConfig {
   , logLevel     = Warning
   , codegen      = Default
   , output       = "_tmppack"
+  , toplevel     = True
   }
 
 infixl 7 `update`
@@ -338,6 +342,7 @@ update ci cm = MkConfig {
   , logLevel     = fromMaybe ci.logLevel cm.logLevel
   , codegen      = fromMaybe ci.codegen cm.codegen
   , output       = fromMaybe ci.output cm.output
+  , toplevel     = fromMaybe ci.toplevel cm.toplevel
   }
 
 --------------------------------------------------------------------------------
