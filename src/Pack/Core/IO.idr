@@ -252,8 +252,8 @@ copyDir from to = do
   mkParentDir to
   sys ["cp", "-r", from, to]
 
-||| Tries to fine a file, the body of which returns `True` for
-||| the given prediccate.
+||| Tries to find the first file, the body of which returns `True` for
+||| the given predicate.
 export
 findInParentDirs :  HasIO io
                  => (Body -> Bool)
