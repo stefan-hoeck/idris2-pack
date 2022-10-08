@@ -445,7 +445,7 @@ getConfig c = do
   debug "Pack home is \{pd}"
   debug "Current directory is \{cur}"
   case localTomls of
-    _::_ => logMany Info "Found local config at" $ interpolate <$> localTomls
+    _::_ => logMany Info {inlineSingle=True} "Found local config at" $ interpolate <$> localTomls
     []   => debug "No local config found"
   info "Using package collection \{conf.collection}"
   debug "Config loaded"
