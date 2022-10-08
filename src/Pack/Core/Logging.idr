@@ -49,17 +49,24 @@ log ref lvl msg =
 ||| is greater than or equal than the (auto-implicit) reference level `ref`.
 ||| If messages list is empty, no log message is printed.
 |||
+||| `inlineSingle` parameter being set to `True` makes a single element of
+||| the given list to be printed at the same line as the main message.
+|||
 ||| Note: Most of the time `ref` is automatically being extracted from
 ||| a value of type `Pack.Config.Types.Config` in scope.
 export
 logMany :  HasIO io
         => (ref  : LogLevel)
-        => (lvl  : LogLevel)
+        => {default False inlineSingle : Bool}
+        -> (lvl  : LogLevel)
         -> (msg  : Lazy String)
         -> (msgs : Lazy (List String))
         -> io ()
 logMany lvl msg msgs =
-  when (lvl >= ref && not (null msgs)) $ printLogMessage lvl msg msgs
+  when (lvl >= ref && not (null msgs)) $
+    case (inlineSingle, force msgs) of
+      (True, [x] ) => printLogMessage lvl "\{msg} \{x}" []
+      (_   , msgs) => printLogMessage lvl msg msgs
 
 ||| Alias for `log ref Debug`.
 |||

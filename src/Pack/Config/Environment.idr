@@ -430,13 +430,11 @@ getConfig c = do
   when !(fileMissing globalPackToml) $
     write globalPackToml (initToml "scheme" coll)
 
-  localToml   <- findInParentDirs ("pack.toml" ==) curDir
+  localTomls  <- findInAllParentDirs (packToml ==) curDir
+  localConfs  <- for localTomls $ readFromTOML UserConfig
   global      <- readOptionalFromTOML UserConfig globalPackToml
-  local       <- case localToml of
-    Just af => readFromTOML UserConfig af
-    Nothing => readOptionalFromTOML UserConfig (MkF curDir packToml)
 
-  let ini = init coll `update` global `update` local
+  let ini = foldl update (init coll `update` global) localConfs
 
   pn :: args  <- getArgs | Nil => pure (ini, defaultCommand c)
   (conf',cmd) <- liftEither $ applyArgs c cur ini args
@@ -446,9 +444,9 @@ getConfig c = do
 
   debug "Pack home is \{pd}"
   debug "Current directory is \{cur}"
-  case localToml of
-    Just af => info "Found local config at \{af}"
-    Nothing => debug "No local config found"
+  case localTomls of
+    _::_ => logMany Info {inlineSingle=True} "Found local config at" $ interpolate <$> localTomls
+    []   => debug "No local config found"
   info "Using package collection \{conf.collection}"
   debug "Config loaded"
   mkDir packDir

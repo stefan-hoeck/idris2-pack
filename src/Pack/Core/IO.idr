@@ -252,8 +252,8 @@ copyDir from to = do
   mkParentDir to
   sys ["cp", "-r", from, to]
 
-||| Tries to fine a file, the body of which returns `True` for
-||| the given prediccate.
+||| Tries to find the first file, the body of which returns `True` for
+||| the given predicate.
 export
 findInParentDirs :  HasIO io
                  => (Body -> Bool)
@@ -267,6 +267,23 @@ findInParentDirs p (PAbs sb) = go sb
            in do
              (h :: _) <- filter p <$> entries dir | Nil => go sb
              pure $ Just (MkF dir h)
+
+||| Tries to find the first file, the body of which return `True` for
+||| the given predicate, in each parent directory.
+export
+findInAllParentDirs :  HasIO io
+                    => (Body -> Bool)
+                    -> Path Abs
+                    -> EitherT PackErr io $ List $ File Abs
+findInAllParentDirs p = go [] where
+  go : List (File Abs) -> Path Abs -> EitherT PackErr io $ List $ File Abs
+  go presentRes currD = do
+    Just af <- findInParentDirs p currD
+      | Nothing => pure presentRes
+    let nextRes = af::presentRes
+    case parentDir $ parent af of
+      Just parentD => go nextRes $ assert_smaller currD parentD
+      Nothing      => pure nextRes
 
 export
 mkTmpDir : HasIO io => PackDir => EitherT PackErr io TmpDir
