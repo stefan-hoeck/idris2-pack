@@ -420,20 +420,12 @@ findLocalTOMLs :  HasIO io
                -> EitherT PackErr io $ List (File Abs, UserConfig)
 findLocalTOMLs presentConf currD = do
   Just af <- findInParentDirs (packToml ==) currD
-    | Nothing => case presentConf of
-                   -- No local `pack.toml` found and it is okay
-                   []   => pure []
-                   -- No local toplevel `pack.toml` is found
-                   _::_ => throwError $ TopLevelConfigExpected currD $ fst <$> presentConf
+    | Nothing => pure presentConf
   local <- readFromTOML UserConfig af
   let nextConf = (af, local) :: presentConf
-  if local.toplevel /= Just False
-    then pure nextConf
-    else do
-      let Just parentD = parentDir $ parent af
-          -- No local toplevel `pack.toml` is found and nowhere to look for it
-        | Nothing => throwError $ TopLevelConfigExpected currD $ fst <$> nextConf
-      findLocalTOMLs nextConf parentD
+  case parentDir $ parent af of
+    Just parentD => findLocalTOMLs nextConf parentD
+    Nothing      => pure nextConf
 
 ||| Read application config from command line arguments.
 export covering

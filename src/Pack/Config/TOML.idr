@@ -45,7 +45,6 @@ FromTOML UserConfig where
                   (pure Nothing)
                   (maybeValAt "idris2.codegen" f v)
                   (pure Nothing)
-                  (maybeValAt "meta.toplevel" f v)
       |]
 
 ||| Initial content of an auto-generated `PACK_DIR/user/pack.toml` file.
