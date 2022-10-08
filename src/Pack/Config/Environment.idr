@@ -413,20 +413,6 @@ resolveMeta b u (Latest x) = do
       pure c
     False => (\s => MkCommit $ trim s) <$> read cfile
 
-covering
-findLocalTOMLs :  HasIO io
-               => List (File Abs, UserConfig)
-               -> Path Abs
-               -> EitherT PackErr io $ List (File Abs, UserConfig)
-findLocalTOMLs presentConf currD = do
-  Just af <- findInParentDirs (packToml ==) currD
-    | Nothing => pure presentConf
-  local <- readFromTOML UserConfig af
-  let nextConf = (af, local) :: presentConf
-  case parentDir $ parent af of
-    Just parentD => findLocalTOMLs nextConf parentD
-    Nothing      => pure nextConf
-
 ||| Read application config from command line arguments.
 export covering
 getConfig :  (0 c : Type)
@@ -444,7 +430,8 @@ getConfig c = do
   when !(fileMissing globalPackToml) $
     write globalPackToml (initToml "scheme" coll)
 
-  (localTOMLs, localConfs) <- unzip <$> findLocalTOMLs [] curDir
+  localTomls  <- findInAllParentDirs (packToml ==) curDir
+  localConfs  <- for localTomls $ readFromTOML UserConfig
   global      <- readOptionalFromTOML UserConfig globalPackToml
 
   let ini = foldl update (init coll `update` global) localConfs
@@ -457,8 +444,8 @@ getConfig c = do
 
   debug "Pack home is \{pd}"
   debug "Current directory is \{cur}"
-  case localTOMLs of
-    _::_ => info "Found local config at \{joinBy ", " $ interpolate <$> localTOMLs}"
+  case localTomls of
+    _::_ => info "Found local config at \{joinBy ", " $ interpolate <$> localTomls}"
     []   => debug "No local config found"
   info "Using package collection \{conf.collection}"
   debug "Config loaded"
