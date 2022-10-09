@@ -203,6 +203,8 @@ usageInfo = """
   Options:
   \{usageInfo "" descs}
 
+  Run `pack help <cmd>` to get detailed information about a command.
+
   Available commands:
   \{unlines $ map (indent 2 . fst) namesAndCommands}
   """

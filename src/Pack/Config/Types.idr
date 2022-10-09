@@ -492,7 +492,7 @@ readSingle read = parseSingleMaybe (Just . read)
 
 export
 Arg a => Arg (Maybe a) where
-  argDesc_ = "[ \{argDesc a} ]"
+  argDesc_ = "[\{argDesc a}]"
 
   readArg ss = case readArg {a} ss of
     Nothing      => Just (Nothing, ss)
@@ -525,7 +525,7 @@ Arg PkgName where
 
 export %inline
 Arg PkgType where
-  argDesc_ = "[lib | app]"
+  argDesc_ = "<lib | app>"
   readArg = parseSingle readPkgType
 
 export %inline
@@ -612,7 +612,7 @@ args {ts = x :: xs} (p :: ps) ss = do
   pure (v :: vs)
 
 argsDesc : CurDir => Command c => Maybe c -> String
-argsDesc Nothing  = "[<args>]"
+argsDesc Nothing  = " [<args>]"
 argsDesc (Just x) = fastConcat $ go (readArgs x)
   where go : All Arg ts -> List String
         go [] = []
@@ -625,7 +625,7 @@ export
 usageHeader : CurDir => Command c => Maybe c -> String
 usageHeader cmd =
   let nm      := maybe "<cmd>" cmdName cmd
-   in "Usage: \{appName {c}} [options] \{nm} \{argsDesc cmd}"
+   in "Usage: \{appName {c}} [options] \{nm}\{argsDesc cmd}"
 
 ind : String -> String
 ind = unlines . map (indent 2) . lines
@@ -669,7 +669,7 @@ readCWA :  Command c
 readCWA x ss =
   let readers := readArgs x
       Just as := args readers ss
-        | Nothing => Left (InvalidCmdArgs (cmdName x) ss $ usageDesc $ Just x)
+        | Nothing => Left (InvalidCmdArgs (cmdName x) ss $ usageHeader $ Just x)
    in Right (x ** as)
 
 ||| Convenience alias for `readCommand_` with an explicit
@@ -682,7 +682,7 @@ readCommand :  (0 c : Type)
             -> Either PackErr (CommandWithArgs c)
 readCommand c cd []       = readCWA defaultCommand []
 readCommand c cd (h :: t) = case readCommand_ {c} h of
-  Nothing => Left (UnknownCommand h $ usage {c})
+  Nothing => Left (UnknownCommand h $ usageDesc {c} Nothing)
   Just x  => readCWA x t
 
 ||| Some commands overwrite certain aspects of the user-defined

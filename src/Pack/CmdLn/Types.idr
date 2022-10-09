@@ -21,7 +21,7 @@ record PkgQuery where
 
 export
 Arg PkgQuery where
-  argDesc_ = "dep <query> | module <query> | <query"
+  argDesc_ = "[mode] <query>"
 
   readArg ("dep" :: s :: t)     = Just (MkQ Dependency s, t)
   readArg ("modules" :: s :: t) = Just (MkQ Module s, t)
@@ -358,7 +358,7 @@ cmdDesc PrintHelp        = """
 
 export
 Arg Cmd where
-  argDesc_ = "[ cmd ]"
+  argDesc_ = "<cmd>"
 
   readArg = parseSingleMaybe (`lookup` namesAndCommands)
 

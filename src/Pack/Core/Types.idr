@@ -834,16 +834,16 @@ printErr (ErroneousArg err) = err
 
 printErr (UnknownCommand cmd usage) =
   """
-  Unknown command: \{cmd}
+  Unknown command: "\{cmd}"
 
-  Usage: \{usage}
+  \{usage}
   """
 
 printErr (InvalidCmdArgs cmd args usage) =
   """
-  Invalid argument(s) for command \{cmd}.
+  Invalid argument(s) for command `\{cmd}`.
 
-  Usage: \{usage}
+  \{usage}
   """
 
 printErr BuildMany =
