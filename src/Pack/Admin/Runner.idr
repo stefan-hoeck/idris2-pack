@@ -11,33 +11,91 @@ import Pack.Runner.Install
 import public Pack.Core
 
 data ACmd : Type where
-  CheckDB  : DBName -> File Abs -> ACmd
-  FromHEAD : (out : File Abs) -> ACmd
+  CheckDB  : ACmd
+  FromHEAD : ACmd
   Help     : ACmd
 
+commands : List ACmd
+commands = [CheckDB, FromHEAD, Help]
+
+name : ACmd -> String
+name CheckDB  = "check-collection"
+name FromHEAD = "extract-from-head"
+name Help     = "help"
+
+namesAndCommands : List (String,ACmd)
+namesAndCommands = map (\c => (name c, c)) commands
+
+cmdDesc : ACmd -> String
+cmdDesc CheckDB  = """
+  Tries to build and install all packages from the given package
+  collection and prints a basic report.
+  Writes the results to the given file.
+  """
+
+cmdDesc FromHEAD = """
+  Extract the latest commit hash for all packages in
+  the HEAD collection and store the resulting package collection
+  at the given path.
+  """
+
+cmdDesc Help     = """
+  Without an additional <cmd> argument, this prints general information
+  about using pack-admin, including a list of available command-line options
+  and a description of what each of them does.
+
+  If an explicit command is given, this gives some detail about what
+  the command in question does and what additional arguments it takes.
+
+  Available commands:
+  \{unlines $ map (indent 2 . fst) Runner.namesAndCommands}
+  """
+
+export
+Arg ACmd where
+  argDesc_ = "<cmd>"
+
+  readArg = parseSingleMaybe (`lookup` namesAndCommands)
+
 Command ACmd where
-  defaultLevel (CheckDB x y)  = Info
-  defaultLevel (FromHEAD out) = Info
-  defaultLevel Help           = Warning
+  defaultCommand = Help
 
-  readCommand_ _   ["help"]                 = Right Help
-  readCommand_ dir ["extract-from-head",p]  = FromHEAD <$> readAbsFile curDir p
-  readCommand_ dir ["check-collection",n,p] =
-    [| CheckDB (readDBName n) (readAbsFile curDir p) |]
-  readCommand_ _   xs                       = Left $ UnknownCommand xs
+  appName = "pack-admin"
 
-  adjConfig (CheckDB db _) c = pure $ {
+  usage = """
+  Run `pack-admin help <cmd>` to get detailed information about a command.
+
+  Available commands:
+  \{unlines $ map (indent 2 . fst) Runner.namesAndCommands}
+  """
+
+  cmdName = name
+
+  defaultLevel CheckDB  = Info
+  defaultLevel FromHEAD = Info
+  defaultLevel Help     = Warning
+
+  ArgTypes CheckDB  = [DBName, File Abs]
+  ArgTypes FromHEAD = [File Abs]
+  ArgTypes Help     = [Maybe ACmd]
+
+  readCommand_ n = lookup n namesAndCommands
+
+  adjConfig_ CheckDB [db,_] c = pure $ {
       collection   := db
     , withDocs     := True
     , useKatla     := True
     , safetyPrompt := False
     } c
 
-  adjConfig (FromHEAD p) c = pure $ {collection := MkDBName "HEAD"} c
-  adjConfig Help         c = pure c
+  adjConfig_ FromHEAD [p] c = pure $ {collection := MkDBName "HEAD"} c
+  adjConfig_ Help     [_] c = pure c
 
-  defaultCommand_ = Help
+  desc = cmdDesc
 
+  readArgs CheckDB  = %search
+  readArgs FromHEAD = %search
+  readArgs Help     = %search
 
 covering
 commitOf : HasIO io => Package -> EitherT PackErr io Package
@@ -74,23 +132,6 @@ runCmd = do
   (mc,cmd) <- getConfig ACmd
   linebuf  <- getLineBufferingCmd
   case cmd of
-    CheckDB db p       => finally (rmDir tmpDir) $ idrisEnv mc True >>= checkDB p
-    FromHEAD p         => env mc True >>= writeLatestDB p
-    Help               => putStrLn """
-      Usage: pack-admin [cmd] [args]
-
-      Commands:
-
-        extract-from-head <path>
-          Extract the latest commit hash for all packages in
-          the HEAD collection and store the resulting package collection
-          at the given path.
-
-        check-collection <colname> <path>
-          Tries to build and install all packages from the given package
-          collection and prints a basic report.
-          Writes the results to the given file.
-
-        help
-          Print this help text.
-      """
+    (CheckDB ** [db,p]) => finally (rmDir tmpDir) $ idrisEnv mc True >>= checkDB p
+    (FromHEAD ** [p])   => env mc True >>= writeLatestDB p
+    (Help ** [c])       => putStrLn (usageDesc c)

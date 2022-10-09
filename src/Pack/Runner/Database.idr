@@ -101,10 +101,10 @@ parseLibIpkg p loc = parseIpkgFile p loc >>= safe
 export
 findAndParseLocalIpkg :  HasIO io
                       => (e    : Env)
-                      => (file : Either (File Abs) PkgName)
+                      => (file : PkgOrIpkg)
                       -> EitherT PackErr io (Desc Safe)
-findAndParseLocalIpkg (Left p)  = parseLibIpkg p p
-findAndParseLocalIpkg (Right n) =
+findAndParseLocalIpkg (Ipkg p) = parseLibIpkg p p
+findAndParseLocalIpkg (Pkg n)  =
   case lookup n allPackages of
     Nothing                 => throwE (UnknownPkg n)
     Just (Local dir ipkg _) => let p = dir </> ipkg in parseLibIpkg p p

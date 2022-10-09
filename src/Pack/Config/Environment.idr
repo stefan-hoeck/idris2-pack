@@ -421,7 +421,7 @@ getConfig :  (0 c : Type)
           => (pd        : PackDir)
           => (td        : TmpDir)
           => (cur       : CurDir)
-          => EitherT PackErr io (MetaConfig,c)
+          => EitherT PackErr io (MetaConfig, CommandWithArgs c)
 getConfig c = do
   -- relevant directories
   coll       <- defaultColl
@@ -436,7 +436,12 @@ getConfig c = do
 
   let ini = foldl update (init coll `update` global) localConfs
 
-  pn :: args  <- getArgs | Nil => pure (ini, defaultCommand c)
+  args'       <- getArgs
+  let args : List String
+      args = case args' of
+        h :: t => t
+        []     => [] -- this should not happen
+
   (conf',cmd) <- liftEither $ applyArgs c cur ini args
   conf        <- adjConfig cmd conf'
 

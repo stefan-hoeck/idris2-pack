@@ -126,36 +126,24 @@ exec file args e = do
 
 ||| Build a local library given as an `.ipkg` file.
 export covering %inline
-build :  HasIO io
-      => Either (File Abs) PkgName
-      -> IdrisEnv
-      -> EitherT PackErr io ()
+build : HasIO io => PkgOrIpkg -> IdrisEnv -> EitherT PackErr io ()
 build f e = findAndParseLocalIpkg f >>= runIdrisOn ["--build"]
 
 ||| Install dependencies of a local `.ipkg` file or package name
 export covering
-buildDeps :  HasIO io
-          => Either (File Abs) PkgName
-          -> IdrisEnv
-          -> EitherT PackErr io ()
+buildDeps : HasIO io => PkgOrIpkg -> IdrisEnv -> EitherT PackErr io ()
 buildDeps f e = do
   d <- findAndParseLocalIpkg f
   installDeps d
 
 ||| Typecheck a local library given as an `.ipkg` file or package name
 export covering %inline
-typecheck :  HasIO io
-          => Either (File Abs) PkgName
-          -> IdrisEnv
-          -> EitherT PackErr io ()
+typecheck : HasIO io => PkgOrIpkg -> IdrisEnv -> EitherT PackErr io ()
 typecheck f e = findAndParseLocalIpkg f >>= runIdrisOn ["--typecheck"]
 
 ||| Cleanup a local library given as an `.ipkg` file or package name
 export covering %inline
-clean :  HasIO io
-          => Either (File Abs) PkgName
-          -> IdrisEnv
-          -> EitherT PackErr io ()
+clean : HasIO io => PkgOrIpkg -> IdrisEnv -> EitherT PackErr io ()
 clean f e = findAndParseLocalIpkg f >>= libPkg [] ["--clean"]
 
 ||| Build and execute a local `.ipkg` file.
@@ -168,7 +156,7 @@ runIpkg :  HasIO io
 runIpkg p args e = do
   d        <- parseLibIpkg p p
   Just exe <- pure (execPath d) | Nothing => throwE (NoAppIpkg p)
-  build (Left p) e
+  build (Ipkg p) e
   case ipkgCodeGen d.desc of
     Node => sys $ ["node", exe] ++ args
     _    => sys $ [exe] ++ args

@@ -1,8 +1,10 @@
 module Pack.Config.Types
 
 import Control.Monad.Either
+import Data.Either
 import Data.List
 import Data.IORef
+import public Data.List.Quantifiers
 import Data.Maybe
 import Data.SortedMap as SM
 import Idris.Package.Types
@@ -458,6 +460,104 @@ idrisEnvToEnv : (e : IdrisEnv) => Env
 idrisEnvToEnv = e.env
 
 --------------------------------------------------------------------------------
+--          Command Arguments
+--------------------------------------------------------------------------------
+
+||| An interface for parsing the argument list of a pack command
+public export
+interface Arg (0 a : Type) where
+  argDesc_ : String
+  readArg  : List String -> Maybe (a, List String)
+
+||| Utility version of `argDesc_` with an explicit erased type argument.
+public export %inline
+argDesc : (0 a : Type) -> Arg a => String
+argDesc a = argDesc_ {a}
+
+||| Utility for implementing `readArg` via a function reading a single string.
+export
+parseSingleMaybe :  (read : String -> Maybe a)
+                 -> List String
+                 -> Maybe (a, List String)
+parseSingleMaybe read []       = Nothing
+parseSingleMaybe read (h :: t) = (,t) <$> read h
+
+||| Utility for implementing `readArg` via a function reading a single string.
+export %inline
+parseSingle :  (read : String -> Either e a)
+            -> List String
+            -> Maybe (a, List String)
+parseSingle read = parseSingleMaybe (eitherToMaybe . read)
+
+||| Utility for implementing `readArg` via a function reading a single string.
+export %inline
+readSingle :  (read : String -> a) -> List String -> Maybe (a, List String)
+readSingle read = parseSingleMaybe (Just . read)
+
+export
+Arg a => Arg (Maybe a) where
+  argDesc_ = "[\{argDesc a}]"
+
+  readArg ss = case readArg {a} ss of
+    Nothing      => Just (Nothing, ss)
+    Just (v,ss') => Just (Just v, ss')
+
+export
+(cd : CurDir) => Arg (File Abs) where
+  argDesc_ = "<file>"
+  readArg = parseSingle (readAbsFile curDir)
+
+export
+(cd : CurDir) => Arg PkgOrIpkg where
+  argDesc_ = "<pkg or .ipkg>"
+  readArg = readSingle $ \s => case readAbsFile curDir s of
+    Left  _ => Pkg $ MkPkgName s
+    Right f =>
+      if isIpkgBody f.file
+           then Ipkg f
+           else Pkg $ MkPkgName s
+
+export %inline
+(cd : CurDir) => Arg CurDir where
+  argDesc_ = ""
+  readArg ss = Just (cd, ss)
+
+export %inline
+Arg PkgName where
+  argDesc_ = "<pkg>"
+  readArg = readSingle MkPkgName
+
+export %inline
+Arg PkgType where
+  argDesc_ = "<lib | app>"
+  readArg = parseSingle readPkgType
+
+export %inline
+Arg CmdArgList where
+  argDesc_ = "[<args>]"
+  readArg ss = Just (fromStrList ss, [])
+
+export %inline
+Arg (List PkgName) where
+  argDesc_ = "[<pkgs>]"
+  readArg ss = Just (map MkPkgName ss, [])
+
+export %inline
+Arg Body where
+  argDesc_ = "<file name>"
+  readArg = parseSingle readBody
+
+export %inline
+Arg DBName where
+  argDesc_ = "<db>"
+  readArg = parseSingle readDBName
+
+export %inline
+Arg String where
+  argDesc_ = "<str>"
+  readArg = readSingle id
+
+--------------------------------------------------------------------------------
 --          Command
 --------------------------------------------------------------------------------
 
@@ -465,41 +565,148 @@ idrisEnvToEnv = e.env
 ||| because both pack and pack-admin accept different types of
 ||| commands, but both use the same functionality for reading
 ||| the application config based on the command they use.
+|||
+||| A command `c` is expected to be an enum type. This interface provides
+||| a name and detailed description for each command, as well as the types of
+||| arguments a command takes.
+|||
+||| This allows us to generate useful error messages when the wrong type
+||| of argument is passed to a command. It also allows us to implement the
+||| parsing of commands only once.
 public export
 interface Command c where
   ||| The command to use if only command line options but
   ||| not command is given.
-  defaultCommand_ : c
+  defaultCommand : c
+
+  ||| Name of the application in question
+  appName : String
+
+  ||| Name of command in question
+  cmdName : c -> String
 
   ||| The default log level to use.
   defaultLevel    : c -> LogLevel
+
+  ||| Detailed usage description of the command
+  desc : c -> String
+
+  ||| General usage of the application in question
+  usage : Lazy String
+
+  ||| Types of arguments required by the given command
+  0 ArgTypes : c -> List Type
+
+  ||| Tries to read a command from a String
+  readCommand_ : String -> Maybe c
+
+  ||| List of argument readers for the current command
+  readArgs : CurDir => (cmd : c) -> All Arg (ArgTypes cmd)
 
   ||| Some commands overwrite certain aspects of the user-defined
   ||| config. For instance, `pack switch latest` must overwrite the
   ||| package collection read from the `pack.toml` files with the
   ||| latest package collection available.
-  adjConfig :  HasIO io
-            => PackDir
-            => TmpDir
-            => c
-            -> MetaConfig
-            -> EitherT PackErr io MetaConfig
+  adjConfig_ :  HasIO io
+             => PackDir
+             => TmpDir
+             => (cmd : c)
+             -> All I (ArgTypes cmd)
+             -> MetaConfig
+             -> EitherT PackErr io MetaConfig
 
-  ||| Tries to read a command from a list of command line arguments.
-  readCommand_ : CurDir -> List String -> Either PackErr c
+args : All Arg ts -> CurDir => List String -> Maybe (All I ts)
+args [] []       = Just []
+args [] (_ :: _) = Nothing
+args {ts = x :: xs} (p :: ps) ss = do
+  (v,ss') <- readArg {a = x} ss
+  vs      <- args ps ss'
+  pure (v :: vs)
 
-||| Convenience alias for `defaultCommand_` with an explicit
-||| erased argument for the command type.
-export %inline
-defaultCommand : (0 c : Type) -> Command c => c
-defaultCommand _ = defaultCommand_
+argsDesc : CurDir => Command c => Maybe c -> String
+argsDesc Nothing  = " [<args>]"
+argsDesc (Just x) = fastConcat $ go (readArgs x)
+  where go : All Arg ts -> List String
+        go [] = []
+        go {ts = x :: xs} (p :: ps) = case argDesc_ {a = x} of
+          "" => go ps
+          s  => (" " ++ s) :: go ps
+
+||| Header line for a usage string
+export
+usageHeader : CurDir => Command c => Maybe c -> String
+usageHeader cmd =
+  let nm      := maybe "<cmd>" cmdName cmd
+   in "Usage: \{appName {c}} [options] \{nm}\{argsDesc cmd}"
+
+ind : String -> String
+ind = unlines . map (indent 2) . lines
+
+||| Detailed description how to use the given command.
+|||
+||| This is a general description of the application
+||| in case the argument is `Nothing`.
+export
+usageDesc : CurDir => Command c => Maybe c -> String
+usageDesc m = case m of
+  Just cmd =>
+    """
+    \{usageHeader m}
+
+    \{ind $ desc cmd}
+    """
+
+  Nothing =>
+    """
+    \{usageHeader m}
+
+    \{usage {c}}
+    """
+
+||| Type of arguments expected by the given command
+public export
+0 Args : Command c => c -> Type
+Args cmd = All I (ArgTypes cmd)
+
+||| A pack command together with its list of arguments
+public export
+0 CommandWithArgs : (c : Type) -> Command c => Type
+CommandWithArgs c = DPair c Args
+
+readCWA :  Command c
+        => CurDir
+        => (cmd : c)
+        -> List String
+        -> Either PackErr (CommandWithArgs c)
+readCWA x ss =
+  let readers := readArgs x
+      Just as := args readers ss
+        | Nothing => Left (InvalidCmdArgs (cmdName x) ss $ usageHeader $ Just x)
+   in Right (x ** as)
 
 ||| Convenience alias for `readCommand_` with an explicit
 ||| erased argument for the command type.
-export %inline
+export
 readCommand :  (0 c : Type)
             -> Command c
             => CurDir
             -> List String
-            -> Either PackErr c
-readCommand _ = readCommand_
+            -> Either PackErr (CommandWithArgs c)
+readCommand c cd []       = readCWA defaultCommand []
+readCommand c cd (h :: t) = case readCommand_ {c} h of
+  Nothing => Left (UnknownCommand h $ usageDesc {c} Nothing)
+  Just x  => readCWA x t
+
+||| Some commands overwrite certain aspects of the user-defined
+||| config. For instance, `pack switch latest` must overwrite the
+||| package collection read from the `pack.toml` files with the
+||| latest package collection available.
+export %inline
+adjConfig :  HasIO io
+          => Command c
+          => PackDir
+          => TmpDir
+          => CommandWithArgs c
+          -> MetaConfig
+          -> EitherT PackErr io MetaConfig
+adjConfig (command ** args) = adjConfig_ command args

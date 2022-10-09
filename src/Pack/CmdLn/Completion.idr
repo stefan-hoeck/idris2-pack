@@ -92,35 +92,11 @@ codegens =
   , "vmcode-interp"
   ]
 
+commands : List String
+commands = map fst namesAndCommands
+
 optionFlags : List String
-optionFlags =
-  [ "app-path"
-  , "build"
-  , "clean"
-  , "completion"
-  , "completion-script"
-  , "data-path"
-  , "exec"
-  , "fetch"
-  , "fuzzy"
-  , "help"
-  , "info"
-  , "install"
-  , "install-app"
-  , "install-deps"
-  , "libs-path"
-  , "new"
-  , "package-path"
-  , "query"
-  , "remove"
-  , "remove-app"
-  , "repl"
-  , "run"
-  , "switch"
-  , "typecheck"
-  , "update-db"
-  , "update"
-  ] ++ optionNames
+optionFlags = commands ++ optionNames
 
 queries : Env => List String
 queries = ["dep", "module"] ++ packages
@@ -160,7 +136,8 @@ opts x "switch"           = prefixOnlyIfNonEmpty x . ("latest" ::)
                             <$> collections
 opts x "clean"            = prefixOnlyIfNonEmpty x <$> ipkgFiles
 opts x "typecheck"        = prefixOnlyIfNonEmpty x <$> ipkgFiles
-opts x "new"              = prefixOnlyIfNonEmpty x <$> pure (packageTypes)
+opts x "new"              = prefixOnlyIfNonEmpty x <$> pure packageTypes
+opts x "help"             = prefixOnlyIfNonEmpty x <$> pure commands
 
 -- options
 opts x _ = pure $ if (x `elem` optionFlags)
