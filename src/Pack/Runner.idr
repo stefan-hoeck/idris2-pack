@@ -1,5 +1,6 @@
 module Pack.Runner
 
+import Data.List.Quantifiers
 import Data.IORef
 import Pack.CmdLn
 import Pack.CmdLn.Completion
@@ -12,98 +13,75 @@ import Pack.Runner.Query
 import Pack.Runner.Install
 import Pack.Runner.New
 
-ipkgFile : CurDir -> String -> (File Abs -> Cmd) -> Either PackErr Cmd
-ipkgFile (CD dir) s f = f <$> readAbsFile dir s
-
-pkgOrIpkg :  CurDir
-          -> String
-          -> (Either (File Abs) PkgName -> Cmd)
-          -> Either PackErr Cmd
-pkgOrIpkg (CD dir) s f = case readAbsFile dir s of
-  Left  _    => Right (f . Right $ MkPkgName s)
-  Right file => if isIpkgBody file.file
-                   then Right (f $ Left file)
-                   else Right (f . Right $ MkPkgName s)
-
+public export
 Command Cmd where
-  defaultLevel (Build x)              = Build
-  defaultLevel (BuildDeps x)          = Build
-  defaultLevel (Typecheck x)          = Build
-  defaultLevel (Clean x)              = Build
-  defaultLevel (Exec _ _)             = Warning
-  defaultLevel (New _ _ _)            = Build
-  defaultLevel (Repl x)               = Warning
-  defaultLevel (Install xs)           = Build
-  defaultLevel (Remove xs)            = Build
-  defaultLevel (Run x strs)           = Warning
-  defaultLevel Update                 = Build
-  defaultLevel Fetch                  = Build
-  defaultLevel PackagePath            = Silence
-  defaultLevel LibsPath               = Silence
-  defaultLevel DataPath               = Silence
-  defaultLevel (AppPath x)            = Silence
-  defaultLevel (Switch x)             = Build
-  defaultLevel UpdateDB               = Build
-  defaultLevel Info                   = Warning
-  defaultLevel (Query x str)          = Warning
-  defaultLevel (Fuzzy xs str)         = Warning
-  defaultLevel (Completion str str1)  = Silence
-  defaultLevel (CompletionScript str) = Silence
-  defaultLevel PrintHelp              = Silence
+  defaultCommand = PrintHelp
 
-  defaultCommand_ = PrintHelp
+  usage = usageInfo
 
-  readCommand_ _  []                         = Right PrintHelp
-  readCommand_ _  ["help"]                   = Right PrintHelp
-  readCommand_ _  ["info"]                   = Right Info
-  readCommand_ _  ["update-db"]              = Right UpdateDB
-  readCommand_ _  ["update"]                 = Right Update
-  readCommand_ _  ["fetch"]                  = Right Fetch
-  readCommand_ _  ["fuzzy", s]               = Right $ Fuzzy [] s
-  readCommand_ _  ["fuzzy", p, s]            =
-    Right $ Fuzzy (forget $ map MkPkgName $ split (',' ==) p) s
+  cmdName = name
 
-  readCommand_ _  ["query", s]               = Right $ Query PkgName s
-  readCommand_ _  ["query", "dep", s]        = Right $ Query Dependency s
-  readCommand_ _  ["query", "module", s]     = Right $ Query Module s
-  readCommand_ cd ("exec" :: idr :: args)    =
-    (`Exec` fromStrList args) <$> readAbsFile curDir idr
+  appName = "pack"
 
-  readCommand_ _  ["repl"]                   = Right $ Repl Nothing
-  readCommand_ cd ["repl", s]                =
-    Repl . Just <$> readAbsFile curDir s
-  readCommand_ cd ("run" :: p :: args)       = pkgOrIpkg cd p (`Run` fromStrList args)
+  defaultLevel Build            = Build
+  defaultLevel BuildDeps        = Build
+  defaultLevel Typecheck        = Build
+  defaultLevel Clean            = Build
+  defaultLevel Exec             = Warning
+  defaultLevel New              = Build
+  defaultLevel Repl             = Warning
+  defaultLevel Install          = Build
+  defaultLevel InstallApp       = Build
+  defaultLevel Remove           = Build
+  defaultLevel RemoveApp        = Build
+  defaultLevel Run              = Warning
+  defaultLevel Update           = Build
+  defaultLevel Fetch            = Build
+  defaultLevel PackagePath      = Silence
+  defaultLevel LibsPath         = Silence
+  defaultLevel DataPath         = Silence
+  defaultLevel AppPath          = Silence
+  defaultLevel Switch           = Build
+  defaultLevel UpdateDB         = Build
+  defaultLevel Info             = Warning
+  defaultLevel Query            = Warning
+  defaultLevel Fuzzy            = Warning
+  defaultLevel Completion       = Silence
+  defaultLevel CompletionScript = Silence
+  defaultLevel PrintHelp        = Silence
 
-  readCommand_ cd ["build", file]            = pkgOrIpkg cd file Build
-  readCommand_ cd ["install-deps", file]     = pkgOrIpkg cd file BuildDeps
-  readCommand_ cd ["typecheck", file]        = pkgOrIpkg cd file Typecheck
-  readCommand_ cd ["clean", file]            = pkgOrIpkg cd file Clean
-  readCommand_ _  ("install" :: xs)          =
-    Right . Install $ map (\s => (Library, MkPkgName s)) xs
+  desc = cmdDesc
 
-  readCommand_ _  ("remove" :: xs)           =
-    Right . Remove $ map (\s => (Lib, MkPkgName s)) xs
+  ArgTypes Build            = [PkgOrIpkg]
+  ArgTypes BuildDeps        = [PkgOrIpkg]
+  ArgTypes Typecheck        = [PkgOrIpkg]
+  ArgTypes Clean            = [PkgOrIpkg]
+  ArgTypes Repl             = [Maybe (File Abs)]
+  ArgTypes Exec             = [File Abs, CmdArgList]
+  ArgTypes Install          = [List PkgName]
+  ArgTypes InstallApp       = [List PkgName]
+  ArgTypes Remove           = [List PkgName]
+  ArgTypes RemoveApp        = [List PkgName]
+  ArgTypes Run              = [PkgOrIpkg, CmdArgList]
+  ArgTypes New              = [CurDir, PkgType, Body]
+  ArgTypes Update           = []
+  ArgTypes Fetch            = []
+  ArgTypes PackagePath      = []
+  ArgTypes LibsPath         = []
+  ArgTypes DataPath         = []
+  ArgTypes AppPath          = [PkgName]
+  ArgTypes Switch           = [DBName]
+  ArgTypes UpdateDB         = []
+  ArgTypes Info             = []
+  ArgTypes Query            = [PkgQuery]
+  ArgTypes Fuzzy            = [FuzzyQuery]
+  ArgTypes Completion       = [String, String]
+  ArgTypes CompletionScript = [String]
+  ArgTypes PrintHelp        = [Maybe Cmd]
 
-  readCommand_ _  ("remove-app" :: xs)           =
-    Right . Remove $ map (\s => (Bin, MkPkgName s)) xs
+  readCommand_ n = lookup n namesAndCommands
 
-  readCommand_ _  ("install-app" :: xs)      =
-    Right . Install $ map (\s => (App True, MkPkgName s)) xs
-
-  readCommand_ _  ["completion",a,b]         = Right $ Completion a b
-
-  readCommand_ _  ["completion-script",f]    = Right $ CompletionScript f
-  readCommand_ _  ["package-path"]           = Right PackagePath
-  readCommand_ _  ["libs-path"]              = Right LibsPath
-  readCommand_ _  ["data-path"]              = Right DataPath
-  readCommand_ _  ["app-path", n]            = Right $ AppPath (MkPkgName n)
-  readCommand_ _  ["switch",db]              = Switch <$> readDBName db
-  readCommand_ cd ["new", pty, p]            =
-    New cd <$> readPkgType pty <*> readBody p
-
-  readCommand_ _  xs                         = Left  $ UnknownCommand xs
-
-  adjConfig (Switch db) c = case db == MkDBName "latest" of
+  adjConfig_ Switch [db] c = case db == MkDBName "latest" of
     True  => do
       updateDB
       latest <- defaultColl
@@ -112,8 +90,35 @@ Command Cmd where
 
   -- we trust pack to be safe to install even though it uses
   -- custom build hooks
-  adjConfig Update c = pure $ {safetyPrompt := False} c
-  adjConfig _      c = pure c
+  adjConfig_ Update []  c = pure $ {safetyPrompt := False} c
+  adjConfig_ _      _   c = pure c
+
+  readArgs Build            = %search
+  readArgs BuildDeps        = %search
+  readArgs Typecheck        = %search
+  readArgs Clean            = %search
+  readArgs Repl             = %search
+  readArgs Exec             = %search
+  readArgs Install          = %search
+  readArgs InstallApp       = %search
+  readArgs Remove           = %search
+  readArgs RemoveApp        = %search
+  readArgs Run              = %search
+  readArgs New              = %search
+  readArgs Update           = %search
+  readArgs Fetch            = %search
+  readArgs PackagePath      = %search
+  readArgs LibsPath         = %search
+  readArgs DataPath         = %search
+  readArgs AppPath          = %search
+  readArgs Switch           = %search
+  readArgs UpdateDB         = %search
+  readArgs Info             = %search
+  readArgs Query            = %search
+  readArgs Fuzzy            = %search
+  readArgs Completion       = %search
+  readArgs CompletionScript = %search
+  readArgs PrintHelp        = %search
 
 isFetch : Cmd -> Bool
 isFetch Fetch = True
@@ -128,34 +133,36 @@ runCmd = do
   cd       <- CD <$> curDir
   cache    <- emptyCache
   (mc,cmd) <- getConfig Cmd
-  let fetch := isFetch cmd
+  let fetch := isFetch (fst cmd)
   linebuf  <- getLineBufferingCmd
   finally (rmDir tmpDir) $ case cmd of
-    Completion a b     => env mc fetch >>= complete a b
-    CompletionScript f => putStrLn (completionScript f)
-    Query m s          => env mc fetch >>= query m s
-    Fuzzy m s          => idrisEnv mc fetch >>= fuzzy m s
-    UpdateDB           => updateDB
-    Run (Right p) args => idrisEnv mc fetch >>= execApp p args
-    Run (Left p)  args => idrisEnv mc fetch >>= runIpkg p args
-    Exec p args        => idrisEnv mc fetch >>= exec p args
-    Repl p             => idrisEnv mc fetch >>= idrisRepl p
-    Build p            => idrisEnv mc fetch >>= build p
-    BuildDeps p        => idrisEnv mc fetch >>= buildDeps p
-    Typecheck p        => idrisEnv mc fetch >>= typecheck p
-    Clean p            => idrisEnv mc fetch >>= clean p
-    PrintHelp          => putStrLn usageInfo
-    Install ps         => idrisEnv mc fetch >>= \e => install ps
-    Remove ps          => idrisEnv mc fetch >>= \e => remove ps
-    Update             => idrisEnv mc fetch >>= update
-    Fetch              => idrisEnv mc fetch >>= \e => install []
-    PackagePath        => env mc fetch >>= packagePathDirs >>= putStrLn
-    LibsPath           => env mc fetch >>= packageLibDirs  >>= putStrLn
-    DataPath           => env mc fetch >>= packageDataDirs >>= putStrLn
-    AppPath n          => env mc fetch >>= appPath n
-    Info               => env mc fetch >>= printInfo
-    New dir pty p      => idrisEnv mc fetch >>= new dir pty p
-    Switch db          => do
+    (Completion ** [a,b])     => env mc fetch >>= complete a b
+    (CompletionScript ** [f]) => putStrLn (completionScript f)
+    (Query  ** [MkQ m s])     => env mc fetch >>= query m s
+    (Fuzzy ** [MkFQ m s])     => idrisEnv mc fetch >>= fuzzy m s
+    (UpdateDB ** [])          => updateDB
+    (Run ** [Pkg p,args])     => idrisEnv mc fetch >>= execApp p args
+    (Run ** [Ipkg p,args])    => idrisEnv mc fetch >>= runIpkg p args
+    (Exec ** [p,args])        => idrisEnv mc fetch >>= exec p args
+    (Repl ** [p])             => idrisEnv mc fetch >>= idrisRepl p
+    (Build ** [p])            => idrisEnv mc fetch >>= build p
+    (BuildDeps ** [p])        => idrisEnv mc fetch >>= buildDeps p
+    (Typecheck ** [p])        => idrisEnv mc fetch >>= typecheck p
+    (Clean ** [p])            => idrisEnv mc fetch >>= clean p
+    (PrintHelp ** [c])        => putStrLn (usageDesc c)
+    (Install ** [ps])         => idrisEnv mc fetch >>= \e => installLibs ps
+    (Remove ** [ps])          => idrisEnv mc fetch >>= \e => removeLibs ps
+    (InstallApp ** [ps])      => idrisEnv mc fetch >>= \e => installApps ps
+    (RemoveApp ** [ps])       => idrisEnv mc fetch >>= \e => removeApps ps
+    (Update ** [])            => idrisEnv mc fetch >>= update
+    (Fetch ** [])             => idrisEnv mc fetch >>= \e => install []
+    (PackagePath ** [])       => env mc fetch >>= packagePathDirs >>= putStrLn
+    (LibsPath ** [])          => env mc fetch >>= packageLibDirs  >>= putStrLn
+    (DataPath ** [])          => env mc fetch >>= packageDataDirs >>= putStrLn
+    (AppPath ** [n])          => env mc fetch >>= appPath n
+    (Info ** [])              => env mc fetch >>= printInfo
+    (New  ** [dir,pty,p])     => idrisEnv mc fetch >>= new dir pty p
+    (Switch ** [db])          => do
       env <- idrisEnv mc fetch
       install []
       writeCollection

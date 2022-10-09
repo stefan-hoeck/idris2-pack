@@ -289,6 +289,20 @@ install ps = do
     for_ all $ \case Lib rl  => installDocs rl
                      App _ _ => pure ()
 
+||| Install the given list of libraries, by first
+||| resolving each of them and then creating a build plan including
+||| all dependencies of the lot.
+export covering %inline
+installLibs : HasIO io => IdrisEnv => List PkgName -> EitherT PackErr io ()
+installLibs = install . map (Library,)
+
+||| Install the given list of applications, by first
+||| resolving each of them and then creating a build plan including
+||| all dependencies of the lot.
+export covering %inline
+installApps : HasIO io => IdrisEnv => List PkgName -> EitherT PackErr io ()
+installApps = install . map (App True,)
+
 ||| Install the (possibly transitive) dependencies of the given
 ||| loaded `.ipkg` file.
 export covering
@@ -356,10 +370,20 @@ removeLib n = do
   info "Removing library \{n}"
   rmDir (pkgInstallDir rl.name rl.pkg rl.desc)
 
-||| Remove a library or application.
+||| Remove the given libs or apps
 export covering
 remove : HasIO io => Env => List (PkgType,PkgName) -> EitherT PackErr io ()
 remove ps = do
   ref <- emptyCache
   for_ ps  $ \case (Lib,n) => removeLib n
                    (Bin,n) => removeApp n
+
+||| Remove the given libs
+export covering
+removeLibs : HasIO io => Env => List PkgName -> EitherT PackErr io ()
+removeLibs = remove . map (Lib,)
+
+||| Remove the given apps
+export covering
+removeApps : HasIO io => Env => List PkgName -> EitherT PackErr io ()
+removeApps = remove . map (Bin,)

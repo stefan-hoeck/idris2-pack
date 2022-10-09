@@ -282,6 +282,17 @@ Cast PkgName (Path Rel) where
   cast = toRelPath . value
 
 --------------------------------------------------------------------------------
+--          PkgOrIpkg
+--------------------------------------------------------------------------------
+
+||| Several pack commands operat either on a pack package or a local
+||| `.ipkg` file. This data type represents such command line arguments.
+public export
+data PkgOrIpkg : Type where
+  Pkg :  PkgName -> PkgOrIpkg
+  Ipkg : File Abs -> PkgOrIpkg
+
+--------------------------------------------------------------------------------
 --          Package Type
 --------------------------------------------------------------------------------
 
@@ -704,9 +715,14 @@ data PackErr : Type where
   ||| (or something that isn't a local package).
   BuildMany : PackErr
 
-  ||| Unknown command or sequence of options
-  ||| entered on the command line
-  UnknownCommand : List String -> PackErr
+  ||| Unknown pack command
+  UnknownCommand : String -> (usage : String) -> PackErr
+
+  ||| Unknown pack command
+  InvalidCmdArgs :  (cmd   : String)
+                 -> (args  : List String)
+                 -> (usage : String)
+                 -> PackErr
 
   ||| Trying to clone a repository into an existing
   ||| directory.
@@ -816,7 +832,19 @@ printErr (InvalidArgs args) = "Invalid command line args: \{unwords args}"
 
 printErr (ErroneousArg err) = err
 
-printErr (UnknownCommand cmd) = "Unknown command: \{unwords cmd}"
+printErr (UnknownCommand cmd usage) =
+  """
+  Unknown command: \{cmd}
+
+  Usage: \{usage}
+  """
+
+printErr (InvalidCmdArgs cmd args usage) =
+  """
+  Invalid argument(s) for command \{cmd}.
+
+  Usage: \{usage}
+  """
 
 printErr BuildMany =
   "Can only build or typecheck a single Idris2 package given as an `.ipkg` file."

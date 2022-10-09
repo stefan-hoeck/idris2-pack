@@ -180,12 +180,12 @@ applyArgs :  (0 c : Type)
           => (curDir     : CurDir)
           -> (init       : MetaConfig)
           -> (args       : List String)
-          -> Either PackErr (MetaConfig, c)
+          -> Either PackErr (MetaConfig, CommandWithArgs c)
 applyArgs c dir init args =
   case getOpt RequireOrder descs args of
        MkResult opts n  []      []       => do
          cmd  <- readCommand c dir n
-         let init' = {logLevel := defaultLevel cmd} init
+         let init' = {logLevel := defaultLevel (fst cmd)} init
          conf <- foldlM (\c,f => f dir c) init' opts
          Right (conf, cmd)
 
@@ -196,152 +196,13 @@ applyArgs c dir init args =
 --          Usage Info
 --------------------------------------------------------------------------------
 
-progName : String
-progName = "pack"
-
 ||| Application info printed with the `help` action.
 export
 usageInfo : String
 usageInfo = """
-  Usage: \{progName} [options] COMMAND [args]
-
   Options:
   \{usageInfo "" descs}
 
-  Commands:
-    help
-      Print this help text.
-
-    new <lib | bin> <package name>
-      Create a new package in the current directory
-      consisting of a source directory, default module and a .ipkg file.
-      A git repository will be initialized.
-
-    build <.ipkg file or local pkg name>
-      Build a local package given as an `.ipkg` file or package name.
-
-    exec <.idr file> [args...]
-      Compile the given Idris source file and execute its main function
-      with the given list of arguments. This will look for `.ipkg` files
-      in the source file's parent directories and will apply the settings
-      it finds there.
-
-    install-deps <.ipkg file or local pkg name>
-      Install the dependencies of a local package given as an `.ipkg` file
-      or package name.
-
-    typecheck <.ipkg file or local pkg name>
-      Typecheck a local package given as an `.ipkg` file or package name.
-
-    clean <.ipkg file or local pkg name>
-      Clean up a local package by invoking `idris2 --clean` on its
-      `.ipkg` file
-
-    repl [.idr file]
-      Start a REPL session loading an optional `.idr` file.
-      Use command line option `--with-ipkg` to load settings
-      and packages from an `.ipkg` file. Option `--no-ipkg` can be used
-      to not go looking for an `.ipkg` file. The default behavior
-      is for pack to use the first `.ipkg` file it can find in the
-      current directory or one of its prent directories.
-
-      In order to start the REPL session with `rlwrap`, use the `--rlwrap`
-      option or set flag `repl.rlwrap` in file
-      `$HOME/.pack/user/pack.toml` to `true`.
-
-    install [package...]
-      Install the given packages.
-
-    install-app [package...]
-      Install the given applications.
-
-    run <package or .ipkg file> [args]
-      Run an application from the package
-      collection or a local `.ipkg` file passing it the
-      given command line arguments.
-
-      Note: This will install remote apps before running them.
-      Local apps and applications specified as mere `.ipkg` files
-      will be built and run locally without installing them.
-
-    remove [package...]
-      Remove installed libraries.
-
-    remove-app [package...]
-      Remove installed applications.
-
-    update-db
-      Update the pack data base by downloading the package collections
-      from https://github.com/stefan-hoeck/idris2-pack-db.
-
-    update
-      Update the pack installation by downloading and building
-      the current main branch of
-      https://github.com/stefan-hoeck/idris2-pack.
-
-      Note: This uses the current package collection, which might be
-      too outdated to build the latest pack. If this fails, try using
-      the latest nightly.
-
-    fetch
-      Fetch latest commit hashes from GitHub for packages with a
-      commit entry of "latest:branch".
-
-    switch [collection name]
-      Switch to the given package collection. This will adjust your
-      `$HOME/.pack/user/pack.toml` file to use the given package
-      collection. It will also install all auto libs and apps for the
-      given package collection.
-
-      Note: It is also possible to switch to the latest package
-      collection by using "latest" as the collection name.
-
-    info
-      Print general information about the current package
-      collection and list installed applications and libraries.
-
-    query [mode] <substring>
-      Query the package collection for the given name.
-      Several command line options exist to define the type
-      of information printed. The optional [mode] argument
-      defines the type of query to use:
-
-        * `dep`    : Search a package by its dependencies. For
-          instance, `pack query dep sop` will list all packages,
-          which have a dependency on the sop library. Only exact
-          matches will be listed.
-
-        * `module` : Search a package by its modules. For
-          instance, `pack query module Data.List` will list all packages,
-          which export module `Data.List`. Only exact matches will
-          be listed.
-
-        * none     : List packages whose names have the query
-          string as a substring.
-
-    fuzzy [packages] <query>
-      Run a fuzzy search by type over a comma-separated list of packages.
-      If no packages are given, all installed packages will be queried
-      (which might take several minutes).
-
-      Examples: fuzzy base "HasIO -> Bool", will find functions taking
-      an argument of type `HasIO` and returning a boolean result.
-
-
-    package-path
-      Return a colon-separated list of paths where packages are
-      installed. This is useful for programs like `idris2-lsp`,
-      which need to know where to look for installed packages.
-
-    libs-path
-      Return a colon-separated list of paths where libraries
-      for code generation are installed.
-
-    data-path
-      Return a colon-separated list of paths where data files
-      are installed.
-
-    app-path <pkgname>
-      Return the absolute path to the given application managed by pack.
-      `pack app-path idris2` returns the path to the current Idris compiler
+  Available commands:
+  \{unlines $ map (indent 2 . fst) namesAndCommands}
   """
