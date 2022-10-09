@@ -89,6 +89,9 @@ data Cmd : Type where
   -- Help
   PrintHelp        : Cmd
 
+||| List of all available commands.
+|||
+||| `Pack.CmdLn.Types.cmdInCommands` proofs that none was forgotten.
 public export
 commands : List Cmd
 commands =
@@ -155,6 +158,7 @@ public export
 namesAndCommands : List (String,Cmd)
 namesAndCommands = map (\c => (name c, c)) commands
 
+||| Usage info for each command. This is printed when invoking `pack help <cmd>`.
 export
 cmdDesc : Cmd -> String
 cmdDesc Build            = """

@@ -469,10 +469,12 @@ interface Arg (0 a : Type) where
   argDesc_ : String
   readArg  : List String -> Maybe (a, List String)
 
+||| Utility version of `argDesc_` with an explicit erased type argument.
 public export %inline
 argDesc : (0 a : Type) -> Arg a => String
 argDesc a = argDesc_ {a}
 
+||| Utility for implementing `readArg` via a function reading a single string.
 export
 parseSingleMaybe :  (read : String -> Maybe a)
                  -> List String
@@ -480,12 +482,14 @@ parseSingleMaybe :  (read : String -> Maybe a)
 parseSingleMaybe read []       = Nothing
 parseSingleMaybe read (h :: t) = (,t) <$> read h
 
+||| Utility for implementing `readArg` via a function reading a single string.
 export %inline
 parseSingle :  (read : String -> Either e a)
             -> List String
             -> Maybe (a, List String)
 parseSingle read = parseSingleMaybe (eitherToMaybe . read)
 
+||| Utility for implementing `readArg` via a function reading a single string.
 export %inline
 readSingle :  (read : String -> a) -> List String -> Maybe (a, List String)
 readSingle read = parseSingleMaybe (Just . read)
@@ -561,6 +565,14 @@ Arg String where
 ||| because both pack and pack-admin accept different types of
 ||| commands, but both use the same functionality for reading
 ||| the application config based on the command they use.
+|||
+||| A command `c` is expected to be an enum type. This interface provides
+||| a name and detailed description for each command, as well as the types of
+||| arguments a command takes.
+|||
+||| This allows us to generate useful error messages when the wrong type
+||| of argument is passed to a command. It also allows us to implement the
+||| parsing of commands only once.
 public export
 interface Command c where
   ||| The command to use if only command line options but
@@ -630,7 +642,7 @@ usageHeader cmd =
 ind : String -> String
 ind = unlines . map (indent 2) . lines
 
-||| Detailed description of using the given command.
+||| Detailed description how to use the given command.
 |||
 ||| This is a general description of the application
 ||| in case the argument is `Nothing`.
@@ -656,7 +668,7 @@ public export
 0 Args : Command c => c -> Type
 Args cmd = All I (ArgTypes cmd)
 
-||| A pack command together with its list of command line arguments
+||| A pack command together with its list of arguments
 public export
 0 CommandWithArgs : (c : Type) -> Command c => Type
 CommandWithArgs c = DPair c Args
