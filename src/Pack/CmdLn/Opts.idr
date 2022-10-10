@@ -44,6 +44,9 @@ setQuery s _ = Right . {queryType := s}
 setPrompt : Bool -> AdjConf
 setPrompt b _ = Right . {safetyPrompt := b}
 
+setGCPrompt : Bool -> AdjConf
+setGCPrompt b _ = Right . {gcPrompt := b}
+
 setScheme : String -> AdjConf
 setScheme s _ = Right . {scheme := fromString s}
 
@@ -111,6 +114,14 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             """
             Don't prompt before installing a potentially unsafe package
             with custom build hooks.
+            """
+        , MkOpt [] ["gc-prompt"]   (NoArg $ setGCPrompt True)
+            """
+            Prompt before deleting directories when running command `gc`.
+            """
+        , MkOpt [] ["no-gc-prompt"]   (NoArg $ setGCPrompt False)
+            """
+            Don't prompt before deleting directories when running command `gc`.
             """
         , MkOpt [] ["with-src"]   (NoArg withSrc)
             """

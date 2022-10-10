@@ -43,6 +43,7 @@ Command Cmd where
   defaultLevel AppPath          = Silence
   defaultLevel Switch           = Build
   defaultLevel UpdateDB         = Build
+  defaultLevel CollectGarbage   = Info
   defaultLevel Info             = Warning
   defaultLevel Query            = Warning
   defaultLevel Fuzzy            = Warning
@@ -72,6 +73,7 @@ Command Cmd where
   ArgTypes AppPath          = [PkgName]
   ArgTypes Switch           = [DBName]
   ArgTypes UpdateDB         = []
+  ArgTypes CollectGarbage   = []
   ArgTypes Info             = []
   ArgTypes Query            = [PkgQuery]
   ArgTypes Fuzzy            = [FuzzyQuery]
@@ -113,6 +115,7 @@ Command Cmd where
   readArgs AppPath          = %search
   readArgs Switch           = %search
   readArgs UpdateDB         = %search
+  readArgs CollectGarbage   = %search
   readArgs Info             = %search
   readArgs Query            = %search
   readArgs Fuzzy            = %search
@@ -141,6 +144,7 @@ runCmd = do
     (Query  ** [MkQ m s])     => env mc fetch >>= query m s
     (Fuzzy ** [MkFQ m s])     => idrisEnv mc fetch >>= fuzzy m s
     (UpdateDB ** [])          => updateDB
+    (CollectGarbage ** [])    => env mc fetch >>= garbageCollector
     (Run ** [Pkg p,args])     => idrisEnv mc fetch >>= execApp p args
     (Run ** [Ipkg p,args])    => idrisEnv mc fetch >>= runIpkg p args
     (Exec ** [p,args])        => idrisEnv mc fetch >>= exec p args

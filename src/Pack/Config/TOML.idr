@@ -40,6 +40,7 @@ FromTOML UserConfig where
                   (maybeValAt "pack.commit" f v)
                   (maybeValAt "idris2.scheme" f v)
                   (maybeValAt "install.safety-prompt" f v)
+                  (maybeValAt "install.gc-prompt" f v)
                   (maybeValAt "install.whitelist" f v)
                   (maybeValAt "install.with-src" f v)
                   (maybeValAt "install.with-docs" f v)
@@ -83,6 +84,10 @@ initToml scheme db = """
   # packages or applications with custom build hooks in their
   # `.ipkg` file.
   safety-prompt = true
+
+  # Whether to prompt the user before running the garbage collector
+  # via command `gc`.
+  gc-prompt = true
 
   # List of packages and apps with custom build hooks we trust to
   # be safe. This gives more fine grained control over package safety

@@ -45,6 +45,13 @@ log :  HasIO io
 log ref lvl msg =
   when (lvl >= ref) $ printLogMessage lvl msg []
 
+||| Logs a message to stdout and reads an reply from stdin.
+||| This uses the given log level but makes sure the message is always
+||| printed no matter the current log level preferences.
+export %inline
+prompt : HasIO io => (lvl : LogLevel) -> (msg : String) -> io String
+prompt lvl msg = log lvl lvl msg >> map trim getLine
+
 ||| Logs an idented list of values to stdout if the given log level
 ||| is greater than or equal than the (auto-implicit) reference level `ref`.
 ||| If messages list is empty, no log message is printed.
@@ -67,6 +74,18 @@ logMany lvl msg msgs =
     case (inlineSingle, force msgs) of
       (True, [x] ) => printLogMessage lvl "\{msg} \{x}" []
       (_   , msgs) => printLogMessage lvl msg msgs
+
+||| Logs an indented list of values to stdout and reads a reply from stdin.
+|||
+||| This uses the given log level but makes sure the message is always
+||| printed no matter the current log level preferences.
+export %inline
+promptMany :  HasIO io
+           => (lvl : LogLevel)
+           -> (msg : String)
+           -> (msgs : List String)
+           -> io String
+promptMany lvl msg msgs = logMany lvl msg msgs >> map trim getLine
 
 ||| Alias for `log ref Debug`.
 |||

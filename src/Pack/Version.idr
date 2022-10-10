@@ -1,4 +1,6 @@
 module Pack.Version
 
-export
-version : String
+import Pack.Core.Types
+
+export %inline
+version : Commit

@@ -172,6 +172,11 @@ record Config_ (f : Type -> Type) (c : Type) where
   ||| build or install hooks.
   safetyPrompt : f Bool
 
+  ||| Whether to prompt for a confirmation when
+  ||| running the garbage collector for removing no longer used
+  ||| installation directories.
+  gcPrompt : f Bool
+
   ||| List of package names, for which we will not issue a safety prompt
   ||| in case of custom `.ipkg` hooks, even if `safetyPrompt` is set
   ||| to `True`
@@ -308,6 +313,7 @@ init coll = MkConfig {
   , packCommit   = Nothing
   , scheme       = "scheme"
   , safetyPrompt = True
+  , gcPrompt     = True
   , whitelist    = []
   , withSrc      = False
   , withDocs     = False
@@ -337,6 +343,7 @@ update ci cm = MkConfig {
   , packCommit   = cm.packCommit <|> ci.packCommit
   , scheme       = fromMaybe ci.scheme cm.scheme
   , safetyPrompt = fromMaybe ci.safetyPrompt cm.safetyPrompt
+  , gcPrompt     = fromMaybe ci.gcPrompt cm.gcPrompt
   , withSrc      = fromMaybe ci.withSrc cm.withSrc
   , withDocs     = fromMaybe ci.withDocs cm.withDocs
   , useKatla     = fromMaybe ci.useKatla cm.useKatla

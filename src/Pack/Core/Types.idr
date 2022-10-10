@@ -875,7 +875,7 @@ printErr ManualInstallPackApp = """
   in one of your pack.toml files. Please remove it from there.
   """
 
-printErr SafetyAbort = "Installation aborted."
+printErr SafetyAbort = "Aborted."
 
 ||| Tries to convert a string to a `DBName` by first converting
 ||| it to a valid file path body.
