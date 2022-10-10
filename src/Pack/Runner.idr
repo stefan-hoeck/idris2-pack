@@ -64,7 +64,7 @@ Command Cmd where
   ArgTypes Remove           = [List PkgName]
   ArgTypes RemoveApp        = [List PkgName]
   ArgTypes Run              = [PkgOrIpkg, CmdArgList]
-  ArgTypes New              = [CurDir, PkgType, Body]
+  ArgTypes New              = [PkgType, Body]
   ArgTypes Update           = []
   ArgTypes Fetch            = []
   ArgTypes PackagePath      = []
@@ -165,7 +165,7 @@ runCmd = do
     (DataPath ** [])          => env mc fetch >>= packageDataDirs >>= putStrLn
     (AppPath ** [n])          => env mc fetch >>= appPath n
     (Info ** [])              => env mc fetch >>= printInfo
-    (New  ** [dir,pty,p])     => idrisEnv mc fetch >>= new dir pty p
+    (New ** [pty,p])          => idrisEnv mc fetch >>= new cd pty p
     (Switch ** [db])          => do
       env <- idrisEnv mc fetch
       install []
