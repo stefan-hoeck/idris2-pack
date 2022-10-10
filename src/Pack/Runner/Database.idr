@@ -331,19 +331,28 @@ packDelDir b =
   let s := interpolate b
    in toMaybe (s /= V.version.value) (packParentDir /> b)
 
+tmpDelDir : (e : Env) => Body -> Maybe (Path Abs)
+tmpDelDir b =
+  let s := interpolate b
+      p := packDir /> b
+   in toMaybe ((".tmp" `isPrefixOf` s) && p /= Types.tmpDir) p
+
 ||| Delete installations from previous package collections.
 export
 garbageCollector : HasIO io => Env -> EitherT PackErr io ()
 garbageCollector e = do
   ds <- mapMaybe idrisDelDir <$> entries installDir
   ps <- mapMaybe packDelDir <$> entries packParentDir
+  ts <- mapMaybe tmpDelDir <$> entries packDir
+
+  let all := ds ++ ps ++ ts
+
   when e.config.gcPrompt $ do
     let msg := "The following directories will be deleted. Continue (yes/*no)?"
-    "yes" <- promptMany Warning msg (interpolate <$> ds ++ ps)
+    "yes" <- promptMany Warning msg (interpolate <$> all)
       | _ => throwE SafetyAbort
     pure ()
-  for_ ds rmDir
-  for_ ps rmDir
+  for_ all rmDir
 
 --------------------------------------------------------------------------------
 --         Installation Plan
