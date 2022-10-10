@@ -83,21 +83,39 @@ installCmd : (withSrc : Bool) -> CmdArgList
 installCmd True  = ["--install-with-src"]
 installCmd False = ["--install"]
 
+||| Check if the build directory associated with the given `.ipkg` file
+||| is outdated, either because it does not contain an `.idrisVersion` file,
+||| or because this file has a different commit tag than the Idris version
+||| we use currently.
+export covering
+checkBuildDir :  HasIO io => (e : IdrisEnv) => Desc Safe -> EitherT PackErr io ()
+checkBuildDir d =
+  let buildDir := buildPath d
+      version  := the (File Abs) (buildDir /> ".idrisCommit")
+      commit   := e.env.db.idrisCommit.value
+   in do
+     str <- readIfExists version ""
+     when (str /= commit) $ do
+       rmDir buildDir
+       write version commit
+
 ||| Use the installed Idris to run an operation on
 ||| a library `.ipkg` file.
-export
+export covering
 libPkg :  HasIO io
        => IdrisEnv
-       => (env  : List (String,String))
-       -> (cmd  : CmdArgList)
-       -> (desc : Desc Safe)
+       => (env        : List (String,String))
+       -> (cleanBuild : Bool)
+       -> (cmd        : CmdArgList)
+       -> (desc       : Desc Safe)
        -> EitherT PackErr io ()
-libPkg env cmd desc =
+libPkg env cleanBuild cmd desc =
   let exe := idrisWithCG
       s   := exe ++ cmd ++ [desc.path.file]
    in do
      pre <- (env ++) <$> buildEnv
      debug "About to run: \{escapeCmd s}"
+     when cleanBuild (checkBuildDir desc)
      inDir (desc.path.parent) (\_ => sysWithEnvAndLog Build s pre)
 
 --------------------------------------------------------------------------------
@@ -141,8 +159,8 @@ installImpl dir rl =
       cmd := installCmd e.env.config.withSrc
    in do
      info "Installing library\{withSrcStr}: \{name rl}"
-     libPkg pre cmd rl.desc
-     when e.env.config.withDocs $ libPkg pre ["--mkdoc"] rl.desc
+     libPkg pre True cmd rl.desc
+     when e.env.config.withDocs $ libPkg pre False ["--mkdoc"] rl.desc
      when !(exists $ dir /> "lib") $
        copyDir (dir /> "lib") (pkgLibDir rl.name rl.pkg)
 
@@ -197,11 +215,11 @@ installApp b ra =
             GitHub u c ipkg b => do
               let cache   := ipkgCachePath ra.name c ipkg
               copyFile cache ipkgAbs
-              libPkg [] ["--build"] (notPackIsSafe ra.desc)
+              libPkg [] True ["--build"] (notPackIsSafe ra.desc)
               copyApp ra
               when b $ appLink ra.exec ra.name (usePackagePath ra) cg
             Local _ _ b    => do
-              libPkg [] ["--build"] (notPackIsSafe ra.desc)
+              libPkg [] True ["--build"] (notPackIsSafe ra.desc)
               copyApp ra
               when b $ appLink ra.exec ra.name (usePackagePath ra) cg
               write (appTimestamp ra.name ra.pkg) ""
@@ -346,7 +364,7 @@ update e =
           case ex of
             True  => link installedExec packExec
             False => do
-              libPkg [] ["--build"] d
+              libPkg [] True ["--build"] d
               mkDir installDir
               sys ["cp", "-r", NoEscape "build/exec/*", installDir]
               link installedExec packExec
