@@ -8,6 +8,7 @@ import Idris.Package.Types
 import Pack.Config
 import Pack.Core
 import Pack.Database
+import Pack.Version as V
 
 %default total
 
@@ -73,8 +74,8 @@ safe (MkDesc d s f _) =
            not (MkPkgName d.name `elem` e.config.whitelist) of
         False => pure $ MkDesc d s f IsSafe
         True  => do
-          warn "Package \{name d} uses custom build hooks. Continue (yes/*no)?"
-          "yes" <- trim <$> getLine | _ => throwE SafetyAbort
+          let msg := "Package \{name d} uses custom build hooks. Continue (yes/*no)?"
+          "yes" <- prompt Warning msg | _ => throwE SafetyAbort
           pure $ MkDesc d s f IsSafe
 
 ||| Like `safe` but verify also that the package does not
@@ -315,6 +316,34 @@ appPath n e = do
   ref <- emptyCache
   ra <- resolveApp n
   putStrLn . interpolate $ pkgExec ra.name ra.pkg ra.exec
+
+--------------------------------------------------------------------------------
+--         Garbage Collection
+--------------------------------------------------------------------------------
+
+idrisDelDir : (e : Env) => Body -> Maybe (Path Abs)
+idrisDelDir b =
+  let s := interpolate b
+   in toMaybe (s /= "pack" && s /= e.db.idrisCommit.value) (installDir /> b)
+
+packDelDir : (e : Env) => Body -> Maybe (Path Abs)
+packDelDir b =
+  let s := interpolate b
+   in toMaybe (s /= V.version.value) (packParentDir /> b)
+
+||| Delete installations from previous package collections.
+export
+garbageCollector : HasIO io => Env -> EitherT PackErr io ()
+garbageCollector e = do
+  ds <- mapMaybe idrisDelDir <$> entries installDir
+  ps <- mapMaybe packDelDir <$> entries packParentDir
+  when e.config.gcPrompt $ do
+    let msg := "The following directories will be deleted. Continue (yes/*no)?"
+    "yes" <- promptMany Warning msg (interpolate <$> ds ++ ps)
+      | _ => throwE SafetyAbort
+    pure ()
+  for_ ds rmDir
+  for_ ps rmDir
 
 --------------------------------------------------------------------------------
 --         Installation Plan

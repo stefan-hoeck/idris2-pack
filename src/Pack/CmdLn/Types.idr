@@ -76,6 +76,7 @@ data Cmd : Type where
   -- Managing package collections
   Switch           : Cmd
   UpdateDB         : Cmd
+  CollectGarbage   : Cmd
 
   -- Queries
   Info             : Cmd
@@ -115,6 +116,7 @@ commands =
   , AppPath
   , Switch
   , UpdateDB
+  , CollectGarbage
   , Info
   , Query
   , Fuzzy
@@ -146,6 +148,7 @@ name DataPath         = "data-path"
 name AppPath          = "app-path"
 name Switch           = "switch"
 name UpdateDB         = "update-db"
+name CollectGarbage   = "gc"
 name Info             = "info"
 name Query            = "query"
 name Fuzzy            = "fuzzy"
@@ -292,6 +295,12 @@ cmdDesc UpdateDB         = """
   from https://github.com/stefan-hoeck/idris2-pack-db.
   """
 
+cmdDesc CollectGarbage   = """
+  Clean up installations of older package collections by removing
+  all sub-directories of `$PACK_DIR/install` not belonging to the
+  currently used compiler commit.
+  """
+
 cmdDesc Info             = """
   Print general information about the current package
   collection and list installed applications and libraries.
@@ -391,6 +400,7 @@ cmdInCommands DataPath         = %search
 cmdInCommands AppPath          = %search
 cmdInCommands Switch           = %search
 cmdInCommands UpdateDB         = %search
+cmdInCommands CollectGarbage   = %search
 cmdInCommands Info             = %search
 cmdInCommands Query            = %search
 cmdInCommands Fuzzy            = %search

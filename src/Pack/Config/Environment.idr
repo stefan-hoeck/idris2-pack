@@ -70,10 +70,20 @@ export %inline
 packBinDir : PackDir => Path Abs
 packBinDir = packDir /> "bin"
 
+||| Where packages and built applications will be installed
+export %inline
+installDir : PackDir => Path Abs
+installDir = packDir </> "install"
+
+||| Where all pack versions are installed
+export %inline
+packParentDir : PackDir => Path Abs
+packParentDir = installDir </> "pack"
+
 ||| Where the actual pack application is installed.
 export %inline
 packInstallDir : PackDir => Commit -> Path Abs
-packInstallDir com = packDir </> "install/pack" </> cast com
+packInstallDir com = packParentDir </> cast com
 
 ||| Executable for an application
 export %inline
@@ -109,7 +119,7 @@ patchFile n (MkF p b) = MkF
 ||| current Idris2 commit will be installed.
 export %inline
 commitDir : PackDir => (db : DB) => Path Abs
-commitDir = packDir </> "install" <//> db.idrisCommit
+commitDir = installDir <//> db.idrisCommit
 
 ||| The directory where Idris2 and core libraries will be installed.
 export %inline
