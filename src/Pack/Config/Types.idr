@@ -525,11 +525,6 @@ export
            else Pkg $ MkPkgName s
 
 export %inline
-(cd : CurDir) => Arg CurDir where
-  argDesc_ = ""
-  readArg ss = Just (cd, ss)
-
-export %inline
 Arg PkgName where
   argDesc_ = "<pkg>"
   readArg = readSingle MkPkgName
@@ -634,10 +629,7 @@ argsDesc : CurDir => Command c => Maybe c -> String
 argsDesc Nothing  = " [<args>]"
 argsDesc (Just x) = fastConcat $ go (readArgs x)
   where go : All Arg ts -> List String
-        go [] = []
-        go {ts = x :: xs} (p :: ps) = case argDesc_ {a = x} of
-          "" => go ps
-          s  => (" " ++ s) :: go ps
+        go = forget . mapProperty (\p => " " ++ argDesc_ @{p})
 
 ||| Header line for a usage string
 export
