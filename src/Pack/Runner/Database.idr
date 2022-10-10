@@ -347,11 +347,12 @@ garbageCollector e = do
 
   let all := ds ++ ps ++ ts
 
-  when e.config.gcPrompt $ do
+  when (e.config.gcPrompt && not (null all)) $ do
     let msg := "The following directories will be deleted. Continue (yes/*no)?"
     "yes" <- promptMany Warning msg (interpolate <$> all)
       | _ => throwE SafetyAbort
     pure ()
+  when (null all) $ info "Nothing to clean up."
   for_ all rmDir
 
 --------------------------------------------------------------------------------
