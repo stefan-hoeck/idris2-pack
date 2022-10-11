@@ -47,12 +47,13 @@ data CorePkg =
   | Linear
   | Network
   | Test
+  | Papers
   | IdrisApi
 
 ||| The list of core packages.
 public export
 corePkgs : List CorePkg
-corePkgs = [Prelude, Base, Contrib, Linear, Network, Test, IdrisApi]
+corePkgs = [Prelude, Base, Contrib, Linear, Network, Test, Papers, IdrisApi]
 
 export
 Interpolation CorePkg where
@@ -62,6 +63,7 @@ Interpolation CorePkg where
   interpolate Linear   = "linear"
   interpolate Network  = "network"
   interpolate Test     = "test"
+  interpolate Papers   = "papers"
   interpolate IdrisApi = "idris2"
 
 export
@@ -72,6 +74,7 @@ Cast CorePkg Body where
   cast Linear   = "linear"
   cast Network  = "network"
   cast Test     = "test"
+  cast Papers   = "papers"
   cast IdrisApi = "idris2"
 
 export %inline
@@ -105,6 +108,7 @@ readCorePkg "contrib" = Just Contrib
 readCorePkg "linear"  = Just Linear
 readCorePkg "network" = Just Network
 readCorePkg "test"    = Just Test
+readCorePkg "papers"  = Just Papers
 readCorePkg "idris2"  = Just IdrisApi
 readCorePkg _         = Nothing
 
@@ -458,6 +462,7 @@ corePkgsTest Contrib  = %search
 corePkgsTest Linear   = %search
 corePkgsTest Network  = %search
 corePkgsTest Test     = %search
+corePkgsTest Papers   = %search
 corePkgsTest IdrisApi = %search
 
 -- all core packages should be parsable from their
@@ -469,4 +474,5 @@ corePkgRoundTrip Contrib  = Refl
 corePkgRoundTrip Linear   = Refl
 corePkgRoundTrip Network  = Refl
 corePkgRoundTrip Test     = Refl
+corePkgRoundTrip Papers   = Refl
 corePkgRoundTrip IdrisApi = Refl
