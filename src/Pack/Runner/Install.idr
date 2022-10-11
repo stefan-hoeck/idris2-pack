@@ -99,11 +99,19 @@ checkBuildDir d =
        rmDir buildDir
        write version commit
 
+dependsMsg : Path Abs -> String
+dependsMsg p = """
+  Found local package directory at \{p}.
+  Using local package directories together with pack is highly discouraged,
+  as they might interfere with the packages managed by pack in an unpredictable
+  manner.
+  """
+
 ||| Use the installed Idris to run an operation on
 ||| a library `.ipkg` file.
 export covering
 libPkg :  HasIO io
-       => IdrisEnv
+       => (e : IdrisEnv)
        => (env        : List (String,String))
        -> (cleanBuild : Bool)
        -> (cmd        : CmdArgList)
@@ -116,6 +124,12 @@ libPkg env cleanBuild cmd desc =
      pre <- (env ++) <$> buildEnv
      debug "About to run: \{escapeCmd s}"
      when cleanBuild (checkBuildDir desc)
+
+     -- warn if we find a `depends` directory in a local package
+     let dependsDir := desc.path.parent /> "depends"
+     when !(exists dependsDir) $
+       when e.env.config.warnDepends $ warn (dependsMsg dependsDir)
+
      inDir (desc.path.parent) (\_ => sysWithEnvAndLog Build s pre)
 
 --------------------------------------------------------------------------------

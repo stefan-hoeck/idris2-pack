@@ -41,6 +41,7 @@ FromTOML UserConfig where
                   (maybeValAt "idris2.scheme" f v)
                   (maybeValAt "install.safety-prompt" f v)
                   (maybeValAt "install.gc-prompt" f v)
+                  (maybeValAt "install.warn-depends" f v)
                   (maybeValAt "install.whitelist" f v)
                   (maybeValAt "install.with-src" f v)
                   (maybeValAt "install.with-docs" f v)
@@ -88,6 +89,10 @@ initToml scheme db = """
   # Whether to prompt the user before running the garbage collector
   # via command `gc`.
   gc-prompt = true
+
+  # Whether to issue a warning in presence of a local `depends` directory
+  # which might interfere with the libraries managed by pack
+  warn-depends = true
 
   # List of packages and apps with custom build hooks we trust to
   # be safe. This gives more fine grained control over package safety
