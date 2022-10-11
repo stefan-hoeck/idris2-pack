@@ -385,8 +385,10 @@ covering
 removeLib : HasIO io => Env => PkgName -> EitherT PackErr io ()
 removeLib n = do
   rl <- resolveLib n
-  info "Removing library \{n}"
-  rmDir (pkgInstallDir rl.name rl.pkg rl.desc)
+  case isInstalled rl of
+    True  => info "Removing library \{n}" >>
+             rmDir (pkgInstallDir rl.name rl.pkg rl.desc)
+    False => warn "Package \{n} is not installed. Ignoring."
 
 ||| Remove the given libs or apps
 export covering
@@ -399,7 +401,9 @@ remove ps = do
 ||| Remove the given libs
 export covering
 removeLibs : HasIO io => Env => List PkgName -> EitherT PackErr io ()
-removeLibs = remove . map (Lib,)
+removeLibs ns = do
+  checkDeletable ns
+  remove $ map (Lib,) ns
 
 ||| Remove the given apps
 export covering

@@ -285,6 +285,13 @@ namespace ResolveLib
   dependencies : ResolvedLib t -> List PkgName
   dependencies rp = dependencies rp.desc
 
+  ||| Check if the given library is installed
+  export
+  isInstalled : ResolvedLib t -> Bool
+  isInstalled rl = case rl.status of
+    Missing => False
+    _       => True
+
 namespace AppStatus
   ||| Installation status of an Idris app. Local apps can be
   ||| `Outdated`, if some of their source files contain changes newer

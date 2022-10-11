@@ -65,7 +65,7 @@ installedApp qp = case map status qp.app of
   Nothing           => False
 
 covering
-resolve : HasIO io => LibCache => Env => PkgName -> EitherT PackErr io QPkg
+resolve : HasIO io => Env => PkgName -> EitherT PackErr io QPkg
 resolve n = do
   lib <- resolveLib n
   Just exe <- pure (exec lib.desc) | Nothing => pure (QP lib Nothing)
@@ -77,9 +77,7 @@ pkgNames = keys allPackages
 
 export covering
 resolveAll : HasIO io => Env => EitherT PackErr io (List QPkg)
-resolveAll = do
-  ref <- emptyCache
-  traverse resolve pkgNames
+resolveAll = traverse resolve pkgNames
 
 --------------------------------------------------------------------------------
 --         Queries
