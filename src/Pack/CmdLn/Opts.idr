@@ -47,6 +47,9 @@ setPrompt b _ = Right . {safetyPrompt := b}
 setGCPrompt : Bool -> AdjConf
 setGCPrompt b _ = Right . {gcPrompt := b}
 
+setWarnDepends : Bool -> AdjConf
+setWarnDepends b _ = Right . {warnDepends := b}
+
 setScheme : String -> AdjConf
 setScheme s _ = Right . {scheme := fromString s}
 
@@ -122,6 +125,15 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
         , MkOpt [] ["no-gc-prompt"]   (NoArg $ setGCPrompt False)
             """
             Don't prompt before deleting directories when running command `gc`.
+            """
+        , MkOpt [] ["warn-depends"]   (NoArg $ setWarnDepends True)
+            """
+            Issue a warning in precense of a local `depends` directory, which might
+            interfere with the libraries managed by pack.
+            """
+        , MkOpt [] ["no-warn-depends"]   (NoArg $ setWarnDepends False)
+            """
+            Don't issue a warning in precense of a local `depends` directory.
             """
         , MkOpt [] ["with-src"]   (NoArg withSrc)
             """

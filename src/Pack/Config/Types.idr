@@ -177,6 +177,9 @@ record Config_ (f : Type -> Type) (c : Type) where
   ||| installation directories.
   gcPrompt : f Bool
 
+  ||| Whether to issue a warning in precense of a local `depends` directory
+  warnDepends : f Bool
+
   ||| List of package names, for which we will not issue a safety prompt
   ||| in case of custom `.ipkg` hooks, even if `safetyPrompt` is set
   ||| to `True`
@@ -314,6 +317,7 @@ init coll = MkConfig {
   , scheme       = "scheme"
   , safetyPrompt = True
   , gcPrompt     = True
+  , warnDepends  = True
   , whitelist    = []
   , withSrc      = False
   , withDocs     = False
@@ -344,6 +348,7 @@ update ci cm = MkConfig {
   , scheme       = fromMaybe ci.scheme cm.scheme
   , safetyPrompt = fromMaybe ci.safetyPrompt cm.safetyPrompt
   , gcPrompt     = fromMaybe ci.gcPrompt cm.gcPrompt
+  , warnDepends  = fromMaybe ci.warnDepends cm.warnDepends
   , withSrc      = fromMaybe ci.withSrc cm.withSrc
   , withDocs     = fromMaybe ci.withDocs cm.withDocs
   , useKatla     = fromMaybe ci.useKatla cm.useKatla

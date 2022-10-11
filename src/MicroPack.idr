@@ -27,6 +27,7 @@ microInit scheme db = MkConfig {
   , scheme        = fromString scheme
   , safetyPrompt  = False
   , gcPrompt      = False
+  , warnDepends   = True
   , whitelist     = []
   , withSrc       = True
   , withDocs      = False
