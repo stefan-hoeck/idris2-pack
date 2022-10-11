@@ -60,7 +60,7 @@ notPackIsSafe (MkDesc x y z s) = MkDesc x y z $ toSafe s
 ||| defined, and if yes, prompt the user
 ||| before continuing (unless `safetyPrompt` in the
 ||| `Config` is set to `False` or the package's name is listed
-||| in the white list of safe packages).
+||| in the whitelist of safe packages).
 export
 safe : HasIO io => (e : Env) => Desc t -> EitherT PackErr io (Desc Safe)
 safe (MkDesc d s f _) =
@@ -316,6 +316,46 @@ appPath n e = do
   ref <- emptyCache
   ra <- resolveApp n
   putStrLn . interpolate $ pkgExec ra.name ra.pkg ra.exec
+
+--------------------------------------------------------------------------------
+--          Deletable
+--------------------------------------------------------------------------------
+
+depString : (depsOfX : List PkgName) -> (x,y : PkgName) -> Maybe String
+depString depsOfX x y =
+  toMaybe (y `elem` depsOfX) "\{quote x} depends on \{quote y}"
+
+consider : List PkgName -> ResolvedLib s -> Bool
+consider ns x = isInstalled x && not (x.name `elem` ns)
+
+printDeps :  HasIO io
+          => Env
+          => List (ResolvedLib s)
+          -> PkgName
+          -> EitherT PackErr io Bool
+printDeps rls n =
+  case map nameStr (filter (elem n . dependencies) rls) of
+    Nil  => pure False
+    [n1] => warn "Package \{quote n1} depends on \{quote n}." $> True
+    ns   => logMany Warning
+              "The following packages depend on \{quote n}:" ns $> True
+
+delPrompt : String
+delPrompt = """
+  Some installed packages depend on the ones about to be deleted.
+  This might leave the package library in an inconsistent state.
+  Continue (yes/no*)?
+  """
+
+||| Verifies that the given list of libraries is safe to be deleted
+export covering
+checkDeletable : HasIO io => Env => List PkgName -> EitherT PackErr io ()
+checkDeletable ns = do
+  ss <- filter (consider ns) <$> traverse resolveLib (keys allPackages)
+  bs <- traverse (printDeps ss) ns
+  when (any id bs) $ do
+    "yes" <- prompt Warning delPrompt | _ => throwE SafetyAbort
+    pure ()
 
 --------------------------------------------------------------------------------
 --         Garbage Collection
