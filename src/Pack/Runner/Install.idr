@@ -199,7 +199,8 @@ installLib rl = case rl.status of
             let cache   := coreCachePath c
             copyFile cache ipkgAbs
             case c of
-              IdrisApi => sysAndLog Build ["make", "src/IdrisPaths.idr"]
+              IdrisApi =>
+                sysAndLog Build ["make", "src/IdrisPaths.idr", prefixVar]
               _        => pure ()
             installImpl dir rl
 
