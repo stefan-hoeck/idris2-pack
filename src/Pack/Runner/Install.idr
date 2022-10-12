@@ -364,12 +364,13 @@ update e =
   let bin  := packBinDir
    in do
      info "Updating pack. If this fails, try switching to the latest package collection."
-     withGit "pack" packRepo packCommit $ \dir => do
+     commit <- maybe (gitLatest packRepo "main") pure packCommit
+
+     withGit "pack" packRepo commit $ \dir => do
        let ipkg := MkF dir "pack.ipkg"
        d <- parseLibIpkg ipkg ipkg
        installDeps d
-       vers <- MkCommit <$> sysRun ["git", "rev-parse", "HEAD"]
-       let installDir    := packInstallDir vers
+       let installDir    := packInstallDir commit
            installedExec := installDir /> "pack"
        ex <- exists installedExec
        case ex of

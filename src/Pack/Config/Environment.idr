@@ -265,14 +265,14 @@ packageDataDirs : HasIO io => Env -> io String
 packageDataDirs _ = pathDirs "\{idrisDataDir}" pkgDataDir
 
 ||| URL of the pack repository to use
-export
+export %inline
 packRepo : (c : Config) => URL
 packRepo = fromMaybe defaultPackRepo c.packURL
 
 ||| Commit of pack to use
-export
-packCommit : (c : Config) => Commit
-packCommit = fromMaybe "main" c.packCommit
+export %inline
+packCommit : (c : Config) => Maybe Commit
+packCommit = c.packCommit
 
 --------------------------------------------------------------------------------
 --          Environment Variables
