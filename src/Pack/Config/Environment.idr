@@ -22,11 +22,6 @@ export
 packToml : Body
 packToml = "pack.toml"
 
-||| Clone of the pack GitHub repo
-export %inline
-packClone : TmpDir => Path Abs
-packClone = tmpDir /> "pack"
-
 ||| Directory where databases are stored.
 export %inline
 dbDir : PackDir => Path Abs
@@ -274,10 +269,10 @@ export
 packRepo : (c : Config) => URL
 packRepo = fromMaybe defaultPackRepo c.packURL
 
-||| URL of the pack repository to use
+||| Commit of pack to use
 export
-packCommit : (c : Config) => Maybe Commit
-packCommit = c.packCommit
+packCommit : (c : Config) => Commit
+packCommit = fromMaybe "main" c.packCommit
 
 --------------------------------------------------------------------------------
 --          Environment Variables
@@ -384,7 +379,7 @@ updateDB : HasIO io => TmpDir => PackDir => EitherT PackErr io ()
 updateDB = do
   rmDir dbDir
   finally (rmDir tmpDir) $
-    withGit tmpDir packDB dbRepo "main" $ \d =>
+    withGit packDB dbRepo "main" $ \d =>
       copyDir (d /> "collections") dbDir
 
 ||| Loads the name of the default collection (currently the latest

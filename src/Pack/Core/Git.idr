@@ -7,18 +7,43 @@ import Pack.Core.Types
 
 %default total
 
+||| (Temporary) Directory to use for a Git project.
+export %inline
+gitTmpDir : TmpDir => (pkg : PkgName) -> Path Abs
+gitTmpDir pkg = tmpDir <//> pkg
+
+||| Cached directory to use for a Git project.
+export %inline
+gitCacheDir : PackDir => (url : URL) -> Path Abs
+gitCacheDir url = packDir <//> ".cache/git" <//> url
+
 ||| Clones a GitHub repository to the given destination
-export
-gitClone :  HasIO io
-         => (url  : URL)
-         -> (dest : Path Abs)
-         -> EitherT PackErr io ()
-gitClone url dest = sys ["git", "clone", "-q", url, dest]
+cloneRemote :  HasIO io
+               => (url  : URL)
+               -> (dest : Path Abs)
+               -> EitherT PackErr io ()
+cloneRemote url dest = sys ["git", "clone", "--depth", "1", "-q", url, dest]
+
+||| Creates a shared clone of a cached local git clone
+cloneShared :  HasIO io
+            => PackDir
+            => TmpDir
+            => URL
+            -> PkgName
+            -> EitherT PackErr io ()
+cloneShared url pkg =
+  let cache := gitCacheDir url
+      tmp   := gitTmpDir pkg
+   in sys ["git", "clone", "--shared", "-q", cache, tmp]
+
+||| Fetch the given commit from upstream
+fetch : HasIO io => (commit : Commit) -> EitherT PackErr io ()
+fetch commit = sys ["git", "fetch", "-q", "origin", commit]
 
 ||| Checkout to the given commit
 export
-gitCheckout : HasIO io => (commit : Commit) -> EitherT PackErr io ()
-gitCheckout commit = sys ["git", "checkout", "-q", commit]
+checkout : HasIO io => (commit : Commit) -> EitherT PackErr io ()
+checkout commit = sys ["git", "checkout", "-q", commit]
 
 ||| Query GitHub for the latest commit of the main branch.
 export covering
@@ -29,25 +54,33 @@ gitLatest :  HasIO io
 gitLatest url b =
   MkCommit . fst . break isSpace <$> sysRun ["git", "ls-remote", url, b]
 
-||| (Temporary) Directory to use for a Git project.
-export
-gitDir : (dir : Path Abs) -> (pkg : PkgName) -> (commit : Commit) -> Path Abs
-gitDir dir pkg commit = dir <//> pkg <//> commit
-
 ||| Clone a git repository into `dir`, switch to the
 ||| given commit and run the given action.
 export
 withGit :  HasIO io
-        => (dir    : Path Abs)
-        -> (pkg    : PkgName)
+        => TmpDir
+        => PackDir
+        => (pkg    : PkgName)
         -> (url    : URL)
         -> (commit : Commit)
         -> (act    : Path Abs -> EitherT PackErr io a)
         -> EitherT PackErr io a
-withGit p pkg url commit act =
-  let dir := gitDir p pkg commit
+withGit pkg url commit act =
+  let cache := gitCacheDir url
+      tmp   := gitTmpDir pkg
+
    in do
-     False <- exists dir | True => inDir dir act
-     mkParentDir dir
-     gitClone url dir
-     inDir dir (\d => gitCheckout commit >> act d)
+     False <- exists tmp | True => inDir tmp act
+
+     -- clone a GitHub repo if it's not already cached
+     when !(missing cache) $ do
+       mkParentDir cache
+       cloneRemote url cache
+
+     -- fetch the required commit
+     inDir cache $ \_ => fetch commit
+
+     mkParentDir tmp
+
+     cloneShared url pkg
+     inDir tmp (\d => checkout commit >> act d)
