@@ -83,4 +83,4 @@ withGit pkg url commit act =
      mkParentDir tmp
 
      cloneShared url pkg
-     inDir tmp (\d => checkout commit >> act d)
+     inDir tmp (\d => fetch commit >> checkout commit >> act d)
