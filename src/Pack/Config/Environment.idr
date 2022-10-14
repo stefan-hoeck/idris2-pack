@@ -378,9 +378,9 @@ export
 updateDB : HasIO io => TmpDir => PackDir => EitherT PackErr io ()
 updateDB = do
   rmDir dbDir
-  finally (rmDir tmpDir) $
-    withGit packDB dbRepo "main" $ \d =>
-      copyDir (d /> "collections") dbDir
+  commit <- gitLatest dbRepo "main"
+  withGit packDB dbRepo commit $ \d =>
+    copyDir (d /> "collections") dbDir
 
 ||| Loads the name of the default collection (currently the latest
 ||| nightly)
