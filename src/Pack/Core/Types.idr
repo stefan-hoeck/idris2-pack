@@ -209,6 +209,13 @@ FromString URL where fromString = MkURL
 export %inline
 Interpolation URL where interpolate = value
 
+export
+Cast URL (Path Rel) where
+  cast (MkURL s) = case unpack s of
+    'h'::'t'::'t'::'p'::'s'::':'::'/'::'/':: t => cast (pack t)
+    'h'::'t'::'t'::'p'::':'::'/'::'/':: t      => cast (pack t)
+    t                                          => cast (pack t)
+
 --------------------------------------------------------------------------------
 --          Commits
 --------------------------------------------------------------------------------

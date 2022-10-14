@@ -154,7 +154,7 @@ withCoreGit : HasIO io
             => (e : Env)
             => (Path Abs -> EitherT PackErr io a)
             -> EitherT PackErr io a
-withCoreGit = withGit tmpDir compiler e.db.idrisURL e.db.idrisCommit
+withCoreGit = withGit compiler e.db.idrisURL e.db.idrisCommit
 
 ||| Run a pack action in the directory of a (possibly cloned) package.
 export
@@ -164,7 +164,7 @@ withPkgEnv :  HasIO io
              -> Package
              -> (Path Abs -> EitherT PackErr io a)
              -> EitherT PackErr io a
-withPkgEnv n (GitHub u c i _) f = withGit tmpDir n u c f
+withPkgEnv n (GitHub u c i _) f = withGit n u c f
 withPkgEnv n (Local d i _)    f = inDir d f
 withPkgEnv n (Core _)         f = withCoreGit f
 
@@ -244,10 +244,10 @@ loadIpkg :  HasIO io
          -> EitherT PackErr io (Desc U)
 loadIpkg n (GitHub u c i _) =
   let cache  := ipkgCachePath n c i
-      tmpLoc := gitDir tmpDir n c </> i
+      tmpLoc := gitTmpDir n </> i
    in do
      when !(fileMissing cache) $
-       withGit tmpDir n u c $ \dir => do
+       withGit n u c $ \dir => do
          let pf := patchFile n i
          when !(fileExists pf) (patch tmpLoc pf)
          copyFile tmpLoc cache
@@ -255,7 +255,7 @@ loadIpkg n (GitHub u c i _) =
 loadIpkg n (Local d i _)    = parseIpkgFile (d </> i) (d </> i)
 loadIpkg n (Core c)         =
   let cache  := coreCachePath c
-      tmpLoc := gitDir tmpDir compiler  e.db.idrisCommit </> coreIpkgPath c
+      tmpLoc := gitTmpDir compiler </> coreIpkgPath c
    in do
      when !(fileMissing cache) $ withCoreGit cacheCoreIpkgFiles
      parseIpkgFile cache tmpLoc

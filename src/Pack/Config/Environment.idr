@@ -22,11 +22,6 @@ export
 packToml : Body
 packToml = "pack.toml"
 
-||| Clone of the pack GitHub repo
-export %inline
-packClone : TmpDir => Path Abs
-packClone = tmpDir /> "pack"
-
 ||| Directory where databases are stored.
 export %inline
 dbDir : PackDir => Path Abs
@@ -270,12 +265,12 @@ packageDataDirs : HasIO io => Env -> io String
 packageDataDirs _ = pathDirs "\{idrisDataDir}" pkgDataDir
 
 ||| URL of the pack repository to use
-export
+export %inline
 packRepo : (c : Config) => URL
 packRepo = fromMaybe defaultPackRepo c.packURL
 
-||| URL of the pack repository to use
-export
+||| Commit of pack to use
+export %inline
 packCommit : (c : Config) => Maybe Commit
 packCommit = c.packCommit
 
@@ -383,9 +378,9 @@ export
 updateDB : HasIO io => TmpDir => PackDir => EitherT PackErr io ()
 updateDB = do
   rmDir dbDir
-  finally (rmDir tmpDir) $
-    withGit tmpDir packDB dbRepo "main" $ \d =>
-      copyDir (d /> "collections") dbDir
+  commit <- gitLatest dbRepo "main"
+  withGit packDB dbRepo commit $ \d =>
+    copyDir (d /> "collections") dbDir
 
 ||| Loads the name of the default collection (currently the latest
 ||| nightly)

@@ -30,7 +30,7 @@ ipkgCodeGen desc = case e.config.codegen of
         getCG (h :: t)                 = getCG t
 
 coreGitDir : (e : Env) => Path Abs
-coreGitDir = gitDir tmpDir compiler e.db.idrisCommit
+coreGitDir = gitTmpDir compiler
 
 copyApp : HasIO io => IdrisEnv => SafeApp -> EitherT PackErr io ()
 copyApp ra =
@@ -361,28 +361,25 @@ idrisEnv mc fetch = env mc fetch >>= (\e => mkIdris)
 export covering
 update : HasIO io => IdrisEnv -> EitherT PackErr io ()
 update e =
-  let dir  := packClone
-      ipkg := MkF dir "pack.ipkg"
-      bin  := packBinDir
-   in finally (rmDir dir) $ do
-        info "Updating pack. If this fails, try switching to the latest package collection."
-        gitClone packRepo dir
-        traverse_ (\c => inDir dir $ \_ => gitCheckout c) packCommit
+  let bin  := packBinDir
+   in do
+     info "Updating pack. If this fails, try switching to the latest package collection."
+     commit <- maybe (gitLatest packRepo "main") pure packCommit
 
-        d <- parseLibIpkg ipkg ipkg
-        installDeps d
-        inDir dir $ \_ => do
-          vers <- MkCommit <$> sysRun ["git", "rev-parse", "HEAD"]
-          let installDir    := packInstallDir vers
-              installedExec := installDir /> "pack"
-          ex <- exists installedExec
-          case ex of
-            True  => link installedExec packExec
-            False => do
-              libPkg [] True ["--build"] d
-              mkDir installDir
-              sys ["cp", "-r", NoEscape "build/exec/*", installDir]
-              link installedExec packExec
+     withGit "pack" packRepo commit $ \dir => do
+       let ipkg := MkF dir "pack.ipkg"
+       d <- parseLibIpkg ipkg ipkg
+       installDeps d
+       let installDir    := packInstallDir commit
+           installedExec := installDir /> "pack"
+       ex <- exists installedExec
+       case ex of
+         True  => link installedExec packExec
+         False => do
+           libPkg [] True ["--build"] d
+           mkDir installDir
+           sys ["cp", "-r", NoEscape "build/exec/*", installDir]
+           link installedExec packExec
 
 --------------------------------------------------------------------------------
 --          Removing Libs
