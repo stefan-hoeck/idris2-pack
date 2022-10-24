@@ -536,7 +536,7 @@ Arg PkgName where
 
 export %inline
 Arg PkgType where
-  argDesc_ = "<lib | app>"
+  argDesc_ = "<lib | bin>"
   readArg = parseSingle readPkgType
 
 export %inline
