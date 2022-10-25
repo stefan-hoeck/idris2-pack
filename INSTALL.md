@@ -14,6 +14,9 @@ The following libraries and applications are required
 for working with Idris2. Make sure you have them installed
 before you continue:
 
+* `git` version >= 2.35.1. Earlier versions of `git` will cause issues
+  when caching GitHub repositories locally.
+
 * A Scheme compiler; either [Chez Scheme](https://cisco.github.io/ChezScheme/)
   (default), or Racket.
   If you install Chez Scheme from source files, building it locally,
