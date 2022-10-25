@@ -97,30 +97,12 @@ Command ACmd where
   readArgs FromHEAD = %search
   readArgs Help     = %search
 
-covering
-commitOf : HasIO io => Package -> EitherT PackErr io Package
-commitOf (GitHub url branch ipkg pp) = do
-  commit <- gitLatest url (MkBranch branch.value)
-  pure $ GitHub url commit ipkg pp
-commitOf p                        = pure p
-
--- Converts a data base with a branch name for each
--- package to one holding the latest commit hash for each.
-covering
-dbOf : HasIO io => DB -> EitherT PackErr io DB
-dbOf (MkDB u commit v ps) = do
-  nc  <- gitLatest u "main"
-  nps <- traverse commitOf ps
-  pure $ MkDB u nc v nps
-
 -- Converts a data base with a branch name for each
 -- package to one holding the latest commit hash for each
 -- and writes the resulting DB to the given file.
 covering
 writeLatestDB : HasIO io => File Abs -> Env -> EitherT PackErr io ()
-writeLatestDB path e = do
-  ndb <- dbOf e.db
-  write path (printDB ndb)
+writeLatestDB path e = write path (printDB e.db)
 
 export covering
 runCmd : HasIO io => EitherT PackErr io ()

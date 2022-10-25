@@ -195,17 +195,6 @@ keyVal :  TOMLKey k
        -> Either TOMLErr (k,v)
 keyVal f (x,y) = prefixKey x [| MkPair (fromKey x) (f y) |]
 
--- -- TODO: Remove this.
--- -- export
--- -- sortedMap :  TOMLKey k
--- --           => (Path Abs -> Value -> Either TOMLErr v)
--- --           -> Path Abs
--- --           -> Value
--- --           -> Either TOMLErr (SortedMap k v)
--- -- sortedMap f dir (VTable m) =
--- --   M.fromList <$> traverse (keyVal $ f dir) (M.toList m)
--- -- sortedMap _ _    _         = Left $ WrongType [] "Table"
-
 export
 TOMLKey k => FromTOML v => FromTOML (SortedMap k v) where
   fromTOML f (VTable m) =
@@ -220,26 +209,6 @@ export
 FromTOML (File Abs) where
   fromTOML f v = toAbsFile f.parent <$> fromTOML f v
 
--- -- ||| Read an absolute path from a .toml file that could also be given
--- -- ||| as a path relative to the .toml file's parent directory. We therefore
--- -- ||| need the parent directory as an additional input.
--- -- export
--- -- absPathAt :  (path : String)
--- --           -> (dir  : Path Abs) -- parent directory of the .toml file we read
--- --           -> (val  : Value)
--- --           -> Either TOMLErr (Path Abs)
--- -- absPathAt path dir val = toAbsPath dir <$> valAt path val
---
--- -- ||| Read an absolute file path from a .toml file that could also be given
--- -- ||| as a path relative to the .toml file's parent directory. We therefore
--- -- ||| need the parent directory as an additional input.
--- -- export
--- -- absFileAt :  (path : String)
--- --           -> (dir  : Path Abs) -- parent directory of the .toml file we read
--- --           -> (val  : Value)
--- --           -> Either TOMLErr (File Abs)
--- -- absFileAt path dir val = toAbsFile dir <$> valAt path val
---
 --------------------------------------------------------------------------------
 --          Reading a TOML File
 --------------------------------------------------------------------------------
