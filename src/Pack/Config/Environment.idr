@@ -488,11 +488,18 @@ pkgs = fromList $ (\c => (corePkgName c, Core c)) <$> corePkgs
 
 ||| Load the package collection as given in the (auto-implicit) user config.
 export covering
-loadDB : HasIO io => TmpDir => PackDir => MetaConfig -> EitherT PackErr io DB
+loadDB :  HasIO io
+       => TmpDir
+       => PackDir
+       => MetaConfig
+       -> EitherT PackErr io MetaDB
 loadDB mc = do
   when !(missing dbDir) updateDB
   debug "reading package collection"
-  readFromTOML DB dbFile
+  raw <- readFromTOML MetaDB dbFile
+  case fileStem dbFile of
+    Just "HEAD" => pure $ map toLatest raw
+    _           => pure raw
 
 ||| Load the package collection as given in the (auto-implicit) user config
 ||| and convert the result to a pack environment.
@@ -502,12 +509,13 @@ env :  HasIO io
     => (td    : TmpDir)
     => (ch    : LibCache)
     => (lbf   : LineBufferingCmd)
-    => (c     : MetaConfig)
+    => (mc    : MetaConfig)
     -> (fetch : Bool)
     -> EitherT PackErr io Env
 env mc fetch = do
-  db <- loadDB mc
-  c  <- traverse (resolveMeta fetch) db.idrisURL mc
+  mdb <- loadDB mc
+  db  <- traverseDB (resolveMeta fetch) mdb
+  c   <- traverse (resolveMeta fetch) db.idrisURL mc
 
   let url    := fromMaybe db.idrisURL c.idrisURL
       commit := fromMaybe db.idrisCommit c.idrisCommit

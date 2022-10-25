@@ -38,7 +38,7 @@ idrisRepo : URL
 idrisRepo = "https://github.com/idris-lang/Idris2.git"
 
 export
-FromTOML DB where
+FromTOML MetaDB where
   fromTOML f v = [| MkDB (optValAt "idris2.url" f idrisRepo v)
                          (valAt "idris2.commit" f v)
                          (valAt "idris2.version" f v)

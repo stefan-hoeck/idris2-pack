@@ -34,6 +34,11 @@ Interpolation MetaCommit where
   interpolate (Fetch b)  = "fetch-latest:\{b}"
   interpolate (MC c)     = "\{c}"
 
+export
+toLatest : MetaCommit -> MetaCommit
+toLatest (MC x) = Latest (MkBranch x.value)
+toLatest x      = x
+
 --------------------------------------------------------------------------------
 --          Core Packages
 --------------------------------------------------------------------------------
@@ -151,6 +156,12 @@ data Package_ : (c : Type) -> Type where
 
   ||| A core package of the Idris2 project
   Core   : (core : CorePkg) -> Package_ c
+
+export
+Functor Package_ where
+  map f (GitHub u c i p) = GitHub u (f c) i p
+  map f (Local d i p)    = Local d i p
+  map f (Core c)         = Core c
 
 export
 traverse : Applicative f => (URL -> a -> f b) -> Package_ a -> f (Package_ b)
@@ -398,12 +409,42 @@ namespace LibOrApp
 ||| the Idris commit to use, together with a curated list of
 ||| known packages.
 public export
-record DB where
+record DB_ c where
   constructor MkDB
   idrisURL     : URL
-  idrisCommit  : Commit
+  idrisCommit  : c
   idrisVersion : PkgVersion
-  packages     : SortedMap PkgName Package
+  packages     : SortedMap PkgName (Package_ c)
+
+export
+Functor DB_ where
+  map f db = {
+      idrisCommit $= f
+    , packages    $= map (map f)
+    } db
+
+public export
+0 DB : Type
+DB = DB_ Commit
+
+public export
+0 MetaDB : Type
+MetaDB = DB_ MetaCommit
+
+||| Effectfully convert package descriptions in a DB
+export
+traverseDB :  Applicative f
+           => (URL -> a -> f b)
+           -> DB_ a
+           -> f (DB_ b)
+traverseDB g db =
+  let ic   := g db.idrisURL db.idrisCommit
+      pkgs := traverse (traverse g) db.packages
+   in [| adj ic pkgs |]
+    where adj :  b
+              -> SortedMap PkgName (Package_ b)
+              -> DB_ b
+          adj ic cb = {idrisCommit := ic, packages := cb} db
 
 tomlBool : Bool -> String
 tomlBool True  = "true"
