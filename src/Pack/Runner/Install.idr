@@ -138,13 +138,19 @@ libPkg env cleanBuild cmd desc =
 
 ||| Builds and installs the Idris commit given in the environment.
 export covering
-mkIdris : HasIO io => Env => EitherT PackErr io IdrisEnv
+mkIdris : HasIO io => (e : Env) => EitherT PackErr io IdrisEnv
 mkIdris = do
   debug "Checking Idris installation"
   when !(missing idrisInstallDir) $ do
     debug "No Idris compiler found. Installing..."
     withCoreGit $ \dir => do
-      sysAndLog Build ["make", "bootstrap", prefixVar, schemeVar]
+      case e.config.bootstrap of
+        True  =>
+          sysAndLog Build ["make", "bootstrap", prefixVar, schemeVar]
+        False =>
+          sysAndLog Build ["make", "support", prefixVar, schemeVar] >>
+          sysAndLog Build ["make", "idris2-exec", prefixVar, schemeVar]
+
       sysAndLog Build ["make", "install-support", prefixVar]
       sysAndLog Build ["make", "install-idris2", prefixVar]
       sysAndLog Build ["make", "clean-libs"]
@@ -293,8 +299,10 @@ katla : (c : Config) => List (InstallType, PkgName)
 katla = if c.withDocs && c.useKatla then [(App False, "katla")] else []
 
 autoPairs : (c : Config) => List (InstallType, PkgName)
-autoPairs = map (Library,) c.autoLibs ++
-            map (App True,) c.autoApps
+autoPairs =
+     map ((Library,) . corePkgName) [ Prelude, Base, Network ]
+  ++ map (Library,) c.autoLibs
+  ++ map (App True,) c.autoApps
 
 libInfo : List SafePkg -> List String
 libInfo = mapMaybe $ \case Lib rl  => Just "\{rl.name}"

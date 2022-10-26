@@ -167,6 +167,9 @@ record Config_ (f : Type -> Type) (c : Type) where
   ||| Scheme executable to use
   scheme       : f FilePath
 
+  ||| Whether to bootstrap when building Idris2
+  bootstrap    : f Bool
+
   ||| Whether to prompt for a confirmation when
   ||| building or installing a package with custom
   ||| build or install hooks.
@@ -315,6 +318,7 @@ init coll = MkConfig {
   , packURL      = Nothing
   , packCommit   = Nothing
   , scheme       = "scheme"
+  , bootstrap    = True
   , safetyPrompt = True
   , gcPrompt     = True
   , warnDepends  = True
@@ -346,6 +350,7 @@ update ci cm = MkConfig {
   , packURL      = cm.packURL <|> ci.packURL
   , packCommit   = cm.packCommit <|> ci.packCommit
   , scheme       = fromMaybe ci.scheme cm.scheme
+  , bootstrap    = fromMaybe ci.bootstrap cm.bootstrap
   , safetyPrompt = fromMaybe ci.safetyPrompt cm.safetyPrompt
   , gcPrompt     = fromMaybe ci.gcPrompt cm.gcPrompt
   , warnDepends  = fromMaybe ci.warnDepends cm.warnDepends

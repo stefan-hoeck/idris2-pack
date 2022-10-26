@@ -53,6 +53,9 @@ setWarnDepends b _ = Right . {warnDepends := b}
 setScheme : String -> AdjConf
 setScheme s _ = Right . {scheme := fromString s}
 
+setBootstrap : Bool -> AdjConf
+setBootstrap b _ = Right . {bootstrap := b}
+
 setRlwrap : Maybe String -> AdjConf
 setRlwrap args _ = Right . {rlwrap := UseRlwrap $ maybe [] (\s => [NoEscape s]) args}
 
@@ -125,6 +128,18 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
         , MkOpt [] ["no-gc-prompt"]   (NoArg $ setGCPrompt False)
             """
             Don't prompt before deleting directories when running command `gc`.
+            """
+        , MkOpt [] ["bootstrap"]   (NoArg $ setBootstrap True)
+            """
+            Use the bootstrap compiler for building Idris2. This takes longer
+            than without bootstrapping, but it will even work if no Idris2
+            compiler or an outdated one is on the `$PATH`.
+            """
+        , MkOpt [] ["no-bootstrap"]   (NoArg $ setBootstrap False)
+            """
+            Use an existing version of Idris2 when building the compiler.
+            This will fail if `idris2` is not on the computer's `$PATH` or
+            is too old to build the current version of the compiler.
             """
         , MkOpt [] ["warn-depends"]   (NoArg $ setWarnDepends True)
             """
