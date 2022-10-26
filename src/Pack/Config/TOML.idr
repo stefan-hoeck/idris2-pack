@@ -39,6 +39,7 @@ FromTOML UserConfig where
                   (maybeValAt "pack.url" f v)
                   (maybeValAt "pack.commit" f v)
                   (maybeValAt "idris2.scheme" f v)
+                  (maybeValAt "idris2.bootstrap" f v)
                   (maybeValAt "install.safety-prompt" f v)
                   (maybeValAt "install.gc-prompt" f v)
                   (maybeValAt "install.warn-depends" f v)

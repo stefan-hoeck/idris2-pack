@@ -25,6 +25,7 @@ microInit scheme db = MkConfig {
   , packURL       = Nothing
   , packCommit    = Nothing
   , scheme        = fromString scheme
+  , bootstrap     = True
   , safetyPrompt  = False
   , gcPrompt      = False
   , warnDepends   = True
