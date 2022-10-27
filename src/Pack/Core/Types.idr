@@ -600,7 +600,6 @@ logLevels =
   ]
 
 ||| Reference `LogLevel` to be used as an auto implicit
-||| line buffering.
 public export
 record LogRef where
   [noHints]
