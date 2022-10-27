@@ -14,13 +14,14 @@ import Pack.Runner.Query
 covering
 runIdrisOn :  HasIO io
            => IdrisEnv
-           => (cleanBuild : Bool)
+           => (logLevel   : LogLevel)
+           -> (cleanBuild : Bool)
            -> (cmd        : CmdArgList)
            -> Desc Safe
            -> EitherT PackErr io ()
-runIdrisOn cleanBuild c d = do
+runIdrisOn lvl cleanBuild c d = do
   installDeps d
-  libPkg [] cleanBuild c d
+  libPkg [] lvl cleanBuild c d
 
 findIpkg :  HasIO io
          => WithIpkg
@@ -128,7 +129,7 @@ exec file args e = do
 ||| Build a local library given as an `.ipkg` file.
 export covering %inline
 build : HasIO io => PkgOrIpkg -> IdrisEnv -> EitherT PackErr io ()
-build f e = findAndParseLocalIpkg f >>= runIdrisOn True ["--build"]
+build f e = findAndParseLocalIpkg f >>= runIdrisOn Build True ["--build"]
 
 ||| Install dependencies of a local `.ipkg` file or package name
 export covering
@@ -140,12 +141,13 @@ buildDeps f e = do
 ||| Typecheck a local library given as an `.ipkg` file or package name
 export covering %inline
 typecheck : HasIO io => PkgOrIpkg -> IdrisEnv -> EitherT PackErr io ()
-typecheck f e = findAndParseLocalIpkg f >>= runIdrisOn True ["--typecheck"]
+typecheck f e =
+  findAndParseLocalIpkg f >>= runIdrisOn Build True ["--typecheck"]
 
 ||| Cleanup a local library given as an `.ipkg` file or package name
 export covering %inline
 clean : HasIO io => PkgOrIpkg -> IdrisEnv -> EitherT PackErr io ()
-clean f e = findAndParseLocalIpkg f >>= libPkg [] False ["--clean"]
+clean f e = findAndParseLocalIpkg f >>= libPkg [] Build False ["--clean"]
 
 ||| Build and execute a local `.ipkg` file.
 export covering

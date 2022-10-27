@@ -450,7 +450,7 @@ getConfig c = do
   (conf',cmd) <- liftEither $ applyArgs c cur ini args
   conf        <- adjConfig cmd conf'
 
-  let level := conf.logLevel
+  let logRef := MkLogRef conf.logLevel
 
   debug "Pack home is \{pd}"
   debug "Current directory is \{cur}"
