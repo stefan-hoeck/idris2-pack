@@ -599,6 +599,13 @@ logLevels =
   , ("silence", Silence)
   ]
 
+||| Reference `LogLevel` to be used as an auto implicit
+public export
+record LogRef where
+  [noHints]
+  constructor MkLogRef
+  level : LogLevel
+
 --------------------------------------------------------------------------------
 --          Errors
 --------------------------------------------------------------------------------

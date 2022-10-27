@@ -113,11 +113,12 @@ export covering
 libPkg :  HasIO io
        => (e : IdrisEnv)
        => (env        : List (String,String))
+       -> (logLevel   : LogLevel)
        -> (cleanBuild : Bool)
        -> (cmd        : CmdArgList)
        -> (desc       : Desc Safe)
        -> EitherT PackErr io ()
-libPkg env cleanBuild cmd desc =
+libPkg env lvl cleanBuild cmd desc =
   let exe := idrisWithCG
       s   := exe ++ cmd ++ [desc.path.file]
    in do
@@ -130,7 +131,7 @@ libPkg env cleanBuild cmd desc =
      when !(exists dependsDir) $
        when e.env.config.warnDepends $ warn (dependsMsg dependsDir)
 
-     inDir (desc.path.parent) (\_ => sysWithEnvAndLog Build s pre)
+     inDir (desc.path.parent) (\_ => sysWithEnvAndLog lvl s pre)
 
 --------------------------------------------------------------------------------
 --          Installing Idris
@@ -175,12 +176,14 @@ installImpl :  HasIO io
             -> SafeLib
             -> EitherT PackErr io ()
 installImpl dir rl =
-  let pre := libInstallPrefix rl
-      cmd := installCmd e.env.config.withSrc
+  let pre      := libInstallPrefix rl
+      buildCmd := installCmd e.env.config.withSrc
+      instCmd  := installCmd e.env.config.withSrc
    in do
      info "Installing library\{withSrcStr}: \{name rl}"
-     libPkg pre True cmd rl.desc
-     when e.env.config.withDocs $ libPkg pre False ["--mkdoc"] rl.desc
+     libPkg pre Build True ["--build"] rl.desc
+     libPkg pre Debug False instCmd rl.desc
+     when e.env.config.withDocs $ libPkg pre Build False ["--mkdoc"] rl.desc
      when !(exists $ dir /> "lib") $
        copyDir (dir /> "lib") (pkgLibDir rl.name rl.pkg)
 
@@ -236,11 +239,11 @@ installApp b ra =
             GitHub u c ipkg b => do
               let cache   := ipkgCachePath ra.name c ipkg
               copyFile cache ipkgAbs
-              libPkg [] True ["--build"] (notPackIsSafe ra.desc)
+              libPkg [] Build True ["--build"] (notPackIsSafe ra.desc)
               copyApp ra
               when b $ appLink ra.exec ra.name (usePackagePath ra) cg
             Local _ _ b    => do
-              libPkg [] True ["--build"] (notPackIsSafe ra.desc)
+              libPkg [] Build True ["--build"] (notPackIsSafe ra.desc)
               copyApp ra
               when b $ appLink ra.exec ra.name (usePackagePath ra) cg
               write (appTimestamp ra.name ra.pkg) ""
@@ -384,7 +387,7 @@ update e =
        case ex of
          True  => link installedExec packExec
          False => do
-           libPkg [] True ["--build"] d
+           libPkg [] Build True ["--build"] d
            mkDir installDir
            sys ["cp", "-r", NoEscape "build/exec/*", installDir]
            link installedExec packExec

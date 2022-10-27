@@ -38,19 +38,19 @@ printLogMessage lvl msg msgs = do
 ||| to the beginning of the first one.
 export
 log :  HasIO io
-    => (ref : LogLevel)
+    => (ref : LogRef)
     -> (lvl : LogLevel)
     -> (msg : Lazy String)
     -> io ()
 log ref lvl msg =
-  when (lvl >= ref) $ printLogMessage lvl msg []
+  when (lvl >= ref.level) $ printLogMessage lvl msg []
 
 ||| Logs a message to stdout and reads an reply from stdin.
 ||| This uses the given log level but makes sure the message is always
 ||| printed no matter the current log level preferences.
 export %inline
 prompt : HasIO io => (lvl : LogLevel) -> (msg : String) -> io String
-prompt lvl msg = log lvl lvl msg >> map trim getLine
+prompt lvl msg = log (MkLogRef lvl) lvl msg >> map trim getLine
 
 ||| Logs an idented list of values to stdout if the given log level
 ||| is greater than or equal than the (auto-implicit) reference level `ref`.
@@ -63,14 +63,14 @@ prompt lvl msg = log lvl lvl msg >> map trim getLine
 ||| a value of type `Pack.Config.Types.Config` in scope.
 export
 logMany :  HasIO io
-        => (ref  : LogLevel)
+        => (ref  : LogRef)
         => {default False inlineSingle : Bool}
         -> (lvl  : LogLevel)
         -> (msg  : Lazy String)
         -> (msgs : Lazy (List String))
         -> io ()
 logMany lvl msg msgs =
-  when (lvl >= ref && not (null msgs)) $
+  when (lvl >= ref.level && not (null msgs)) $
     case (inlineSingle, force msgs) of
       (True, [x] ) => printLogMessage lvl "\{msg} \{x}" []
       (_   , msgs) => printLogMessage lvl msg msgs
@@ -85,14 +85,16 @@ promptMany :  HasIO io
            -> (msg : String)
            -> (msgs : List String)
            -> io String
-promptMany lvl msg msgs = logMany lvl msg msgs >> map trim getLine
+promptMany lvl msg msgs =
+  let ref := MkLogRef lvl
+   in logMany lvl msg msgs >> map trim getLine
 
 ||| Alias for `log ref Debug`.
 |||
 ||| Note: Most of the time `ref` is automatically being extracted from
 ||| a value of type `Pack.Config.Types.Config` in scope.
 export %inline
-debug : HasIO io => (ref : LogLevel) => (msg  : Lazy String) -> io ()
+debug : HasIO io => (ref : LogRef) => (msg  : Lazy String) -> io ()
 debug = log ref Debug
 
 ||| Alias for `log ref Info`.
@@ -100,7 +102,7 @@ debug = log ref Debug
 ||| Note: Most of the time `ref` is automatically being extracted from
 ||| a value of type `Pack.Config.Types.Config` in scope.
 export %inline
-info : HasIO io => (ref : LogLevel) => (msg  : Lazy String) -> io ()
+info : HasIO io => (ref : LogRef) => (msg  : Lazy String) -> io ()
 info = log ref Info
 
 ||| Alias for `log ref Warning`.
@@ -108,7 +110,7 @@ info = log ref Info
 ||| Note: Most of the time `ref` is automatically being extracted from
 ||| a value of type `Pack.Config.Types.Config` in scope.
 export %inline
-warn : HasIO io => (ref : LogLevel) => (msg  : Lazy String) -> io ()
+warn : HasIO io => (ref : LogRef) => (msg  : Lazy String) -> io ()
 warn = log ref Warning
 
 ||| Fail fatally with error message logged.

@@ -71,8 +71,12 @@ sys cmd = do
   0 <- system $ escapeCmd cmd | n => throwE (Sys cmd n)
   pure ()
 
-logCmdOutput : HasIO io => (ref, lvl : LogLevel) -> (msg : String) -> io ()
-logCmdOutput ref lvl msg =
+logCmdOutput :  HasIO io
+             => (ref : LogRef)
+             => (lvl : LogLevel)
+             -> (msg : String)
+             -> io ()
+logCmdOutput lvl msg =
   when (msg /= "") $ log ref lvl msg
 
 lineBufferedCmd : Env => CmdArgList -> CmdArgList
@@ -87,7 +91,7 @@ sysAndLog :  HasIO io
           -> EitherT PackErr io ()
 sysAndLog lvl cmd = do
   0 <- runProcessingOutput
-         (logCmdOutput configToLogLevel lvl)
+         (logCmdOutput lvl)
          (escapeCmd $ lineBufferedCmd cmd)
     | n => throwE (Sys cmd n)
   pure ()
@@ -122,7 +126,7 @@ sysWithEnvAndLog :  HasIO io
                  -> EitherT PackErr io ()
 sysWithEnvAndLog lvl cmd env = do
   0 <- runProcessingOutput
-         (logCmdOutput configToLogLevel lvl)
+         (logCmdOutput lvl)
          (cmdWithEnv (lineBufferedCmd cmd) env)
     | n => throwE (Sys cmd n)
   pure ()

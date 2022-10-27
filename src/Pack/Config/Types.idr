@@ -278,14 +278,14 @@ traverse g idrisURL cfg =
 ||| This allows us to use a `Config` in scope when we
 ||| need an auto-implicit `LogLevel` for logging.
 export %inline %hint
-configToLogLevel : (c : Config) => LogLevel
-configToLogLevel = c.logLevel
+configToLogRef : (c : Config) => LogRef
+configToLogRef = MkLogRef c.logLevel
 
 ||| This allows us to use a `MetaConfig` in scope when we
 ||| need an auto-implicit `LogLevel` for logging.
 export %inline %hint
-metaConfigToLogLevel : (c : MetaConfig) => LogLevel
-metaConfigToLogLevel = c.logLevel
+metaConfigToLogRef : (c : MetaConfig) => LogRef
+metaConfigToLogRef = MkLogRef c.logLevel
 
 --------------------------------------------------------------------------------
 --          Updating the Config
