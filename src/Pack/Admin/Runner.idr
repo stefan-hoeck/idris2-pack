@@ -71,7 +71,7 @@ Command ACmd where
 
   cmdName = name
 
-  defaultLevel CheckDB  = Info
+  defaultLevel CheckDB  = Build
   defaultLevel FromHEAD = Info
   defaultLevel Help     = Warning
 
