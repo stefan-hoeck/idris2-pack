@@ -129,6 +129,7 @@ opts x "modules"          = prefixOnlyIfNonEmpty x <$> pure packages
 opts x "check-db"         = prefixOnlyIfNonEmpty x <$> collections
 opts x "run"              = prefixOnlyIfNonEmpty x <$> packagesOrIpkg
 opts x "install"          = prefixOnlyIfNonEmpty x <$> pure packages
+opts x "test"             = prefixOnlyIfNonEmpty x <$> pure packages
 opts x "install-app"      = prefixOnlyIfNonEmpty x <$> apps
 opts x "remove"           = prefixOnlyIfNonEmpty x <$> installedLibs
 opts x "remove-app"       = prefixOnlyIfNonEmpty x <$> installedApps

@@ -63,6 +63,7 @@ data Cmd : Type where
   Remove           : Cmd
   RemoveApp        : Cmd
   Run              : Cmd
+  Test             : Cmd
   New              : Cmd
   Update           : Cmd
   Fetch            : Cmd
@@ -107,6 +108,7 @@ commands =
   , Remove
   , RemoveApp
   , Run
+  , Test
   , New
   , Update
   , Fetch
@@ -139,6 +141,7 @@ name InstallApp       = "install-app"
 name Remove           = "remove"
 name RemoveApp        = "remove-app"
 name Run              = "run"
+name Test             = "test"
 name New              = "new"
 name Update           = "update"
 name Fetch            = "fetch"
@@ -227,6 +230,19 @@ cmdDesc Run              = """
   will be built and run locally without installing them.
 
   To change the codegen to use, use the `--cg` command-line option.
+  """
+
+cmdDesc Test              = """
+  Run a test suite as specified in a package description's `test` field.
+
+  The `test` field should consist of a file path relative to a package's
+  root directory point to the test suite's `.ipkg` file:
+
+  [custom.all.json]
+  type   = "local"
+  path   = "."
+  ipkg   = "json.ipkg"
+  test   = "test/test.ipkg"
   """
 
 cmdDesc New              = """
@@ -391,6 +407,7 @@ cmdInCommands InstallApp       = %search
 cmdInCommands Remove           = %search
 cmdInCommands RemoveApp        = %search
 cmdInCommands Run              = %search
+cmdInCommands Test             = %search
 cmdInCommands New              = %search
 cmdInCommands Update           = %search
 cmdInCommands Fetch            = %search

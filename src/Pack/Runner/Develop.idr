@@ -164,6 +164,23 @@ runIpkg p args e = do
     Node => sys $ ["node", exe] ++ args
     _    => sys $ [exe] ++ args
 
+||| Build and execute the test suite of a package.
+export covering
+runTest :  HasIO io
+        => PkgName
+        -> (args : CmdArgList)
+        -> IdrisEnv
+        -> EitherT PackErr io ()
+runTest n args e = case lookup n allPackages of
+  Nothing                        => throwE (UnknownPkg n)
+  Just (GitHub u c _ _ $ Just t) => do
+    d <- withGit n u c pure
+    runIpkg (d </> t) args e
+  Just (Local d _ _ $ Just t)    => runIpkg (d </> t) args e
+  Just _                         => do
+    warn "No test suite found for \{n}. I'll just typecheck it."
+    typecheck (Pkg n) e
+
 ||| Install and run an executable given as a package name.
 export covering
 execApp :  HasIO io

@@ -35,6 +35,7 @@ Command Cmd where
   defaultLevel Remove           = Build
   defaultLevel RemoveApp        = Build
   defaultLevel Run              = Warning
+  defaultLevel Test             = Build
   defaultLevel Update           = Build
   defaultLevel Fetch            = Build
   defaultLevel PackagePath      = Silence
@@ -64,6 +65,7 @@ Command Cmd where
   ArgTypes Remove           = [List PkgName]
   ArgTypes RemoveApp        = [List PkgName]
   ArgTypes Run              = [PkgOrIpkg, CmdArgList]
+  ArgTypes Test             = [PkgName, CmdArgList]
   ArgTypes New              = [PkgType, Body]
   ArgTypes Update           = []
   ArgTypes Fetch            = []
@@ -106,6 +108,7 @@ Command Cmd where
   readArgs Remove           = %search
   readArgs RemoveApp        = %search
   readArgs Run              = %search
+  readArgs Test             = %search
   readArgs New              = %search
   readArgs Update           = %search
   readArgs Fetch            = %search
@@ -147,6 +150,7 @@ runCmd = do
     (CollectGarbage ** [])    => env mc fetch >>= garbageCollector
     (Run ** [Pkg p,args])     => idrisEnv mc fetch >>= execApp p args
     (Run ** [Ipkg p,args])    => idrisEnv mc fetch >>= runIpkg p args
+    (Test ** [p,args])        => idrisEnv mc fetch >>= runTest p args
     (Exec ** [p,args])        => idrisEnv mc fetch >>= exec p args
     (Repl ** [p])             => idrisEnv mc fetch >>= idrisRepl p
     (Build ** [p])            => idrisEnv mc fetch >>= build p
