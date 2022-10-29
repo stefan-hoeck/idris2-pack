@@ -16,12 +16,14 @@ github : FromTOML c => File Abs -> Value -> Either TOMLErr (Package_ c)
 github f v = [| GitHub (valAt "url" f v)
                        (valAt "commit" f v)
                        (valAt "ipkg" f v)
-                       (optValAt "packagePath" f False v) |]
+                       (optValAt "packagePath" f False v)
+                       (maybeValAt "test" f v) |]
 
 local : File Abs -> Value -> Either TOMLErr (Package_ c)
 local f v = [| Local (valAt "path" f v)
                      (valAt "ipkg" f v)
-                     (optValAt "packagePath" f False v) |]
+                     (optValAt "packagePath" f False v)
+                     (maybeValAt "test" f v) |]
 
 package : FromTOML c => File Abs -> Value -> Either TOMLErr (Package_ c)
 package f v = valAt {a = String} "type" f v >>=

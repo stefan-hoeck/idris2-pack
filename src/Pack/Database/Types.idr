@@ -138,10 +138,11 @@ data Package_ : (c : Type) -> Type where
   ||| `pkgPath` should be set to `True` for executables which need
   ||| access to the `IDRIS2_PACKAGE_PATH`: The list of directories
   ||| where Idris packages are installed.
-  GitHub :  (url     : URL)
-         -> (commit  : c)
-         -> (ipkg    : File Rel)
-         -> (pkgPath : Bool)
+  GitHub :  (url      : URL)
+         -> (commit   : c)
+         -> (ipkg     : File Rel)
+         -> (pkgPath  : Bool)
+         -> (testIpkg : Maybe (File Rel))
          -> Package_ c
 
   ||| A local Idris project given as an absolute path to a local
@@ -149,9 +150,10 @@ data Package_ : (c : Type) -> Type where
   ||| `pkgPath` should be set to `True` for executable which need
   ||| access to the `IDRIS2_PACKAGE_PATH`: The list of directories
   ||| where Idris packages are installed.
-  Local  :  (dir     : Path Abs)
-         -> (ipkg    : File Rel)
-         -> (pkgPath : Bool)
+  Local  :  (dir      : Path Abs)
+         -> (ipkg     : File Rel)
+         -> (pkgPath  : Bool)
+         -> (testIpkg : Maybe (File Rel))
          -> Package_ c
 
   ||| A core package of the Idris2 project
@@ -159,15 +161,15 @@ data Package_ : (c : Type) -> Type where
 
 export
 Functor Package_ where
-  map f (GitHub u c i p) = GitHub u (f c) i p
-  map f (Local d i p)    = Local d i p
-  map f (Core c)         = Core c
+  map f (GitHub u c i p t) = GitHub u (f c) i p t
+  map f (Local d i p t)    = Local d i p t
+  map f (Core c)           = Core c
 
 export
 traverse : Applicative f => (URL -> a -> f b) -> Package_ a -> f (Package_ b)
-traverse g (GitHub u c i p) = (\c' => GitHub u c' i p) <$> g u c
-traverse _ (Local d i p)    = pure $ Local d i p
-traverse _ (Core c)         = pure $ Core c
+traverse g (GitHub u c i p t) = (\c' => GitHub u c' i p t) <$> g u c
+traverse _ (Local d i p t)    = pure $ Local d i p t
+traverse _ (Core c)           = pure $ Core c
 
 ||| An alias for `Package_ Commit`: A package description with
 ||| meta commits already resolved.
@@ -248,16 +250,16 @@ isGitHub (Local {})  = No absurd
 ||| folders where Idris package are installed.
 export
 usePackagePath : Package_ c -> Bool
-usePackagePath (GitHub _ _ _ pp) = pp
-usePackagePath (Local _ _ pp)    = pp
-usePackagePath (Core _)          = False
+usePackagePath (GitHub _ _ _ pp _) = pp
+usePackagePath (Local _ _ pp _)    = pp
+usePackagePath (Core _)            = False
 
 ||| Absolute path to the `.ipkg` file of a package.
 export
 ipkg : (dir : Path Abs) -> Package -> File Abs
-ipkg dir (GitHub _ _ i _) = toAbsFile dir i
-ipkg dir (Local _ i _)    = toAbsFile dir i
-ipkg dir (Core c)         = toAbsFile dir (coreIpkgPath c)
+ipkg dir (GitHub _ _ i _ _) = toAbsFile dir i
+ipkg dir (Local _ i _ _)    = toAbsFile dir i
+ipkg dir (Core c)           = toAbsFile dir (coreIpkgPath c)
 
 --------------------------------------------------------------------------------
 --          Resolved Packages
@@ -450,34 +452,32 @@ tomlBool : Bool -> String
 tomlBool True  = "true"
 tomlBool False = "false"
 
-printPair : (PkgName,Package) -> String
-printPair (x, GitHub url commit ipkg pp) =
-  """
+testPath : Maybe (File Rel) -> List String
+testPath Nothing  = []
+testPath (Just x) = [ "test        = \{quote x}" ]
 
-  [db.\{x}]
-  type        = "github"
-  url         = "\{url}"
-  commit      = "\{commit}"
-  ipkg        = "\{ipkg}"
-  packagePath = \{tomlBool pp}
-  """
+printPair : (PkgName,Package) -> List String
+printPair (x, GitHub url commit ipkg pp t) =
+  [ "[db.\{x}]"
+  , "type        = \"github\""
+  , "url         = \{quote url}"
+  , "commit      = \{quote commit}"
+  , "ipkg        = \{quote ipkg}"
+  , "packagePath = \{tomlBool pp}"
+  ] ++ testPath t
 
-printPair (x, Local dir ipkg pp) =
-  """
-
-  [db.\{x}]
-  type        = "local"
-  path        = "\{dir}"
-  ipkg        = "\{ipkg}"
-  packagePath = \{tomlBool pp}
-  """
+printPair (x, Local dir ipkg pp t) =
+  [ "[db.\{x}]"
+  , "type        = \"local\""
+  , "path        = \{quote dir}"
+  , "ipkg        = \{quote ipkg}"
+  , "packagePath = \{tomlBool pp}"
+  ] ++ testPath t
 
 printPair (x, Core c) =
-  """
-
-  [db.\{x}]
-  type        = "core"
-  """
+  [ "[db.\{x}]"
+  , "type        = \"core\""
+  ]
 
 ||| Convert a package collection to a valid TOML string.
 export
@@ -489,7 +489,7 @@ printDB (MkDB u c v db) =
         version = "\{v}"
         commit  = "\{c}"
         """
-   in unlines $ header :: map printPair (SortedMap.toList db)
+   in unlines $ header :: (SortedMap.toList db >>= \p => "" :: printPair p)
 
 --------------------------------------------------------------------------------
 --          Tests

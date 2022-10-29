@@ -154,9 +154,9 @@ idrisDataDir = idrisInstallDir /> "support"
 ||| Directory where an installed library or app goes
 export %inline
 pkgPrefixDir : PackDir => DB => PkgName -> Package -> Path Abs
-pkgPrefixDir n (GitHub _ c _ _) = commitDir <//> n <//> c
-pkgPrefixDir n (Local _ _ _)    = commitDir </> "local" <//> n
-pkgPrefixDir n (Core _)         = idrisPrefixDir
+pkgPrefixDir n (GitHub _ c _ _ _) = commitDir <//> n <//> c
+pkgPrefixDir n (Local _ _ _ _)    = commitDir </> "local" <//> n
+pkgPrefixDir n (Core _)           = idrisPrefixDir
 
 ||| Directory to be used with the `IDRIS2_PACKAGE_PATH` variable, so that
 ||| Idris finds a library even though it is being installed in a
@@ -220,9 +220,9 @@ pkgInstallDir n p d =
   let vers = db.idrisVersion
       dir  = pkgPrefixDir n p /> idrisDir
    in case p of
-        Core c         => dir /> (c <-> vers)
-        GitHub _ _ _ _ => dir </> pkgRelDir d
-        Local _ _ _    => dir </> pkgRelDir d
+        Core c           => dir /> (c <-> vers)
+        GitHub _ _ _ _ _ => dir </> pkgRelDir d
+        Local _ _ _ _    => dir </> pkgRelDir d
 
 ||| Location of an executable of the given name.
 export

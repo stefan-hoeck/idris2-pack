@@ -107,9 +107,9 @@ findAndParseLocalIpkg :  HasIO io
 findAndParseLocalIpkg (Ipkg p) = parseLibIpkg p p
 findAndParseLocalIpkg (Pkg n)  =
   case lookup n allPackages of
-    Nothing                 => throwE (UnknownPkg n)
-    Just (Local dir ipkg _) => let p = dir </> ipkg in parseLibIpkg p p
-    Just _                  => throwE (NotLocalPkg n)
+    Nothing                   => throwE (UnknownPkg n)
+    Just (Local dir ipkg _ _) => let p = dir </> ipkg in parseLibIpkg p p
+    Just _                    => throwE (NotLocalPkg n)
 
 
 ||| Parse an `.ipkg` file representing an application
@@ -164,9 +164,9 @@ withPkgEnv :  HasIO io
              -> Package
              -> (Path Abs -> EitherT PackErr io a)
              -> EitherT PackErr io a
-withPkgEnv n (GitHub u c i _) f = withGit n u c f
-withPkgEnv n (Local d i _)    f = inDir d f
-withPkgEnv n (Core _)         f = withCoreGit f
+withPkgEnv n (GitHub u c i _ _) f = withGit n u c f
+withPkgEnv n (Local d i _ _)    f = inDir d f
+withPkgEnv n (Core _)           f = withCoreGit f
 
 isOutdated : DPair Package PkgStatus -> Bool
 isOutdated (fst ** Outdated) = True
@@ -242,7 +242,7 @@ loadIpkg :  HasIO io
          => PkgName
          -> Package
          -> EitherT PackErr io (Desc U)
-loadIpkg n (GitHub u c i _) =
+loadIpkg n (GitHub u c i _ _) =
   let cache  := ipkgCachePath n c i
       tmpLoc := gitTmpDir n </> i
    in do
@@ -252,8 +252,8 @@ loadIpkg n (GitHub u c i _) =
          when !(fileExists pf) (patch tmpLoc pf)
          copyFile tmpLoc cache
      parseIpkgFile cache tmpLoc
-loadIpkg n (Local d i _)    = parseIpkgFile (d </> i) (d </> i)
-loadIpkg n (Core c)         =
+loadIpkg n (Local d i _ _)    = parseIpkgFile (d </> i) (d </> i)
+loadIpkg n (Core c)           =
   let cache  := coreCachePath c
       tmpLoc := gitTmpDir compiler </> coreIpkgPath c
    in do
