@@ -280,4 +280,4 @@ non-comprehensive list:
 - [x] Command for running an application
 - [x] Command for querying a data collection
 - [x] Command for listing current version of data collection
-- [ ] Support for running tests
+- [x] Support for running tests
