@@ -27,6 +27,17 @@ newPkgDesc name mod user =
       , sourcedir := Just "src"
       } (initPkgDesc "\{name}")
 
+newTestPkgDesc : (name : Body) -> (user: String) -> PkgDesc
+newTestPkgDesc name user =
+   {
+     authors    := Just user
+   , version    := Just (MkPkgVersion (0 ::: [1, 0]))
+   , mainmod    := Just (nsAsModuleIdent $ mkNamespace "Main", "")
+   , executable := Just "\{name}-test"
+   , depends    := [MkDepends "\{name}" anyBounds]
+   , sourcedir  := Just "src"
+   } (initPkgDesc "\{name}-test")
+
 toModuleName : List Char -> List Char
 toModuleName [] = []
 toModuleName (h :: t) = toUpper h :: map adjHyphen t
@@ -49,6 +60,16 @@ mainModFile =
 
   """
 
+testFile : String
+testFile =
+  """
+  module Main
+
+  main : IO ()
+  main = putStrLn "Test successful!"
+
+  """
+
 libModFile : Body -> String
 libModFile name =
   """
@@ -57,6 +78,21 @@ libModFile name =
   test : String
   test = "Hello from Idris2!"
 
+  """
+
+packTomlContent : Body -> String
+packTomlContent name =
+  """
+  [custom.all.\{name}]
+  type = "local"
+  path = "."
+  ipkg = "\{name}.ipkg"
+  test = "test/test.ipkg"
+
+  [custom.all.\{name}-test]
+  type = "local"
+  path = "test"
+  ipkg = "test.ipkg"
   """
 
 -- Returns module name and module file
@@ -87,21 +123,34 @@ new (CD curdir) pty pkgName e = do
     debug "Creating PkgDesc"
     let (mod, modFile) = getModFile pty pkgName
 
-    ipkg <- pure $ newPkgDesc pkgName mod user
+    let pkgRootDir := curdir /> pkgName
+        srcDir     := pkgRootDir </> "src"
+        testDir    := pkgRootDir </> "test"
+        ipkg       := newPkgDesc pkgName mod user
+        test       := newTestPkgDesc pkgName user
 
     debug "Creating parent and src directories"
-    let pkgRootDir = curdir /> pkgName
-    let srcDir = pkgRootDir /> "src"
+
     mkDir (srcDir)
 
     debug "Initializing git repo"
     eitherT (\err => warn "Git repo creation failed: \{printErr err}")
-            (\_ => write (MkF pkgRootDir ".gitignore") gitIgnoreFile)
+            (\_ => write (pkgRootDir </> ".gitignore") gitIgnoreFile)
             (sysAndLog Info ["git", "init", pkgRootDir])
 
     debug "Writing ipkg file"
-    write (MkF pkgRootDir  (pkgName <+> ".ipkg"))
+    write (pkgRootDir  /> (pkgName <+> ".ipkg"))
           (renderString (layoutUnbounded $ pretty ipkg) ++ "\n")
+
+    debug "Writing test.ipkg file"
+    write (testDir  </> "test.ipkg")
+          (renderString (layoutUnbounded $ pretty test) ++ "\n")
+
+    debug "Writing test Main.idr file"
+    write (testDir  </> "src" </> "Main.idr") testFile
+
+    debug "Writing pack.toml"
+    write (MkF pkgRootDir packToml) (packTomlContent pkgName)
 
     debug "Writing module file"
     write (MkF srcDir $ mod <+> ".idr") modFile
