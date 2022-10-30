@@ -245,7 +245,7 @@ pack exec katla
 ```
 
 However, if you want to make these binaries available on your
-command line, you need to do two things: First, invoke
+command-line, you need to do two things: First, invoke
 `pack` with the `switch` command:
 
 ```sh
