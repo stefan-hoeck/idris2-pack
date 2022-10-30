@@ -195,12 +195,12 @@ installLib rl = case rl.status of
   _         => withPkgEnv rl.name rl.pkg $ \dir =>
     let ipkgAbs := ipkg dir rl.pkg
      in case rl.pkg of
-          GitHub u c ipkg _ => do
+          GitHub u c ipkg _ _ => do
             let cache := ipkgCachePath rl.name c ipkg
             copyFile cache ipkgAbs
             installImpl dir rl
 
-          Local _ _ _ => do
+          Local _ _ _ _ => do
             installImpl dir rl
             write (libTimestamp rl.name rl.pkg) ""
 
@@ -236,13 +236,13 @@ installApp b ra =
       let ipkgAbs := ipkg dir ra.pkg
        in case ra.pkg of
             Core _            => pure ()
-            GitHub u c ipkg b => do
+            GitHub u c ipkg b _ => do
               let cache   := ipkgCachePath ra.name c ipkg
               copyFile cache ipkgAbs
               libPkg [] Build True ["--build"] (notPackIsSafe ra.desc)
               copyApp ra
               when b $ appLink ra.exec ra.name (usePackagePath ra) cg
-            Local _ _ b    => do
+            Local _ _ b _    => do
               libPkg [] Build True ["--build"] (notPackIsSafe ra.desc)
               copyApp ra
               when b $ appLink ra.exec ra.name (usePackagePath ra) cg

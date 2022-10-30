@@ -9,6 +9,7 @@ import Pack.Config
 import Pack.Core
 import Pack.Database
 import Pack.Runner.Database
+import Pack.Runner.Develop
 import Pack.Runner.Install
 
 %default total
@@ -35,6 +36,20 @@ missing : ResolvedLib t -> ResolvedLib t
 missing = {status := Missing}
 
 covering
+testPkg :  HasIO io
+        => (e : IdrisEnv)
+        => LibCache
+        => SafeLib
+        -> EitherT PackErr io ()
+testPkg (RL pkg n _ _ _) = case pkg of
+  GitHub u c _ _ (Just t) => do
+    d <- withGit n u c pure
+    runIpkg (d </> t) [] e
+  Local d _ _ (Just t)    => runIpkg (d </> t) [] e
+  _                       =>
+    info "No tests to run for \{n}"
+
+covering
 checkPkg :  HasIO io
          => IdrisEnv
          => LibCache
@@ -51,6 +66,9 @@ checkPkg p = do
             updateRep p (Failure rl rs)
   Right () <- toState $ installAny $ Lib rl
     | Left err => warn "Failed to build \{p}" >>
+                  updateRep p (Failure rl [])
+  Right () <- toState $ testPkg rl
+    | Left err => warn "Test failures in \{p}" >>
                   updateRep p (Failure rl [])
   updateRep p (Success rl)
 
