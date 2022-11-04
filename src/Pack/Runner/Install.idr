@@ -137,6 +137,13 @@ libPkg env lvl cleanBuild cmd desc =
 --          Installing Idris
 --------------------------------------------------------------------------------
 
+covering
+getTTCVersion : HasIO io => PackDir => DB => io TTCVersion
+getTTCVersion = do
+  Right s <- runEitherT $ sysRun [idrisExec, "--ttc-version"]
+    | Left _ => pure (TTCV Nothing)
+  pure $ TTCV (parse s)
+
 ||| Builds and installs the Idris commit given in the environment.
 export covering
 mkIdris : HasIO io => (e : Env) => EitherT PackErr io IdrisEnv
@@ -159,7 +166,8 @@ mkIdris = do
       cacheCoreIpkgFiles dir
 
   appLink "idris2" "idris2" True Default
-  pure $ MkIdrisEnv %search ItHasIdris
+  ttc <- getTTCVersion
+  pure $ MkIdrisEnv %search ttc ItHasIdris
 
 --------------------------------------------------------------------------------
 --          Installing Libs

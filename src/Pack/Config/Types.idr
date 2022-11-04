@@ -468,6 +468,7 @@ public export
 record IdrisEnv where
   constructor MkIdrisEnv
   env   : Env
+  ttc   : TTCVersion
   0 prf : HasIdris env.config env.db
 
 ||| This allows us to use an `IdrisEnv` in scope when we
@@ -475,6 +476,12 @@ record IdrisEnv where
 export %inline %hint
 idrisEnvToEnv : (e : IdrisEnv) => Env
 idrisEnvToEnv = e.env
+
+||| This allows us to use an `IdrisEnv` in scope when we
+||| need an auto-implicit `TTCVersion`.
+export %inline %hint
+idrisEnvToTTC : (e : IdrisEnv) => TTCVersion
+idrisEnvToTTC = e.ttc
 
 --------------------------------------------------------------------------------
 --          Command Arguments
