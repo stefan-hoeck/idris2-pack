@@ -292,6 +292,7 @@ docsImpl rl = do
 
   when e.env.config.useKatla $ do
     info "Building source docs for: \{name rl}"
+    mkDir htmlDir
     rp <- resolveApp "katla"
     let katla := pkgExec rp.name rp.pkg rp.exec
     fs <- map (MkF htmlDir) <$> htmlFiles htmlDir
