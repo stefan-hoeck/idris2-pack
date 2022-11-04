@@ -273,16 +273,20 @@ replaceDot c   = c
 ||| Generates the doc paths based on the package description
 ||| (which might use custom source and build directories).
 export
-sourceForDoc : Desc t -> File Abs -> Maybe DocSources
+sourceForDoc : TTCVersion => Desc t -> File Abs -> Maybe DocSources
 sourceForDoc d f = do
   MkBody cs p <- fileStem f
   rf          <- RelFile.parse . pack $ map replaceDot cs
   Just $ MkDS {
     htmlDoc = f
   , srcFile = (sourcePath d </> rf) <.> "idr"
-  , ttmFile = (buildPath d </> "ttc" </> rf) <.> "ttm"
+  , ttmFile = ttm rf
   , srcHtml = MkF (f.parent) (MkBody cs p <.> "src.html")
   }
+  where ttm : (rf : File Rel) -> File Abs
+        ttm rf = case ttcVersion of
+          Just v  => (buildPath d /> v </> "ttc" </> rf) <.> "ttm"
+          Nothing => (buildPath d </> "ttc" </> rf) <.> "ttm"
 
 ||| Insert a link to the katla-generated and highlighted
 ||| sources to the API docs.

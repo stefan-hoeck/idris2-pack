@@ -177,6 +177,23 @@ tmpDir : (td : TmpDir) => Path Abs
 tmpDir {td = TD dir} = dir
 
 ----------------------------------------------------------------------------------
+----          TTC-Version
+----------------------------------------------------------------------------------
+
+||| The TTC-Version currently used by the Idris compiler
+public export
+record TTCVersion where
+  [noHints]
+  constructor TTCV
+  version : Maybe Body
+
+||| Use this when you need access to the current TTC version
+||| only a value of type `TTCVersion` in scope.
+export %inline
+ttcVersion : (ttc : TTCVersion) => Maybe Body
+ttcVersion = ttc.version
+
+----------------------------------------------------------------------------------
 ----          Interpolation
 ----------------------------------------------------------------------------------
 
