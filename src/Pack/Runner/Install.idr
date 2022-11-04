@@ -137,12 +137,16 @@ libPkg env lvl cleanBuild cmd desc =
 --          Installing Idris
 --------------------------------------------------------------------------------
 
+hasTTC : String -> Bool
+hasTTC = any (("--ttc-version" `isPrefixOf`) . trim) . lines
+
 covering
-getTTCVersion : HasIO io => PackDir => DB => io TTCVersion
+getTTCVersion : HasIO io => PackDir => DB => EitherT PackErr io TTCVersion
 getTTCVersion = do
-  Right s <- runEitherT $ sysRun [idrisExec, "--ttc-version"]
-    | Left _ => pure (TTCV Nothing)
-  pure $ TTCV (parse s)
+  hlp <- sysRun [idrisExec, "--help"]
+  case hasTTC hlp of
+    True  => TTCV . parse . trim <$> sysRun [idrisExec, "--ttc-version"]
+    False => pure (TTCV Nothing)
 
 ||| Builds and installs the Idris commit given in the environment.
 export covering
