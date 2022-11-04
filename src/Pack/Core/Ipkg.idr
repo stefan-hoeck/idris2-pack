@@ -285,7 +285,7 @@ sourceForDoc d f = do
   }
   where ttm : (rf : File Rel) -> File Abs
         ttm rf = case ttcVersion of
-          Just v  => (buildPath d /> v </> "ttc" </> rf) <.> "ttm"
+          Just v  => (buildPath d </> "ttc" /> v </> rf) <.> "ttm"
           Nothing => (buildPath d </> "ttc" </> rf) <.> "ttm"
 
 ||| Insert a link to the katla-generated and highlighted
