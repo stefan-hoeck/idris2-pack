@@ -141,12 +141,16 @@ hasTTC : String -> Bool
 hasTTC = any (("--ttc-version" `isPrefixOf`) . trim) . lines
 
 covering
-getTTCVersion : HasIO io => PackDir => DB => EitherT PackErr io TTCVersion
+getTTCVersion : HasIO io => Env => EitherT PackErr io TTCVersion
 getTTCVersion = do
   hlp <- sysRun [idrisExec, "--help"]
   case hasTTC hlp of
-    True  => TTCV . parse . trim <$> sysRun [idrisExec, "--ttc-version"]
-    False => pure (TTCV Nothing)
+    True  => do
+      str <- sysRun [idrisExec, "--ttc-version"]
+      case Body.parse (trim str) of
+        Just v  => debug "Using TTC version \{v}" $> TTCV (Just v)
+        Nothing => warn "Failed to parse TTC version \{str}" $> TTCV Nothing
+    False => debug "No TTC version given by Idris" $> TTCV Nothing
 
 ||| Builds and installs the Idris commit given in the environment.
 export covering
