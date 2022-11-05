@@ -1,6 +1,5 @@
 module Pack.Admin.Runner.Check
 
-import Control.Monad.State
 import Data.IORef
 import Data.SortedMap
 import Idris.Package.Types
@@ -14,78 +13,87 @@ import Pack.Runner.Install
 
 %default total
 
-toState : HasIO io => EitherT err io a -> StateT s io (Either err a)
-toState = lift . runEitherT
+--------------------------------------------------------------------------------
+--          State
+--------------------------------------------------------------------------------
 
-updateRep :  HasIO io
-          => PkgName
-          -> Report
-          -> StateT ReportDB io Report
-updateRep p rep = modify (insert p rep) $> rep
+public export
+0 ReportDB : Type
+ReportDB = IORef (SortedMap PkgName Report)
 
-report :  HasIO io
-       => PkgName
-       -> SafeLib
-       -> EitherT PackErr io ()
-       -> StateT ReportDB io Report
-report p rp act = do
-  Right _ <- toState act | Left _ => updateRep p (Failure rp [])
-  updateRep p (Success rp)
+updateRep : HasIO io => {auto db : ReportDB} -> PkgName -> Report -> io Report
+updateRep p rep = modifyIORef db (insert p rep) $> rep
+
+updateRep_ : HasIO io => {auto db : ReportDB} -> PkgName -> Report -> io ()
+updateRep_ p = ignore . updateRep p
+
+getRep : HasIO io => {auto db : ReportDB} -> PkgName -> io (Maybe Report)
+getRep p = lookup p <$> readIORef db
 
 missing : ResolvedLib t -> ResolvedLib t
 missing = {status := Missing}
 
 covering
-testPkg :  HasIO io
-        => (e : IdrisEnv)
-        => LibCache
-        => SafeLib
-        -> EitherT PackErr io ()
-testPkg (RL pkg n _ _ _) = case pkg of
+test :
+      HasIO io
+  => {auto e : IdrisEnv}
+  -> SafeLib
+  -> EitherT PackErr io TestResult
+test (RL pkg n d _ _) = case  pkg of
   GitHub u c _ _ (Just t) => do
     d <- withGit n u c pure
     runIpkg (d </> t) [] e
-  Local d _ _ (Just t)    => runIpkg (d </> t) [] e
-  _                       =>
-    info "No tests to run for \{n}"
+    pure TestSuccess
+  Local d _ _ (Just t)    => runIpkg (d </> t) [] e $> TestSuccess
+  _                       => info "No tests to run for \{n}" $> NoTests
 
 covering
-checkPkg :  HasIO io
-         => IdrisEnv
-         => LibCache
-         => PkgName
-         -> StateT ReportDB io Report
+testPkg :
+     HasIO io
+  => {auto e  : IdrisEnv}
+  -> {auto db : ReportDB}
+  -> PkgName
+  -> io ()
+testPkg n = do
+  Just (Success pkg NoTests) <- getRep n | _ => pure ()
+  Right res <- runEitherT $ test pkg
+    | Left _ => do
+        warn "Tests for package \{n} failed"
+        updateRep_ n (Success pkg TestFailure)
+  updateRep_ n (Success pkg res)
+
+covering
+checkPkg :
+     HasIO io
+  => {auto _ : IdrisEnv}
+  -> {auto _ : ReportDB}
+  -> PkgName
+  -> io Report
 checkPkg p = do
-  Nothing  <- lookup p <$> get | Just rep => pure rep
+  Nothing  <- getRep p | Just rep => pure rep
   info "Checking \{p}"
-  Right rl <- toState $ resolveLib p >>= safeLib . missing
+  Right rl <- runEitherT $ resolveLib p >>= safeLib . missing
     | Left err => warn "Could not resolve \{p}" >>
                   updateRep p (Error p err)
   [] <- failingDeps <$> traverse checkPkg (dependencies rl)
     | rs => warn "\{p} had failing dependencies" >>
             updateRep p (Failure rl rs)
-  Right () <- toState $ installAny $ Lib rl
+  Right () <- runEitherT $ installLib rl
     | Left err => warn "Failed to build \{p}" >>
                   updateRep p (Failure rl [])
-  Right () <- toState $ testPkg rl
-    | Left err => warn "Test failures in \{p}" >>
-                  updateRep p (Failure rl [])
-  updateRep p (Success rl)
+  updateRep p (Success rl NoTests)
 
 covering
-copyDocs :  HasIO io
-         => IdrisEnv
-         => LibCache
-         => File Abs
-         -> ReportDB
-         -> EitherT PackErr io ()
-copyDocs f db = traverse_ go db
-  where go : Report -> EitherT PackErr io ()
-        go (Success rl) = do
-            installDocs rl
-            copyDir (pkgDocs rl.name rl.pkg)
-                    (f.parent /> "docs" <//> name rl)
-        go _            = pure ()
+checkAll :
+     HasIO io
+  => {auto _  : IdrisEnv}
+  -> {auto db : ReportDB}
+  -> List PkgName
+  -> io (SortedMap PkgName Report)
+checkAll xs = do
+  traverse_ checkPkg xs
+  traverse_ testPkg xs
+  readIORef db
 
 export covering
 checkDB : HasIO io => File Abs -> IdrisEnv -> EitherT PackErr io ()
@@ -93,12 +101,9 @@ checkDB p e =
   let ps := map (MkPkgName . interpolate) corePkgs
          ++ keys e.env.db.packages
    in do
-     ref <- emptyCache
-     install [(App False, "katla")]
-     rep <- liftIO $ execStateT empty
-                   $ traverse_ checkPkg ps
+     ref <- newIORef (the (SortedMap PkgName Report) empty)
+     rep <- checkAll ps
      write p (printReport rep)
-     copyDocs p rep
      case numberOfFailures rep of
        0 => pure ()
        n => throwE (BuildFailures n)
