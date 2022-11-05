@@ -252,16 +252,16 @@ installApp b ra =
       let ipkgAbs := ipkg dir ra.pkg
        in case ra.pkg of
             Core _            => pure ()
-            GitHub u c ipkg b _ => do
+            GitHub u c ipkg pp _ => do
               let cache   := ipkgCachePath ra.name c ipkg
               copyFile cache ipkgAbs
               libPkg [] Build True ["--build"] (notPackIsSafe ra.desc)
               copyApp ra
-              when b $ appLink ra.exec ra.name (usePackagePath ra) cg
-            Local _ _ b _    => do
+              when b $ appLink ra.exec ra.name pp cg
+            Local _ _ pp _    => do
               libPkg [] Build True ["--build"] (notPackIsSafe ra.desc)
               copyApp ra
-              when b $ appLink ra.exec ra.name (usePackagePath ra) cg
+              when b $ appLink ra.exec ra.name pp cg
               write (appTimestamp ra.name ra.pkg) ""
 
 
