@@ -1,9 +1,5 @@
 module Pack.Admin.Report.Types
 
-import Data.Maybe
-import Data.SnocList
-import Data.SortedMap
-import Data.String
 import Idris.Package.Types
 import Pack.Core
 import Pack.Config
@@ -145,3 +141,31 @@ numberOfFailures = foldl count 0
         count k (Success _ _) = k
         count k (Failure _ _) = S k
         count k (Error _ _)   = S k
+
+testInfo : TestResult -> String
+testInfo TestSuccess = "all tests passed"
+testInfo TestFailure = "some tests failed"
+testInfo NoTests     = "no tests run"
+
+export
+successLine : Report -> Maybe String
+successLine (Success x y)  = Just "\{name x} (\{testInfo y})"
+successLine _              = Nothing
+
+depsInfo : List PkgName -> String
+depsInfo [] = ""
+depsInfo xs =
+     "(failing dependencies: "
+  ++ concat (intersperse ", " $ map value xs)
+  ++ ")"
+
+export
+failureLine : Report -> Maybe String
+failureLine (Failure x xs) = Just "\{name x}\{depsInfo xs}"
+failureLine _              = Nothing
+
+export
+resolveLine : Report -> Maybe String
+resolveLine (Error x y) = Just "\{x}"
+resolveLine _           = Nothing
+

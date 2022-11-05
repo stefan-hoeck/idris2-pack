@@ -89,11 +89,11 @@ checkAll :
   => {auto _  : IdrisEnv}
   -> {auto db : ReportDB}
   -> List PkgName
-  -> io (SortedMap PkgName Report)
+  -> io (List Report)
 checkAll xs = do
   traverse_ checkPkg xs
   traverse_ testPkg xs
-  readIORef db
+  values <$> readIORef db
 
 export covering
 checkDB : HasIO io => File Abs -> IdrisEnv -> EitherT PackErr io ()
@@ -103,6 +103,12 @@ checkDB p e =
    in do
      ref <- newIORef (the (SortedMap PkgName Report) empty)
      rep <- checkAll ps
+     logMany Info "The following packages built successfully:"
+       (mapMaybe successLine rep)
+     logMany Warning "The following packages failed to build:"
+       (mapMaybe failureLine rep)
+     logMany Warning "The following packages could not be resolved:"
+       (mapMaybe resolveLine rep)
      write p (printReport rep)
      case numberOfFailures rep of
        0 => pure ()
