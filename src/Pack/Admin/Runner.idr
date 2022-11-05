@@ -83,8 +83,8 @@ Command ACmd where
 
   adjConfig_ CheckDB [db,_] c = pure $ {
       collection   := db
-    , withDocs     := True
-    , useKatla     := True
+    , withDocs     := False
+    , useKatla     := False
     , safetyPrompt := False
     } c
 
