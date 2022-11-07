@@ -202,11 +202,11 @@ libStatus n p d deps = do
   True <- exists (pkgInstallDir n p d) | False => pure Missing
   b    <- exists $ pkgDocs n p
   case isLocal p of
-    No c     => pure $ Installed
+    No c     => pure $ (Installed b)
     Yes ploc =>
       let ts  := libTimestamp n p
           dir := localSrcDir d
-       in checkOutdated ts dir deps Outdated Installed
+       in checkOutdated ts dir deps Outdated (Installed b)
 
 ||| Generates the `AppStatus` of a package representing an application.
 export
@@ -399,10 +399,11 @@ garbageCollector e = do
 --         Installation Plan
 --------------------------------------------------------------------------------
 
-pkgNeedsInstalling : PkgStatus p -> Bool
-pkgNeedsInstalling Missing   = True
-pkgNeedsInstalling Installed = False
-pkgNeedsInstalling Outdated  = True
+pkgNeedsInstalling : {auto c : Config} -> PkgStatus p -> Bool
+pkgNeedsInstalling Missing           = True
+pkgNeedsInstalling (Installed True)  = False
+pkgNeedsInstalling (Installed False) = c.withDocs
+pkgNeedsInstalling Outdated          = True
 
 appNeedsInstalling : (withWrapperScript : Bool) -> AppStatus p -> Bool
 appNeedsInstalling _ Missing      = True
@@ -410,7 +411,7 @@ appNeedsInstalling b Installed    = b
 appNeedsInstalling _ Outdated     = True
 appNeedsInstalling _ BinInstalled = False
 
-needsInstalling : LibOrApp t s -> Bool
+needsInstalling : {auto c : Config} -> LibOrApp t s -> Bool
 needsInstalling (Lib x)   = pkgNeedsInstalling x.status
 needsInstalling (App b x) = appNeedsInstalling b x.status
 

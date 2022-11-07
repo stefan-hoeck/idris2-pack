@@ -51,9 +51,9 @@ isApp (QP _ a) = isJust a
 export
 installedLib : QPkg -> Bool
 installedLib qp = case qp.lib.status of
-  Installed => True
-  Outdated  => True
-  Missing   => False
+  Installed _ => True
+  Outdated    => True
+  Missing     => False
 
 export
 installedApp : QPkg -> Bool
@@ -107,9 +107,9 @@ prettyModules s qp = case filter (isInfixOf s) (modules qp) of
   h :: t => "Modules : \{h}" :: map (indent 10) t
 
 status : PkgStatus p -> String
-status Missing   = "not installed"
-status Installed = "installed"
-status Outdated  = "outdated"
+status Missing        = "not installed"
+status (Installed _ ) = "installed"
+status Outdated       = "outdated"
 
 status' : AppStatus p -> String
 status' Missing      = "not installed"
@@ -200,9 +200,9 @@ query m n e = do
 
 instLib : QPkg -> Maybe String
 instLib qp = case qp.lib.status of
-  Installed => Just "\{qp.lib.name}"
-  Outdated  => Just "\{qp.lib.name} (outdated)"
-  Missing   => Nothing
+  Installed _ => Just "\{qp.lib.name}"
+  Outdated    => Just "\{qp.lib.name} (outdated)"
+  Missing     => Nothing
 
 instApp : QPkg -> Maybe String
 instApp (QP lib $ Just (AI _ st))  = case st of

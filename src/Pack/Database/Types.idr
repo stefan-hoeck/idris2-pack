@@ -270,9 +270,9 @@ ipkg dir (Core c)           = toAbsFile dir (coreIpkgPath c)
 ||| a timestamp created during package installation.
 public export
 data PkgStatus : Package -> Type where
-  Missing   :  PkgStatus p
-  Installed :  PkgStatus p
-  Outdated  :  (0 isLocal : IsLocal p) => PkgStatus p
+  Missing     : PkgStatus p
+  Installed   : (withDocs : Bool) -> PkgStatus p
+  Outdated    : (0 isLocal : IsLocal p) => PkgStatus p
 
 ||| A resolved library, which was downloaded from GitHub
 ||| or looked up in the local file system. This comes with

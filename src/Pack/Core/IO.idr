@@ -256,6 +256,13 @@ copyDir from to = do
   mkParentDir to
   sys ["cp", "-r", from, to]
 
+||| Copy a whole directory into the given parent directory.
+export
+copyDirInto : HasIO io => (from,parent : Path Abs) -> EitherT PackErr io ()
+copyDirInto from parent = do
+  mkDir parent
+  sys ["cp", "-r", from, "\{parent}/"]
+
 ||| Tries to find the first file, the body of which returns `True` for
 ||| the given predicate.
 export
