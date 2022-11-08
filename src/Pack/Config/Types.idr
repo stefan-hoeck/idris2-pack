@@ -228,6 +228,9 @@ record Config_ (f : Type -> Type) (c : Type) where
   ||| Name of output file when compiling Idris source files
   output       : f Body
 
+  ||| Default LogLevels for different commands
+  levels       : f (SortedMap String LogLevel)
+
 ||| Configuration with mandatory fields.
 public export
 0 IConfig : Type -> Type
@@ -336,6 +339,7 @@ init coll = MkConfig {
   , logLevel     = Warning
   , codegen      = Default
   , output       = "_tmppack"
+  , levels       = empty
   }
 
 infixl 7 `update`
@@ -368,6 +372,7 @@ update ci cm = MkConfig {
   , logLevel     = fromMaybe ci.logLevel cm.logLevel
   , codegen      = fromMaybe ci.codegen cm.codegen
   , output       = fromMaybe ci.output cm.output
+  , levels       = mergeWith (\_,v => v) ci.levels (fromMaybe empty cm.levels)
   }
 
 --------------------------------------------------------------------------------

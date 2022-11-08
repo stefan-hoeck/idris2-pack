@@ -223,7 +223,10 @@ applyArgs c dir init args =
   case getOpt RequireOrder descs args of
        MkResult opts n  []      []       => do
          cmd  <- readCommand c dir n
-         let init' = {logLevel := defaultLevel (fst cmd)} init
+         let lvl_m := lookup (cmdName $ fst cmd) init.levels
+             dflt  := defaultLevel $ fst cmd
+
+             init' = {logLevel := fromMaybe dflt lvl_m} init
          conf <- foldlM (\c,f => f dir c) init' opts
          Right (conf, cmd)
 
