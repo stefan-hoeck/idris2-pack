@@ -35,7 +35,7 @@ Command Cmd where
   defaultLevel Remove           = Build
   defaultLevel RemoveApp        = Build
   defaultLevel Run              = Warning
-  defaultLevel Test             = Build
+  defaultLevel Test             = Warning
   defaultLevel Update           = Build
   defaultLevel Fetch            = Build
   defaultLevel PackagePath      = Silence

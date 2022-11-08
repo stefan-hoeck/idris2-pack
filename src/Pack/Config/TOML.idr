@@ -57,6 +57,7 @@ FromTOML UserConfig where
                   (pure Nothing)
                   (maybeValAt "idris2.codegen" f v)
                   (pure Nothing)
+                  (maybeValAt "log" f v)
       |]
 
 ||| Initial content of an auto-generated `PACK_DIR/user/pack.toml` file.
@@ -181,4 +182,12 @@ initToml scheme db = """
   # url    = "https://github.com/cuddlefishie/toml-idr"
   # commit = "eb7a146f565276f82ebf30cb6d5502e9f65dcc3c"
   # ipkg   = "toml.ipkg"
+
+  # Uncomment and adjust the following entries to specify the
+  # default log level associated with each pack command.
+  # [log]
+
+  # exec = "debug"
+  # run  = "info"
+  # test = "warning"
   """

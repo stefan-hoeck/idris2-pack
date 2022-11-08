@@ -28,6 +28,9 @@ TOMLKey DBName where
 export
 TOMLKey PkgName where fromKey = Right . MkPkgName
 
+export
+TOMLKey String where fromKey = Right
+
 ||| Interface for converting a TOML value to a pack
 ||| data type. We pass the TOML file's absolute path
 ||| as an additional argument, since this allows us to
@@ -163,6 +166,14 @@ toRelFile _                     = Left (WrongType [] "relative file path")
 
 export %inline
 FromTOML (Path Rel) where fromTOML = trefine toRelPath
+
+toLogLevel : String -> Either TOMLErr LogLevel
+toLogLevel s = case lookup s logLevels of
+  Just lvl => Right lvl
+  Nothing  => Left (WrongType [] "log level")
+
+export %inline
+FromTOML LogLevel where fromTOML = trefine toLogLevel
 
 export %inline
 FromTOML (File Rel) where fromTOML = trefine toRelFile
