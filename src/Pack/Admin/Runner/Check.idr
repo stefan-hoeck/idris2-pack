@@ -78,7 +78,7 @@ checkPkg p = do
   [] <- failingDeps <$> traverse checkPkg (dependencies rl)
     | rs => warn "\{p} had failing dependencies" >>
             updateRep p (Failure rl rs)
-  Right () <- runEitherT $ installLib rl
+  Right () <- runEitherT $ installLibs [p]
     | Left err => warn "Failed to build \{p}" >>
                   updateRep p (Failure rl [])
   updateRep p (Success rl NoTests)
@@ -95,21 +95,46 @@ checkAll xs = do
   traverse_ testPkg xs
   values <$> readIORef db
 
+covering
+docsFor :
+     HasIO io
+  => {auto e : IdrisEnv}
+  -> {auto _ : CurDir}
+  -> PkgName
+  -> io (Maybe String)
+docsFor n = do
+  res <- runEitherT $ do
+    rl <- resolveLib n
+    installLibs [n]
+    copyDirInto (pkgDocs rl.name rl.pkg) (curDir /> "docs" <//> n)
+  case res of
+    Left _  => pure (Just "\{n}")
+    Right _ => pure Nothing
+
+allPkgs : {auto e : IdrisEnv} -> List PkgName
+allPkgs = map corePkgName corePkgs ++ keys e.env.db.packages
+
+export covering
+makeDocs : HasIO io => {auto _ : CurDir} -> IdrisEnv -> EitherT PackErr io ()
+makeDocs e = do
+  ps <- catMaybes <$> traverse docsFor allPkgs
+  logMany Warning "Generating the docs of the following packages failed:" ps
+  case length ps of
+    0 => pure ()
+    n => throwE (BuildFailures n)
+
 export covering
 checkDB : HasIO io => File Abs -> IdrisEnv -> EitherT PackErr io ()
-checkDB p e =
-  let ps := map (MkPkgName . interpolate) corePkgs
-         ++ keys e.env.db.packages
-   in do
-     ref <- newIORef (the (SortedMap PkgName Report) empty)
-     rep <- checkAll ps
-     logMany Info "The following packages built successfully:"
-       (mapMaybe successLine rep)
-     logMany Warning "The following packages failed to build:"
-       (mapMaybe failureLine rep)
-     logMany Warning "The following packages could not be resolved:"
-       (mapMaybe resolveLine rep)
-     write p (printReport rep)
-     case numberOfFailures rep of
-       0 => pure ()
-       n => throwE (BuildFailures n)
+checkDB p e = do
+  ref <- newIORef (the (SortedMap PkgName Report) empty)
+  rep <- checkAll allPkgs
+  logMany Info "The following packages built successfully:"
+    (mapMaybe successLine rep)
+  logMany Warning "The following packages failed to build:"
+    (mapMaybe failureLine rep)
+  logMany Warning "The following packages could not be resolved:"
+    (mapMaybe resolveLine rep)
+  write p (printReport rep)
+  case numberOfFailures rep of
+    0 => pure ()
+    n => throwE (BuildFailures n)

@@ -186,11 +186,12 @@ withSrcStr = case c.withSrc of
   True  => " (with sources)"
   False => ""
 
-installImpl :  HasIO io
-            => (e : IdrisEnv)
-            => (dir : Path Abs)
-            -> SafeLib
-            -> EitherT PackErr io ()
+installImpl :
+     HasIO io
+  => {auto e : IdrisEnv}
+  -> (dir : Path Abs)
+  -> SafeLib
+  -> EitherT PackErr io ()
 installImpl dir rl =
   let pre      := libInstallPrefix rl
       buildCmd := installCmd e.env.config.withSrc
@@ -199,48 +200,59 @@ installImpl dir rl =
      info "Installing library\{withSrcStr}: \{name rl}"
      libPkg pre Build True ["--build"] rl.desc
      libPkg pre Debug False instCmd rl.desc
-     when e.env.config.withDocs $ libPkg pre Build False ["--mkdoc"] rl.desc
      when !(exists $ dir /> "lib") $
        copyDir (dir /> "lib") (pkgLibDir rl.name rl.pkg)
 
-||| Install the given resolved library.
-export
-installLib :  HasIO io => IdrisEnv => SafeLib -> EitherT PackErr io ()
+preInstall :
+     HasIO io
+  => {auto e : IdrisEnv}
+  -> SafeLib
+  -> EitherT PackErr io ()
+preInstall rl = withPkgEnv rl.name rl.pkg $ \dir =>
+  let ipkgAbs := ipkg dir rl.pkg
+   in case rl.pkg of
+        GitHub u c ipkg _ _ => do
+          let cache := ipkgCachePath rl.name c ipkg
+          copyFile cache ipkgAbs
+        Local _ _ _ _ => pure ()
+
+        Core c => do
+          let cache   := coreCachePath c
+          copyFile cache ipkgAbs
+          case c of
+            IdrisApi =>
+              sysAndLog Build ["make", "src/IdrisPaths.idr", prefixVar]
+            _        => pure ()
+
+-- Install the given resolved library.
+installLib :
+     HasIO io
+  => {auto e : IdrisEnv}
+  -> SafeLib
+  -> EitherT PackErr io ()
 installLib rl = case rl.status of
-  Installed => pure ()
-  _         => withPkgEnv rl.name rl.pkg $ \dir =>
-    let ipkgAbs := ipkg dir rl.pkg
-     in case rl.pkg of
-          GitHub u c ipkg _ _ => do
-            let cache := ipkgCachePath rl.name c ipkg
-            copyFile cache ipkgAbs
-            installImpl dir rl
-
-          Local _ _ _ _ => do
-            installImpl dir rl
-            write (libTimestamp rl.name rl.pkg) ""
-
-          Core c => do
-            let cache   := coreCachePath c
-            copyFile cache ipkgAbs
-            case c of
-              IdrisApi =>
-                sysAndLog Build ["make", "src/IdrisPaths.idr", prefixVar]
-              _        => pure ()
-            installImpl dir rl
+  Installed _ => pure ()
+  _           => do
+    preInstall rl
+    withPkgEnv rl.name rl.pkg $ \dir => do
+      installImpl dir rl
+      case rl.pkg of
+       Local _ _ _ _ => write (libTimestamp rl.name rl.pkg) ""
+       _             => pure ()
 
 --------------------------------------------------------------------------------
 --          Installing Apps
 --------------------------------------------------------------------------------
 
-||| Install an Idris application given as a package name
-||| TODO: Install wrapper script only if necessary
-export covering
-installApp :  HasIO io
-           => IdrisEnv
-           => (withWrapperScript : Bool)
-           -> SafeApp
-           -> EitherT PackErr io ()
+-- Install an Idris application given as a package name
+-- TODO: Install wrapper script only if necessary
+covering
+installApp :
+     HasIO io
+  => {auto e : IdrisEnv}
+  -> (withWrapperScript : Bool)
+  -> SafeApp
+  -> EitherT PackErr io ()
 installApp b ra =
   let cg := ipkgCodeGen ra.desc.desc
   in case ra.status of
@@ -265,55 +277,48 @@ installApp b ra =
               write (appTimestamp ra.name ra.pkg) ""
 
 
-||| Install the given resolved library or application.
-export covering
-installAny :  HasIO io
-           => IdrisEnv
-           => SafePkg
-           -> EitherT PackErr io ()
-installAny (Lib sli)   = installLib sli
-installAny (App b sla) = installApp b sla
-
 --------------------------------------------------------------------------------
 --          Generating API Docs
 --------------------------------------------------------------------------------
 
 covering
-docsImpl :  HasIO io
-         => (e : IdrisEnv)
-         => SafeLib
-         -> EitherT PackErr io ()
-docsImpl rl = do
-  let docsDir : Path Abs
-      docsDir = buildPath rl.desc /> "docs"
+-- Install the API docs for the given resolved library.
+installDocs :
+     HasIO io
+  => {auto e : IdrisEnv}
+  -> SafeLib
+  -> EitherT PackErr io ()
+installDocs rl = case rl.status of
+  Installed True => pure ()
+  _              => withPkgEnv rl.name rl.pkg $ \dir => do
+    let docsDir : Path Abs
+        docsDir = buildPath rl.desc /> "docs"
 
-      htmlDir : Path Abs
-      htmlDir = docsDir /> "docs"
+        pre : List (String,String)
+        pre = libInstallPrefix rl
 
-  when e.env.config.useKatla $ do
+        htmlDir : Path Abs
+        htmlDir = docsDir /> "docs"
+
     info "Building source docs for: \{name rl}"
-    mkDir htmlDir
-    rp <- resolveApp "katla"
-    let katla := pkgExec rp.name rp.pkg rp.exec
-    fs <- map (MkF htmlDir) <$> htmlFiles htmlDir
-    for_ fs $ \htmlFile =>
-      let Just ds@(MkDS _ src ttm srcHtml) := sourceForDoc rl.desc htmlFile
-            | Nothing => pure ()
-       in sysAndLog Build [katla, "html", src, ttm, NoEscape ">", srcHtml] >>
-          insertSources ds
+    preInstall rl
+    libPkg pre Build False ["--mkdoc"] rl.desc
 
-  let docs := pkgDocs rl.name rl.pkg
-  when !(exists docs) (rmDir docs)
-  copyDir docsDir docs
+    when e.env.config.useKatla $ do
+      info "Building highlighted sources for: \{name rl}"
+      mkDir htmlDir
+      rp <- resolveApp "katla"
+      let katla := pkgExec rp.name rp.pkg rp.exec
+      fs <- map (MkF htmlDir) <$> htmlFiles htmlDir
+      for_ fs $ \htmlFile =>
+        let Just ds@(MkDS _ src ttm srcHtml) := sourceForDoc rl.desc htmlFile
+              | Nothing => pure ()
+         in sysAndLog Build [katla, "html", src, ttm, NoEscape ">", srcHtml] >>
+            insertSources ds
 
-||| Install the API docs for the given resolved library.
-export covering
-installDocs :  HasIO io
-            => IdrisEnv
-            => SafeLib
-            -> EitherT PackErr io ()
-installDocs rl = do
-  withPkgEnv rl.name rl.pkg $ \dir => docsImpl rl
+    let docs := pkgDocs rl.name rl.pkg
+    when !(exists docs) (rmDir docs)
+    copyDir docsDir docs
 
 katla : (c : Config) => List (InstallType, PkgName)
 katla = if c.withDocs && c.useKatla then [(App False, "katla")] else []
@@ -336,15 +341,17 @@ appInfo = mapMaybe $ \case App _ ra => Just "\{ra.name}"
 ||| resolving each of them and then creating a build plan including
 ||| all dependencies of the lot.
 export covering
-install :  HasIO io
-        => (e : IdrisEnv)
-        => List (InstallType, PkgName)
-        -> EitherT PackErr io ()
+install :
+     HasIO io
+  => {auto e : IdrisEnv}
+  -> List (InstallType, PkgName)
+  -> EitherT PackErr io ()
 install ps = do
   all <- plan $ katla <+> autoPairs <+> ps
   logMany Info "Installing libraries:" (libInfo all)
   logMany Info "Installing apps:" (appInfo all)
-  for_ all installAny
+  for_ all $ \case Lib rl   => installLib rl
+                   App b rl => installApp b rl
 
   when e.env.config.withDocs $
     for_ all $ \case Lib rl  => installDocs rl
