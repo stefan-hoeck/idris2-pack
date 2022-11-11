@@ -224,8 +224,7 @@ preInstall rl = withPkgEnv rl.name rl.pkg $ \dir =>
               sysAndLog Build ["make", "src/IdrisPaths.idr", prefixVar]
             _        => pure ()
 
-||| Install the given resolved library.
-export
+-- Install the given resolved library.
 installLib :
      HasIO io
   => {auto e : IdrisEnv}
@@ -245,9 +244,9 @@ installLib rl = case rl.status of
 --          Installing Apps
 --------------------------------------------------------------------------------
 
-||| Install an Idris application given as a package name
-||| TODO: Install wrapper script only if necessary
-export covering
+-- Install an Idris application given as a package name
+-- TODO: Install wrapper script only if necessary
+covering
 installApp :
      HasIO io
   => {auto e : IdrisEnv}
@@ -278,56 +277,12 @@ installApp b ra =
               write (appTimestamp ra.name ra.pkg) ""
 
 
-||| Install the given resolved library or application.
-export covering
-installAny :  HasIO io
-           => IdrisEnv
-           => SafePkg
-           -> EitherT PackErr io ()
-installAny (Lib sli)   = installLib sli
-installAny (App b sla) = installApp b sla
-
 --------------------------------------------------------------------------------
 --          Generating API Docs
 --------------------------------------------------------------------------------
 
 covering
-docsImpl :
-     HasIO io
-  => {auto e : IdrisEnv}
-  -> SafeLib
-  -> EitherT PackErr io ()
-docsImpl rl = do
-  let docsDir : Path Abs
-      docsDir = buildPath rl.desc /> "docs"
-
-      pre : List (String,String)
-      pre = libInstallPrefix rl
-
-      htmlDir : Path Abs
-      htmlDir = docsDir /> "docs"
-
-  info "Building source docs for: \{name rl}"
-  preInstall rl
-  libPkg pre Build False ["--mkdoc"] rl.desc
-  when e.env.config.useKatla $ do
-    info "Building highlighted sources for: \{name rl}"
-    mkDir htmlDir
-    rp <- resolveApp "katla"
-    let katla := pkgExec rp.name rp.pkg rp.exec
-    fs <- map (MkF htmlDir) <$> htmlFiles htmlDir
-    for_ fs $ \htmlFile =>
-      let Just ds@(MkDS _ src ttm srcHtml) := sourceForDoc rl.desc htmlFile
-            | Nothing => pure ()
-       in sysAndLog Build [katla, "html", src, ttm, NoEscape ">", srcHtml] >>
-          insertSources ds
-
-  let docs := pkgDocs rl.name rl.pkg
-  when !(exists docs) (rmDir docs)
-  copyDir docsDir docs
-
-||| Install the API docs for the given resolved library.
-export covering
+-- Install the API docs for the given resolved library.
 installDocs :
      HasIO io
   => {auto e : IdrisEnv}
@@ -335,7 +290,35 @@ installDocs :
   -> EitherT PackErr io ()
 installDocs rl = case rl.status of
   Installed True => pure ()
-  _              => withPkgEnv rl.name rl.pkg $ \dir => docsImpl rl
+  _              => withPkgEnv rl.name rl.pkg $ \dir => do
+    let docsDir : Path Abs
+        docsDir = buildPath rl.desc /> "docs"
+
+        pre : List (String,String)
+        pre = libInstallPrefix rl
+
+        htmlDir : Path Abs
+        htmlDir = docsDir /> "docs"
+
+    info "Building source docs for: \{name rl}"
+    preInstall rl
+    libPkg pre Build False ["--mkdoc"] rl.desc
+
+    when e.env.config.useKatla $ do
+      info "Building highlighted sources for: \{name rl}"
+      mkDir htmlDir
+      rp <- resolveApp "katla"
+      let katla := pkgExec rp.name rp.pkg rp.exec
+      fs <- map (MkF htmlDir) <$> htmlFiles htmlDir
+      for_ fs $ \htmlFile =>
+        let Just ds@(MkDS _ src ttm srcHtml) := sourceForDoc rl.desc htmlFile
+              | Nothing => pure ()
+         in sysAndLog Build [katla, "html", src, ttm, NoEscape ">", srcHtml] >>
+            insertSources ds
+
+    let docs := pkgDocs rl.name rl.pkg
+    when !(exists docs) (rmDir docs)
+    copyDir docsDir docs
 
 katla : (c : Config) => List (InstallType, PkgName)
 katla = if c.withDocs && c.useKatla then [(App False, "katla")] else []
@@ -367,7 +350,8 @@ install ps = do
   all <- plan $ katla <+> autoPairs <+> ps
   logMany Info "Installing libraries:" (libInfo all)
   logMany Info "Installing apps:" (appInfo all)
-  for_ all installAny
+  for_ all $ \case Lib rl   => installLib rl
+                   App b rl => installApp b rl
 
   when e.env.config.withDocs $
     for_ all $ \case Lib rl  => installDocs rl

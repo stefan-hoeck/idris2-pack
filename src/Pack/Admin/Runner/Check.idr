@@ -78,7 +78,7 @@ checkPkg p = do
   [] <- failingDeps <$> traverse checkPkg (dependencies rl)
     | rs => warn "\{p} had failing dependencies" >>
             updateRep p (Failure rl rs)
-  Right () <- runEitherT $ installLib rl
+  Right () <- runEitherT $ installLibs [p]
     | Left err => warn "Failed to build \{p}" >>
                   updateRep p (Failure rl [])
   updateRep p (Success rl NoTests)
