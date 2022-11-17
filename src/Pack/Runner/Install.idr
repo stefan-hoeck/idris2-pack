@@ -211,7 +211,7 @@ preInstall :
 preInstall rl = withPkgEnv rl.name rl.pkg $ \dir =>
   let ipkgAbs := ipkg dir rl.pkg
    in case rl.pkg of
-        GitHub u c ipkg _ _ => do
+        Git u c ipkg _ _ => do
           let cache := ipkgCachePath rl.name c ipkg
           copyFile cache ipkgAbs
         Local _ _ _ _ => pure ()
@@ -264,7 +264,7 @@ installApp b ra =
       let ipkgAbs := ipkg dir ra.pkg
        in case ra.pkg of
             Core _            => pure ()
-            GitHub u c ipkg pp _ => do
+            Git u c ipkg pp _ => do
               let cache   := ipkgCachePath ra.name c ipkg
               copyFile cache ipkgAbs
               libPkg [] Build True ["--build"] (notPackIsSafe ra.desc)

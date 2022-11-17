@@ -172,12 +172,12 @@ runTest :  HasIO io
         -> IdrisEnv
         -> EitherT PackErr io ()
 runTest n args e = case lookup n allPackages of
-  Nothing                        => throwE (UnknownPkg n)
-  Just (GitHub u c _ _ $ Just t) => do
+  Nothing                     => throwE (UnknownPkg n)
+  Just (Git u c _ _ $ Just t) => do
     d <- withGit n u c pure
     runIpkg (d </> t) args e
-  Just (Local d _ _ $ Just t)    => runIpkg (d </> t) args e
-  Just _                         => do
+  Just (Local d _ _ $ Just t) => runIpkg (d </> t) args e
+  Just _                      => do
     warn "No test suite found for \{n}. I'll just typecheck it."
     typecheck (Pkg n) e
 

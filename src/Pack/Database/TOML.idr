@@ -12,12 +12,12 @@ import Pack.Database.Types
 export
 FromTOML MetaCommit where fromTOML = tmap fromString
 
-github : FromTOML c => File Abs -> Value -> Either TOMLErr (Package_ c)
-github f v = [| GitHub (valAt "url" f v)
-                       (valAt "commit" f v)
-                       (valAt "ipkg" f v)
-                       (optValAt "packagePath" f False v)
-                       (maybeValAt "test" f v) |]
+git : FromTOML c => File Abs -> Value -> Either TOMLErr (Package_ c)
+git f v = [| Git (valAt "url" f v)
+                 (valAt "commit" f v)
+                 (valAt "ipkg" f v)
+                 (optValAt "packagePath" f False v)
+                 (maybeValAt "test" f v) |]
 
 local : File Abs -> Value -> Either TOMLErr (Package_ c)
 local f v = [| Local (valAt "path" f v)
@@ -27,7 +27,8 @@ local f v = [| Local (valAt "path" f v)
 
 package : FromTOML c => File Abs -> Value -> Either TOMLErr (Package_ c)
 package f v = valAt {a = String} "type" f v >>=
-  \case "github" => github f v
+  \case "git"    => git f v
+        "github" => git f v -- for compatibility
         "local"  => local f v
         _        => Left $ WrongType ["type"] "Package Type"
 

@@ -40,12 +40,12 @@ test :
   -> SafeLib
   -> EitherT PackErr io TestResult
 test (RL pkg n d _ _) = case  pkg of
-  GitHub u c _ _ (Just t) => do
+  Git u c _ _ (Just t) => do
     d <- withGit n u c pure
     runIpkg (d </> t) [] e
     pure TestSuccess
-  Local d _ _ (Just t)    => runIpkg (d </> t) [] e $> TestSuccess
-  _                       => info "No tests to run for \{n}" $> NoTests
+  Local d _ _ (Just t) => runIpkg (d </> t) [] e $> TestSuccess
+  _                    => info "No tests to run for \{n}" $> NoTests
 
 covering
 testPkg :

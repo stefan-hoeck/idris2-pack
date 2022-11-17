@@ -211,7 +211,7 @@ Interpolation PkgVersion where interpolate = show
 --          URL
 --------------------------------------------------------------------------------
 
-||| URL mostly used to represent repositories on GitHub.
+||| URL mostly used to represent Git repositories.
 public export
 record URL where
   constructor MkURL
@@ -883,7 +883,7 @@ printErr BuildMany =
 printErr (NoFilePath s) = "Not a file path : \{s}"
 
 printErr (DirExists path) = """
-  Failed to clone GitHub repository into \{path}.
+  Failed to clone Git repository into \{path}.
   Directory already exists.
   """
 

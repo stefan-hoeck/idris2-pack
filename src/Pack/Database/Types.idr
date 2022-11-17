@@ -126,24 +126,24 @@ isCorePkg = isJust . readCorePkg
 --          Packages
 --------------------------------------------------------------------------------
 
-||| Description of a GitHub or local Idris package in the
+||| Description of a Git or local Idris package in the
 ||| package database.
 |||
 ||| Note: This does not contain the package name, as it
 ||| will be paired with its name in a `SortedMap`.
 public export
 data Package_ : (c : Type) -> Type where
-  ||| A repository on GitHub, given as the package's URL,
+  ||| A Git repository, given as the package's URL,
   ||| commit (hash or tag), and name of `.ipkg` file to use.
   ||| `pkgPath` should be set to `True` for executables which need
   ||| access to the `IDRIS2_PACKAGE_PATH`: The list of directories
   ||| where Idris packages are installed.
-  GitHub :  (url      : URL)
-         -> (commit   : c)
-         -> (ipkg     : File Rel)
-         -> (pkgPath  : Bool)
-         -> (testIpkg : Maybe (File Rel))
-         -> Package_ c
+  Git :  (url      : URL)
+      -> (commit   : c)
+      -> (ipkg     : File Rel)
+      -> (pkgPath  : Bool)
+      -> (testIpkg : Maybe (File Rel))
+      -> Package_ c
 
   ||| A local Idris project given as an absolute path to a local
   ||| directory, and `.ipkg` file to use.
@@ -161,13 +161,13 @@ data Package_ : (c : Type) -> Type where
 
 export
 Functor Package_ where
-  map f (GitHub u c i p t) = GitHub u (f c) i p t
-  map f (Local d i p t)    = Local d i p t
-  map f (Core c)           = Core c
+  map f (Git u c i p t) = Git u (f c) i p t
+  map f (Local d i p t) = Local d i p t
+  map f (Core c)        = Core c
 
 export
 traverse : Applicative f => (URL -> a -> f b) -> Package_ a -> f (Package_ b)
-traverse g (GitHub u c i p t) = (\c' => GitHub u c' i p t) <$> g u c
+traverse g (Git u c i p t) = (\c' => Git u c' i p t) <$> g u c
 traverse _ (Local d i p t)    = pure $ Local d i p t
 traverse _ (Core c)           = pure $ Core c
 
@@ -193,16 +193,16 @@ Uninhabited (IsCore $ Local {}) where
   uninhabited _ impossible
 
 export
-Uninhabited (IsCore $ GitHub {}) where
+Uninhabited (IsCore $ Git {}) where
   uninhabited _ impossible
 
 ||| Decides, if the given package represents
 ||| one of the core packages (`base`, `prelude`, etc.)
 export
 isCore : (p : Package) -> Dec (IsCore p)
-isCore (Core {})   = Yes ItIsCore
-isCore (GitHub {}) = No absurd
-isCore (Local {})  = No absurd
+isCore (Core {})  = Yes ItIsCore
+isCore (Git {})   = No absurd
+isCore (Local {}) = No absurd
 
 ||| Proof that a package is a local package
 public export
@@ -214,52 +214,52 @@ Uninhabited (IsLocal $ Core {}) where
   uninhabited _ impossible
 
 export
-Uninhabited (IsLocal $ GitHub {}) where
+Uninhabited (IsLocal $ Git {}) where
   uninhabited _ impossible
 
 ||| Decides, if the given package represents
 ||| a local package.
 export
 isLocal : (p : Package) -> Dec (IsLocal p)
-isLocal (Core {})   = No absurd
-isLocal (GitHub {}) = No absurd
-isLocal (Local {})  = Yes ItIsLocal
+isLocal (Core {})  = No absurd
+isLocal (Git {})   = No absurd
+isLocal (Local {}) = Yes ItIsLocal
 
-||| Proof that a package is a GitHub package
+||| Proof that a package is a Git package
 public export
-data IsGitHub : Package -> Type where
-  ItIsGitHub : IsGitHub (GitHub {})
+data IsGit : Package -> Type where
+  ItIsGit : IsGit (Git {})
 
 export
-Uninhabited (IsGitHub $ Core {}) where
+Uninhabited (IsGit $ Core {}) where
   uninhabited _ impossible
 
 export
-Uninhabited (IsGitHub $ Local {}) where
+Uninhabited (IsGit $ Local {}) where
   uninhabited _ impossible
 
 ||| Decides, if the given package represents
-||| a package on GitHub.
+||| a Git package.
 export
-isGitHub : (p : Package) -> Dec (IsGitHub p)
-isGitHub (Core {})   = No absurd
-isGitHub (GitHub {}) = Yes ItIsGitHub
-isGitHub (Local {})  = No absurd
+isGit : (p : Package) -> Dec (IsGit p)
+isGit (Core {})  = No absurd
+isGit (Git {})   = Yes ItIsGit
+isGit (Local {}) = No absurd
 
 ||| True, if the given application needs access to the
 ||| folders where Idris package are installed.
 export
 usePackagePath : Package_ c -> Bool
-usePackagePath (GitHub _ _ _ pp _) = pp
-usePackagePath (Local _ _ pp _)    = pp
-usePackagePath (Core _)            = False
+usePackagePath (Git _ _ _ pp _) = pp
+usePackagePath (Local _ _ pp _) = pp
+usePackagePath (Core _)         = False
 
 ||| Absolute path to the `.ipkg` file of a package.
 export
 ipkg : (dir : Path Abs) -> Package -> File Abs
-ipkg dir (GitHub _ _ i _ _) = toAbsFile dir i
-ipkg dir (Local _ i _ _)    = toAbsFile dir i
-ipkg dir (Core c)           = toAbsFile dir (coreIpkgPath c)
+ipkg dir (Git _ _ i _ _) = toAbsFile dir i
+ipkg dir (Local _ i _ _) = toAbsFile dir i
+ipkg dir (Core c)        = toAbsFile dir (coreIpkgPath c)
 
 --------------------------------------------------------------------------------
 --          Resolved Packages
@@ -274,7 +274,7 @@ data PkgStatus : Package -> Type where
   Installed   : (withDocs : Bool) -> PkgStatus p
   Outdated    : (0 isLocal : IsLocal p) => PkgStatus p
 
-||| A resolved library, which was downloaded from GitHub
+||| A resolved library, which was cloned from a Git repo
 ||| or looked up in the local file system. This comes with
 ||| a fully parsed `PkgDesc` (representing the `.ipkg` file).
 public export
@@ -329,7 +329,7 @@ namespace AppStatus
     ||| not yet been included in the installed version.
     Outdated     :  (0 isLocal : IsLocal p) => AppStatus p
 
-||| A resolved application, which was downloaded from GitHub
+||| A resolved application, which was cloned from a Git repo
 ||| or looked up in the local file system. This comes with
 ||| a fully parsed `PkgDesc` (representing the `.ipkg` file).
 public export
@@ -456,8 +456,10 @@ testPath : Maybe (File Rel) -> List String
 testPath Nothing  = []
 testPath (Just x) = [ "test        = \{quote x}" ]
 
+-- we need to print `Git` packages as `"github"` at
+-- least for the time being for reasons of compatibility
 printPair : (PkgName,Package) -> List String
-printPair (x, GitHub url commit ipkg pp t) =
+printPair (x, Git url commit ipkg pp t) =
   [ "[db.\{x}]"
   , "type        = \"github\""
   , "url         = \{quote url}"

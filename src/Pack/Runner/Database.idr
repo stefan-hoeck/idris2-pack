@@ -164,9 +164,9 @@ withPkgEnv :  HasIO io
              -> Package
              -> (Path Abs -> EitherT PackErr io a)
              -> EitherT PackErr io a
-withPkgEnv n (GitHub u c i _ _) f = withGit n u c f
-withPkgEnv n (Local d i _ _)    f = inDir d f
-withPkgEnv n (Core _)           f = withCoreGit f
+withPkgEnv n (Git u c i _ _) f = withGit n u c f
+withPkgEnv n (Local d i _ _) f = inDir d f
+withPkgEnv n (Core _)        f = withCoreGit f
 
 isOutdated : DPair Package PkgStatus -> Bool
 isOutdated (fst ** Outdated) = True
@@ -242,7 +242,7 @@ loadIpkg :  HasIO io
          => PkgName
          -> Package
          -> EitherT PackErr io (Desc U)
-loadIpkg n (GitHub u c i _ _) =
+loadIpkg n (Git u c i _ _) =
   let cache  := ipkgCachePath n c i
       tmpLoc := gitTmpDir n </> i
    in do
