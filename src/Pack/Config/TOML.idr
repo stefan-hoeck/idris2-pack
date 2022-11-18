@@ -111,7 +111,7 @@ initToml scheme db = """
 
   [pack]
 
-  # Override this to use a custom GitHub repo for pack
+  # Override this to use a custom Git repo for pack
   # url = "https://github.com/stefan-hoeck/idris2-pack"
 
   # Override this to use a custom commit and branch for pack
@@ -146,7 +146,7 @@ initToml scheme db = """
   # repl.autoload   = "autolibs"
   # repl.autoload   = [ "sop", "toml" ]
 
-  # Override this to use a custom GitHub repo for the Idris compiler
+  # Override this to use a custom Git repo for the Idris compiler
   # url = "https://github.com/idris-lang/Idris2"
 
   # Override this to use a custom commit and branch for the Idris compiler
@@ -168,17 +168,17 @@ initToml scheme db = """
   # path = "/data/idris/chem"
   # ipkg = "chem.ipkg"
 
-  # A package on GitHub to be available with all
+  # A package as a Git repository to be available with all
   # package collections.
   # [custom.all.foo]
-  # type = "github"
+  # type = "git"
   # url  = "https://github.com/bar/foo"
   # ipkg = "foo.ipkg"
 
   # Override library `toml` from package collection `nightly-220503`
   # by using a custom commit hash.
   # [custom.nightly-220503.toml]
-  # type   = "github"
+  # type   = "git"
   # url    = "https://github.com/cuddlefishie/toml-idr"
   # commit = "eb7a146f565276f82ebf30cb6d5502e9f65dcc3c"
   # ipkg   = "toml.ipkg"

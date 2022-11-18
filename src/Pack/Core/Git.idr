@@ -17,7 +17,7 @@ export %inline
 gitCacheDir : PackDir => (url : URL) -> Path Abs
 gitCacheDir url = packDir <//> ".cache/git" <//> url
 
-||| Clones a GitHub repository to the given destination
+||| Clones a Git repository to the given destination
 cloneRemote :  HasIO io
                => (url  : URL)
                -> (dest : Path Abs)
@@ -45,7 +45,7 @@ export
 checkout : HasIO io => (commit : Commit) -> EitherT PackErr io ()
 checkout commit = sys ["git", "checkout", "-q", commit]
 
-||| Query GitHub for the latest commit of the main branch.
+||| Query a Git repo for the latest commit of the main branch.
 export covering
 gitLatest :  HasIO io
           => (url    : URL)
@@ -72,7 +72,7 @@ withGit pkg url commit act =
    in do
      False <- exists tmp | True => inDir tmp act
 
-     -- clone a GitHub repo if it's not already cached
+     -- clone a Git repo if it's not already cached
      when !(missing cache) $ do
        mkParentDir cache
        cloneRemote url cache

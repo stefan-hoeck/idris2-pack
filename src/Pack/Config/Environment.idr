@@ -95,7 +95,7 @@ export
 patchesDir : PackDir => Path Abs
 patchesDir = dbDir /> "patches"
 
-||| Path to file storing the last fetched commit of a GitHub
+||| Path to file storing the last fetched commit of a Git
 ||| repo given as a URL and branch name.
 export
 commitFile : PackDir => URL -> Branch -> File Abs
@@ -154,9 +154,9 @@ idrisDataDir = idrisInstallDir /> "support"
 ||| Directory where an installed library or app goes
 export %inline
 pkgPrefixDir : PackDir => DB => PkgName -> Package -> Path Abs
-pkgPrefixDir n (GitHub _ c _ _ _) = commitDir <//> n <//> c
-pkgPrefixDir n (Local _ _ _ _)    = commitDir </> "local" <//> n
-pkgPrefixDir n (Core _)           = idrisPrefixDir
+pkgPrefixDir n (Git _ c _ _ _) = commitDir <//> n <//> c
+pkgPrefixDir n (Local _ _ _ _) = commitDir </> "local" <//> n
+pkgPrefixDir n (Core _)        = idrisPrefixDir
 
 ||| Directory to be used with the `IDRIS2_PACKAGE_PATH` variable, so that
 ||| Idris finds a library even though it is being installed in a
@@ -220,9 +220,9 @@ pkgInstallDir n p d =
   let vers = db.idrisVersion
       dir  = pkgPrefixDir n p /> idrisDir
    in case p of
-        Core c           => dir /> (c <-> vers)
-        GitHub _ _ _ _ _ => dir </> pkgRelDir d
-        Local _ _ _ _    => dir </> pkgRelDir d
+        Core c        => dir /> (c <-> vers)
+        Git _ _ _ _ _ => dir </> pkgRelDir d
+        Local _ _ _ _ => dir </> pkgRelDir d
 
 ||| Location of an executable of the given name.
 export
@@ -396,7 +396,7 @@ defaultColl = do
     $ foldl max x xs
 
 ||| Resolve a meta commit by fetching the hash of the latest commit
-||| from GitHub in case of an `Fetch x` commit. In case of a `Latest x`
+||| from a Git repo in case of an `Fetch x` commit. In case of a `Latest x`
 ||| meta commit, the hash is only fetched, if the corresponding commit
 ||| file is missing or `fetch` is set to `True`.
 export

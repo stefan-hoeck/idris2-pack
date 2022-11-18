@@ -271,7 +271,7 @@ cmdDesc Update           = """
   """
 
 cmdDesc Fetch            = """
-  Fetch the latest commit hashes from GitHub for remote packages with a
+  Fetch the latest commit hashes from a repository for Git packages with a
   commit entry of "latest:branch".
   """
 

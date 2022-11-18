@@ -43,6 +43,7 @@ microInit scheme db = MkConfig {
   , logLevel      = Info
   , codegen       = Chez
   , output        = "_tmppack"
+  , levels        = empty
   }
 
 covering

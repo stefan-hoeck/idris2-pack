@@ -134,8 +134,8 @@ testFile (Just f) = ["Test File    : \{f}"]
 
 details : QPkg -> List String
 details qp = case qp.lib.pkg of
-  GitHub url commit ipkg _ t => [
-    "Type         : GitHub project"
+  Git url commit ipkg _ t => [
+    "Type         : Git project"
   , "URL          : \{url}"
   , "Commit       : \{commit}"
   , "ipkg File    : \{ipkg}"
