@@ -240,6 +240,8 @@ installLib rl = case rl.status of
        Local _ _ _ _ => write (libTimestamp rl.name rl.pkg) ""
        _             => pure ()
 
+    uncacheLib (name rl)
+
 --------------------------------------------------------------------------------
 --          Installing Apps
 --------------------------------------------------------------------------------
