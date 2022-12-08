@@ -417,6 +417,11 @@ lookupLib :  HasIO io
           -> io (Maybe $ ResolvedLib U)
 lookupLib n = lookup n <$> readIORef ref
 
+||| Lookup a library in the cache
+export
+uncacheLib : HasIO io => (ref : LibCache) => PkgName -> io ()
+uncacheLib n = modifyIORef ref (delete n)
+
 ||| Environment used by most pack methods, consisting of
 ||| the `PACK_DIR` environment variable, the user-defined
 ||| application configuratin, and the data collection to
