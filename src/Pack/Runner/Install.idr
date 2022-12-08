@@ -321,6 +321,7 @@ installDocs rl = case rl.status of
     let docs := pkgDocs rl.name rl.pkg
     when !(exists docs) (rmDir docs)
     copyDir docsDir docs
+    uncacheLib (name rl)
 
 katla : (c : Config) => List (InstallType, PkgName)
 katla = if c.withDocs && c.useKatla then [(App False, "katla")] else []
