@@ -501,6 +501,85 @@ loadDB mc = do
     Just "HEAD" => pure $ map toLatest raw
     _           => pure raw
 
+||| Run a pack action in the directory of the cloned Idris repository.
+export
+withCoreGit : HasIO io
+            => (e : Env)
+            => (Path Abs -> EitherT PackErr io a)
+            -> EitherT PackErr io a
+withCoreGit = withGit compiler e.db.idrisURL e.db.idrisCommit
+
+||| Caches the `.ipkg` files of the core libraries to make them
+||| quickly available when running queries.
+export
+cacheCoreIpkgFiles : HasIO io => Env => Path Abs -> EitherT PackErr io ()
+cacheCoreIpkgFiles dir = for_ corePkgs $ \c =>
+  copyFile (toAbsFile dir (coreIpkgPath c)) (coreCachePath c)
+
+export
+notCached : HasIO io => (e : Env) => PkgName -> Package -> io Bool
+notCached n (Git u c i _ _) = fileMissing $ ipkgCachePath n c i
+notCached n (Local d i _ _) = pure False
+notCached n (Core c)        = fileMissing $ coreCachePath c
+
+export
+cachePkg :
+     HasIO io
+  => (e : Env)
+  => PkgName
+  -> Package
+  -> EitherT PackErr io ()
+cachePkg n (Git u c i _ _) =
+  let cache  := ipkgCachePath n c i
+      tmpLoc := gitTmpDir n </> i
+   in withGit n u c $ \dir => do
+        let pf := patchFile n i
+        when !(fileExists pf) (patch tmpLoc pf)
+        copyFile tmpLoc cache
+cachePkg n (Local d i _ _)    = pure ()
+cachePkg n (Core c)           =
+  let cache  := coreCachePath c
+      tmpLoc := gitTmpDir compiler </> coreIpkgPath c
+   in withCoreGit cacheCoreIpkgFiles
+
+export
+cachePkgs : HasIO io => (e : Env) => EitherT PackErr io ()
+cachePkgs =
+  let pkgs := toList allPackages
+   in do
+     (S n,ml,ps) <- needCaching Lin 0 60 pkgs | (0,_,_) => pure ()
+     traverse_ (doCache (S n) ml) ps
+
+  where
+    needCaching :
+         SnocList (Nat,PkgName,Package)
+      -> (count : Nat)
+      -> (maxLen : Nat)
+      -> List (PkgName,Package)
+      -> EitherT PackErr io (Nat,Nat,List (Nat,PkgName,Package))
+    needCaching sp n ml []               = pure (n, ml, sp <>> [])
+    needCaching sp n ml ((pn,pkg) :: ps) = do
+      True <- notCached pn pkg | False => needCaching sp n ml ps
+      let n'  := S n
+          ml' := max ml (length (interpolate pn) + 26)
+      needCaching (sp :< (n', pn, pkg)) n' ml' ps
+
+    cacheInfo : (tot, maxLength, ix : Nat) -> PkgName -> String
+    cacheInfo tot ml ix pn =
+      let line := padRight ml '.' "Caching package info for \{pn} "
+          stot := show tot
+          six  := padLeft (length stot) ' ' (show ix)
+       in "\{line} (\{six}/\{stot})"
+
+    doCache :
+          (tot : Nat)
+       -> (maxLenght : Nat)
+       -> (Nat,PkgName,Package)
+       -> EitherT PackErr io ()
+    doCache tot ml (n,pn,pkg) = do
+      cache (cacheInfo tot ml n pn)
+      cachePkg pn pkg
+
 ||| Load the package collection as given in the (auto-implicit) user config
 ||| and convert the result to a pack environment.
 export covering
@@ -519,9 +598,10 @@ env mc fetch = do
 
   let url    := fromMaybe db.idrisURL c.idrisURL
       commit := fromMaybe db.idrisCommit c.idrisCommit
+      -- adjust the idrisCommit and URL to use according to user overrides
+      env    := MkEnv pd td c ch ({idrisURL := url, idrisCommit := commit} db) lbf
 
-  -- adjust the idrisCommit and URL to use according to user overrides
-  pure $ MkEnv pd td c ch ({idrisURL := url, idrisCommit := commit} db) lbf
+  cachePkgs $> env
 
 adjCollection : DBName -> String -> String
 adjCollection db str = case isPrefixOf "collection " str of

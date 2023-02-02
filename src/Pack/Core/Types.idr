@@ -582,6 +582,7 @@ data LogLevel : Type where
   Debug   : LogLevel
   Build   : LogLevel
   Info    : LogLevel
+  Cache   : LogLevel
   Warning : LogLevel
   Silence : LogLevel
 
@@ -589,8 +590,9 @@ llToNat : LogLevel -> Nat
 llToNat Debug   = 0
 llToNat Build   = 1
 llToNat Info    = 2
-llToNat Warning = 3
-llToNat Silence = 4
+llToNat Cache   = 3
+llToNat Warning = 4
+llToNat Silence = 5
 
 export
 Eq LogLevel where (==) = (==) `on` llToNat
@@ -603,6 +605,7 @@ Interpolation LogLevel where
   interpolate Debug   = "debug"
   interpolate Build   = "build"
   interpolate Info    = "info"
+  interpolate Cache   = "cache"
   interpolate Warning = "warning"
   interpolate Silence = ""
 
@@ -612,6 +615,7 @@ logLevels =
   [ ("debug"  , Debug  )
   , ("build"  , Build  )
   , ("info"   , Info   )
+  , ("cache"  , Cache  )
   , ("warning", Warning)
   , ("silence", Silence)
   ]

@@ -148,14 +148,6 @@ checkLOA (App b x) = App b <$> safeApp x
 --          Resolving Packages
 --------------------------------------------------------------------------------
 
-||| Run a pack action in the directory of the cloned Idris repository.
-export
-withCoreGit : HasIO io
-            => (e : Env)
-            => (Path Abs -> EitherT PackErr io a)
-            -> EitherT PackErr io a
-withCoreGit = withGit compiler e.db.idrisURL e.db.idrisCommit
-
 ||| Run a pack action in the directory of a (possibly cloned) package.
 export
 withPkgEnv :  HasIO io
@@ -230,13 +222,6 @@ appStatus n p d deps exe = do
           src := localSrcDir d
        in checkOutdated ts src deps Outdated installed
 
-||| Caches the `.ipkg` files of the core libraries to make them
-||| quickly available when running queries.
-export
-cacheCoreIpkgFiles : HasIO io => Env => Path Abs -> EitherT PackErr io ()
-cacheCoreIpkgFiles dir = for_ corePkgs $ \c =>
-  copyFile (toAbsFile dir (coreIpkgPath c)) (coreCachePath c)
-
 loadIpkg :  HasIO io
          => (e : Env)
          => PkgName
@@ -245,20 +230,12 @@ loadIpkg :  HasIO io
 loadIpkg n (Git u c i _ _) =
   let cache  := ipkgCachePath n c i
       tmpLoc := gitTmpDir n </> i
-   in do
-     when !(fileMissing cache) $
-       withGit n u c $ \dir => do
-         let pf := patchFile n i
-         when !(fileExists pf) (patch tmpLoc pf)
-         copyFile tmpLoc cache
-     parseIpkgFile cache tmpLoc
+   in parseIpkgFile cache tmpLoc
 loadIpkg n (Local d i _ _)    = parseIpkgFile (d </> i) (d </> i)
 loadIpkg n (Core c)           =
   let cache  := coreCachePath c
       tmpLoc := gitTmpDir compiler </> coreIpkgPath c
-   in do
-     when !(fileMissing cache) $ withCoreGit cacheCoreIpkgFiles
-     parseIpkgFile cache tmpLoc
+   in parseIpkgFile cache tmpLoc
 
 ||| Try to fully resolve a library given as a package name.
 ||| This will look up the library in the current package collection
