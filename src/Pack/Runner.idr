@@ -45,9 +45,9 @@ Command Cmd where
   defaultLevel Switch           = Build
   defaultLevel UpdateDB         = Build
   defaultLevel CollectGarbage   = Info
-  defaultLevel Info             = Warning
-  defaultLevel Query            = Warning
-  defaultLevel Fuzzy            = Warning
+  defaultLevel Info             = Cache
+  defaultLevel Query            = Cache
+  defaultLevel Fuzzy            = Cache
   defaultLevel Completion       = Silence
   defaultLevel CompletionScript = Silence
   defaultLevel PrintHelp        = Silence
