@@ -70,11 +70,12 @@ succLine (lib,tst) =
   let desc := desc lib
       pkg  := pkg lib
       brf  := fromMaybe "" desc.desc.brief
+      lic  := fromMaybe "" desc.desc.license
       nm   := name lib
       api  := apiLink nm
       url  := url pkg
       lnk  := ghCommitLink url (commit pkg)
-   in "| [\{nm}](\{url}) | \{brf} | \{lnk} | \{tst} | [docs](\{api}) |"
+   in "| [\{nm}](\{url}) | \{brf} | \{lic} | \{lnk} | \{tst} | [docs](\{api}) |"
 
 failLine : Env => (SafeLib, List PkgName) -> String
 failLine (lib,ps) =
@@ -103,8 +104,8 @@ report (MkRL es fs ss) =
 
       ## Building Packages
 
-      | Package | Description | Commit | Tests | API Docs |
-      | --- | --- | --- | --- | --- |
+      | Package | Description | License | Commit | Tests | API Docs |
+      | --- | --- | --- | --- | --- | --- |
       \{succs}
 
       ## Failing Packages
