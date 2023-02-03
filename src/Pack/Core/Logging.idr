@@ -105,7 +105,7 @@ export %inline
 info : HasIO io => (ref : LogRef) => (msg  : Lazy String) -> io ()
 info = log ref Info
 
-||| Alias for `log ref Info`.
+||| Alias for `log ref Cache`.
 |||
 ||| Note: Most of the time `ref` is automatically being extracted from
 ||| a value of type `Pack.Config.Types.Config` in scope.
