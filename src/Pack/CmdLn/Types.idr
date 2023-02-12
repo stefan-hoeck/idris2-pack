@@ -23,10 +23,10 @@ export
 Arg PkgQuery where
   argDesc_ = "[mode] <query>"
 
-  readArg ("dep" :: s :: t)     = Just (MkQ Dependency s, t)
+  readArg ("dep" :: s :: t)    = Just (MkQ Dependency s, t)
   readArg ("module" :: s :: t) = Just (MkQ Module s, t)
-  readArg [s]                   = Just (MkQ PkgName s, [])
-  readArg _                     = Nothing
+  readArg [s]                  = Just (MkQ PkgName s, [])
+  readArg _                    = Nothing
 
 public export
 record FuzzyQuery where
