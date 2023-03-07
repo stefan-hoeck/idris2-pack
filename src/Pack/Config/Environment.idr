@@ -382,18 +382,35 @@ updateDB = do
   withGit packDB dbRepo commit $ \d =>
     copyDir (d /> "collections") dbDir
 
+||| Extract the name of the latest collection from a directory
+export
+latestCollection : HasIO io => (dir : Path Abs) -> EitherT PackErr io DBName
+latestCollection dir = do
+  (x :: xs) <- filter ("HEAD.toml" /=) <$> tomlFiles dir
+    | [] => pure Head
+  pure
+    . maybe Head MkDBName
+    . fileStem
+    $ foldl max x xs
+
+||| Update the package database.
+export
+copyLatest : HasIO io => TmpDir => PackDir => EitherT PackErr io DBName
+copyLatest = do
+  commit <- gitLatest dbRepo "main"
+  withGit packDB dbRepo commit $ \d => do
+    db <- latestCollection (d /> "collections")
+    let body := cast {to = Body} db <+> ".toml"
+    copyFile (d /> "collections" /> body) (dbDir /> body)
+    pure db
+
 ||| Loads the name of the default collection (currently the latest
 ||| nightly)
 export
 defaultColl : HasIO io => TmpDir => PackDir => EitherT PackErr io DBName
 defaultColl = do
   when !(missing dbDir) updateDB
-  (x :: xs) <- filter ("HEAD.toml" /=) <$> tomlFiles dbDir
-    | [] => pure Head
-  pure
-    . maybe Head MkDBName
-    . fileStem
-    $ foldl max x xs
+  latestCollection dbDir
 
 ||| Resolve a meta commit by fetching the hash of the latest commit
 ||| from a Git repo in case of an `Fetch x` commit. In case of a `Latest x`
