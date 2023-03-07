@@ -87,8 +87,7 @@ Command Cmd where
 
   adjConfig_ Switch [db] c = case db == MkDBName "latest" of
     True  => do
-      updateDB
-      latest <- defaultColl
+      latest <- copyLatest
       pure $ {collection := latest} c
     False => pure $ {collection := db} c
 
