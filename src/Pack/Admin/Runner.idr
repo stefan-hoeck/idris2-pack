@@ -32,7 +32,12 @@ cmdDesc : ACmd -> String
 cmdDesc CheckDB  = """
   Tries to build and install all packages from the current package
   collection and prints a basic report.
-  Writes the results to the given file.
+  Writes the results to `Status.md` in the given directory. A copy
+  of the tested DB is put there as well if all goes well.
+
+  Note: This does not terminate with an error condition, even if
+  some of the checks fail. In that case, the tested collection is
+  not copied.
   """
 
 cmdDesc FromHEAD = """
@@ -84,7 +89,7 @@ Command ACmd where
   defaultLevel MakeDocs = Build
   defaultLevel Help     = Warning
 
-  ArgTypes CheckDB  = [File Abs]
+  ArgTypes CheckDB  = [Path Abs]
   ArgTypes MakeDocs = []
   ArgTypes FromHEAD = [File Abs]
   ArgTypes Help     = [Maybe ACmd]

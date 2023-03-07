@@ -400,7 +400,7 @@ copyLatest = do
   commit <- gitLatest dbRepo "main"
   withGit packDB dbRepo commit $ \d => do
     db <- latestCollection (d /> "collections")
-    let body := cast db <.> "toml"
+    let body := cast {to = Body} db <+> ".toml"
     copyFile (d /> "collections" /> body) (dbDir /> body)
     pure db
 

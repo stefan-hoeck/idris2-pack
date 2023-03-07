@@ -124,7 +124,7 @@ makeDocs e = do
     n => throwE (BuildFailures n)
 
 export covering
-checkDB : HasIO io => File Abs -> IdrisEnv -> EitherT PackErr io ()
+checkDB : HasIO io => Path Abs -> (e : IdrisEnv) -> EitherT PackErr io ()
 checkDB p e = do
   ref <- newIORef (the (SortedMap PkgName Report) empty)
   rep <- checkAll allPkgs
@@ -134,7 +134,9 @@ checkDB p e = do
     (mapMaybe failureLine rep)
   logMany Warning "The following packages could not be resolved:"
     (mapMaybe resolveLine rep)
-  write p (printReport rep)
+  write (p /> "STATUS.md") (printReport rep)
+
+  let dbName := cast {to = Body} e.env.config.collection <+> ".toml"
   case numberOfFailures rep of
-    0 => pure ()
-    n => throwE (BuildFailures n)
+    0 => copyFile (dbDir /> dbName) (p /> dbName)
+    n => warn (printErr $ BuildFailures n)

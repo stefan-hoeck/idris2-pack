@@ -542,6 +542,11 @@ export
   readArg = parseSingle (readAbsFile curDir)
 
 export
+(cd : CurDir) => Arg (Path Abs) where
+  argDesc_ = "<dir>"
+  readArg = readSingle (\s => parse s curDir)
+
+export
 (cd : CurDir) => Arg PkgOrIpkg where
   argDesc_ = "<pkg or .ipkg>"
   readArg = readSingle $ \s => case readAbsFile curDir s of
