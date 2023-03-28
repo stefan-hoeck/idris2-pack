@@ -194,10 +194,12 @@ installImpl :
   -> EitherT PackErr io ()
 installImpl dir rl =
   let pre      := libInstallPrefix rl
-      buildCmd := installCmd e.env.config.withSrc
       instCmd  := installCmd e.env.config.withSrc
    in do
      info "Installing library\{withSrcStr}: \{name rl}"
+     when (isInstalled rl) $ do
+       info "Removing currently installed version of \{name rl}"
+       rmDir (pkgInstallDir rl.name rl.pkg rl.desc)
      libPkg pre Build True ["--build"] rl.desc
      libPkg pre Debug False instCmd rl.desc
      when !(exists $ dir /> "lib") $
