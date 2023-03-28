@@ -445,17 +445,17 @@ export covering
 remove : HasIO io => Env => List (PkgType,PkgName) -> EitherT PackErr io ()
 remove ps = do
   ref <- emptyCache
-  for_ ps  $ \case (Lib,n) => removeLib n
-                   (Bin,n) => removeApp n
+  for_ ps  $ \case (PLib,n) => removeLib n
+                   (PApp,n) => removeApp n
 
 ||| Remove the given libs
 export covering
 removeLibs : HasIO io => Env => List PkgName -> EitherT PackErr io ()
 removeLibs ns = do
   checkDeletable ns
-  remove $ map (Lib,) ns
+  remove $ map (PLib,) ns
 
 ||| Remove the given apps
 export covering
 removeApps : HasIO io => Env => List PkgName -> EitherT PackErr io ()
-removeApps = remove . map (Bin,)
+removeApps = remove . map (PApp,)
