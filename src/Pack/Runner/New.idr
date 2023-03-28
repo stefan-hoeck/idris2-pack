@@ -97,8 +97,8 @@ packTomlContent name =
 
 -- Returns module name and module file
 getModFile : PkgType -> Body -> (Body, String)
-getModFile Lib pkgName = let mod = capitalize pkgName in (mod, libModFile mod)
-getModFile Bin pkgName = ("Main", mainModFile)
+getModFile PLib pkgName = let mod = capitalize pkgName in (mod, libModFile mod)
+getModFile PApp pkgName = ("Main", mainModFile)
 
 gitIgnoreFile : String
 gitIgnoreFile =

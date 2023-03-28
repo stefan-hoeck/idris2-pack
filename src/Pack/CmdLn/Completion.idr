@@ -73,7 +73,7 @@ prefixOnlyIfNonEmpty s    = prefixOnly s
 
 -- list of package types when creating a new package
 packageTypes : List String
-packageTypes = map interpolate [Lib, Bin]
+packageTypes = map interpolate [PLib, PApp]
 
 packageList : String -> List String -> List String
 packageList "--" xs = xs

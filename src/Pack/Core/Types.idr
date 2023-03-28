@@ -322,24 +322,24 @@ data PkgOrIpkg : Type where
 
 ||| Type of an Idris package (either a library or a binary).
 public export
-data PkgType = Lib | Bin
+data PkgType = PLib | PApp
 
-export %inline
+export
 Interpolation PkgType where
-  interpolate Lib = "lib"
-  interpolate Bin = "bin"
+  interpolate PLib = "lib"
+  interpolate PApp = "app"
 
 export
 Eq PkgType where
-  Lib == Lib = True
-  Bin == Bin = True
-  _   == _   = False
+  PLib == PLib = True
+  PApp == PApp = True
+  _    == _    = False
 
 export
 Ord PkgType where
-  compare Lib Bin = LT
-  compare Bin Lib = GT
-  compare _   _   = EQ
+  compare PLib PApp = LT
+  compare PApp PLib = GT
+  compare _    _    = EQ
 
 --------------------------------------------------------------------------------
 --          Install Type
@@ -930,8 +930,9 @@ readBody s = case Body.parse s of
 ||| Tries to convert a string to a package type.
 export
 readPkgType : String -> Either PackErr PkgType
-readPkgType "lib" = Right Lib
-readPkgType "bin" = Right Bin
+readPkgType "lib" = Right PLib
+readPkgType "bin" = Right PApp
+readPkgType "app" = Right PApp
 readPkgType s     = Left (InvalidPkgType s)
 
 ||| Tries to convert a string representing a relative or absolute
