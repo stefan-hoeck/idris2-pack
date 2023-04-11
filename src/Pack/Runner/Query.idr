@@ -211,8 +211,8 @@ resultString _ _      ps cs qp = case e.config.queryType of
     Nothing  => prettyTree cs
 
   ParentTree => case filter ("base" /=) ps of
-    Just tr' => prettyTree tr'
-    Nothing  => prettyTree ps
+    Just tr' => prettyTreeRev tr'
+    Nothing  => prettyTreeRev ps
 
 export covering
 query :  HasIO io

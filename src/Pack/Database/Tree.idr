@@ -90,39 +90,53 @@ treeLookup v = fromMaybe (T v []) . lookup v
 --          Pretty-printing Tree
 --------------------------------------------------------------------------------
 
-merge1 :
-     SnocList (String,String)
-  -> Nat
-  -> List String
-  -> List String
-  -> (Nat,List String)
-merge1 sp n (x::xs) (y::ys) = merge1 (sp :< (x,y)) (max n (length x)) xs ys
-merge1 sp n xs      _       =
-  (S n, map (\(x,y) => padRight (S n) ' ' x ++ y) sp <>> xs)
+parameters (rev : Bool)
+  end : String
+  end = if rev then "┘" else "┐"
 
-header : Nat -> String
-header m = "|" ++ replicate (pred m) '_'
+  mid : String
+  mid = if rev then "┴" else "┬"
 
-merge :
-     Nat
-  -> List String
-  -> List (List String)
-  -> (List String, Nat)
-merge m ss []      = (ss,m)
-merge m ss (x::xs) = let (n,ss2) := merge1 [<] 0 ss x in merge n ss2 xs
+  merge1 :
+       SnocList (String,String)
+    -> Nat
+    -> List String
+    -> List String
+    -> (Nat,List String)
+  merge1 sp n (x::xs) (y::ys) = merge1 (sp :< (x,y)) (max n (length x)) xs ys
+  merge1 sp n xs      _       =
+    (n, map (\(x,y) => padRight (S n) ' ' x ++ y) sp <>> xs)
 
-treeLines : Interpolation a => Tree a -> (Nat, List String)
-treeLines (T l ds) =
-  let s       := interpolate l
-      lls     := map (("|" ::) . snd)
-               . reverse
-               . sortBy (comparing fst)
-               $ map treeLines ds
+  header : SnocList String -> String
+  header [<]       = "│"
+  header (sx :< x) = concat $ "├" :: (map (++ mid) sx <>> [x ++ end])
 
-      (h::t)  := lls | [] => (1, [s])
-      (ls,os) := merge 0 h t
-      in (length ls + 2, s :: header os :: ls)
+  merge :
+       List String
+    -> SnocList (List String)
+    -> List String
+    -> (List String, String)
+  merge hs [<]     ls = (ls,header $ [<] <>< hs)
+  merge hs (sb:<b) ls =
+    let (n,ls2) := merge1 [<] 0 b ls
+     in merge (replicate n '─' :: hs) sb ls2
+
+  treeLines : Interpolation a => Tree a -> (Nat, List String)
+  treeLines (T l ds) =
+    let s       := interpolate l
+        lls     := map (("│" ::) . snd)
+                 . reverse
+                 . sortBy (comparing fst)
+                 $ map treeLines ds
+
+        (i:<l)  := [<] <>< lls | [<] => (1, [s])
+        (ls,hd) := merge [] i l
+        in (length ls + 2, s :: hd :: ls)
 
 export %inline
 prettyTree : Interpolation a => Tree a -> String
-prettyTree = unlines . snd . treeLines
+prettyTree = unlines . snd . treeLines False
+
+export %inline
+prettyTreeRev : Interpolation a => Tree a -> String
+prettyTreeRev = unlines . reverse . snd . treeLines True
