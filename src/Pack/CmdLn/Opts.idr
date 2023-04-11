@@ -102,6 +102,14 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             """
         , MkOpt ['l'] ["long-desc"]   (NoArg $ setQuery Details)
             "Print a detailed description of a package known to pack"
+        , MkOpt [] ["tree"]   (NoArg $ setQuery Tree)
+            "Print a dependency tree of a package known to pack"
+        , MkOpt [] ["parent-tree"]   (NoArg $ setQuery ParentTree)
+            """
+            Print a tree of packages depending on a package know to pack
+            Use this to find all packages transitively depending on a specific
+            library
+            """
         , MkOpt ['d'] ["dependencies"]   (NoArg $ setQuery Dependencies)
             "Print the dependencies of each query result."
         , MkOpt ['o'] ["output"]   (ReqArg  setOutput "<file>")

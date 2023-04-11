@@ -54,6 +54,13 @@ data QueryType : Type where
   ||| List detailed information about a package
   Details      : QueryType
 
+  ||| Print dependency tree
+  Tree         : QueryType
+
+  ||| Print inverse dependency tree
+  ||| (That is, a tree of packages depending on a given package)
+  ParentTree   : QueryType
+
 ||| Code generator to use
 public export
 data Codegen : Type where

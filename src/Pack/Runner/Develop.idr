@@ -46,7 +46,7 @@ replDeps Nothing  NoPkgs         = pure $ []
 replDeps Nothing  AutoLibs       = pure $ e.env.config.autoLibs
 replDeps Nothing  (AutoPkgs ps)  = pure $ ps
 replDeps Nothing  Installed      =
-  map name . filter installedLib <$> resolveAll
+  map name . filter installedLib . snd <$> resolveAll
 
 covering
 replOpts :  HasIO io
