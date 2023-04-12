@@ -59,7 +59,7 @@ data QueryType : Type where
 
   ||| Print inverse dependency tree
   ||| (That is, a tree of packages depending on a given package)
-  ParentTree   : QueryType
+  ReverseTree  : QueryType
 
 ||| Code generator to use
 public export

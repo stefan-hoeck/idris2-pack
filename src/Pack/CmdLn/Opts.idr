@@ -104,7 +104,7 @@ descs = [ MkOpt ['p'] ["package-set"]   (ReqArg setDB "<db>")
             "Print a detailed description of a package known to pack"
         , MkOpt [] ["tree"]   (NoArg $ setQuery Tree)
             "Print a dependency tree of a package known to pack"
-        , MkOpt [] ["parent-tree"]   (NoArg $ setQuery ParentTree)
+        , MkOpt [] ["reverse-tree"]   (NoArg $ setQuery ReverseTree)
             """
             Print a tree of packages depending on a package know to pack
             Use this to find all packages transitively depending on a specific

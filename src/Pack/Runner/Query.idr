@@ -207,12 +207,12 @@ resultString _ _      ps cs qp = case e.config.queryType of
   Ipkg => unlines $ nameStr qp :: map (indent 2) (lines qp.lib.desc.cont)
 
   Tree => case filter ("base" /=) cs of
-    Just tr' => prettyTree tr'
-    Nothing  => prettyTree cs
+    Just tr' => prettyTree False tr'
+    Nothing  => prettyTree False cs
 
-  ParentTree => case filter ("base" /=) ps of
-    Just tr' => prettyTreeRev tr'
-    Nothing  => prettyTreeRev ps
+  ReverseTree => case filter ("base" /=) ps of
+    Just tr' => prettyTree True tr'
+    Nothing  => prettyTree True ps
 
 export covering
 query :  HasIO io

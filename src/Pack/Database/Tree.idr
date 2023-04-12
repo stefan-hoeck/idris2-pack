@@ -90,53 +90,32 @@ treeLookup v = fromMaybe (T v []) . lookup v
 --          Pretty-printing Tree
 --------------------------------------------------------------------------------
 
-parameters (rev : Bool)
-  end : String
-  end = if rev then "┘" else "┐"
+parameters {0 a     : Type}
+           {auto ip : Interpolation a}
+           (rev     : Bool)
 
-  mid : String
-  mid = if rev then "┴" else "┬"
+  0 PrettyST : Type -> Type
+  PrettyST t = State (SnocList String) t
 
-  merge1 :
-       SnocList (String,String)
-    -> Nat
-    -> List String
-    -> List String
-    -> (Nat,List String)
-  merge1 sp n (x::xs) (y::ys) = merge1 (sp :< (x,y)) (max n (length x)) xs ys
-  merge1 sp n xs      _       =
-    (n, map (\(x,y) => padRight (S n) ' ' x ++ y) sp <>> xs)
+  lst : String
+  lst = if rev then "┌─" else "└─"
 
-  header : SnocList String -> String
-  header [<]       = "│"
-  header (sx :< x) = concat $ "├" :: (map (++ mid) sx <>> [x ++ end])
+  append : String -> PrettyST ()
+  append s = modify (:< s)
 
-  merge :
-       List String
-    -> SnocList (List String)
-    -> List String
-    -> (List String, String)
-  merge hs [<]     ls = (ls,header $ [<] <>< hs)
-  merge hs (sb:<b) ls =
-    let (n,ls2) := merge1 [<] 0 b ls
-     in merge (replicate n '─' :: hs) sb ls2
+  children : String -> List (Tree a) -> PrettyST ()
+  children _   []       = pure ()
+  children pre [T l cs] = do
+    append (pre ++ lst ++ "\{l}")
+    children (pre ++ "  ") cs
 
-  treeLines : Interpolation a => Tree a -> (Nat, List String)
-  treeLines (T l ds) =
-    let s       := interpolate l
-        lls     := map (("│" ::) . snd)
-                 . reverse
-                 . sortBy (comparing fst)
-                 $ map treeLines ds
+  children pre (T l cs :: xs) = do
+    append (pre ++ "├─\{l}")
+    children (pre ++ "│ ") cs
+    children pre xs
 
-        (i:<l)  := [<] <>< lls | [<] => (1, [s])
-        (ls,hd) := merge [] i l
-        in (length ls + 2, s :: hd :: ls)
-
-export %inline
-prettyTree : Interpolation a => Tree a -> String
-prettyTree = unlines . snd . treeLines False
-
-export %inline
-prettyTreeRev : Interpolation a => Tree a -> String
-prettyTreeRev = unlines . reverse . snd . treeLines True
+  export %inline
+  prettyTree : Tree a -> String
+  prettyTree (T l cs) =
+    let ss := execState [<"\{l}"] (children "" cs) <>> []
+     in if rev then unlines (reverse ss) else unlines ss
