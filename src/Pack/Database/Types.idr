@@ -286,7 +286,7 @@ record ResolvedLib t where
   status  : PkgStatus pkg
   deps    : List (DPair Package PkgStatus)
 
-namespace ResolveLib
+namespace ResolvedLib
   ||| Extracts the package name from a resolved library.
   export %inline
   nameStr : ResolvedLib t -> String

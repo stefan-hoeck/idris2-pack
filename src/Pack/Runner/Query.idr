@@ -10,6 +10,7 @@ import Pack.CmdLn.Types
 import Pack.Config
 import Pack.Core
 import Pack.Database
+import Pack.Database.Tree
 import Pack.Runner.Database
 import Pack.Runner.Install
 import Pack.Version
@@ -76,8 +77,15 @@ pkgNames : Env => List PkgName
 pkgNames = keys allPackages
 
 export covering
-resolveAll : HasIO io => Env => EitherT PackErr io (List QPkg)
-resolveAll = traverse resolve pkgNames
+resolveAll :
+     {auto h : HasIO io}
+  -> {auto env : Env}
+  -> EitherT PackErr io (SortedMap PkgName (ResolvedLib U), List QPkg)
+resolveAll = do
+  ps <- traverse resolve pkgNames
+  sm <- readIORef env.cache
+  pure (sm, ps)
+
 
 --------------------------------------------------------------------------------
 --         Queries
@@ -86,9 +94,16 @@ resolveAll = traverse resolve pkgNames
 covering
 query_ :  HasIO io
        => Env
-       => (q : QPkg -> Maybe b)
+       => (q : (parents,children : Tree PkgName) -> QPkg -> Maybe b)
        -> EitherT PackErr io (List b)
-query_ q = mapMaybe q <$> resolveAll
+query_ q = do
+  (sm,ps) <- resolveAll
+
+  let children := childMap sm
+
+      parents  := parentMap sm
+
+  pure $ mapMaybe (\p => q (treeLookup (name p) parents) (treeLookup (name p) children) p) ps
 
 shortDesc : QPkg -> Maybe String
 shortDesc q = q.lib.desc.desc.brief
@@ -161,9 +176,16 @@ keep PkgName    q p = isInfixOf q (nameStr p)
 keep Dependency q p = any ((q ==) . value) (dependencies p)
 keep Module     q p = any (isInfixOf q . show . fst) (modules p.lib.desc.desc)
 
-resultString : (c : Config) => (query : String) -> QueryMode -> QPkg -> String
-resultString q Module qp = namePlusModules q qp
-resultString _ _      qp = case c.queryType of
+covering
+resultString :
+     {auto e : Env}
+  -> (query : String)
+  -> QueryMode
+  -> (parents, children : Tree PkgName)
+  -> QPkg
+  -> String
+resultString q Module _  _  qp = namePlusModules q qp
+resultString _ _      ps cs qp = case e.config.queryType of
   NameOnly => nameStr qp
 
   ShortDesc =>
@@ -184,6 +206,14 @@ resultString _ _      qp = case c.queryType of
 
   Ipkg => unlines $ nameStr qp :: map (indent 2) (lines qp.lib.desc.cont)
 
+  Tree => case filter ("base" /=) cs of
+    Just tr' => prettyTree False tr'
+    Nothing  => prettyTree False cs
+
+  ReverseTree => case filter ("base" /=) ps of
+    Just tr' => prettyTree True tr'
+    Nothing  => prettyTree True ps
+
 export covering
 query :  HasIO io
       => QueryMode
@@ -191,7 +221,7 @@ query :  HasIO io
       -> Env
       -> EitherT PackErr io ()
 query m n e = do
-  ss <- query_ $ \p => toMaybe (keep m n p) (resultString n m p)
+  ss <- query_ $ \ps,cs,p => toMaybe (keep m n p) (resultString n m ps cs p)
   putStrLn $ unlines ss
 
 --------------------------------------------------------------------------------
@@ -239,7 +269,7 @@ infoString ps = """
 
 export covering
 printInfo : HasIO io => Env -> EitherT PackErr io ()
-printInfo e = resolveAll >>= putStrLn . infoString
+printInfo e = resolveAll >>= putStrLn . infoString . snd
 
 --------------------------------------------------------------------------------
 --          Fuzzy Search
@@ -251,7 +281,7 @@ installedPkgs :  HasIO io
               => List PkgName
               -> EitherT PackErr io (List QPkg, List QPkg)
 installedPkgs ns = do
-  all <- filter installedLib <$> resolveAll
+  all <- filter installedLib . snd <$> resolveAll
   pure (all, filter inPkgs all)
   where inPkgs : QPkg -> Bool
         inPkgs qp = isNil ns || elem (name qp) ns

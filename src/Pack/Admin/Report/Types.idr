@@ -169,4 +169,3 @@ export
 resolveLine : Report -> Maybe String
 resolveLine (Error x y) = Just "\{x}"
 resolveLine _           = Nothing
-

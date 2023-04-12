@@ -47,7 +47,7 @@ packagesOrIpkg = do
 all : HasIO io => Env => io (List QPkg)
 all = do
   ei <- runEitherT $ resolveAll
-  pure $ either (const []) id ei
+  pure $ either (const []) snd ei
 
 -- Lists only installed packages
 installedLibs : HasIO io => Env => io (List String)
