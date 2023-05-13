@@ -57,7 +57,11 @@ if [ -d "/opt/homebrew/include" ]; then
 fi
 
 check_installed git
-check_installed "$SCHEME"
+if [ -z "DETECTED_RACKET" ]; then
+  check_installed "$SCHEME"
+else
+  check_installed racket
+fi
 check_installed make
 
 # Install package collection
