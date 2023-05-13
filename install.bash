@@ -17,23 +17,30 @@ function check_installed {
 
 PACK_DIR="${PACK_DIR:-$HOME/.pack}"
 
+DETECTED_RACKET=''
+DETECTED_SCHEME=''
+
 if command -v chezscheme &>/dev/null; then
 	DETECTED_SCHEME=chezscheme
 elif command -v scheme &>/dev/null; then
 	DETECTED_SCHEME=scheme
 elif command -v chez &>/dev/null; then
 	DETECTED_SCHEME=chez
-else
-	DETECTED_SCHEME=''
+elif command -v racket &>/dev/null; then
+	DETECTED_RACKET=racket
 fi
 
-read -r -p "Enter the name of your chez scheme binary [$DETECTED_SCHEME]: " SCHEME
-SCHEME=${SCHEME:-$DETECTED_SCHEME}
+if [ -z "$DETECTED_SCHEME$DETECTED_RACKET" ]; then
+	read -r -p "Enter the name of your chez scheme binary [$DETECTED_SCHEME]: " SCHEME
+	SCHEME=${SCHEME:-$DETECTED_SCHEME}
+else
+	SCHEME=''
+fi
 
 # Verify that the necessary programs are installed
 
-if [ -z "$SCHEME" ]; then
-	echo 'scheme binary was not set'
+if [ -z "$SCHEME$DETECTED_RACKET" ]; then
+	echo 'scheme or racket binary was not set'
 	exit 1
 fi
 
@@ -75,7 +82,11 @@ git checkout "$IDRIS2_COMMIT"
 PREFIX_PATH="$PACK_DIR/install/$IDRIS2_COMMIT/idris2"
 BOOT_PATH="$PACK_DIR/install/$IDRIS2_COMMIT/idris2/bin/idris2"
 
-make bootstrap PREFIX="$PREFIX_PATH" SCHEME="$SCHEME"
+if [ -z "$SCHEME" ]; then
+	make bootstrap-racket PREFIX="$PREFIX_PATH"
+else
+	make bootstrap PREFIX="$PREFIX_PATH" SCHEME="$SCHEME"
+fi
 make install PREFIX="$PREFIX_PATH"
 make clean
 make all IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH"
