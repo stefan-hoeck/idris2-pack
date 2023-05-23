@@ -40,13 +40,16 @@ copyApp ra =
      mkDir dir
      sys ["cp", "-r", Escapable "\{buildPath ra.desc}/exec/" ++ NoEscape "*", dir]
 
-pthStr : PackDir => Bool -> String
+pthStr : (c : Config) => PackDir => Bool -> String
 pthStr False = ""
-pthStr True = """
-  export IDRIS2_PACKAGE_PATH="$(\{packExec} package-path)"
-  export IDRIS2_LIBS="$(\{packExec} libs-path)"
-  export IDRIS2_DATA="$(\{packExec} data-path)"
-  """
+pthStr True =
+  let racket := if c.useRacket then "export \{schemeVar}" else ""
+   in """
+   export IDRIS2_PACKAGE_PATH="$(\{packExec} package-path)"
+   export IDRIS2_LIBS="$(\{packExec} libs-path)"
+   export IDRIS2_DATA="$(\{packExec} data-path)"
+   \{racket}
+   """
 
 -- When linking to a binary from pack's `bin` directory,
 -- we distinguish between applications,
@@ -162,7 +165,7 @@ mkIdris = do
     withCoreGit $ \dir => do
       case e.config.bootstrap of
         True  =>
-          sysAndLog Build ["make", "bootstrap", prefixVar, schemeVar]
+          sysAndLog Build ["make", e.config.bootstrapCmd, prefixVar, schemeVar]
         False =>
           sysAndLog Build ["make", "support", prefixVar, schemeVar] >>
           sysAndLog Build ["make", "idris2-exec", prefixVar, schemeVar]

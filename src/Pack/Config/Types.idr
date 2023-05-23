@@ -263,6 +263,17 @@ public export
 0 UserConfig : Type
 UserConfig = MConfig MetaCommit
 
+||| True if the path to the scheme executable actually points
+||| to `racket`.
+export
+(.useRacket) : Config_ I b -> Bool
+c.useRacket = map snd (split c.scheme) == Just "racket"
+
+||| Bootstrap command to use
+export
+(.bootstrapCmd) : Config_ I b -> String
+c.bootstrapCmd = if c.useRacket then "bootstrap-racket" else "bootstrap"
+
 ||| Effectfully convert all custom package descriptions
 ||| stored in a configuration. This is mainly used to
 ||| resolve meta commits to mere commits.

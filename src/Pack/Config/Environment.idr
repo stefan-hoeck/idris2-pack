@@ -291,7 +291,7 @@ idrisBootVar = "IDRIS2_BOOT=\{idrisExec}"
 ||| `$SCHEME` variable during Idris2 installation, unquoted
 export
 schemeVar : (c : Config) => String
-schemeVar = "SCHEME=\{c.scheme}"
+schemeVar = if c.useRacket then "IDRIS2_CG=racket" else "SCHEME=\{c.scheme}"
 
 ||| `IDRIS2_PREFIX` to be used with Idris when installing a library
 ||| to a custom location.
