@@ -12,6 +12,10 @@ micropack:
 	bash micropack.bash
 	${SCHEME} --script micropack/micropack.ss
 
+micropack-racket:
+	bash micropack.bash
+	SCHEME="racket" racket micropack/micropack.rkt
+
 .PHONY: install-lib
 install-lib:
 	idris2 --install pack.ipkg
