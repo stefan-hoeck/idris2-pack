@@ -148,7 +148,7 @@ jobs:
           sudo apt-get install --yes chezscheme libgmp3-dev nodejs
       - name: Run installation script
         run: |
-          echo chezscheme | bash -c "$(curl -fsSL https://raw.githubusercontent.com/stefan-hoeck/idris2-pack/main/install.bash)"
+          echo chezscheme | bash -c install.bash
           echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
       - name: Install application
         run: pack install graph
@@ -171,7 +171,7 @@ jobs:
           sudo apt-get install --yes racket libgmp3-dev nodejs
       - name: Run installation script
         run: |
-          echo racket | bash -c "$(curl -fsSL https://raw.githubusercontent.com/stefan-hoeck/idris2-pack/main/install.bash)"
+          echo racket | bash -c install.bash
           echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
       - name: Install application
         run: pack install graph
