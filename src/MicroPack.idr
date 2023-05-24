@@ -41,7 +41,7 @@ microInit scheme db = MkConfig {
   , custom        = empty
   , queryType     = NameOnly
   , logLevel      = Build
-  , codegen       = Chez
+  , codegen       = Default
   , output        = "_tmppack"
   , levels        = empty
   }
