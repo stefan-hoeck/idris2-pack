@@ -160,7 +160,7 @@ jobs:
           pack run chem-smiles-example-test -n 1000
 
   shellscript-racket:
-    name: Bootstrap with the shell script
+    name: Bootstrap with the shell script and racket
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
