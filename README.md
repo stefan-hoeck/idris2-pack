@@ -51,7 +51,7 @@ To create a new library project, type
 pack new lib idris2-library
 ```
 replacing `idris2-library` with the name of your library.
-This will create a new package in the current directory consisting of a source directory, default module, a skeleton test and a .ipkg file.
+This will create a new package in the current directory consisting of a source directory, a default module, a skeleton test suite, a local pack.toml file and a .ipkg file.
 A git repository will also be initialized together with a suitable `.gitignore` file.
 If you wish to create a new application project, replace `lib` with `app`.
 
