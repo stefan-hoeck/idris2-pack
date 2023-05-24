@@ -86,7 +86,7 @@ idrisRepl :  HasIO io
           -> EitherT PackErr io ()
 idrisRepl mf e = do
   (opts, _, mp) <- replOpts mf
-  pth  <- packagePath
+  env  <- buildEnv
 
   let arg := srcFileRelativeToIpkg mp mf
       exe := idrisWithCG
@@ -96,8 +96,8 @@ idrisRepl mf e = do
     DoNotUseRlwrap  => pure $ exe ++ opts ++ arg
 
   case mp of
-    Just af => inDir af.parent $ \_ => sysWithEnv cmd [pth]
-    Nothing => sysWithEnv cmd [pth]
+    Just af => inDir af.parent $ \_ => sysWithEnv cmd env
+    Nothing => sysWithEnv cmd env
 
 ||| Use the installed Idris to compile the given source file
 ||| and invoke its main function with the given argument list.
@@ -109,7 +109,7 @@ exec :  HasIO io
      -> EitherT PackErr io ()
 exec file args e = do
   (opts, cg, mp) <- replOpts (Just file)
-  pth  <- packagePath
+  env  <- buildEnv
 
 
   let interp = case cg of
@@ -122,9 +122,9 @@ exec file args e = do
 
   case mp of
     Just af => inDir af.parent $ \_ => do
-      sysWithEnvAndLog Build cmd [pth]
+      sysWithEnvAndLog Build cmd env
       sys run
-    Nothing => sysWithEnvAndLog Build cmd [pth] >> sys run
+    Nothing => sysWithEnvAndLog Build cmd env >> sys run
 
 ||| Build a local library given as an `.ipkg` file.
 export covering %inline

@@ -43,7 +43,7 @@ copyApp ra =
 pthStr : (c : Config) => PackDir => Bool -> String
 pthStr False = ""
 pthStr True =
-  let racket := if c.useRacket then "export \{schemeVar}" else ""
+  let racket := if useRacket then "export \{schemeVar}" else ""
    in """
    export IDRIS2_PACKAGE_PATH="$(\{packExec} package-path)"
    export IDRIS2_LIBS="$(\{packExec} libs-path)"
@@ -165,7 +165,7 @@ mkIdris = do
     withCoreGit $ \dir => do
       case e.config.bootstrap of
         True  =>
-          sysAndLog Build ["make", e.config.bootstrapCmd, prefixVar, schemeVar]
+          sysAndLog Build ["make", bootstrapCmd, prefixVar, schemeVar]
         False =>
           sysAndLog Build ["make", "support", prefixVar, schemeVar] >>
           sysAndLog Build ["make", "idris2-exec", prefixVar, schemeVar]

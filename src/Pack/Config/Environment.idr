@@ -274,6 +274,17 @@ export %inline
 packCommit : (c : Config) => Maybe Commit
 packCommit = c.packCommit
 
+||| True if the path to the scheme executable actually points
+||| to `racket`.
+export
+useRacket : (c : Config) => Bool
+useRacket = map snd (split c.scheme) == Just "racket"
+
+||| Bootstrap command to use
+export
+bootstrapCmd : (c : Config) => String
+bootstrapCmd = if useRacket then "bootstrap-racket" else "bootstrap"
+
 --------------------------------------------------------------------------------
 --          Environment Variables
 --------------------------------------------------------------------------------
@@ -291,7 +302,7 @@ idrisBootVar = "IDRIS2_BOOT=\{idrisExec}"
 ||| `$SCHEME` variable during Idris2 installation, unquoted
 export
 schemeVar : (c : Config) => String
-schemeVar = if c.useRacket then "IDRIS2_CG=racket" else "SCHEME=\{c.scheme}"
+schemeVar = if useRacket then "IDRIS2_CG=racket" else "SCHEME=\{c.scheme}"
 
 ||| `IDRIS2_PREFIX` to be used with Idris when installing a library
 ||| to a custom location.
@@ -324,7 +335,9 @@ dataPath = ("IDRIS2_DATA",) <$> packageDataDirs %search
 ||| the dependencies of which are handled by pack.
 export
 buildEnv : HasIO io => Env => io (List (String,String))
-buildEnv = sequence [packagePath, libPath, dataPath]
+buildEnv =
+  let pre := if useRacket then [("IDRIS2_CG", "racket")] else []
+   in (pre ++ ) <$> sequence [packagePath, libPath, dataPath]
 
 ||| Idris executable to use together with the
 ||| `--cg` (codegen) command line option.
