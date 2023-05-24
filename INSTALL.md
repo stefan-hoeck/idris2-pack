@@ -22,10 +22,7 @@ before you continue:
   If you install Chez Scheme from source files, building it locally,
   make sure you run ./configure --threads to build multithreading support in.
 
-  Note 1: Racket support has not yet been built into *pack*. This
-  is an open issue.
-
-  Note 2: For Apple M1 user, at the moment, the easiest way to get Chez Scheme
+  Note: For Apple M1 user, at the moment, the easiest way to get Chez Scheme
   is to use its [Racket fork](https://github.com/racket/ChezScheme).
   See the [Apple M1 User](#apple-m1-user) appendix for more info.
 
@@ -93,6 +90,13 @@ the name of your Chez Scheme executable is `scheme`:
 
 ```sh
 make micropack SCHEME=scheme
+```
+
+In order to use racket instead of chez scheme, run the
+following:
+
+```sh
+make micropack-racket
 ```
 
 Wait a couple of seconds. If *micropack* starts writing non-stop
