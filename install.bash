@@ -80,11 +80,11 @@ PREFIX_PATH="$PACK_DIR/install/$IDRIS2_COMMIT/idris2"
 BOOT_PATH="$PACK_DIR/install/$IDRIS2_COMMIT/idris2/bin/idris2"
 
 if [ "$SCHEME" = "racket" ]; then
-  CG="racket"
-  make bootstrap-racket PREFIX="$PREFIX_PATH"
+	CG="racket"
+	make bootstrap-racket PREFIX="$PREFIX_PATH"
 else
-  CG="chez"
-  make bootstrap PREFIX="$PREFIX_PATH" SCHEME="$SCHEME"
+	CG="chez"
+	make bootstrap PREFIX="$PREFIX_PATH" SCHEME="$SCHEME"
 fi
 
 export IDRIS2_CG="$CG"
