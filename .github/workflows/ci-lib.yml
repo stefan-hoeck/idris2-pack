@@ -113,6 +113,29 @@ jobs:
           cd ../example2
           pack run chem-smiles-example-test -n 1000
 
+  micropack-racket:
+    name: Bootstrap with micropack-racket
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install scheme
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes racket libgmp3-dev nodejs
+      - name: Run installation script
+        run: |
+          make micropack-racket
+          echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
+      - name: Install application
+        run: pack install graph
+      - name: Run examples
+        run: |
+          cd example1
+          pack run chem-formula-example-test -n 1000
+          cd ../example2
+          pack run chem-smiles-example-test -n 1000
+
   shellscript:
     name: Bootstrap with the shell script
     runs-on: ubuntu-latest
@@ -125,7 +148,30 @@ jobs:
           sudo apt-get install --yes chezscheme libgmp3-dev nodejs
       - name: Run installation script
         run: |
-          echo chezscheme | bash -c "$(curl -fsSL https://raw.githubusercontent.com/stefan-hoeck/idris2-pack/main/install.bash)"
+          echo chezscheme | bash -c ./install.bash
+          echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
+      - name: Install application
+        run: pack install graph
+      - name: Run examples
+        run: |
+          cd example1
+          pack run chem-formula-example-test -n 1000
+          cd ../example2
+          pack run chem-smiles-example-test -n 1000
+
+  shellscript-racket:
+    name: Bootstrap with the shell script and racket
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install scheme
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes racket libgmp3-dev nodejs
+      - name: Run installation script
+        run: |
+          echo racket | bash -c ./install.bash
           echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
       - name: Install application
         run: pack install graph

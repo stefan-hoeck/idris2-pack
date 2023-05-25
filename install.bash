@@ -23,11 +23,13 @@ elif command -v scheme &>/dev/null; then
 	DETECTED_SCHEME=scheme
 elif command -v chez &>/dev/null; then
 	DETECTED_SCHEME=chez
+elif command -v racket &>/dev/null; then
+	DETECTED_SCHEME=racket
 else
 	DETECTED_SCHEME=''
 fi
 
-read -r -p "Enter the name of your chez scheme binary [$DETECTED_SCHEME]: " SCHEME
+read -r -p "Enter the name of your chez-scheme or racket binary [$DETECTED_SCHEME]: " SCHEME
 SCHEME=${SCHEME:-$DETECTED_SCHEME}
 
 # Verify that the necessary programs are installed
@@ -35,6 +37,8 @@ SCHEME=${SCHEME:-$DETECTED_SCHEME}
 if [ -z "$SCHEME" ]; then
 	echo 'scheme binary was not set'
 	exit 1
+else
+	echo "Using $SCHEME for code generation"
 fi
 
 if [ -d "$PACK_DIR" ]; then
@@ -75,13 +79,22 @@ git checkout "$IDRIS2_COMMIT"
 PREFIX_PATH="$PACK_DIR/install/$IDRIS2_COMMIT/idris2"
 BOOT_PATH="$PACK_DIR/install/$IDRIS2_COMMIT/idris2/bin/idris2"
 
-make bootstrap PREFIX="$PREFIX_PATH" SCHEME="$SCHEME"
-make install PREFIX="$PREFIX_PATH"
+if [ "$SCHEME" = "racket" ]; then
+	CG="racket"
+	make bootstrap-racket PREFIX="$PREFIX_PATH"
+else
+	CG="chez"
+	make bootstrap PREFIX="$PREFIX_PATH" SCHEME="$SCHEME"
+fi
+
+export IDRIS2_CG="$CG"
+
+make install PREFIX="$PREFIX_PATH" IDRIS2_CG="$CG"
 make clean
-make all IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH"
-make install IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH"
-make install-with-src-libs IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH"
-make install-with-src-api IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH"
+make all IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH" IDRIS2_CG="$CG"
+make install IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH" IDRIS2_CG="$CG"
+make install-with-src-libs IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH" IDRIS2_CG="$CG"
+make install-with-src-api IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH" IDRIS2_CG="$CG"
 popd
 
 # Install filepath
@@ -120,6 +133,7 @@ APPLICATION="\$($PACK_DIR/bin/pack app-path idris2)"
 export IDRIS2_PACKAGE_PATH="\$($PACK_DIR/bin/pack package-path)"
 export IDRIS2_LIBS="\$($PACK_DIR/bin/pack libs-path)"
 export IDRIS2_DATA="\$($PACK_DIR/bin/pack data-path)"
+export IDRIS2_CG="$CG"
 \$APPLICATION "\$@"
 EOF
 
