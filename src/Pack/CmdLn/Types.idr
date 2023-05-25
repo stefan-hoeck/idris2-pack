@@ -247,7 +247,7 @@ cmdDesc Test              = """
 
 cmdDesc New              = """
   Create a new package in the current directory
-  consisting of a source directory, default module and a .ipkg file.
+  consisting of a source directory, a default module, a skeleton test suite, a local pack.toml file and a .ipkg file.
   A git repository will also be initialized together with a
   suitable `.gitignore` file.
 

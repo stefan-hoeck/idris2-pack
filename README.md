@@ -44,6 +44,17 @@ pack help
 In the following sections, we assume the `$PACK_DIR/bin` folder
 is on your path and you have installed
 pack as described under [installation](INSTALL.md).
+
+To create a new library project, type
+
+```sh
+pack new lib idris2-library
+```
+replacing `idris2-library` with the name of your library.
+This will create a new package in the current directory consisting of a source directory, a default module, a skeleton test suite, a local pack.toml file and a .ipkg file.
+A git repository will also be initialized together with a suitable `.gitignore` file.
+If you wish to create a new application project, replace `lib` with `app`.
+
 To install a library from the package collection, run
 
 ```sh
