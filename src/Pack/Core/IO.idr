@@ -296,7 +296,6 @@ findInAllParentDirs p = go [] where
       Just parentD => go nextRes $ assert_smaller currD parentD
       Nothing      => pure nextRes
 
-export
 mkTmpDir : HasIO io => PackDir => EitherT PackErr io TmpDir
 mkTmpDir = go 100 0
   where go : Nat -> Nat -> EitherT PackErr io TmpDir
@@ -306,8 +305,25 @@ mkTmpDir = go 100 0
               dir       := packDir /> body
            in do
              False <- exists dir | True => go k (S n)
+             when (n > 50) $
+               warn {ref = MkLogRef Info}
+                 """
+                 Too many temporary directories. Please remove all `.tmpXY`
+                 directories in `PACK_DIR` or run `pack gc` to let pack
+                 clean them up.
+                 """
              mkDir dir
              pure (TD dir)
+
+export
+withTmpDir :
+     {auto _ : HasIO io}
+  -> {auto _ : PackDir}
+  -> (TmpDir => EitherT PackErr io a)
+  -> EitherT PackErr io a
+withTmpDir f = do
+  td <- mkTmpDir
+  finally (rmDir tmpDir) f
 
 --------------------------------------------------------------------------------
 --         File Access

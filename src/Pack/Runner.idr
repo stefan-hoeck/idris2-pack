@@ -134,42 +134,42 @@ export covering
 runCmd : HasIO io => EitherT PackErr io ()
 runCmd = do
   pd       <- getPackDir
-  td       <- mkTmpDir
-  cd       <- CD <$> curDir
-  cache    <- emptyCache
-  (mc,cmd) <- getConfig Cmd
-  let fetch := isFetch (fst cmd)
-  linebuf  <- getLineBufferingCmd
-  finally (rmDir tmpDir) $ case cmd of
-    (Completion ** [a,b])     => env mc fetch >>= complete a b
-    (CompletionScript ** [f]) => putStrLn (completionScript f)
-    (Query  ** [MkQ m s])     => env mc fetch >>= query m s
-    (Fuzzy ** [MkFQ m s])     => idrisEnv mc fetch >>= fuzzy m s
-    (UpdateDB ** [])          => updateDB
-    (CollectGarbage ** [])    => env mc fetch >>= garbageCollector
-    (Run ** [Pkg p,args])     => idrisEnv mc fetch >>= execApp p args
-    (Run ** [Ipkg p,args])    => idrisEnv mc fetch >>= runIpkg p args
-    (Test ** [p,args])        => idrisEnv mc fetch >>= runTest p args
-    (Exec ** [p,args])        => idrisEnv mc fetch >>= exec p args
-    (Repl ** [p])             => idrisEnv mc fetch >>= idrisRepl p
-    (Build ** [p])            => idrisEnv mc fetch >>= build p
-    (BuildDeps ** [p])        => idrisEnv mc fetch >>= buildDeps p
-    (Typecheck ** [p])        => idrisEnv mc fetch >>= typecheck p
-    (Clean ** [p])            => idrisEnv mc fetch >>= clean p
-    (PrintHelp ** [c])        => putStrLn (usageDesc c)
-    (Install ** [ps])         => idrisEnv mc fetch >>= \e => installLibs ps
-    (Remove ** [ps])          => idrisEnv mc fetch >>= \e => removeLibs ps
-    (InstallApp ** [ps])      => idrisEnv mc fetch >>= \e => installApps ps
-    (RemoveApp ** [ps])       => idrisEnv mc fetch >>= \e => removeApps ps
-    (Update ** [])            => idrisEnv mc fetch >>= update
-    (Fetch ** [])             => idrisEnv mc fetch >>= \e => install []
-    (PackagePath ** [])       => env mc fetch >>= packagePathDirs >>= putStrLn
-    (LibsPath ** [])          => env mc fetch >>= packageLibDirs  >>= putStrLn
-    (DataPath ** [])          => env mc fetch >>= packageDataDirs >>= putStrLn
-    (AppPath ** [n])          => env mc fetch >>= appPath n
-    (Info ** [])              => env mc fetch >>= printInfo
-    (New ** [pty,p])          => idrisEnv mc fetch >>= new cd pty p
-    (Switch ** [db])          => do
-      env <- idrisEnv mc fetch
-      install []
-      writeCollection
+  withTmpDir $ do
+    cd       <- CD <$> curDir
+    cache    <- emptyCache
+    (mc,cmd) <- getConfig Cmd
+    let fetch := isFetch (fst cmd)
+    linebuf  <- getLineBufferingCmd
+    case cmd of
+      (Completion ** [a,b])     => env mc fetch >>= complete a b
+      (CompletionScript ** [f]) => putStrLn (completionScript f)
+      (Query  ** [MkQ m s])     => env mc fetch >>= query m s
+      (Fuzzy ** [MkFQ m s])     => idrisEnv mc fetch >>= fuzzy m s
+      (UpdateDB ** [])          => updateDB
+      (CollectGarbage ** [])    => env mc fetch >>= garbageCollector
+      (Run ** [Pkg p,args])     => idrisEnv mc fetch >>= execApp p args
+      (Run ** [Ipkg p,args])    => idrisEnv mc fetch >>= runIpkg p args
+      (Test ** [p,args])        => idrisEnv mc fetch >>= runTest p args
+      (Exec ** [p,args])        => idrisEnv mc fetch >>= exec p args
+      (Repl ** [p])             => idrisEnv mc fetch >>= idrisRepl p
+      (Build ** [p])            => idrisEnv mc fetch >>= build p
+      (BuildDeps ** [p])        => idrisEnv mc fetch >>= buildDeps p
+      (Typecheck ** [p])        => idrisEnv mc fetch >>= typecheck p
+      (Clean ** [p])            => idrisEnv mc fetch >>= clean p
+      (PrintHelp ** [c])        => putStrLn (usageDesc c)
+      (Install ** [ps])         => idrisEnv mc fetch >>= \e => installLibs ps
+      (Remove ** [ps])          => idrisEnv mc fetch >>= \e => removeLibs ps
+      (InstallApp ** [ps])      => idrisEnv mc fetch >>= \e => installApps ps
+      (RemoveApp ** [ps])       => idrisEnv mc fetch >>= \e => removeApps ps
+      (Update ** [])            => idrisEnv mc fetch >>= update
+      (Fetch ** [])             => idrisEnv mc fetch >>= \e => install []
+      (PackagePath ** [])       => env mc fetch >>= packagePathDirs >>= putStrLn
+      (LibsPath ** [])          => env mc fetch >>= packageLibDirs  >>= putStrLn
+      (DataPath ** [])          => env mc fetch >>= packageDataDirs >>= putStrLn
+      (AppPath ** [n])          => env mc fetch >>= appPath n
+      (Info ** [])              => env mc fetch >>= printInfo
+      (New ** [pty,p])          => idrisEnv mc fetch >>= new cd pty p
+      (Switch ** [db])          => do
+        env <- idrisEnv mc fetch
+        install []
+        writeCollection

@@ -50,21 +50,21 @@ covering
 main : IO ()
 main = run $ do
   dir     <- getPackDir
-  td      <- mkTmpDir
   cache   <- emptyCache
   mkDir packDir
-  defCol  <- defaultColl
-  args    <- getArgs
-  scheme  <- fromMaybe "scheme" <$> getEnv "SCHEME"
-  linebuf <- getLineBufferingCmd
+  withTmpDir $ do
+    defCol  <- defaultColl
+    args    <- getArgs
+    scheme  <- fromMaybe "scheme" <$> getEnv "SCHEME"
+    linebuf <- getLineBufferingCmd
 
-  let db   = case args of
-        [_,n] => either (const defCol) id $ readDBName n
-        _     => defCol
+    let db   = case args of
+          [_,n] => either (const defCol) id $ readDBName n
+          _     => defCol
 
-      conf = microInit scheme db
+        conf = microInit scheme db
 
-  -- initialize `$HOME/.pack/user/pack.toml`
-  write (MkF (packDir /> "user") packToml) (initToml scheme db)
+    -- initialize `$HOME/.pack/user/pack.toml`
+    write (MkF (packDir /> "user") packToml) (initToml scheme db)
 
-  finally (rmDir tmpDir) $ idrisEnv conf True >>= update
+    idrisEnv conf True >>= update
