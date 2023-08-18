@@ -129,13 +129,13 @@ export covering
 runCmd : HasIO io => EitherT PackErr io ()
 runCmd = do
   pd       <- getPackDir
-  td       <- mkTmpDir
-  cd       <- CD <$> curDir
-  cache    <- emptyCache
-  (mc,cmd) <- getConfig ACmd
-  linebuf  <- getLineBufferingCmd
-  case cmd of
-    (CheckDB ** [p])  => finally (rmDir tmpDir) $ idrisEnv mc True >>= checkDB p
-    (FromHEAD ** [p]) => env mc True >>= writeLatestDB p
-    (MakeDocs ** [])  => finally (rmDir tmpDir) $ idrisEnv mc True >>= makeDocs
-    (Help ** [c])     => putStrLn (usageDesc c)
+  withTmpDir $ do
+    cd       <- CD <$> curDir
+    cache    <- emptyCache
+    (mc,cmd) <- getConfig ACmd
+    linebuf  <- getLineBufferingCmd
+    case cmd of
+      (CheckDB ** [p])  => idrisEnv mc True >>= checkDB p
+      (FromHEAD ** [p]) => env mc True >>= writeLatestDB p
+      (MakeDocs ** [])  => idrisEnv mc True >>= makeDocs
+      (Help ** [c])     => putStrLn (usageDesc c)
