@@ -35,8 +35,8 @@ missing = {status := Missing}
 
 covering
 test :
-      HasIO io
-  => {auto e : IdrisEnv}
+     {auto _ : HasIO io}
+  -> {auto e : IdrisEnv}
   -> SafeLib
   -> EitherT PackErr io TestResult
 test (RL pkg n d _ _) = case  pkg of
@@ -49,8 +49,8 @@ test (RL pkg n d _ _) = case  pkg of
 
 covering
 testPkg :
-     HasIO io
-  => {auto e  : IdrisEnv}
+     {auto _  : HasIO io}
+  -> {auto e  : IdrisEnv}
   -> {auto db : ReportDB}
   -> PkgName
   -> io ()
@@ -64,8 +64,8 @@ testPkg n = do
 
 covering
 checkPkg :
-     HasIO io
-  => {auto _ : IdrisEnv}
+     {auto _ : HasIO io}
+  -> {auto _ : IdrisEnv}
   -> {auto _ : ReportDB}
   -> PkgName
   -> io Report
@@ -85,8 +85,8 @@ checkPkg p = do
 
 covering
 checkAll :
-     HasIO io
-  => {auto _  : IdrisEnv}
+     {auto _ : HasIO io}
+  -> {auto _  : IdrisEnv}
   -> {auto db : ReportDB}
   -> List PkgName
   -> io (List Report)
@@ -97,8 +97,8 @@ checkAll xs = do
 
 covering
 docsFor :
-     HasIO io
-  => {auto e : IdrisEnv}
+     {auto _ : HasIO io}
+  -> {auto e : IdrisEnv}
   -> {auto _ : CurDir}
   -> PkgName
   -> io (Maybe String)

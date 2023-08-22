@@ -24,6 +24,7 @@ Graph a = SortedMap a (List a)
 export
 invertGraph : Ord a => Graph a -> Graph a
 invertGraph = foldl add empty . SortedMap.toList
+
   where
     ins : a -> Graph a -> a -> Graph a
     ins v g k = case lookup k g of
