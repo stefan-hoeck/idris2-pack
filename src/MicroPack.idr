@@ -18,33 +18,34 @@ import System
 microInit :  (scheme : String)
           -> (db     : DBName)
           ->  MetaConfig
-microInit scheme db = MkConfig {
-    collection    = db
-  , idrisURL      = Nothing
-  , idrisCommit   = Nothing
-  , packURL       = Nothing
-  , packCommit    = Nothing
-  , scheme        = fromString scheme
-  , bootstrap     = True
-  , safetyPrompt  = False
-  , gcPrompt      = False
-  , warnDepends   = True
-  , whitelist     = []
-  , withSrc       = True
-  , withDocs      = False
-  , useKatla      = False
-  , withIpkg      = None
-  , rlwrap        = DoNotUseRlwrap
-  , autoLibs      = []
-  , autoApps      = []
-  , autoLoad      = NoPkgs
-  , custom        = empty
-  , queryType     = NameOnly
-  , logLevel      = Build
-  , codegen       = Default
-  , output        = "_tmppack"
-  , levels        = empty
-  }
+microInit scheme db =
+  MkConfig
+    { collection    = db
+    , idrisURL      = Nothing
+    , idrisCommit   = Nothing
+    , packURL       = Nothing
+    , packCommit    = Nothing
+    , scheme        = fromString scheme
+    , bootstrap     = True
+    , safetyPrompt  = False
+    , gcPrompt      = False
+    , warnDepends   = True
+    , whitelist     = []
+    , withSrc       = True
+    , withDocs      = False
+    , useKatla      = False
+    , withIpkg      = None
+    , rlwrap        = DoNotUseRlwrap
+    , autoLibs      = []
+    , autoApps      = []
+    , autoLoad      = NoPkgs
+    , custom        = empty
+    , queryType     = NameOnly
+    , logLevel      = Build
+    , codegen       = Default
+    , output        = "_tmppack"
+    , levels        = empty
+    }
 
 covering
 main : IO ()

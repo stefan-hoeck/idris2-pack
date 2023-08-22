@@ -133,7 +133,7 @@ isFetch _     = False
 export covering
 runCmd : HasIO io => EitherT PackErr io ()
 runCmd = do
-  pd       <- getPackDir
+  pd <- getPackDir
   withTmpDir $ do
     cd       <- CD <$> curDir
     cache    <- emptyCache

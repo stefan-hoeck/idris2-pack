@@ -31,19 +31,21 @@ filterM f (x :: xs) = do
 ||| Convert an IO action with the potential of failure
 ||| to an `EitherT PackErr`.
 export
-eitherIO :  HasIO io
-         => (toErr : err -> PackErr)
-         -> (act : io (Either err a))
-         -> EitherT PackErr io a
+eitherIO :
+     {auto _ : HasIO io}
+  -> (toErr : err -> PackErr)
+  -> (act : io (Either err a))
+  -> EitherT PackErr io a
 eitherIO toErr = MkEitherT . map (mapFst toErr)
 
 ||| Make sure a *cleanup* action is run after
 ||| an IO action that might fail.
 export
-finally :  Monad m
-        => (cleanup : EitherT err m ())
-        -> (act     : EitherT err m a)
-        -> EitherT err m a
+finally :
+     {auto _ : Monad m}
+  -> (cleanup : EitherT err m ())
+  -> (act     : EitherT err m a)
+  -> EitherT err m a
 finally cleanup act = MkEitherT $ do
   res <- runEitherT act
   ignore $ runEitherT cleanup
@@ -71,11 +73,12 @@ sys cmd = do
   0 <- system $ escapeCmd cmd | n => throwE (Sys cmd n)
   pure ()
 
-logCmdOutput :  HasIO io
-             => (ref : LogRef)
-             => (lvl : LogLevel)
-             -> (msg : String)
-             -> io ()
+logCmdOutput :
+     {auto _   : HasIO io}
+  -> {auto ref : LogRef}
+  -> (lvl : LogLevel)
+  -> (msg : String)
+  -> io ()
 logCmdOutput lvl msg =
   when (msg /= "") $ log ref lvl msg
 
@@ -84,11 +87,12 @@ lineBufferedCmd args = lineBufferingCmd %search ++ args
 
 ||| Tries to run a system command while logging its output.
 export covering
-sysAndLog :  HasIO io
-          => Env
-          => (lvl : LogLevel)
-          -> (cmd : CmdArgList)
-          -> EitherT PackErr io ()
+sysAndLog :
+     {auto _ : HasIO io}
+  -> {auto _ : Env}
+  -> (lvl : LogLevel)
+  -> (cmd : CmdArgList)
+  -> EitherT PackErr io ()
 sysAndLog lvl cmd = do
   0 <- runProcessingOutput
          (logCmdOutput lvl)
@@ -109,21 +113,23 @@ cmdWithEnv cmd env = "\{dispEnv env} \{escapeCmd cmd}"
 ||| failed build. If the environment should be included in the
 ||| error message, just prefix `cmd` accordingly and use `sys`.
 export
-sysWithEnv :  HasIO io
-           => (cmd : CmdArgList)
-           -> (env : List (String,String))
-           -> EitherT PackErr io ()
+sysWithEnv :
+     {auto _ : HasIO io}
+  -> (cmd : CmdArgList)
+  -> (env : List (String,String))
+  -> EitherT PackErr io ()
 sysWithEnv cmd env = do
   0 <- system (cmdWithEnv cmd env) | n => throwE (Sys cmd n)
   pure ()
 
 export covering
-sysWithEnvAndLog :  HasIO io
-                 => Env
-                 => (lvl : LogLevel)
-                 -> (cmd : CmdArgList)
-                 -> (env : List (String,String))
-                 -> EitherT PackErr io ()
+sysWithEnvAndLog :
+     {auto _ : HasIO io}
+  -> {auto _ : Env}
+  -> (lvl : LogLevel)
+  -> (cmd : CmdArgList)
+  -> (env : List (String,String))
+  -> EitherT PackErr io ()
 sysWithEnvAndLog lvl cmd env = do
   0 <- runProcessingOutput
          (logCmdOutput lvl)
@@ -147,10 +153,11 @@ sysRun cmd = do
 ||| failed build. If the environment should be included in the
 ||| error message, just prefix `cmd` accordingly and use `sys`.
 export covering
-sysRunWithEnv :  HasIO io
-              => (cmd : CmdArgList)
-              -> (env : List (String,String))
-              -> EitherT PackErr io String
+sysRunWithEnv :
+     {auto _ : HasIO io}
+  -> (cmd : CmdArgList)
+  -> (env : List (String,String))
+  -> EitherT PackErr io String
 sysRunWithEnv cmd env = do
   (res,0) <- System.run (cmdWithEnv cmd env) | (_,n) => throwE (Sys cmd n)
   pure res
@@ -214,34 +221,36 @@ chgDir dir = do
 ||| Runs an action in the given directory, changing back
 ||| to the current directory afterwards.
 export
-inDir :  HasIO io
-      => (dir : Path Abs)
-      -> (act : Path Abs -> EitherT PackErr io a)
-      -> EitherT PackErr io a
+inDir :
+     {auto _ : HasIO io}
+  -> (dir : Path Abs)
+  -> (act : Path Abs -> EitherT PackErr io a)
+  -> EitherT PackErr io a
 inDir dir act =
   curDir >>= \cur => finally (chgDir cur) (chgDir dir >> act dir)
 
 ||| Returns the names of entries in a directory
 export
-entries :  HasIO io
-        => (dir : Path Abs)
-        -> EitherT PackErr io (List Body)
+entries :
+     {auto _ : HasIO io}
+  -> (dir : Path Abs)
+  -> EitherT PackErr io (List Body)
 entries dir = do
   ss <- eitherIO (DirEntries dir) (listDir "\{dir}")
   pure (mapMaybe parse ss)
 
 ||| Returns the names of toml files in a directory
 export
-tomlFiles :  HasIO io
-          => (dir : Path Abs)
-          -> EitherT PackErr io (List Body)
+tomlFiles :  {auto _ : HasIO io}
+  -> (dir : Path Abs)
+  -> EitherT PackErr io (List Body)
 tomlFiles dir = filter isTomlBody <$> entries dir
 
 ||| Returns the names of toml files in a directory
 export
-htmlFiles :  HasIO io
-          => (dir : Path Abs)
-          -> EitherT PackErr io (List Body)
+htmlFiles :  {auto _ : HasIO io}
+  -> (dir : Path Abs)
+  -> EitherT PackErr io (List Body)
 htmlFiles dir = filter isHtmlBody <$> entries dir
 
 ||| Returns the names of entries in the current directory
@@ -266,10 +275,10 @@ copyDirInto from parent = do
 ||| Tries to find the first file, the body of which returns `True` for
 ||| the given predicate.
 export
-findInParentDirs :  HasIO io
-                 => (Body -> Bool)
-                 -> Path Abs
-                 -> EitherT PackErr io (Maybe (File Abs))
+findInParentDirs :  {auto _ : HasIO io}
+  -> (Body -> Bool)
+  -> Path Abs
+  -> EitherT PackErr io (Maybe (File Abs))
 findInParentDirs p (PAbs sb) = go sb
   where go : SnocList Body -> EitherT PackErr io (Maybe (File Abs))
         go [<]       = pure Nothing
@@ -282,10 +291,10 @@ findInParentDirs p (PAbs sb) = go sb
 ||| Tries to find the first file, the body of which return `True` for
 ||| the given predicate, in each parent directory.
 export
-findInAllParentDirs :  HasIO io
-                    => (Body -> Bool)
-                    -> Path Abs
-                    -> EitherT PackErr io $ List $ File Abs
+findInAllParentDirs :  {auto _ : HasIO io}
+  -> (Body -> Bool)
+  -> Path Abs
+  -> EitherT PackErr io $ List $ File Abs
 findInAllParentDirs p = go [] where
   go : List (File Abs) -> Path Abs -> EitherT PackErr io $ List $ File Abs
   go presentRes currD = do
@@ -298,22 +307,24 @@ findInAllParentDirs p = go [] where
 
 mkTmpDir : HasIO io => PackDir => EitherT PackErr io TmpDir
 mkTmpDir = go 100 0
-  where go : Nat -> Nat -> EitherT PackErr io TmpDir
-        go 0     _ = throwE NoTmpDir
-        go (S k) n =
-          let Just body := Body.parse ".tmp\{show n}" | Nothing => go k (S n)
-              dir       := packDir /> body
-           in do
-             False <- exists dir | True => go k (S n)
-             when (n > 50) $
-               warn {ref = MkLogRef Info}
-                 """
-                 Too many temporary directories. Please remove all `.tmpXY`
-                 directories in `PACK_DIR` or run `pack gc` to let pack
-                 clean them up.
-                 """
-             mkDir dir
-             pure (TD dir)
+
+  where
+    go : Nat -> Nat -> EitherT PackErr io TmpDir
+    go 0     _ = throwE NoTmpDir
+    go (S k) n =
+      let Just body := Body.parse ".tmp\{show n}" | Nothing => go k (S n)
+          dir       := packDir /> body
+       in do
+         False <- exists dir | True => go k (S n)
+         when (n > 50) $
+           warn {ref = MkLogRef Info}
+             """
+             Too many temporary directories. Please remove all `.tmpXY`
+             directories in `PACK_DIR` or run `pack gc` to let pack
+             clean them up.
+             """
+         mkDir dir
+         pure (TD dir)
 
 export
 withTmpDir :
@@ -325,9 +336,9 @@ withTmpDir f = do
   td <- mkTmpDir
   finally (rmDir tmpDir) f
 
---------------------------------------------------------------------------------
---         File Access
---------------------------------------------------------------------------------
+  --------------------------------------------------------------------------------
+  --         File Access
+  --------------------------------------------------------------------------------
 
 ||| Delete a file.
 export
@@ -342,10 +353,10 @@ read fn = eitherIO (ReadFile fn) (readFile "\{fn}")
 ||| Reads the content of a file if it exists, otherwise
 ||| returns the given alternative string.
 export covering
-readIfExists :  HasIO io
-             => (file : File Abs)
-             -> (alt  : String)
-             -> EitherT PackErr io String
+readIfExists :  {auto _ : HasIO io}
+  -> (file : File Abs)
+  -> (alt  : String)
+  -> EitherT PackErr io String
 readIfExists file alt = do
   True <- fileExists file | False => pure alt
   read file
@@ -377,8 +388,8 @@ copyFile from to = do
 
 ||| Patch a file
 export
-patch :  HasIO io
-      => (original : File Abs)
-      -> (patch    : File Abs)
-      -> EitherT PackErr io ()
+patch :  {auto _ : HasIO io}
+  -> (original : File Abs)
+  -> (patch    : File Abs)
+  -> EitherT PackErr io ()
 patch o p = sys ["patch", o, p]

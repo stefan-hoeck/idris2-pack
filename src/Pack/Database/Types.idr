@@ -435,18 +435,18 @@ MetaDB = DB_ MetaCommit
 
 ||| Effectfully convert package descriptions in a DB
 export
-traverseDB :  Applicative f
-           => (URL -> a -> f b)
-           -> DB_ a
-           -> f (DB_ b)
+traverseDB :
+     {auto _ : Applicative f}
+  -> (URL -> a -> f b)
+  -> DB_ a
+  -> f (DB_ b)
 traverseDB g db =
   let ic   := g db.idrisURL db.idrisCommit
       pkgs := traverse (traverse g) db.packages
    in [| adj ic pkgs |]
-    where adj :  b
-              -> SortedMap PkgName (Package_ b)
-              -> DB_ b
-          adj ic cb = {idrisCommit := ic, packages := cb} db
+    where
+      adj : b -> SortedMap PkgName (Package_ b) -> DB_ b
+      adj ic cb = {idrisCommit := ic, packages := cb} db
 
 tomlBool : Bool -> String
 tomlBool True  = "true"
@@ -485,7 +485,7 @@ printPair (x, Core c) =
 export
 printDB : DB -> String
 printDB (MkDB u c v db) =
-  let header = """
+  let header := """
         [idris2]
         url     = "\{u}"
         version = "\{v}"

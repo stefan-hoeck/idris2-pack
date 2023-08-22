@@ -30,10 +30,11 @@ data Report : Type where
 export
 failingDeps : List Report -> List PkgName
 failingDeps rs = nub $ rs >>=
-  \case Success _ _  => []
-        Failure s [] => [name s]
-        Failure _ ss => ss
-        Error s err  => [s]
+  \case
+    Success _ _  => []
+    Failure s [] => [name s]
+    Failure _ ss => ss
+    Error s err  => [s]
 
 record RepLines where
   constructor MkRL
@@ -53,7 +54,8 @@ ghCommitLink u c@(MkCommit commit)  =
  "[\{shortSha}](\{u}/commit/\{c})"
 
 apiLink : PkgName -> String
-apiLink p = "https://stefan-hoeck.github.io/idris2-pack-docs/docs/\{p}/index.html"
+apiLink p =
+  "https://stefan-hoeck.github.io/idris2-pack-docs/docs/\{p}/index.html"
 
 url : (e : Env) => Package -> URL
 url (Git u _ _ _ _)            = u
@@ -138,10 +140,12 @@ printReport = report . foldMap toRepLines
 export
 numberOfFailures : Foldable t => t Report -> Nat
 numberOfFailures = foldl count 0
-  where count : Nat -> Report -> Nat
-        count k (Success _ _) = k
-        count k (Failure _ _) = S k
-        count k (Error _ _)   = S k
+
+  where
+    count : Nat -> Report -> Nat
+    count k (Success _ _) = k
+    count k (Failure _ _) = S k
+    count k (Error _ _)   = S k
 
 testInfo : TestResult -> String
 testInfo TestSuccess = "all tests passed"

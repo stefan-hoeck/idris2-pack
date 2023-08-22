@@ -10,22 +10,24 @@ import System
 --          Logging
 --------------------------------------------------------------------------------
 
-printLogMessage :  HasIO io
-                => Interpolation logLevel
-                => (lvl : logLevel)
-                -> (msg : String)
-                -> (msgs : List String)
-                -> io ()
+printLogMessage :
+     {auto _ : HasIO io}
+  -> {auto _ : Interpolation logLevel}
+  -> (lvl : logLevel)
+  -> (msg : String)
+  -> (msgs : List String)
+  -> io ()
 printLogMessage lvl msg msgs = do
-  let prefx = "[ \{lvl} ] "
-  let baseIndent = replicate (length prefx) ' '
+  let prefx := "[ \{lvl} ] "
+  let baseIndent := replicate (length prefx) ' '
   printMultilineIndented prefx baseIndent msg
   for_ msgs $ printMultilineIndented "\{baseIndent}- " "\{baseIndent}  "
 
   where
-    printMultilineIndented :  (fstPrefix, restPrefix : String)
-                           -> (msg : String)
-                           -> io ()
+    printMultilineIndented :
+         (fstPrefix, restPrefix : String)
+      -> (msg : String)
+      -> io ()
     printMultilineIndented fstPrefix restPrefix msg = do
       let (s::ss) = lines msg
         | [] => putStrLn "\{fstPrefix}"
@@ -37,11 +39,12 @@ printLogMessage lvl msg msgs = do
 ||| If the given string contains newlines, all lines are printed indented
 ||| to the beginning of the first one.
 export
-log :  HasIO io
-    => (ref : LogRef)
-    -> (lvl : LogLevel)
-    -> (msg : Lazy String)
-    -> io ()
+log :
+     {auto _ : HasIO io}
+  -> (ref : LogRef)
+  -> (lvl : LogLevel)
+  -> (msg : Lazy String)
+  -> io ()
 log ref lvl msg =
   when (lvl >= ref.level) $ printLogMessage lvl msg []
 
@@ -62,13 +65,14 @@ prompt lvl msg = log (MkLogRef lvl) lvl msg >> map trim getLine
 ||| Note: Most of the time `ref` is automatically being extracted from
 ||| a value of type `Pack.Config.Types.Config` in scope.
 export
-logMany :  HasIO io
-        => (ref  : LogRef)
-        => {default False inlineSingle : Bool}
-        -> (lvl  : LogLevel)
-        -> (msg  : Lazy String)
-        -> (msgs : Lazy (List String))
-        -> io ()
+logMany :
+     {auto _ : HasIO io}
+  -> {auto ref  : LogRef}
+  -> {default False inlineSingle : Bool}
+  -> (lvl  : LogLevel)
+  -> (msg  : Lazy String)
+  -> (msgs : Lazy (List String))
+  -> io ()
 logMany lvl msg msgs =
   when (lvl >= ref.level && not (null msgs)) $
     case (inlineSingle, force msgs) of
@@ -80,11 +84,12 @@ logMany lvl msg msgs =
 ||| This uses the given log level but makes sure the message is always
 ||| printed no matter the current log level preferences.
 export %inline
-promptMany :  HasIO io
-           => (lvl : LogLevel)
-           -> (msg : String)
-           -> (msgs : List String)
-           -> io String
+promptMany :
+     {auto _ : HasIO io}
+  -> (lvl : LogLevel)
+  -> (msg : String)
+  -> (msgs : List String)
+  -> io String
 promptMany lvl msg msgs =
   let ref := MkLogRef lvl
    in logMany lvl msg msgs >> map trim getLine

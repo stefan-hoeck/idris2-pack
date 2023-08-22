@@ -25,39 +25,43 @@ export
 FromTOML RlwrapConfig where
   fromTOML _ (VBoolean x)  = Right $ if x then UseRlwrap [] else DoNotUseRlwrap
   fromTOML _ (VString str) = Right $ UseRlwrap [NoEscape str]
-  fromTOML _ (VArray xs)   = map (UseRlwrap . fromStrList) $ for xs $ \case
-                               VString s => Right s
-                               _         => Left $ WrongType [] "array of strings"
-  fromTOML _ _             = Left $ WrongType [] "boolean, string or array of strings"
+  fromTOML _ (VArray xs)   =
+    map (UseRlwrap . fromStrList) $ for xs $
+      \case
+        VString s => Right s
+        _         => Left $ WrongType [] "array of strings"
+
+  fromTOML _ _ = Left $ WrongType [] "boolean, string or array of strings"
 
 export
 FromTOML UserConfig where
   fromTOML f v =
-      [| MkConfig (maybeValAt "collection" f v)
-                  (maybeValAt "idris2.url" f v)
-                  (maybeValAt "idris2.commit" f v)
-                  (maybeValAt "pack.url" f v)
-                  (maybeValAt "pack.commit" f v)
-                  (maybeValAt "idris2.scheme" f v)
-                  (maybeValAt "idris2.bootstrap" f v)
-                  (maybeValAt "install.safety-prompt" f v)
-                  (maybeValAt "install.gc-prompt" f v)
-                  (maybeValAt "install.warn-depends" f v)
-                  (maybeValAt "install.whitelist" f v)
-                  (maybeValAt "install.with-src" f v)
-                  (maybeValAt "install.with-docs" f v)
-                  (maybeValAt "install.use-katla" f v)
-                  (pure Nothing)
-                  (maybeValAt "idris2.repl.rlwrap" f v)
-                  (maybeValAt "install.libs" f v)
-                  (maybeValAt "install.apps" f v)
-                  (maybeValAt "idris2.repl.autoload" f v)
-                  (maybeValAt "custom" f v)
-                  (pure Nothing)
-                  (pure Nothing)
-                  (maybeValAt "idris2.codegen" f v)
-                  (pure Nothing)
-                  (maybeValAt "log" f v)
+      [| MkConfig
+          (maybeValAt "collection" f v)
+          (maybeValAt "idris2.url" f v)
+          (maybeValAt "idris2.commit" f v)
+          (maybeValAt "pack.url" f v)
+          (maybeValAt "pack.commit" f v)
+          (maybeValAt "idris2.scheme" f v)
+          (maybeValAt "idris2.bootstrap" f v)
+          (maybeValAt "install.safety-prompt" f v)
+          (maybeValAt "install.gc-prompt" f v)
+          (maybeValAt "install.warn-depends" f v)
+          (maybeValAt "install.whitelist" f v)
+          (maybeValAt "install.with-src" f v)
+          (maybeValAt "install.with-docs" f v)
+          (maybeValAt "install.use-katla" f v)
+          (pure Nothing)
+          (maybeValAt "idris2.repl.rlwrap" f v)
+          (maybeValAt "install.libs" f v)
+          (maybeValAt "install.apps" f v)
+          (maybeValAt "idris2.repl.autoload" f v)
+          (maybeValAt "custom" f v)
+          (pure Nothing)
+          (pure Nothing)
+          (maybeValAt "idris2.codegen" f v)
+          (pure Nothing)
+          (maybeValAt "log" f v)
       |]
 
 ||| Initial content of an auto-generated `PACK_DIR/user/pack.toml` file.

@@ -54,11 +54,12 @@ tmap f p = map f . fromTOML p
 ||| Read a value of type `b` by refining a value of
 ||| type `a`.
 export
-trefine :  FromTOML a
-        => (a -> Either TOMLErr b)
-        -> File Abs
-        -> Value
-        -> Either TOMLErr b
+trefine :
+     {auto _ : FromTOML a}
+  -> (a -> Either TOMLErr b)
+  -> File Abs
+  -> Value
+  -> Either TOMLErr b
 trefine f p v = fromTOML p v >>= f
 
 ||| Try to extract a value from a toml `Value`.
@@ -73,63 +74,70 @@ trefine f p v = fromTOML p v >>= f
 |||           it can't be properly converted.
 ||| @ value : The TOML value we start with.
 export
-valAt' :  (get  : Value -> Either TOMLErr a)
-       -> (path : String)
-       -> (dflt : Maybe a)
-       -> (val  : Value)
-       -> Either TOMLErr a
+valAt' :
+     (get  : Value -> Either TOMLErr a)
+  -> (path : String)
+  -> (dflt : Maybe a)
+  -> (val  : Value)
+  -> Either TOMLErr a
 valAt' get path dflt = go (forget $ split ('.' ==) path)
-  where go : List String -> Value -> Either TOMLErr a
-        go []        v          = get v
-        go (x :: xs) (VTable y) = case lookup x y of
-          Nothing => case dflt of
-            Nothing => Left $ MissingKey [x]
-            Just a  => Right a
-          Just v2 => prefixKey x $ go xs v2
-        go _ _                  = Left $ WrongType [] "Table"
+
+  where
+    go : List String -> Value -> Either TOMLErr a
+    go []        v          = get v
+    go (x :: xs) (VTable y) = case lookup x y of
+      Nothing => case dflt of
+        Nothing => Left $ MissingKey [x]
+        Just a  => Right a
+      Just v2 => prefixKey x $ go xs v2
+    go _ _                  = Left $ WrongType [] "Table"
 
 ||| Extract and convert a mandatory value from a TOML
 ||| value. The `path` string can contain several dot-separated
 ||| key names. See also `valAt'`.
 export %inline
-valAt :  FromTOML a
-      => (path : String)
-      -> File Abs
-      -> (val : Value)
-      -> Either TOMLErr a
+valAt :
+     {auto _ : FromTOML a}
+  -> (path : String)
+  -> File Abs
+  -> (val : Value)
+  -> Either TOMLErr a
 valAt path f = valAt' (fromTOML f) path Nothing
 
 ||| Extract and convert an optional value from a TOML
 ||| value. The `path` string can contain several dot-separated
 ||| key names. See also `valAt'`.
 export %inline
-optValAt :  FromTOML a
-         => (path : String)
-         -> File Abs
-         -> (dflt : a)
-         -> (val  : Value)
-         -> Either TOMLErr a
+optValAt :
+     {auto _ : FromTOML a}
+  -> (path : String)
+  -> File Abs
+  -> (dflt : a)
+  -> (val  : Value)
+  -> Either TOMLErr a
 optValAt path f = valAt' (fromTOML f) path . Just
 
 ||| Extract and convert an optional value from a TOML
 ||| value. The `path` string can contain several dot-separated
 ||| key names. See also `valAt'`.
 export
-maybeValAt' :  (f    : Value -> Either TOMLErr a)
-            -> (path : String)
-            -> (val  : Value)
-            -> Either TOMLErr (Maybe a)
+maybeValAt' :
+     (f    : Value -> Either TOMLErr a)
+  -> (path : String)
+  -> (val  : Value)
+  -> Either TOMLErr (Maybe a)
 maybeValAt' f path = valAt' (map Just . f) path (Just Nothing)
 
 ||| Extract and convert an optional value from a TOML
 ||| value. The `path` string can contain several dot-separated
 ||| key names. See also `valAt'`.
 export %inline
-maybeValAt :  FromTOML a
-           => (path : String)
-           -> File Abs
-           -> (val  : Value)
-           -> Either TOMLErr (Maybe a)
+maybeValAt :
+     {auto _ : FromTOML a}
+  -> (path : String)
+  -> File Abs
+  -> (val  : Value)
+  -> Either TOMLErr (Maybe a)
 maybeValAt p f = maybeValAt' (fromTOML f) p
 
 --------------------------------------------------------------------------------
@@ -200,10 +208,11 @@ export
 FromTOML PkgVersion where
   fromTOML = trefine readVersion
 
-keyVal :  TOMLKey k
-       => (Value -> Either TOMLErr v)
-       -> (String,Value)
-       -> Either TOMLErr (k,v)
+keyVal :
+     {auto _ : TOMLKey k}
+  -> (Value -> Either TOMLErr v)
+  -> (String,Value)
+  -> Either TOMLErr (k,v)
 keyVal f (x,y) = prefixKey x [| MkPair (fromKey x) (f y) |]
 
 export
@@ -236,11 +245,12 @@ readTOML file = do
 ||| Reads a file, converts its content to a TOML value, and
 ||| extracts an Idris value from this.
 export covering
-readFromTOML :  HasIO io
-             => (0 a : Type)
-             -> FromTOML a
-             => File Abs
-             -> EitherT PackErr io a
+readFromTOML :
+     {auto _ : HasIO io}
+  -> (0 a : Type)
+  -> {auto _ : FromTOML a}
+  -> File Abs
+  -> EitherT PackErr io a
 readFromTOML _ file = do
   v <- readTOML file
   liftEither $ mapFst (TOMLFile file) (fromTOML file v)
@@ -248,11 +258,12 @@ readFromTOML _ file = do
 ||| Reads a file, converts its content to a TOML value, and
 ||| extracts an Idris value from this.
 export covering
-readOptionalFromTOML :  HasIO io
-                     => (0 a : Type)
-                     -> FromTOML a
-                     => File Abs
-                     -> EitherT PackErr io a
+readOptionalFromTOML :
+     {auto _ : HasIO io}
+  -> (0 a : Type)
+  -> {auto _ : FromTOML a}
+  -> File Abs
+  -> EitherT PackErr io a
 readOptionalFromTOML a f = do
   True <- fileExists f
     | False => liftEither (mapFst (TOMLFile f) $ fromTOML f (VTable empty))

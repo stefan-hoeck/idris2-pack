@@ -92,10 +92,11 @@ resolveAll = do
 --------------------------------------------------------------------------------
 
 covering
-query_ :  HasIO io
-       => Env
-       => (q : (parents,children : Tree PkgName) -> QPkg -> Maybe b)
-       -> EitherT PackErr io (List b)
+query_ :
+     {auto _ : HasIO io}
+  -> {auto _ : Env}
+  -> (q : (parents,children : Tree PkgName) -> QPkg -> Maybe b)
+  -> EitherT PackErr io (List b)
 query_ q = do
   (sm,ps) <- resolveAll
 
@@ -103,7 +104,10 @@ query_ q = do
 
       parents  := parentMap sm
 
-  pure $ mapMaybe (\p => q (treeLookup (name p) parents) (treeLookup (name p) children) p) ps
+  pure $
+    mapMaybe
+      (\p => q (treeLookup (name p) parents) (treeLookup (name p) children) p)
+      ps
 
 shortDesc : QPkg -> Maybe String
 shortDesc q = q.lib.desc.desc.brief
@@ -215,11 +219,12 @@ resultString _ _      ps cs qp = case e.config.queryType of
     Nothing  => prettyTree True ps
 
 export covering
-query :  HasIO io
-      => QueryMode
-      -> String
-      -> Env
-      -> EitherT PackErr io ()
+query :
+     {auto _ : HasIO io}
+  -> QueryMode
+  -> String
+  -> Env
+  -> EitherT PackErr io ()
 query m n e = do
   ss <- query_ $ \ps,cs,p => toMaybe (keep m n p) (resultString n m ps cs p)
   putStrLn $ unlines ss
@@ -276,10 +281,11 @@ printInfo e = resolveAll >>= putStrLn . infoString . snd
 --------------------------------------------------------------------------------
 
 covering
-installedPkgs :  HasIO io
-              => IdrisEnv
-              => List PkgName
-              -> EitherT PackErr io (List QPkg, List QPkg)
+installedPkgs :
+     {auto _ : HasIO io}
+  -> {auto _ : IdrisEnv}
+  -> List PkgName
+  -> EitherT PackErr io (List QPkg, List QPkg)
 installedPkgs ns = do
   all <- filter installedLib . snd <$> resolveAll
   pure (all, filter inPkgs all)
@@ -301,17 +307,19 @@ removePre s = case isPrefixOf pre s of
   False => s
 
 fuzzyTrim : String -> String
-fuzzyTrim = unlines
-          . map removePre
-          . filter (pre /=)
-          . lines
+fuzzyTrim =
+    unlines
+  . map removePre
+  . filter (pre /=)
+  . lines
 
-fuzzyPkg :  HasIO io
-         => IdrisEnv
-         => String
-         -> (allPkgs   : List QPkg)
-         -> QPkg
-         -> EitherT PackErr io ()
+fuzzyPkg :
+     {auto _ : HasIO io}
+  -> {auto _ : IdrisEnv}
+  -> String
+  -> (allPkgs   : List QPkg)
+  -> QPkg
+  -> EitherT PackErr io ()
 fuzzyPkg q allPkgs qp = do
   mkDir tmpDir
   finally (rmDir tmpDir) $ inDir tmpDir $ \d => do
@@ -321,17 +329,29 @@ fuzzyPkg q allPkgs qp = do
 
     (cmd,env) <- idrisWithPkgs (map lib allPkgs)
 
-    str <- sysRunWithEnv (cmd ++ ["--quiet", "--no-prelude", "--no-banner", "test.idr", NoEscape "<", "input"]) env
+    str <-
+      sysRunWithEnv
+        (cmd ++
+           [ "--quiet"
+           , "--no-prelude"
+           , "--no-banner"
+           , "test.idr"
+           , NoEscape "<"
+           , "input"
+           ]
+        )
+        env
     case noOut == str of
       True  => pure ()
       False => putStrLn (fuzzyTrim str)
 
 export covering
-fuzzy :  HasIO io
-      => List PkgName
-      -> String
-      -> IdrisEnv
-      -> EitherT PackErr io ()
+fuzzy :
+     {auto _ : HasIO io}
+  -> List PkgName
+  -> String
+  -> IdrisEnv
+  -> EitherT PackErr io ()
 fuzzy m q e = do
   (allPkgs,rps) <- installedPkgs m
   traverse_ (fuzzyPkg q allPkgs) rps
