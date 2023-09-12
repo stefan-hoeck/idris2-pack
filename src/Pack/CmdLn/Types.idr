@@ -345,8 +345,10 @@ cmdDesc Query            = """
   for each found package:
 
     -d --dependencies : Prints the dependencies of each query result
+       --tree         : Prints a dependency tree of a queried package
+       --reverse-tree : Prints a tree of packages depending on a queried package
     -s --short-desc   : Prints the `brief` description from each package's
-                        `.ipkg` file.
+                        `.ipkg` file
     -l --long-desc    : Prints detailed description of each query result
   """
 

@@ -457,6 +457,6 @@ plan :
 plan ps =
   let ps' := (Library, "prelude") :: (Library, "base") :: ps
    in do
-     debug "Building plan for the following libraries: \n \{showPlan ps}"
+     debug "Building plan for the following libraries: \n\{showPlan ps}"
      loas <- filter needsInstalling <$> transitiveDeps ps'
      traverse checkLOA loas
