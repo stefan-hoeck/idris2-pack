@@ -15,10 +15,10 @@ import Libraries.Text.PrettyPrint.Prettyprinter.Render.String
 
 %default total
 
-newPkgDesc : (name : Body) -> (mod : Body) -> (user: String) -> PkgDesc
+newPkgDesc : (name : Body) -> (mod : Body) -> (user: Maybe String) -> PkgDesc
 newPkgDesc name mod user =
   let modName := (nsAsModuleIdent $ mkNamespace "\{mod}", "")
-   in { authors := Just user
+   in { authors := user
       , version := Just (MkPkgVersion (0 ::: [1, 0]))
       , mainmod := toMaybe (mod == "Main") modName
       , executable := toMaybe (mod == "Main") "\{name}"
@@ -26,9 +26,9 @@ newPkgDesc name mod user =
       , sourcedir := Just "src"
       } (initPkgDesc "\{name}")
 
-newTestPkgDesc : (name : Body) -> (user: String) -> PkgDesc
+newTestPkgDesc : (name : Body) -> (user: Maybe String) -> PkgDesc
 newTestPkgDesc name user =
-   { authors    := Just user
+   { authors    := user
    , version    := Just (MkPkgVersion (0 ::: [1, 0]))
    , mainmod    := Just (nsAsModuleIdent $ mkNamespace "Main", "")
    , executable := Just "\{name}-test"
@@ -120,7 +120,8 @@ new :
 new (CD curdir) pty pkgName e = do
     debug "Creating new \{pty} package named \{pkgName}..."
     debug "Getting author name from git config"
-    user <- trim <$> sysRun ["git", "config", "user.name"]
+    user <- Just <$> trim <$> sysRun ["git", "config", "user.name"]
+            `catchE` (const $ right Nothing)
     debug "Creating PkgDesc"
     let (mod, modFile) = getModFile pty pkgName
 
