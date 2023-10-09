@@ -26,7 +26,7 @@ before you continue:
   is to use its [Racket fork](https://github.com/racket/ChezScheme).
   See the [Apple M1 User](#apple-m1-user) appendix for more info.
 
-* `bash`, `GNU make`, `sha256sum`, and `GMP`. On Linux, you probably
+* `bash`, `GNU make`, `gcc` or `clang`, `sha256sum`, and `GMP`. On Linux, you probably
   already have these. On macOS and major BSD flavours, you can install them
   using a package manager: for instance, on macOS, you can install with the
   `brew install coreutils gmp` and on OpenBSD, with the
