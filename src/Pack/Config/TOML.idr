@@ -40,6 +40,7 @@ FromTOML UserConfig where
           (maybeValAt "collection" f v)
           (maybeValAt "idris2.url" f v)
           (maybeValAt "idris2.commit" f v)
+          (toList <$> maybeValAt "idris2.commit" f v)
           (maybeValAt "pack.url" f v)
           (maybeValAt "pack.commit" f v)
           (maybeValAt "idris2.scheme" f v)

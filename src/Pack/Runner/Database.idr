@@ -352,7 +352,7 @@ checkDeletable ns = do
 idrisDelDir : (e : Env) => Body -> Maybe (Path Abs)
 idrisDelDir b =
   let s := interpolate b
-   in toMaybe (s /= "pack" && s /= e.db.idrisCommit.value) (installDir /> b)
+   in toMaybe (s /= "pack" && all (\ic => s /= ic.value) e.config.allIdrisCommits) (installDir /> b)
 
 packDelDir : (e : Env) => Body -> Maybe (Path Abs)
 packDelDir b =

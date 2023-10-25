@@ -648,8 +648,11 @@ env mc fetch = do
 
   let url    := fromMaybe db.idrisURL c.idrisURL
       commit := fromMaybe db.idrisCommit c.idrisCommit
+      -- take the DB's idris commit into account
+      c'     := {allIdrisCommits $= (db.idrisCommit ::)} c
       -- adjust the idrisCommit and URL to use according to user overrides
-      env    := MkEnv pd td c ch ({idrisURL := url, idrisCommit := commit} db) lbf
+      db'    := {idrisURL := url, idrisCommit := commit} db
+      env    := MkEnv pd td c' ch db' lbf
 
   cachePkgs $> env
 
