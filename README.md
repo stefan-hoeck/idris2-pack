@@ -278,6 +278,16 @@ The second example in the folder `example2` explains how to collaborate
 on several packages in parallel via git. Details can be found
 [here](example2/README.md).
 
+> **Note**
+>
+> Please notice that if your application relies on the `IDRIS2_PACKAGE_PATH`
+> environment variable (for example, an alternative backend for Idris) or your
+> package uses a shared library or support files, set `packagePath` option to
+> `true` in an appropriate section for you package in a `pack.toml` (both local
+> and in the pack collection).
+> You can see an example of such usage [here](https://github.com/stefan-hoeck/idris2-pack-db/blob/bcc8dc61706c73361bb1e6e18dd1b0c5981f0e18/collections/HEAD.toml#L297).
+> Technical details can be found [here](https://github.com/stefan-hoeck/idris2-pack/issues/256#issuecomment-1689305587).
+
 ## Stuff still Missing
 
 There is a lot of functionality still missing. Here's a
