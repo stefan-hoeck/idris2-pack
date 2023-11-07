@@ -165,6 +165,9 @@ record Config_ (f : Type -> Type) (c : Type) where
   ||| set to `Nothing`.
   idrisCommit  : Maybe c
 
+  ||| All Idris commits mentioned in used configs
+  allIdrisCommits : List c
+
   ||| Custom pack repo
   packURL      : Maybe URL
 
@@ -277,13 +280,20 @@ traverse g idrisURL cfg =
       purl = fromMaybe defaultPackRepo cfg.packURL
       cst = traverse (traverse $ traverse g) cfg.custom
       ic  = traverse (g iurl) cfg.idrisCommit
+      ics = traverse (g iurl) cfg.allIdrisCommits
       pc  = traverse (g purl) cfg.packCommit
-   in [| adj ic pc cst |]
+   in [| adj ic ics pc cst |]
     where adj :  (idrisCommit : Maybe b)
+              -> (allidrisCommits : List b)
               -> (packCommit  : Maybe b)
               -> SortedMap DBName (SortedMap PkgName $ Package_ b)
               -> Config_ I b
-          adj ic pc cb = {idrisCommit := ic, packCommit := pc, custom := cb} cfg
+          adj ic ics pc cb =
+            { idrisCommit     := ic
+            , allIdrisCommits := ics
+            , packCommit      := pc
+            , custom          := cb
+            } cfg
 
 ||| This allows us to use a `Config` in scope when we
 ||| need an auto-implicit `LogLevel` for logging.
@@ -322,31 +332,32 @@ allPackages =
 export
 init : (cur : CurDir) => (coll : DBName) -> MetaConfig
 init coll = MkConfig {
-    collection   = coll
-  , idrisURL     = Nothing
-  , idrisCommit  = Nothing
-  , packURL      = Nothing
-  , packCommit   = Nothing
-  , scheme       = "scheme"
-  , bootstrap    = True
-  , safetyPrompt = True
-  , gcPrompt     = True
-  , warnDepends  = True
-  , whitelist    = []
-  , withSrc      = False
-  , withDocs     = False
-  , useKatla     = False
-  , withIpkg     = Search cur
-  , rlwrap       = DoNotUseRlwrap
-  , autoLibs     = []
-  , autoApps     = []
-  , autoLoad     = NoPkgs
-  , custom       = empty
-  , queryType    = NameOnly
-  , logLevel     = Warning
-  , codegen      = Default
-  , output       = "_tmppack"
-  , levels       = empty
+    collection      = coll
+  , idrisURL        = Nothing
+  , idrisCommit     = Nothing
+  , allIdrisCommits = []
+  , packURL         = Nothing
+  , packCommit      = Nothing
+  , scheme          = "scheme"
+  , bootstrap       = True
+  , safetyPrompt    = True
+  , gcPrompt        = True
+  , warnDepends     = True
+  , whitelist       = []
+  , withSrc         = False
+  , withDocs        = False
+  , useKatla        = False
+  , withIpkg        = Search cur
+  , rlwrap          = DoNotUseRlwrap
+  , autoLibs        = []
+  , autoApps        = []
+  , autoLoad        = NoPkgs
+  , custom          = empty
+  , queryType       = NameOnly
+  , logLevel        = Warning
+  , codegen         = Default
+  , output          = "_tmppack"
+  , levels          = empty
   }
 
 infixl 7 `update`
@@ -355,31 +366,32 @@ infixl 7 `update`
 export
 update : IConfig c -> MConfig c -> IConfig c
 update ci cm = MkConfig {
-    collection   = fromMaybe ci.collection cm.collection
-  , idrisURL     = cm.idrisURL <|> ci.idrisURL
-  , idrisCommit  = cm.idrisCommit <|> ci.idrisCommit
-  , packURL      = cm.packURL <|> ci.packURL
-  , packCommit   = cm.packCommit <|> ci.packCommit
-  , scheme       = fromMaybe ci.scheme cm.scheme
-  , bootstrap    = fromMaybe ci.bootstrap cm.bootstrap
-  , safetyPrompt = fromMaybe ci.safetyPrompt cm.safetyPrompt
-  , gcPrompt     = fromMaybe ci.gcPrompt cm.gcPrompt
-  , warnDepends  = fromMaybe ci.warnDepends cm.warnDepends
-  , withSrc      = fromMaybe ci.withSrc cm.withSrc
-  , withDocs     = fromMaybe ci.withDocs cm.withDocs
-  , useKatla     = fromMaybe ci.useKatla cm.useKatla
-  , withIpkg     = fromMaybe ci.withIpkg cm.withIpkg
-  , rlwrap       = fromMaybe ci.rlwrap cm.rlwrap
-  , whitelist    = sortedNub (ci.whitelist ++ concat cm.whitelist)
-  , autoLibs     = sortedNub (ci.autoLibs ++ concat cm.autoLibs)
-  , autoApps     = sortedNub (ci.autoApps ++ concat cm.autoApps)
-  , autoLoad     = fromMaybe ci.autoLoad cm.autoLoad
-  , custom       = mergeWith mergeRight ci.custom (fromMaybe empty cm.custom)
-  , queryType    = fromMaybe ci.queryType cm.queryType
-  , logLevel     = fromMaybe ci.logLevel cm.logLevel
-  , codegen      = fromMaybe ci.codegen cm.codegen
-  , output       = fromMaybe ci.output cm.output
-  , levels       = mergeWith (\_,v => v) ci.levels (fromMaybe empty cm.levels)
+    collection      = fromMaybe ci.collection cm.collection
+  , idrisURL        = cm.idrisURL <|> ci.idrisURL
+  , idrisCommit     = cm.idrisCommit <|> ci.idrisCommit
+  , allIdrisCommits = cm.allIdrisCommits <+> ci.allIdrisCommits
+  , packURL         = cm.packURL <|> ci.packURL
+  , packCommit      = cm.packCommit <|> ci.packCommit
+  , scheme          = fromMaybe ci.scheme cm.scheme
+  , bootstrap       = fromMaybe ci.bootstrap cm.bootstrap
+  , safetyPrompt    = fromMaybe ci.safetyPrompt cm.safetyPrompt
+  , gcPrompt        = fromMaybe ci.gcPrompt cm.gcPrompt
+  , warnDepends     = fromMaybe ci.warnDepends cm.warnDepends
+  , withSrc         = fromMaybe ci.withSrc cm.withSrc
+  , withDocs        = fromMaybe ci.withDocs cm.withDocs
+  , useKatla        = fromMaybe ci.useKatla cm.useKatla
+  , withIpkg        = fromMaybe ci.withIpkg cm.withIpkg
+  , rlwrap          = fromMaybe ci.rlwrap cm.rlwrap
+  , whitelist       = sortedNub (ci.whitelist ++ concat cm.whitelist)
+  , autoLibs        = sortedNub (ci.autoLibs ++ concat cm.autoLibs)
+  , autoApps        = sortedNub (ci.autoApps ++ concat cm.autoApps)
+  , autoLoad        = fromMaybe ci.autoLoad cm.autoLoad
+  , custom          = mergeWith mergeRight ci.custom (fromMaybe empty cm.custom)
+  , queryType       = fromMaybe ci.queryType cm.queryType
+  , logLevel        = fromMaybe ci.logLevel cm.logLevel
+  , codegen         = fromMaybe ci.codegen cm.codegen
+  , output          = fromMaybe ci.output cm.output
+  , levels          = mergeWith (\_,v => v) ci.levels (fromMaybe empty cm.levels)
   }
 
 --------------------------------------------------------------------------------

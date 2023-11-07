@@ -102,7 +102,7 @@ or the Idris ide-mode when coding in Idris. While pack can
 make its managed packages available to these tools (for instance,
 if you use *idris2-lsp*, you can conveniently install it via
 pack and it will automatically have access to all libraries
-installed by pack: `pack install-app lsp`), these tools will typically
+installed by pack: `pack install-app idris2-lsp`), these tools will typically
 not install or update any required dependencies automatically.
 In this case it is necessary to first run `pack install-deps my.ipkg`
 before you start coding on a project.

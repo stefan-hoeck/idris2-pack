@@ -40,6 +40,7 @@ FromTOML UserConfig where
           (maybeValAt "collection" f v)
           (maybeValAt "idris2.url" f v)
           (maybeValAt "idris2.commit" f v)
+          (toList <$> maybeValAt "idris2.commit" f v)
           (maybeValAt "pack.url" f v)
           (maybeValAt "pack.commit" f v)
           (maybeValAt "idris2.scheme" f v)
@@ -103,7 +104,7 @@ initToml scheme db = """
   # List of packages and apps with custom build hooks we trust to
   # be safe. This gives more fine grained control over package safety
   # than `safety-prompt`.
-  whitelist = [ "pack", "lsp" ]
+  whitelist = [ "pack", "idris2-lsp" ]
 
   # Must-have libraries. These will be installed automatically
   # when using a new package collection.
@@ -111,7 +112,7 @@ initToml scheme db = """
 
   # Must-have applications. These will be installed automatically
   # when using a new package collection.
-  # apps       = [ "lsp" ]
+  # apps       = [ "idris2-lsp" ]
 
   [pack]
 
