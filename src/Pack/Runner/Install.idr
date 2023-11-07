@@ -41,6 +41,14 @@ copyApp ra =
      mkDir dir
      sys ["cp", "-r", Escapable "\{buildPath ra.desc}/exec/" ++ NoEscape "*", dir]
 
+noAppError : (app : PkgName) -> List String
+noAppError app = lines $ """
+  [ fatal ] Package `\{app}` is not built or not installed in the current
+            environment. Maybe, it was installed with an older compiler version
+            or using a local `pack.toml` which is not available in the current
+            directory. Try to reinstall it with `pack install-app \{app}`.
+  """
+
 pthStr : (c : Config) => PackDir => Bool -> String
 pthStr False = ""
 pthStr True =
@@ -77,7 +85,10 @@ appLink exec app withPkgPath cg =
       content := """
       #!/bin/sh
 
-      APPLICATION="$(\{packExec} app-path \{app})"
+      if ! APPLICATION="$(\{packExec} app-path \{app})" || [ ! -r "$APPLICATION" ]; then {
+      \{unlines $ noAppError app <&> \s => "  echo '\{s}'"}
+        } >&2; exit 2
+      fi
       \{pthStr withPkgPath}
 
       \{interp}$APPLICATION "$@"
