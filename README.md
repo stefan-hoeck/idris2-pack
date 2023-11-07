@@ -274,8 +274,8 @@ can be found in the `example1` subfolder, sets up
 two libraries plus a test suite for local development.
 A detailed description how it works can be found [here](example1/README.md).
 
-The second example in folder `example2` explain how to collaborate
-on several packages in parallel via GitHub. Details can be found
+The second example in the folder `example2` explains how to collaborate
+on several packages in parallel via git. Details can be found
 [here](example2/README.md).
 
 ## Stuff still Missing
