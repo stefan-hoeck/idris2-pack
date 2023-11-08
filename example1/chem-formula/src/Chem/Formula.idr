@@ -98,12 +98,13 @@ plusSucc 0 n impossible
 ||| Merges to molecular formulae
 export
 merge : Repr h1 -> Repr h2 -> MergeRes h1 h2
-merge (p :: ps) (q :: qs) = case comp (hill $ fst p) (hill $ fst q) of
-  LT prf _   _   => prepLT p $ merge ps (q :: qs)
-  EQ _   prf _   =>
-    let 0 nz := plusSucc (snd p) (snd q)
-     in prepEQ (fst p, snd p + snd q) prf $ merge ps qs
-  GT _   _   prf => prepGT q $ merge (p :: ps) qs
+merge xs@(p :: ps) ys@(q :: qs) =
+  case comp (hill $ fst p) (hill $ fst q) of
+    LT prf _   _   => prepLT p $ merge ps ys
+    EQ _   prf _   =>
+      let 0 nz := plusSucc (snd p) (snd q)
+       in prepEQ (fst p, snd p + snd q) prf $ merge ps qs
+    GT _   _   prf => prepGT q $ merge xs qs
 merge y [] = MR y (Left Refl)
 merge [] y = MR y (Right Refl)
 
