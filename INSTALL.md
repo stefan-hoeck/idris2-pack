@@ -150,21 +150,16 @@ You can also add them to your `.zshrc` file.
 
 ## Apple M1 user
 
-A the moment, Chez Scheme is hard to build on M1 processors.
-The best option may be to build the
-[Racket fork](https://github.com/racket/ChezScheme)
-of Chez Scheme from source.
+Apple Silicon processors (M1, M2, etc.) will be supported in Chez Scheme 10.0. Until
+that is released, we need to build chez scheme from the main branch. When configuring
+the Chez Scheme build, Idris2 requires the `--threads` flag.
 
-1. Clone the repository: `git clone git@github.com:racket/ChezScheme.git`
-2. In the ChezScheme repository, run the following set of instruction
-   (as found on [this reddit thread](https://www.reddit.com/r/Idris/comments/pc5lib/success_building_native_idris2_on_an_m1_mac/)):
+The following instructions can be used to accomplish this.
 
-   ```sh
-   arch=tarm64osx
-   ./configure --pb
-   make ${arch}.bootquick
-   ./configure --threads
-   make
-   sudo make install
-   sudo chown $(whoami) ${arch}/petite.1 ${arch}/scheme.1
-   ```
+```sh
+git clone https://github.com/cisco/ChezScheme
+cd ChezScheme
+./configure --threads
+make
+sudo make install
+```
