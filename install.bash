@@ -166,7 +166,7 @@ safety-prompt = true
 
 # Must-have applications. These will be installed automatically
 # when using a new package collection.
-# apps       = [ "lsp" ]
+# apps       = [ "idris2-lsp" ]
 
 [idris2]
 
