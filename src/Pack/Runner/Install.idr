@@ -217,6 +217,7 @@ installImpl dir rl =
      when (isInstalled rl) $ do
        info "Removing currently installed version of \{name rl}"
        rmDir (pkgInstallDir rl.name rl.pkg rl.desc)
+       rmDir (pkgLibDir rl.name rl.pkg)
      libPkg pre Build True ["--build"] rl.desc
      libPkg pre Debug False instCmd rl.desc
      when !(exists $ dir /> "lib") $
@@ -457,8 +458,10 @@ removeLib : HasIO io => Env => PkgName -> EitherT PackErr io ()
 removeLib n = do
   rl <- resolveLib n
   case isInstalled rl of
-    True  => info "Removing library \{n}" >>
-             rmDir (pkgInstallDir rl.name rl.pkg rl.desc)
+    True  => do
+      info "Removing library \{n}"
+      rmDir (pkgInstallDir rl.name rl.pkg rl.desc)
+      rmDir (pkgLibDir rl.name rl.pkg)
     False => warn "Package \{n} is not installed. Ignoring."
 
 ||| Remove the given libs or apps
