@@ -70,8 +70,11 @@ replOpts mf = do
       cgOpt  := case cg of
                   Default => []
                   _       => ["--cg", cg]
+      extraArgs := case e.env.config.extraArgs of
+                        NoExtraArgs => []
+                        PassExtraArgs args => args
   install libs
-  pure (srcDir ++ cgOpt ++ pkgs, cg, mp)
+  pure (srcDir ++ cgOpt ++ pkgs ++ extraArgs, cg, mp)
 
 -- return the path of an Idris source file to an `.ipkg` file.
 srcFileRelativeToIpkg : (ipkg,idr : Maybe (File Abs)) -> CmdArgList
