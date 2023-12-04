@@ -21,17 +21,23 @@ export
 FromTOML Codegen where
   fromTOML = tmap Types.fromString
 
+extractString : (errMsg : String) -> (v : Value) -> Either TOMLErr String
+extractString _ (VString s) = Right s
+extractString errMsg _ = Left $ WrongType [] errMsg
+
 export
 FromTOML RlwrapConfig where
   fromTOML _ (VBoolean x)  = Right $ if x then UseRlwrap [] else DoNotUseRlwrap
   fromTOML _ (VString str) = Right $ UseRlwrap [NoEscape str]
   fromTOML _ (VArray xs)   =
-    map (UseRlwrap . fromStrList) $ for xs $
-      \case
-        VString s => Right s
-        _         => Left $ WrongType [] "array of strings"
-
+    map (UseRlwrap . fromStrList) $ traverse (extractString "array of strings") xs
   fromTOML _ _ = Left $ WrongType [] "boolean, string or array of strings"
+
+export
+FromTOML ExtraIdris2ArgsConfig where
+  fromTOML _ (VString str) = Right $ PassExtraArgs [NoEscape str]
+  fromTOML _ (VArray xs) = PassExtraArgs . fromStrList <$> traverse (extractString "array of strings") xs
+  fromTOML _ _ = Left $ WrongType [] "string or array of strings"
 
 export
 FromTOML UserConfig where
@@ -54,6 +60,7 @@ FromTOML UserConfig where
           (maybeValAt "install.use-katla" f v)
           (pure Nothing)
           (maybeValAt "idris2.repl.rlwrap" f v)
+          (maybeValAt "idris2.extra-args" f v)
           (maybeValAt "install.libs" f v)
           (maybeValAt "install.apps" f v)
           (maybeValAt "idris2.repl.autoload" f v)
