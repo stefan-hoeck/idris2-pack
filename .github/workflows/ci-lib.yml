@@ -1,3 +1,4 @@
+---
 name: Build
 
 on:
@@ -12,6 +13,8 @@ on:
   schedule:
     - cron: '0 21 * * *'
 
+permissions: read-all
+
 defaults:
   run:
     shell: bash
@@ -24,21 +27,21 @@ jobs:
     container: snazzybucket/idris2api:latest
     steps:
       - name: Checkout toml-idr
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           repository: cuddlefishie/toml-idr
       - name: Download already installed dependencies
         uses: actions/download-artifact@master
         with:
-          name: dependencies-for-latest
           path: /root/.idris2/
+          merge-multiple: true
         continue-on-error: true
       - name: Install toml-idr
         run: make install
       - name: Save installed lib
         uses: actions/upload-artifact@master
         with:
-          name: dependencies-for-latest
+          name: built-toml
           path: /root/.idris2/idris2-*/toml*
           if-no-files-found: error
 
@@ -48,21 +51,21 @@ jobs:
     container: snazzybucket/idris2api:latest
     steps:
       - name: Checkout filepath
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           repository: stefan-hoeck/idris2-filepath
       - name: Download already installed dependencies
         uses: actions/download-artifact@master
         with:
-          name: dependencies-for-latest
           path: /root/.idris2/
+          merge-multiple: true
         continue-on-error: true
       - name: Install filepath
         run: idris2 --install filepath.ipkg
       - name: Save installed lib
         uses: actions/upload-artifact@master
         with:
-          name: dependencies-for-latest
+          name: built-filepath
           path: /root/.idris2/idris2-*/filepath*
           if-no-files-found: error
 
@@ -74,13 +77,14 @@ jobs:
     runs-on: ubuntu-latest
     container: snazzybucket/idris2api:latest
     steps:
+
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Download installed dependencies
         uses: actions/download-artifact@master
         with:
-          name: dependencies-for-latest
           path: /root/.idris2/
+          merge-multiple: true
       - name: Install git
         run: |
           apt-get update
@@ -95,7 +99,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Install scheme
         run: |
           sudo apt-get update
@@ -118,7 +122,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Install scheme
         run: |
           sudo apt-get update
@@ -141,7 +145,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Install scheme
         run: |
           sudo apt-get update
@@ -164,7 +168,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Install scheme
         run: |
           sudo apt-get update
