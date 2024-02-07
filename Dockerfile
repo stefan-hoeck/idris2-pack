@@ -1,3 +1,5 @@
+#checkov:skip=CKV_DOCKER_3: we intend to use `root` user
+
 FROM ubuntu:22.04 AS build
 
 SHELL ["/bin/bash", "-c"]
@@ -29,6 +31,9 @@ RUN apt-get update && apt-get install --yes gcc make chezscheme libgmp3-dev git 
 SHELL ["/bin/bash", "-c"]
 
 ENV HOME="/root"
+ENV PACK_DIR="$HOME/.pack"
 
-ENV PATH "/root/.pack/bin:$PATH"
-COPY --from=build $HOME/.pack $HOME/.pack
+ENV PATH "$PACK_DIR/bin:$PATH"
+COPY --from=build $PACK_DIR $PACK_DIR
+
+HEALTHCHECK CMD idris2 --version || exit 1
