@@ -36,4 +36,4 @@ ENV PACK_DIR="$HOME/.pack"
 ENV PATH "$PACK_DIR/bin:$PATH"
 COPY --from=build $PACK_DIR $PACK_DIR
 
-HEALTHCHECK CMD idris2 --version || exit 1
+HEALTHCHECK CMD pack help || exit 1
