@@ -20,11 +20,12 @@ before you continue:
 * A Scheme compiler; either [Chez Scheme](https://cisco.github.io/ChezScheme/)
   (default), or Racket.
   If you install Chez Scheme from source files, building it locally,
-  make sure you run ./configure --threads to build multithreading support in.
+  make sure you run `./configure --threads` to build multithreading support in.
 
-  Note: For Apple M1 user, at the moment, the easiest way to get Chez Scheme
-  is to use its [Racket fork](https://github.com/racket/ChezScheme).
-  See the [Apple M1 User](#apple-m1-user) appendix for more info.
+  Note: On Apple Silicon, Chez Scheme works out-of-the-box as of version 10.0.0,
+  and `brew install chezscheme` should install the latest version. If for some
+  reason you cannot upgrade your Chez version, see the
+  [Apple M1 User](#apple-m1-user) appendix.
 
 * `bash`, `GNU make`, `gcc` or `clang`, `sha256sum`, and `GMP`. On Linux, you probably
   already have these. On macOS and major BSD flavours, you can install them
@@ -150,14 +151,19 @@ You can also add them to your `.zshrc` file.
 
 ## Apple M1 user
 
-Apple Silicon processors (M1, M2, etc.) will be supported in Chez Scheme 10.0. Until
-that is released, we need to build chez scheme from the main branch. When configuring
-the Chez Scheme build, Idris2 requires the `--threads` flag.
+Apple Silicon processors (M1, M2, etc.) are supported as of Chez Scheme 10.0.0,
+released on 2024-02-07, and `brew install chezscheme` should Just Work.
 
-The following instructions can be used to accomplish this.
+If for some reason you cannot upgrade your Chez version, the easiest way to get
+an Apple Silicon compatible install is to use the
+[Racket fork of Chez](https://github.com/racket/ChezScheme).
+When configuring the Chez Scheme build, Idris2 requires threading support to be
+enabled, so make sure to pass the `--threads` flag to Chez's `./configure`.
+
+For example:
 
 ```sh
-git clone https://github.com/cisco/ChezScheme
+git clone 'https://github.com/racket/ChezScheme.git'
 cd ChezScheme
 ./configure --threads
 make
