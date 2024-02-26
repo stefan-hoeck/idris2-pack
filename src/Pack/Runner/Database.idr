@@ -169,23 +169,32 @@ isOutdated : DPair Package PkgStatus -> Bool
 isOutdated (fst ** Outdated) = True
 isOutdated _                 = False
 
+newerSrc : HasIO io => File Abs -> Path Abs -> EitherT PackErr io String
+newerSrc ts src = trim <$> sysRun ["find", src, "-newer", ts]
+
+newerIpkg : HasIO io => File Abs -> File Abs -> EitherT PackErr io String
+newerIpkg ts ipkg =
+  trim <$> sysRun ["find", ipkg.parent, "-name", "\{ipkg.file}", "-newer", ts]
+
 -- tests if the files in a directory are new compare to
 -- a timestamp file, and returns one of two possible results
 -- accordingly
 checkOutdated :
      {auto _ : HasIO io}
   -> (ts         : File Abs)
-  -> (dir        : Path Abs)
+  -> (ipkg       : File Abs)
+  -> (src        : Path Abs)
   -> (deps       : List (DPair Package PkgStatus))
   -> (ifOutdated : a)
   -> (ifUpToDate : a)
   -> EitherT PackErr io a
-checkOutdated ts src deps o u =
+checkOutdated ts ipkg src deps o u =
   if any isOutdated deps
     then pure o
     else do
       True <- fileExists ts | False => pure o
-      ""   <- trim <$> sysRun ["find", src, "-newer", ts] | _ => pure o
+      ""   <- newerSrc ts src | _ => pure o
+      ""   <- newerIpkg ts ipkg | _ => pure o
       pure u
 
 -- checks the status of a library
@@ -205,7 +214,7 @@ libStatus n p d deps = do
     Yes ploc =>
       let ts  := libTimestamp n p
           dir := localSrcDir d
-       in checkOutdated ts dir deps Outdated (Installed b)
+       in checkOutdated ts d.path dir deps Outdated (Installed b)
 
 ||| Generates the `AppStatus` of a package representing an application.
 export
@@ -228,7 +237,7 @@ appStatus n p d deps exe = do
     Yes ploc =>
       let ts  := appTimestamp n p
           src := localSrcDir d
-       in checkOutdated ts src deps Outdated installed
+       in checkOutdated ts d.path src deps Outdated installed
 
 loadIpkg :
      {auto _ : HasIO io}
