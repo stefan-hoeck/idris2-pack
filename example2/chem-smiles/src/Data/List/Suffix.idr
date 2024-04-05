@@ -107,7 +107,7 @@ export
 Transitive (List a) StrictSuffix where
   transitive = trans
 
-infixr 3 ~>
+export infixr 3 ~>
 
 ||| Operator alias for `trans`.
 export %inline

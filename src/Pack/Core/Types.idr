@@ -82,14 +82,14 @@ export %inline
 Cast String (Path Rel) where
   cast = toRelPath
 
-infixl 5 <//>
+export infixl 5 <//>
 
 ||| More flexible version of `</>` (path concatenation).
 export %inline
 (<//>) : Cast a (Path Rel) => Path t -> a -> Path t
 p <//> v = p </> cast v
 
-infixl 5 //>
+export infixl 5 //>
 
 ||| More flexible version of `//>`
 ||| (appending a file path body to an absolute path)
@@ -97,7 +97,7 @@ export %inline
 (//>) : Cast a Body => Path t -> a -> Path t
 p //> v = p /> cast v
 
-infixl 8 <->
+export infixl 8 <->
 
 ||| Concatenate two file path bodies with a hyphen inbetween.
 export

@@ -329,7 +329,7 @@ metaConfigToLogRef = MkLogRef c.logLevel
 --          Updating the Config
 --------------------------------------------------------------------------------
 
-infixl 8 `mergeRight`
+export infixl 8 `mergeRight`
 
 mergeRight : SortedMap k v -> SortedMap k v -> SortedMap k v
 mergeRight = mergeWith (\_,v => v)
@@ -379,7 +379,7 @@ init coll = MkConfig {
   , levels          = empty
   }
 
-infixl 7 `update`
+export infixl 7 `update`
 
 ||| Update a config with optional settings
 export
