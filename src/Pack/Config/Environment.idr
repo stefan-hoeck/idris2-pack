@@ -280,6 +280,17 @@ export %inline
 packCommit : (c : Config) => Maybe Commit
 packCommit = c.packCommit
 
+||| URL of the pack DB repository to use
+export %inline
+packDbRepo : (c : Config) => URL
+packDbRepo = fromMaybe defaultPackDbRepo c.packDbURL
+
+-- should this be ref not commit? so we can use tags and branches?
+||| Commit of pack DB to use
+export %inline
+packDbCommit : (c : Config) => Maybe Commit
+packDbCommit = c.packDbCommit
+
 ||| True if the path to the scheme executable actually points
 ||| to `racket`.
 export

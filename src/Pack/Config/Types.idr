@@ -189,8 +189,11 @@ record Config_ (f : Type -> Type) (c : Type) where
   ||| Custom pack branch to use (default is `main`)
   packCommit   : Maybe c
 
+  ||| Custom pack DB repo
+  packDbURL      : Maybe URL
+
   ||| Custom pack DB URL
-  packDBRef   : Maybe ?  -- contains both URL of git repo, and git ref (tag, branch or commit)
+  packDbRef   : Maybe c
 
   ||| Scheme executable to use
   scheme       : f FilePath
