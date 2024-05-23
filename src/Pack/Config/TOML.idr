@@ -49,6 +49,7 @@ FromTOML UserConfig where
           (toList <$> maybeValAt "idris2.commit" f v)
           (maybeValAt "pack.url" f v)
           (maybeValAt "pack.commit" f v)
+          (maybeValAt "pack.db.url" f v)
           (maybeValAt "idris2.scheme" f v)
           (maybeValAt "idris2.bootstrap" f v)
           (maybeValAt "install.safety-prompt" f v)

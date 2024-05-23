@@ -189,6 +189,9 @@ record Config_ (f : Type -> Type) (c : Type) where
   ||| Custom pack branch to use (default is `main`)
   packCommit   : Maybe c
 
+  ||| Custom pack DB URL
+  packDBRef   : Maybe ?  -- contains both URL of git repo, and git ref (tag, branch or commit)
+
   ||| Scheme executable to use
   scheme       : f FilePath
 
@@ -356,6 +359,7 @@ init coll = MkConfig {
   , allIdrisCommits = []
   , packURL         = Nothing
   , packCommit      = Nothing
+  , packDBRef       = Nothing
   , scheme          = "scheme"
   , bootstrap       = True
   , safetyPrompt    = True
@@ -391,6 +395,7 @@ update ci cm = MkConfig {
   , allIdrisCommits = cm.allIdrisCommits <+> ci.allIdrisCommits
   , packURL         = cm.packURL <|> ci.packURL
   , packCommit      = cm.packCommit <|> ci.packCommit
+  , packDBRef       = cm.packDBRef <|> ci.packDBRef
   , scheme          = fromMaybe ci.scheme cm.scheme
   , bootstrap       = fromMaybe ci.bootstrap cm.bootstrap
   , safetyPrompt    = fromMaybe ci.safetyPrompt cm.safetyPrompt

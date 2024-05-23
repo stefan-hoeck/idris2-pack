@@ -5,8 +5,6 @@ import Pack.Core.Types
 %default total
 
 ||| URL of package collections repository
-|||
-||| TODO: This should become a command line argument
 export
 dbRepo : URL
 dbRepo = "https://github.com/stefan-hoeck/idris2-pack-db"
