@@ -539,7 +539,7 @@ loadDB :
      {auto _ : HasIO io}
   -> {auto _ : TmpDir}
   -> {auto _ : PackDir}
-  -> {auto _ : PackDB}
+  -> {auto dbRepo : PackDBRef}
   -> MetaConfig
   -> EitherT PackErr io MetaDB
 loadDB mc = do
@@ -636,7 +636,7 @@ export covering
 env :
      {auto _   : HasIO io}
   -> {auto pd  : PackDir}
-  -> {auto db  : PackDB}
+  -> {auto db  : PackDBRef}
   -> {auto td  : TmpDir}
   -> {auto ch  : LibCache}
   -> {auto lbf : LineBufferingCmd}
