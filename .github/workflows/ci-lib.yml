@@ -103,7 +103,7 @@ jobs:
       - name: Install scheme
         run: |
           sudo apt-get update
-          sudo apt-get install --yes chezscheme libgmp3-dev nodejs
+          sudo apt-get install --yes chezscheme libgmp3-dev nodejs curl
       - name: Run installation script
         run: |
           make micropack SCHEME=chezscheme
@@ -126,7 +126,7 @@ jobs:
       - name: Install scheme
         run: |
           sudo apt-get update
-          sudo apt-get install --yes racket libgmp3-dev nodejs
+          sudo apt-get install --yes racket libgmp3-dev nodejs curl
       - name: Run installation script
         run: |
           make micropack-racket
@@ -149,7 +149,7 @@ jobs:
       - name: Install scheme
         run: |
           sudo apt-get update
-          sudo apt-get install --yes chezscheme libgmp3-dev nodejs
+          sudo apt-get install --yes chezscheme libgmp3-dev nodejs curl
       - name: Run installation script
         run: |
           echo chezscheme | bash -c ./install.bash
@@ -172,7 +172,7 @@ jobs:
       - name: Install scheme
         run: |
           sudo apt-get update
-          sudo apt-get install --yes racket libgmp3-dev nodejs
+          sudo apt-get install --yes racket libgmp3-dev nodejs curl
       - name: Run installation script
         run: |
           echo racket | bash -c ./install.bash
