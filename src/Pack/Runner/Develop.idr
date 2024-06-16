@@ -155,7 +155,10 @@ typecheck f e =
 ||| Cleanup a local library given as an `.ipkg` file or package name
 export covering %inline
 clean : HasIO io => PkgOrIpkg -> IdrisEnv -> EitherT PackErr io ()
-clean f e = findAndParseLocalIpkg f >>= libPkg [] Build False ["--clean"]
+clean f e = do
+  p <- findAndParseLocalIpkg f
+  libPkg [] Build False ["--clean"] p
+  rmDir (buildPath p)
 
 ||| Build and execute a local `.ipkg` file.
 export covering

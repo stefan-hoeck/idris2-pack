@@ -54,6 +54,7 @@ data Cmd : Type where
   BuildDeps        : Cmd
   Typecheck        : Cmd
   Clean            : Cmd
+  CleanBuild       : Cmd
   Repl             : Cmd
   Exec             : Cmd
 
@@ -101,6 +102,7 @@ commands =
   , BuildDeps
   , Typecheck
   , Clean
+  , CleanBuild
   , Repl
   , Exec
   , Install
@@ -134,6 +136,7 @@ name Build            = "build"
 name BuildDeps        = "install-deps"
 name Typecheck        = "typecheck"
 name Clean            = "clean"
+name CleanBuild       = "cleanbuild"
 name Repl             = "repl"
 name Exec             = "exec"
 name Install          = "install"
@@ -182,8 +185,11 @@ cmdDesc Typecheck        = """
   """
 
 cmdDesc Clean            = """
-  Clean up a local package by invoking `idris2 --clean` on its
-  `.ipkg` file
+  Clean up a local package by removing its build directory.
+  """
+
+cmdDesc CleanBuild       = """
+  Convenience combination of `clean` followed by `build`.
   """
 
 cmdDesc Repl             = """
@@ -402,6 +408,7 @@ cmdInCommands Build            = %search
 cmdInCommands BuildDeps        = %search
 cmdInCommands Typecheck        = %search
 cmdInCommands Clean            = %search
+cmdInCommands CleanBuild       = %search
 cmdInCommands Repl             = %search
 cmdInCommands Exec             = %search
 cmdInCommands Install          = %search
