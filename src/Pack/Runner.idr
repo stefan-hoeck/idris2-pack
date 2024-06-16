@@ -27,6 +27,7 @@ Command Cmd where
   defaultLevel BuildDeps        = Build
   defaultLevel Typecheck        = Build
   defaultLevel Clean            = Build
+  defaultLevel CleanBuild       = Build
   defaultLevel Exec             = Warning
   defaultLevel New              = Build
   defaultLevel Repl             = Warning
@@ -58,6 +59,7 @@ Command Cmd where
   ArgTypes BuildDeps        = [PkgOrIpkg]
   ArgTypes Typecheck        = [PkgOrIpkg]
   ArgTypes Clean            = [PkgOrIpkg]
+  ArgTypes CleanBuild       = [PkgOrIpkg]
   ArgTypes Repl             = [Maybe (File Abs)]
   ArgTypes Exec             = [File Abs, CmdArgList]
   ArgTypes Install          = [List PkgName]
@@ -100,6 +102,7 @@ Command Cmd where
   readArgs BuildDeps        = %search
   readArgs Typecheck        = %search
   readArgs Clean            = %search
+  readArgs CleanBuild       = %search
   readArgs Repl             = %search
   readArgs Exec             = %search
   readArgs Install          = %search
@@ -156,6 +159,7 @@ runCmd = do
       (BuildDeps ** [p])        => idrisEnv mc fetch >>= buildDeps p
       (Typecheck ** [p])        => idrisEnv mc fetch >>= typecheck p
       (Clean ** [p])            => idrisEnv mc fetch >>= clean p
+      (CleanBuild ** [p])       => idrisEnv mc fetch >>= \e => clean p e >> build p e
       (PrintHelp ** [c])        => putStrLn (usageDesc c)
       (Install ** [ps])         => idrisEnv mc fetch >>= \e => installLibs ps
       (Remove ** [ps])          => idrisEnv mc fetch >>= \e => removeLibs ps
