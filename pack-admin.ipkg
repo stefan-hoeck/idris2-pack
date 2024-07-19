@@ -6,9 +6,9 @@ authors = "Stefan Höck"
 
 brief   = "Administration of pack's package collections"
 
-langversion >= 0.5.1
+langversion >= 0.6.0
 
-depends = base >= 0.5.1
+depends = base >= 0.6.0
         , elab-util
         , filepath
         , getopts
