@@ -97,6 +97,15 @@ make install-with-src-libs IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH" IDRIS2
 make install-with-src-api IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH" IDRIS2_CG="$CG"
 popd
 
+# Install getopts
+
+GETOPTS_COMMIT=$(sed -ne '/^\[db.getopts\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p;}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
+git clone https://github.com/idris-community/idris2-getopts.git "$PACK_DIR/clones/idris2-getopts"
+pushd "$PACK_DIR/clones/idris2-getopts"
+git checkout "$GETOPTS_COMMIT"
+"$BOOT_PATH" --install getopts.ipkg
+popd
+
 # Install elab-util
 
 ELAB_UTIL_COMMIT=$(sed -ne '/^\[db.elab-util\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p;}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
