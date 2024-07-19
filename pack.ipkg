@@ -18,6 +18,7 @@ depends = base >= 0.5.1
         , idris2
         , toml
         , filepath
+        , elab-util
 
 modules = Pack.CmdLn
         , Pack.CmdLn.Completion

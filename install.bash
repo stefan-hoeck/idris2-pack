@@ -97,6 +97,15 @@ make install-with-src-libs IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH" IDRIS2
 make install-with-src-api IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH" IDRIS2_CG="$CG"
 popd
 
+# Install elab-util
+
+ELAB_UTIL_COMMIT=$(sed -ne '/^\[db.elab-util\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p;}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
+git clone https://github.com/stefan-hoeck/idris2-elab-util.git "$PACK_DIR/clones/idris2-elab-util"
+pushd "$PACK_DIR/clones/idris2-elab-util"
+git checkout "$ELAB_UTIL_COMMIT"
+"$BOOT_PATH" --install elab-util.ipkg
+popd
+
 # Install filepath
 
 FILEPATH_COMMIT=$(sed -ne '/^\[db.filepath\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p;}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
@@ -215,6 +224,7 @@ EOF
 # Cleanup
 
 rm -rf "$PACK_DIR/clones"
+rm -rf "$PREFIX_PATH/idris2-*/elab-util-*"
 rm -rf "$PREFIX_PATH/idris2-*/filepath-*"
 rm -rf "$PREFIX_PATH/idris2-*/toml-*"
 
