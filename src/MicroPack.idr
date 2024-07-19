@@ -20,31 +20,33 @@ microInit :  (scheme : String)
           ->  MetaConfig
 microInit scheme db =
   MkConfig
-    { collection    = db
-    , idrisURL      = Nothing
-    , idrisCommit   = Nothing
-    , packURL       = Nothing
-    , packCommit    = Nothing
-    , scheme        = fromString scheme
-    , bootstrap     = True
-    , safetyPrompt  = False
-    , gcPrompt      = False
-    , warnDepends   = True
-    , whitelist     = []
-    , withSrc       = True
-    , withDocs      = False
-    , useKatla      = False
-    , withIpkg      = None
-    , rlwrap        = DoNotUseRlwrap
-    , autoLibs      = []
-    , autoApps      = []
-    , autoLoad      = NoPkgs
-    , custom        = empty
-    , queryType     = NameOnly
-    , logLevel      = Build
-    , codegen       = Default
-    , output        = "_tmppack"
-    , levels        = empty
+    { collection        = db
+    , idrisURL          = Nothing
+    , idrisCommit       = Nothing
+    , allIdrisCommits   = []
+    , packURL           = Nothing
+    , packCommit        = Nothing
+    , scheme            = fromString scheme
+    , bootstrap         = True
+    , safetyPrompt      = False
+    , gcPrompt          = False
+    , warnDepends       = True
+    , whitelist         = []
+    , withSrc           = True
+    , withDocs          = False
+    , useKatla          = False
+    , withIpkg          = None
+    , rlwrap            = DoNotUseRlwrap
+    , extraArgs         = NoExtraArgs
+    , autoLibs          = []
+    , autoApps          = []
+    , autoLoad          = NoPkgs
+    , custom            = empty
+    , queryType         = NameOnly
+    , logLevel          = Build
+    , codegen           = Default
+    , output            = "_tmppack"
+    , levels            = empty
     }
 
 covering
