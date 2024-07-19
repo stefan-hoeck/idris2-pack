@@ -155,15 +155,6 @@ git checkout "$FILEPATH_COMMIT"
 "$BOOT_PATH" --install filepath.ipkg
 popd
 
-# Install toml-idr
-
-TOML_COMMIT=$(sed -ne '/^\[db.toml\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p;}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
-git clone https://github.com/cuddlefishie/toml-idr "$PACK_DIR/clones/toml-idr"
-pushd "$PACK_DIR/clones/toml-idr"
-git checkout "$TOML_COMMIT"
-"$BOOT_PATH" --install toml.ipkg
-popd
-
 # Install pack
 
 git clone https://github.com/stefan-hoeck/idris2-pack.git "$PACK_DIR/clones/idris2-pack"
@@ -266,9 +257,9 @@ EOF
 rm -rf "$PACK_DIR/clones"
 rm -rf "$PREFIX_PATH/idris2-*/elab-util-*"
 rm -rf "$PREFIX_PATH/idris2-*/algebra-*"
+rm -rf "$PREFIX_PATH/idris2-*/getopts-*"
 rm -rf "$PREFIX_PATH/idris2-*/refined-*"
 rm -rf "$PREFIX_PATH/idris2-*/parser-*"
 rm -rf "$PREFIX_PATH/idris2-*/filepath-*"
-rm -rf "$PREFIX_PATH/idris2-*/toml-*"
 
 "$PACK_DIR/bin/pack" info
