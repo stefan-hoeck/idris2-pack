@@ -20,79 +20,21 @@ defaults:
     shell: bash
 
 jobs:
-
-  toml:
-    name: Build toml-idr with Idris latest
-    runs-on: ubuntu-latest
-    container: snazzybucket/idris2api:latest
-    steps:
-      - name: Checkout toml-idr
-        uses: actions/checkout@v4
-        with:
-          repository: cuddlefishie/toml-idr
-      - name: Download already installed dependencies
-        uses: actions/download-artifact@master
-        with:
-          path: /root/.idris2/
-          merge-multiple: true
-        continue-on-error: true
-      - name: Install toml-idr
-        run: make install
-      - name: Save installed lib
-        uses: actions/upload-artifact@master
-        with:
-          name: built-toml
-          path: /root/.idris2/idris2-*/toml*
-          if-no-files-found: error
-
-  filepath:
-    name: Build filepath with Idris latest
-    runs-on: ubuntu-latest
-    container: snazzybucket/idris2api:latest
-    steps:
-      - name: Checkout filepath
-        uses: actions/checkout@v4
-        with:
-          repository: stefan-hoeck/idris2-filepath
-      - name: Download already installed dependencies
-        uses: actions/download-artifact@master
-        with:
-          path: /root/.idris2/
-          merge-multiple: true
-        continue-on-error: true
-      - name: Install filepath
-        run: idris2 --install filepath.ipkg
-      - name: Save installed lib
-        uses: actions/upload-artifact@master
-        with:
-          name: built-filepath
-          path: /root/.idris2/idris2-*/filepath*
-          if-no-files-found: error
-
   build:
-    name: Build the lib with latest
-    needs:
-      - toml
-      - filepath
+    name: Build pack with Idris2 latest
     runs-on: ubuntu-latest
-    container: snazzybucket/idris2api:latest
+    env:
+      PACK_DIR: /root/.pack
+    strategy:
+      fail-fast: false
+    container: ghcr.io/stefan-hoeck/idris2-pack:latest
     steps:
-
       - name: Checkout
-        uses: actions/checkout@v4
-      - name: Download installed dependencies
-        uses: actions/download-artifact@master
-        with:
-          path: /root/.idris2/
-          merge-multiple: true
-      - name: Install git
-        run: |
-          apt-get update
-          apt-get install --yes git
+        uses: actions/checkout@v2
       - name: Build lib
-        run: idris2 --build pack.ipkg
+        run: pack typecheck pack.ipkg
       - name: Build admin
-        run: idris2 --build pack-admin.ipkg
+        run: pack typecheck pack-admin.ipkg
 
   micropack:
     name: Bootstrap with micropack

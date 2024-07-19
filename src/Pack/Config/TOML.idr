@@ -7,36 +7,41 @@ import Pack.Config.Types
 import Pack.Core
 import Pack.Database
 
+import Text.TOML
+
 %default total
 
 export
 FromTOML Autoload where
   fromTOML dir v = case v of
-    VString "none"      => Right NoPkgs
-    VString "installed" => Right Installed
-    VString "autolibs"  => Right AutoLibs
-    _                   => AutoPkgs <$> fromTOML dir v
+    TStr "none"      => Right NoPkgs
+    TStr "installed" => Right Installed
+    TStr "autolibs"  => Right AutoLibs
+    _                => AutoPkgs <$> fromTOML dir v
 
 export
 FromTOML Codegen where
   fromTOML = tmap Types.fromString
 
-extractString : (errMsg : String) -> (v : Value) -> Either TOMLErr String
-extractString _ (VString s) = Right s
+extractString : (errMsg : String) -> (v : TomlValue) -> Either TOMLErr String
+extractString _ (TStr s) = Right s
 extractString errMsg _ = Left $ WrongType [] errMsg
 
 export
 FromTOML RlwrapConfig where
-  fromTOML _ (VBoolean x)  = Right $ if x then UseRlwrap [] else DoNotUseRlwrap
-  fromTOML _ (VString str) = Right $ UseRlwrap [NoEscape str]
-  fromTOML _ (VArray xs)   =
-    map (UseRlwrap . fromStrList) $ traverse (extractString "array of strings") xs
+  fromTOML _ (TBool x)   = Right $ if x then UseRlwrap [] else DoNotUseRlwrap
+  fromTOML _ (TStr str)  = Right $ UseRlwrap [NoEscape str]
+  fromTOML _ (TArr _ xs) =
+    map (UseRlwrap . fromStrList) $
+      traverse (extractString "array of strings") (xs <>> [])
   fromTOML _ _ = Left $ WrongType [] "boolean, string or array of strings"
 
 export
 FromTOML ExtraIdris2ArgsConfig where
-  fromTOML _ (VString str) = Right $ PassExtraArgs [NoEscape str]
-  fromTOML _ (VArray xs) = PassExtraArgs . fromStrList <$> traverse (extractString "array of strings") xs
+  fromTOML _ (TStr str)  = Right $ PassExtraArgs [NoEscape str]
+  fromTOML _ (TArr _ xs) =
+    PassExtraArgs . fromStrList <$>
+      traverse (extractString "array of strings") (xs <>> [])
   fromTOML _ _ = Left $ WrongType [] "string or array of strings"
 
 export

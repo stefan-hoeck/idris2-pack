@@ -1,6 +1,7 @@
 module Pack.Runner.Develop
 
 import Data.IORef
+import Data.SortedMap
 import Idris.Package.Types
 import Pack.Config
 import Pack.Core

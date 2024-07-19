@@ -6,13 +6,14 @@ authors = "Stefan Höck"
 
 brief   = "Minimalistic installer for pack"
 
-langversion >= 0.5.1
+langversion >= 0.6.0
 
-depends = base >= 0.5.1
-        , contrib
-        , idris2
-        , toml
+depends = base >= 0.6.0
+        , elab-util
         , filepath
+        , getopts
+        , idris2
+        , parser-toml
 
 main       = MicroPack
 
