@@ -2,6 +2,7 @@ module Pack.Runner
 
 import Data.List.Quantifiers
 import Data.IORef
+import Data.SortedMap
 import Pack.CmdLn
 import Pack.CmdLn.Completion
 import Pack.Config

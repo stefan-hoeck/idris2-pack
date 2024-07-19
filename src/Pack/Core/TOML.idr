@@ -2,9 +2,11 @@ module Pack.Core.TOML
 
 import Data.SortedMap as M
 import Idris.Package.Types
-import public Language.TOML
 import Pack.Core.IO
 import Pack.Core.Types
+import Text.FC
+import Text.ParseError
+import Text.TOML
 
 %default total
 
@@ -38,8 +40,8 @@ TOMLKey String where fromKey = Right
 ||| (for instance, the path to a local package) to absolute ones.
 public export
 interface FromTOML a where
-  ||| Tries to convert a `Value` to a value of type `a`.
-  fromTOML : File Abs -> (val  : Value) -> Either TOMLErr a
+  ||| Tries to convert a `TomlValue` to a value of type `a`.
+  fromTOML : File Abs -> (val  : TomlValue) -> Either TOMLErr a
 
 --------------------------------------------------------------------------------
 --          Utilities
@@ -48,7 +50,7 @@ interface FromTOML a where
 ||| Read a value of type `b` by reading a value of
 ||| type `a` and converting it with the given function.
 export
-tmap : FromTOML a => (a -> b) -> File Abs -> Value -> Either TOMLErr b
+tmap : FromTOML a => (a -> b) -> File Abs -> TomlValue -> Either TOMLErr b
 tmap f p = map f . fromTOML p
 
 ||| Read a value of type `b` by refining a value of
@@ -58,11 +60,11 @@ trefine :
      {auto _ : FromTOML a}
   -> (a -> Either TOMLErr b)
   -> File Abs
-  -> Value
+  -> TomlValue
   -> Either TOMLErr b
 trefine f p v = fromTOML p v >>= f
 
-||| Try to extract a value from a toml `Value`.
+||| Try to extract a value from a toml `TomlValue`.
 |||
 ||| @ get   : Tries to convert the value found at the given `path` to a values of
 |||           the result type.
@@ -75,17 +77,17 @@ trefine f p v = fromTOML p v >>= f
 ||| @ value : The TOML value we start with.
 export
 valAt' :
-     (get  : Value -> Either TOMLErr a)
+     (get  : TomlValue -> Either TOMLErr a)
   -> (path : String)
   -> (dflt : Maybe a)
-  -> (val  : Value)
+  -> (val  : TomlValue)
   -> Either TOMLErr a
 valAt' get path dflt = go (forget $ split ('.' ==) path)
 
   where
-    go : List String -> Value -> Either TOMLErr a
+    go : List String -> TomlValue -> Either TOMLErr a
     go []        v          = get v
-    go (x :: xs) (VTable y) = case lookup x y of
+    go (x :: xs) (TTbl _ y) = case lookup x y of
       Nothing => case dflt of
         Nothing => Left $ MissingKey [x]
         Just a  => Right a
@@ -100,7 +102,7 @@ valAt :
      {auto _ : FromTOML a}
   -> (path : String)
   -> File Abs
-  -> (val : Value)
+  -> (val : TomlValue)
   -> Either TOMLErr a
 valAt path f = valAt' (fromTOML f) path Nothing
 
@@ -113,7 +115,7 @@ optValAt :
   -> (path : String)
   -> File Abs
   -> (dflt : a)
-  -> (val  : Value)
+  -> (val  : TomlValue)
   -> Either TOMLErr a
 optValAt path f = valAt' (fromTOML f) path . Just
 
@@ -122,9 +124,9 @@ optValAt path f = valAt' (fromTOML f) path . Just
 ||| key names. See also `valAt'`.
 export
 maybeValAt' :
-     (f    : Value -> Either TOMLErr a)
+     (f    : TomlValue -> Either TOMLErr a)
   -> (path : String)
-  -> (val  : Value)
+  -> (val  : TomlValue)
   -> Either TOMLErr (Maybe a)
 maybeValAt' f path = valAt' (map Just . f) path (Just Nothing)
 
@@ -136,7 +138,7 @@ maybeValAt :
      {auto _ : FromTOML a}
   -> (path : String)
   -> File Abs
-  -> (val  : Value)
+  -> (val  : TomlValue)
   -> Either TOMLErr (Maybe a)
 maybeValAt p f = maybeValAt' (fromTOML f) p
 
@@ -146,8 +148,8 @@ maybeValAt p f = maybeValAt' (fromTOML f) p
 
 export
 FromTOML String where
-  fromTOML _ (VString s) = Right s
-  fromTOML _ _           = Left $ WrongType [] "String"
+  fromTOML _ (TStr s) = Right s
+  fromTOML _ _        = Left $ WrongType [] "String"
 
 export
 FromTOML PkgName where fromTOML = tmap MkPkgName
@@ -191,12 +193,12 @@ FromTOML DBName where fromTOML = trefine fromKey
 
 export
 FromTOML Bool where
-  fromTOML _ (VBoolean b) = Right b
-  fromTOML _ _            = Left $ WrongType [] "Bool"
+  fromTOML _ (TBool b) = Right b
+  fromTOML _ _         = Left $ WrongType [] "Bool"
 
 export
 FromTOML a => FromTOML (List a) where
-  fromTOML f (VArray vs) = traverse (fromTOML f) vs
+  fromTOML f (TArr _ vs) = traverse (fromTOML f) (vs <>> [])
   fromTOML _ _           = Left $ WrongType [] "Array"
 
 readVersion : String -> Either TOMLErr PkgVersion
@@ -210,14 +212,14 @@ FromTOML PkgVersion where
 
 keyVal :
      {auto _ : TOMLKey k}
-  -> (Value -> Either TOMLErr v)
-  -> (String,Value)
+  -> (TomlValue -> Either TOMLErr v)
+  -> (String,TomlValue)
   -> Either TOMLErr (k,v)
 keyVal f (x,y) = prefixKey x [| MkPair (fromKey x) (f y) |]
 
 export
 TOMLKey k => FromTOML v => FromTOML (SortedMap k v) where
-  fromTOML f (VTable m) =
+  fromTOML f (TTbl _ m) =
     M.fromList <$> traverse (keyVal $ fromTOML f) (M.toList m)
   fromTOML _ _          = Left $ WrongType [] "Table"
 
@@ -235,12 +237,12 @@ FromTOML (File Abs) where
 
 ||| Reads a file and converts its content to a TOML value.
 export covering
-readTOML :  HasIO io => File Abs -> EitherT PackErr io Value
+readTOML :  HasIO io => File Abs -> EitherT PackErr io TomlValue
 readTOML file = do
   str <- read file
-  case parseTOML str of
-    Right v  => pure (VTable v)
-    Left err => throwE $ TOMLParse file (show err)
+  case parse (FileSrc "\{file}") str of
+    Right v       => pure v
+    Left (fc,err) => throwE $ TOMLParse (printParseError str fc err)
 
 ||| Reads a file, converts its content to a TOML value, and
 ||| extracts an Idris value from this.
@@ -266,5 +268,5 @@ readOptionalFromTOML :
   -> EitherT PackErr io a
 readOptionalFromTOML a f = do
   True <- fileExists f
-    | False => liftEither (mapFst (TOMLFile f) $ fromTOML f (VTable empty))
+    | False => liftEither (mapFst (TOMLFile f) $ fromTOML f (TTbl None empty))
   readFromTOML a f

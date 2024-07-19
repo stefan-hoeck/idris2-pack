@@ -3,7 +3,6 @@ module Pack.Runner.New
 import Data.List1
 import Data.Maybe
 import Data.String
-import Data.String.Extra
 import Idris.Package.Types
 import Pack.Config
 import Pack.Core

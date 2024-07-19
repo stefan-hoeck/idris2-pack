@@ -106,6 +106,37 @@ git checkout "$ELAB_UTIL_COMMIT"
 "$BOOT_PATH" --install elab-util.ipkg
 popd
 
+# Install algebra
+
+ALGEBRA_COMMIT=$(sed -ne '/^\[db.algebra\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p;}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
+git clone https://github.com/stefan-hoeck/idris2-algebra.git "$PACK_DIR/clones/idris2-algebra"
+pushd "$PACK_DIR/clones/idris2-algebra"
+git checkout "$ALGEBRA_COMMIT"
+"$BOOT_PATH" --install algebra.ipkg
+popd
+
+# Install refined
+
+REFINED_COMMIT=$(sed -ne '/^\[db.refined\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p;}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
+git clone https://github.com/stefan-hoeck/idris2-refined.git "$PACK_DIR/clones/idris2-refined"
+pushd "$PACK_DIR/clones/idris2-refined"
+git checkout "$REFINED_COMMIT"
+"$BOOT_PATH" --install refined.ipkg
+popd
+
+# Install parser and parser-toml
+
+PARSER_COMMIT=$(sed -ne '/^\[db.parser\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p;}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
+git clone https://github.com/stefan-hoeck/idris2-parser.git "$PACK_DIR/clones/idris2-parser"
+pushd "$PACK_DIR/clones/idris2-parser"
+git checkout "$PARSER_COMMIT"
+"$BOOT_PATH" --install parser.ipkg
+popd
+
+pushd "$PACK_DIR/clones/idris2-parser/toml"
+"$BOOT_PATH" --install parser-toml.ipkg
+popd
+
 # Install filepath
 
 FILEPATH_COMMIT=$(sed -ne '/^\[db.filepath\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p;}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
@@ -225,6 +256,9 @@ EOF
 
 rm -rf "$PACK_DIR/clones"
 rm -rf "$PREFIX_PATH/idris2-*/elab-util-*"
+rm -rf "$PREFIX_PATH/idris2-*/algebra-*"
+rm -rf "$PREFIX_PATH/idris2-*/refined-*"
+rm -rf "$PREFIX_PATH/idris2-*/parser-*"
 rm -rf "$PREFIX_PATH/idris2-*/filepath-*"
 rm -rf "$PREFIX_PATH/idris2-*/toml-*"
 

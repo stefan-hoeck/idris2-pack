@@ -14,11 +14,11 @@ prebuild = "bash version.sh"
 postbuild = "bash restore.sh"
 
 depends = base >= 0.5.1
-        , contrib
-        , idris2
-        , toml
-        , filepath
         , elab-util
+        , filepath
+        , getopts
+        , idris2
+        , parser-toml
 
 modules = Pack.CmdLn
         , Pack.CmdLn.Completion

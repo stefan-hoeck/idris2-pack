@@ -3,6 +3,7 @@ module Pack.Runner.Install
 import Core.FC
 import Data.IORef
 import Data.Maybe
+import Data.SortedMap
 import Idris.Package.Types
 import Pack.Config
 import Pack.Core

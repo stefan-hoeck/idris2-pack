@@ -1,10 +1,11 @@
 module Pack.CmdLn.Opts
 
+import Data.SortedMap
 import Pack.CmdLn.Types
 import Pack.Core
 import Pack.Database
 import Pack.Config.Types
-import System.Console.GetOpt
+import System.GetOpts
 
 %default total
 

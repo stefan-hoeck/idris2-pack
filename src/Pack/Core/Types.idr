@@ -772,7 +772,7 @@ data PackErr : Type where
   TOMLFile :  (file : File Abs) -> (err : TOMLErr) -> PackErr
 
   ||| Error in a toml file.
-  TOMLParse : (file : File Abs) -> (err : String) -> PackErr
+  TOMLParse : (err : String) -> PackErr
 
   ||| Number of failures when building packages.
   BuildFailures : Nat -> PackErr
@@ -899,7 +899,7 @@ printErr (DirExists path) = """
 printErr (TOMLFile file err) =
   "Error in file \{file}: \{printTOMLErr err}."
 
-printErr (TOMLParse file err) = "Error in file \{file}: \{err}."
+printErr (TOMLParse err) = err
 
 printErr (BuildFailures 1) = "1 package failed to build."
 

@@ -3,6 +3,7 @@ module Pack.Database.TOML
 import Data.SortedMap
 import Idris.Package.Types
 import Libraries.Utils.Path
+import Text.TOML
 import Pack.Core.TOML
 import Pack.Core.Types
 import Pack.Database.Types
@@ -12,7 +13,7 @@ import Pack.Database.Types
 export
 FromTOML MetaCommit where fromTOML = tmap fromString
 
-git : FromTOML c => File Abs -> Value -> Either TOMLErr (Package_ c)
+git : FromTOML c => File Abs -> TomlValue -> Either TOMLErr (Package_ c)
 git f v =
   [| Git
        (valAt "url" f v)
@@ -22,7 +23,7 @@ git f v =
        (maybeValAt "test" f v)
   |]
 
-local : File Abs -> Value -> Either TOMLErr (Package_ c)
+local : File Abs -> TomlValue -> Either TOMLErr (Package_ c)
 local f v =
   [| Local
        (valAt "path" f v)
@@ -31,7 +32,7 @@ local f v =
        (maybeValAt "test" f v)
   |]
 
-package : FromTOML c => File Abs -> Value -> Either TOMLErr (Package_ c)
+package : FromTOML c => File Abs -> TomlValue -> Either TOMLErr (Package_ c)
 package f v = valAt {a = String} "type" f v >>=
   \case
     "git"    => git f v
