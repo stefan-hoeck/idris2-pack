@@ -20,6 +20,7 @@ defaults:
     shell: bash
 
 jobs:
+  build:
     name: Build pack with Idris2 latest
     runs-on: ubuntu-latest
     env:
