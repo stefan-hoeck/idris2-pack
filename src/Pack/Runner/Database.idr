@@ -114,6 +114,26 @@ findAndParseLocalIpkg (Pkg n)  =
     Just (Local dir ipkg _ _) => let p = dir </> ipkg in parseLibIpkg p p
     Just _                    => throwE (NotLocalPkg n)
 
+||| Looks at the current directory and tries to find the only `.ipkg` file,
+||| or fails with `AmbigIpkg` if it didn't manage to do so.
+findTheOnlyIpkg :
+     {auto _ : HasIO io}
+  -> {auto _ : CurDir}
+  -> EitherT PackErr io PkgOrIpkg
+findTheOnlyIpkg = do
+  [ipkg] <- filter isIpkgBody <$> entries curDir
+    | lfs => throwE (BuildMany lfs)
+  pure $ Ipkg $ curDir /> ipkg
+
+||| Returns present package, or else tries to find the only loca `.ipkg` file.
+export
+refinePkg :
+     {auto _ : HasIO io}
+  -> {auto _ : CurDir}
+  -> Maybe PkgOrIpkg
+  -> EitherT PackErr io PkgOrIpkg
+refinePkg (Just p) = pure p
+refinePkg Nothing  = findTheOnlyIpkg
 
 ||| Parse an `.ipkg` file representing an application
 ||| and check if it has no custom build hooks and does not produce

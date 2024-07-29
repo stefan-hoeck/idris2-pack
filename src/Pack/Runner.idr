@@ -56,18 +56,18 @@ Command Cmd where
 
   desc = cmdDesc
 
-  ArgTypes Build            = [PkgOrIpkg]
-  ArgTypes BuildDeps        = [PkgOrIpkg]
-  ArgTypes Typecheck        = [PkgOrIpkg]
-  ArgTypes Clean            = [PkgOrIpkg]
-  ArgTypes CleanBuild       = [PkgOrIpkg]
+  ArgTypes Build            = [Maybe PkgOrIpkg]
+  ArgTypes BuildDeps        = [Maybe PkgOrIpkg]
+  ArgTypes Typecheck        = [Maybe PkgOrIpkg]
+  ArgTypes Clean            = [Maybe PkgOrIpkg]
+  ArgTypes CleanBuild       = [Maybe PkgOrIpkg]
   ArgTypes Repl             = [Maybe (File Abs)]
   ArgTypes Exec             = [File Abs, CmdArgList]
   ArgTypes Install          = [List PkgName]
   ArgTypes InstallApp       = [List PkgName]
   ArgTypes Remove           = [List PkgName]
   ArgTypes RemoveApp        = [List PkgName]
-  ArgTypes Run              = [PkgOrIpkg, CmdArgList]
+  ArgTypes Run              = [Maybe PkgOrIpkg, CmdArgList]
   ArgTypes Test             = [PkgName, CmdArgList]
   ArgTypes New              = [PkgType, Body]
   ArgTypes Update           = []
@@ -151,15 +151,17 @@ runCmd = do
       (Fuzzy ** [MkFQ m s])     => idrisEnv mc fetch >>= fuzzy m s
       (UpdateDB ** [])          => updateDB
       (CollectGarbage ** [])    => env mc fetch >>= garbageCollector
-      (Run ** [p,args])         => idrisEnv mc fetch >>= runApp p args
+      (Run ** [p,args])         => idrisEnv mc fetch >>= runApp !(refinePkg p) args
       (Test ** [p,args])        => idrisEnv mc fetch >>= runTest p args
       (Exec ** [p,args])        => idrisEnv mc fetch >>= exec p args
       (Repl ** [p])             => idrisEnv mc fetch >>= idrisRepl p
-      (Build ** [p])            => idrisEnv mc fetch >>= build p
-      (BuildDeps ** [p])        => idrisEnv mc fetch >>= buildDeps p
-      (Typecheck ** [p])        => idrisEnv mc fetch >>= typecheck p
-      (Clean ** [p])            => idrisEnv mc fetch >>= clean p
-      (CleanBuild ** [p])       => idrisEnv mc fetch >>= \e => clean p e >> build p e
+      (Build ** [p])            => idrisEnv mc fetch >>= build !(refinePkg p)
+      (BuildDeps ** [p])        => idrisEnv mc fetch >>= buildDeps !(refinePkg p)
+      (Typecheck ** [p])        => idrisEnv mc fetch >>= typecheck !(refinePkg p)
+      (Clean ** [p])            => idrisEnv mc fetch >>= clean !(refinePkg p)
+      (CleanBuild ** [p])       => do p <- refinePkg p
+                                      e <- idrisEnv mc fetch
+                                      clean p e >> build p e
       (PrintHelp ** [c])        => putStrLn (usageDesc c)
       (Install ** [ps])         => idrisEnv mc fetch >>= \e => installLibs ps
       (Remove ** [ps])          => idrisEnv mc fetch >>= \e => removeLibs ps
