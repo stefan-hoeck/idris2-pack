@@ -151,8 +151,7 @@ runCmd = do
       (Fuzzy ** [MkFQ m s])     => idrisEnv mc fetch >>= fuzzy m s
       (UpdateDB ** [])          => updateDB
       (CollectGarbage ** [])    => env mc fetch >>= garbageCollector
-      (Run ** [Pkg p,args])     => idrisEnv mc fetch >>= execApp p args
-      (Run ** [Ipkg p,args])    => idrisEnv mc fetch >>= runIpkg p args
+      (Run ** [p,args])         => idrisEnv mc fetch >>= runApp p args
       (Test ** [p,args])        => idrisEnv mc fetch >>= runTest p args
       (Exec ** [p,args])        => idrisEnv mc fetch >>= exec p args
       (Repl ** [p])             => idrisEnv mc fetch >>= idrisRepl p
