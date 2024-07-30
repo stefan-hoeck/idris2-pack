@@ -210,3 +210,13 @@ execApp p args e = do
   case ipkgCodeGen ra.desc.desc of
     Node => sys $ ["node", pkgExec ra.name ra.pkg ra.exec] ++ args
     _    => sys $ [pkgExec ra.name ra.pkg ra.exec] ++ args
+
+export covering
+runApp :
+     {auto _ : HasIO io}
+  -> PkgOrIpkg
+  -> (args : CmdArgList)
+  -> IdrisEnv
+  -> EitherT PackErr io ()
+runApp (Pkg p)  = execApp p
+runApp (Ipkg p) = runIpkg p

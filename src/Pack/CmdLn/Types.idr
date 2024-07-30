@@ -172,20 +172,24 @@ export
 cmdDesc : Cmd -> String
 cmdDesc Build            = """
   Build a local package given as an `.ipkg` file or package name.
+  When no package is given, try to find the only one in the current directory.
   This will also install the package's dependencies.
   """
 
 cmdDesc BuildDeps        = """
   Install the dependencies of a local package given as an `.ipkg` file
-  or package name.
+  or package name. When no package is given, try to find the only one
+  in the current directory.
   """
 
 cmdDesc Typecheck        = """
   Typecheck a local package given as an `.ipkg` file or package name.
+  When no package is given, try to find the only one in the current directory.
   """
 
 cmdDesc Clean            = """
   Clean up a local package by removing its build directory.
+  When no package is given, try to find the only one in the current directory.
   """
 
 cmdDesc CleanBuild       = """
@@ -229,6 +233,8 @@ cmdDesc RemoveApp        = "Uninstall the given applications."
 cmdDesc Run              = """
   Run an application from the package collection or a local `.ipkg`
   file passing it the given command line arguments.
+  When no package and no arguments are given, try to find the only one
+  in the current directory.
 
   Note: This will install remote apps before running them without
   generating an entry in `$PACK_DIR/bin`.

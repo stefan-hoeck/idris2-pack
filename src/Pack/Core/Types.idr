@@ -752,7 +752,7 @@ data PackErr : Type where
 
   ||| Trying to run zero or more than one local package
   ||| (or something that isn't a local package).
-  BuildMany : PackErr
+  BuildMany : List Body -> PackErr
 
   ||| Unknown pack command
   UnknownCommand : String -> (usage : String) -> PackErr
@@ -886,8 +886,12 @@ printErr (InvalidCmdArgs cmd args usage) =
   \{usage}
   """
 
-printErr BuildMany =
-  "Can only build or typecheck a single Idris2 package given as an `.ipkg` file."
+printErr (BuildMany []) = "No local `.ipkg` files found."
+printErr (BuildMany fs@(_::_)) = """
+  Ambiguous `.ipkg` files:
+  \{joinBy "\n" $ ("- " ++) . interpolate <$> fs}
+  Please choose only one.
+  """
 
 printErr (NoFilePath s) = "Not a file path : \{s}"
 
