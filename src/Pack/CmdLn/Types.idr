@@ -92,6 +92,9 @@ data Cmd : Type where
   -- Help
   PrintHelp        : Cmd
 
+  -- Uninstall
+  Uninstall        : Cmd
+
 ||| List of all available commands.
 |||
 ||| `Pack.CmdLn.Types.cmdInCommands` proofs that none was forgotten.
@@ -127,6 +130,7 @@ commands =
   , Completion
   , CompletionScript
   , PrintHelp
+  , Uninstall
   ]
 
 ||| Name to use at the command-line for running a pack command
@@ -161,6 +165,7 @@ name Fuzzy            = "fuzzy"
 name Completion       = "completion"
 name CompletionScript = "completion-script"
 name PrintHelp        = "help"
+name Uninstall        = "uninstall"
 
 ||| List pairing a command with its name used for parsing commands.
 public export
@@ -399,6 +404,12 @@ cmdDesc PrintHelp        = """
   \{unlines $ map (indent 2 . fst) namesAndCommands}
   """
 
+cmdDesc Uninstall        = """
+  Uninstalls pack.
+
+  Deletes the $PACK_DIR directory.
+"""
+
 export
 Arg Cmd where
   argDesc_ = "<cmd>"
@@ -439,3 +450,4 @@ cmdInCommands Fuzzy            = %search
 cmdInCommands Completion       = %search
 cmdInCommands CompletionScript = %search
 cmdInCommands PrintHelp        = %search
+cmdInCommands Uninstall        = %search

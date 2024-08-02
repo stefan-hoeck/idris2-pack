@@ -139,6 +139,7 @@ opts x "clean"            = prefixOnlyIfNonEmpty x <$> ipkgFiles
 opts x "typecheck"        = prefixOnlyIfNonEmpty x <$> ipkgFiles
 opts x "new"              = prefixOnlyIfNonEmpty x <$> pure packageTypes
 opts x "help"             = prefixOnlyIfNonEmpty x <$> pure commands
+opts x "uninstall"        = pure Nil
 
 -- options
 opts x _ = pure $

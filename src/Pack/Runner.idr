@@ -13,6 +13,7 @@ import Pack.Runner.Develop
 import Pack.Runner.Query
 import Pack.Runner.Install
 import Pack.Runner.New
+import Pack.Runner.Uninstall
 
 public export
 Command Cmd where
@@ -53,6 +54,7 @@ Command Cmd where
   defaultLevel Completion       = Silence
   defaultLevel CompletionScript = Silence
   defaultLevel PrintHelp        = Silence
+  defaultLevel Uninstall        = Info
 
   desc = cmdDesc
 
@@ -85,6 +87,7 @@ Command Cmd where
   ArgTypes Completion       = [String, String]
   ArgTypes CompletionScript = [String]
   ArgTypes PrintHelp        = [Maybe Cmd]
+  ArgTypes Uninstall        = []
 
   readCommand_ n = lookup n namesAndCommands
 
@@ -128,6 +131,7 @@ Command Cmd where
   readArgs Completion       = %search
   readArgs CompletionScript = %search
   readArgs PrintHelp        = %search
+  readArgs Uninstall        = %search
 
 isFetch : Cmd -> Bool
 isFetch Fetch = True
@@ -179,3 +183,6 @@ runCmd = do
         env <- idrisEnv mc fetch
         install []
         writeCollection
+      (Uninstall ** [])         => do
+        env <- idrisEnv mc fetch
+        uninstallPack
