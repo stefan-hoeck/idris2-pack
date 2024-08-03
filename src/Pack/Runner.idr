@@ -53,8 +53,8 @@ Command Cmd where
   defaultLevel Fuzzy            = Cache
   defaultLevel Completion       = Silence
   defaultLevel CompletionScript = Silence
-  defaultLevel PrintHelp        = Silence
   defaultLevel Uninstall        = Info
+  defaultLevel PrintHelp        = Silence
 
   desc = cmdDesc
 
@@ -86,8 +86,8 @@ Command Cmd where
   ArgTypes Fuzzy            = [FuzzyQuery]
   ArgTypes Completion       = [String, String]
   ArgTypes CompletionScript = [String]
-  ArgTypes PrintHelp        = [Maybe Cmd]
   ArgTypes Uninstall        = []
+  ArgTypes PrintHelp        = [Maybe Cmd]
 
   readCommand_ n = lookup n namesAndCommands
 
@@ -130,8 +130,8 @@ Command Cmd where
   readArgs Fuzzy            = %search
   readArgs Completion       = %search
   readArgs CompletionScript = %search
-  readArgs PrintHelp        = %search
   readArgs Uninstall        = %search
+  readArgs PrintHelp        = %search
 
 isFetch : Cmd -> Bool
 isFetch Fetch = True

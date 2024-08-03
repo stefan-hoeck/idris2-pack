@@ -1,7 +1,11 @@
 module Pack.Runner.Uninstall
 
-import Pack.Config
-import Pack.Core
+import Pack.Config.Types
+import Pack.Core.IO
+import Pack.Core.Logging
+import Pack.Core.Types
+
+%hide Pack.Config.Types.Env.packDir
 
 %default total
 
@@ -16,4 +20,7 @@ uninstallPack :
   -> EitherT PackErr io ()
 uninstallPack = do
   info "Uninstalling pack"
+  let msg := "$PACK_DIR: \{packDir}. Continue (yes/*no)?"
+  "yes" <- prompt Info msg
+    | _ => throwE SafetyAbort
   rmDir packDir

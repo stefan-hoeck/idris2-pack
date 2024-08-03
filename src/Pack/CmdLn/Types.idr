@@ -89,11 +89,11 @@ data Cmd : Type where
   Completion       : Cmd
   CompletionScript : Cmd
 
-  -- Help
-  PrintHelp        : Cmd
-
   -- Uninstall
   Uninstall        : Cmd
+
+  -- Help
+  PrintHelp        : Cmd
 
 ||| List of all available commands.
 |||
@@ -129,8 +129,8 @@ commands =
   , Fuzzy
   , Completion
   , CompletionScript
-  , PrintHelp
   , Uninstall
+  , PrintHelp
   ]
 
 ||| Name to use at the command-line for running a pack command
@@ -164,8 +164,8 @@ name Query            = "query"
 name Fuzzy            = "fuzzy"
 name Completion       = "completion"
 name CompletionScript = "completion-script"
-name PrintHelp        = "help"
 name Uninstall        = "uninstall"
+name PrintHelp        = "help"
 
 ||| List pairing a command with its name used for parsing commands.
 public export
@@ -392,6 +392,11 @@ cmdDesc CompletionScript = """
   for your shell.
   """
 
+cmdDesc Uninstall        = """
+  Uninstalls pack.
+  Deletes the $PACK_DIR directory.
+  """
+
 cmdDesc PrintHelp        = """
   Without an additional <cmd> argument, this prints general information
   about using pack, including a list of available command-line options
@@ -403,12 +408,6 @@ cmdDesc PrintHelp        = """
   Available commands:
   \{unlines $ map (indent 2 . fst) namesAndCommands}
   """
-
-cmdDesc Uninstall        = """
-  Uninstalls pack.
-
-  Deletes the $PACK_DIR directory.
-"""
 
 export
 Arg Cmd where
@@ -449,5 +448,5 @@ cmdInCommands Query            = %search
 cmdInCommands Fuzzy            = %search
 cmdInCommands Completion       = %search
 cmdInCommands CompletionScript = %search
-cmdInCommands PrintHelp        = %search
 cmdInCommands Uninstall        = %search
+cmdInCommands PrintHelp        = %search
