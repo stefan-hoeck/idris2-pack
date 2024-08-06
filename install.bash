@@ -43,7 +43,7 @@ fi
 
 if [ -d "$PACK_DIR" ]; then
 	echo "There is already a $PACK_DIR directory."
-	echo "Please remove it with 'rm -fr $PACK_DIR' and rerun this script."
+	echo "Please remove it with the 'pack uninstall' command and rerun this script."
 	exit 1
 fi
 

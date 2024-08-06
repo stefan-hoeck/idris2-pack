@@ -287,3 +287,13 @@ on several packages in parallel via git. Details can be found
 > and in the pack collection).
 > You can see an example of such usage [here](https://github.com/stefan-hoeck/idris2-pack-db/blob/bcc8dc61706c73361bb1e6e18dd1b0c5981f0e18/collections/HEAD.toml#L297).
 > Technical details can be found [here](https://github.com/stefan-hoeck/idris2-pack/issues/256#issuecomment-1689305587).
+
+## Uninstallation
+
+If you would like to uninstall pack from your system, you can simply use the following command:
+
+```sh
+pack uninstall
+```
+
+This will delete the `$PACK_DIR` directory.
