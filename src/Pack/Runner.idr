@@ -183,6 +183,4 @@ runCmd = do
         env <- idrisEnv mc fetch
         install []
         writeCollection
-      (Uninstall ** [])         => do
-        env <- idrisEnv mc fetch
-        uninstallPack
+      (Uninstall ** [])         => uninstallPack @{%search} @{metaConfigToLogRef @{mc}}
