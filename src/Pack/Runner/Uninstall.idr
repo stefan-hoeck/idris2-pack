@@ -21,7 +21,7 @@ uninstallPack :
   -> EitherT PackErr io ()
 uninstallPack = do
   info "Uninstalling pack"
-  let msg := "$PACK_DIR: \{packDir}. Continue (yes/*no)?"
+  let msg := "This command will delete the $PACK_DIR directory at \{packDir}. Continue (yes/*no)?"
   "yes" <- prompt Info msg
     | _ => throwE SafetyAbort
   rmDir packDir
