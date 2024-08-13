@@ -15,9 +15,9 @@ import Pack.Core.Types
 
 export covering
 uninstallPack :
-     {auto _ : HasIO io}
-  -> {auto _ : LogRef}
+     {auto _ : LogRef}
   -> {auto _ : PackDir}
+  -> {auto _ : HasIO io}
   -> EitherT PackErr io ()
 uninstallPack = do
   info "Uninstalling pack"
