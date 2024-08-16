@@ -16,6 +16,7 @@ import Pack.Runner.Develop
 import Pack.Runner.Query
 import Pack.Runner.Install
 import Pack.Runner.New
+import Pack.Runner.Uninstall
 
 public export
 Command Cmd where
@@ -55,6 +56,7 @@ Command Cmd where
   defaultLevel Fuzzy            = Cache
   defaultLevel Completion       = Silence
   defaultLevel CompletionScript = Silence
+  defaultLevel Uninstall        = Info
   defaultLevel PrintHelp        = Silence
 
   desc = cmdDesc
@@ -87,6 +89,7 @@ Command Cmd where
   ArgTypes Fuzzy            = [FuzzyQuery]
   ArgTypes Completion       = [String, String]
   ArgTypes CompletionScript = [String]
+  ArgTypes Uninstall        = []
   ArgTypes PrintHelp        = [Maybe Cmd]
 
   readCommand_ n = lookup n namesAndCommands
@@ -130,6 +133,7 @@ Command Cmd where
   readArgs Fuzzy            = %search
   readArgs Completion       = %search
   readArgs CompletionScript = %search
+  readArgs Uninstall        = %search
   readArgs PrintHelp        = %search
 
 isFetch : Cmd -> Bool
@@ -185,4 +189,5 @@ runCmd = do
             env <- idrisEnv mc fetch td
             install []
             writeCollection
+          (Uninstall ** [])         => uninstallPack @{metaConfigToLogRef @{mc}}
     ]
