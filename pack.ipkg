@@ -14,6 +14,7 @@ prebuild = "bash version.sh"
 postbuild = "bash restore.sh"
 
 depends = base >= 0.6.0
+        , async
         , elab-util
         , filepath
         , getopts

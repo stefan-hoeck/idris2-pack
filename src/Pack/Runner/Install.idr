@@ -410,13 +410,13 @@ export covering
 idrisEnv :
      {auto _ : HasIO io}
   -> {auto _ : PackDir}
-  -> {auto _ : TmpDir}
   -> {auto _ : LibCache}
   -> {auto _ : LineBufferingCmd}
   -> MetaConfig
   -> (fetch : Bool)
+  -> (td : TmpDir)
   -> EitherT PackErr io IdrisEnv
-idrisEnv mc fetch = env mc fetch >>= (\e => mkIdris)
+idrisEnv mc fetch td = env mc fetch td >>= (\e => mkIdris)
 
 ||| Update the pack installation
 export covering

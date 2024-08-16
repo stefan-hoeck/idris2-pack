@@ -305,6 +305,7 @@ findInAllParentDirs p = go [] where
       Just parentD => go nextRes $ assert_smaller currD parentD
       Nothing      => pure nextRes
 
+export
 mkTmpDir : HasIO io => PackDir => EitherT PackErr io TmpDir
 mkTmpDir = go 100 0
 
@@ -334,6 +335,15 @@ withTmpDir :
   -> EitherT PackErr io a
 withTmpDir f = do
   td <- mkTmpDir
+  finally (rmDir tmpDir) f
+
+export
+withTmpDir' :
+     {auto _ : HasIO io}
+  -> {auto _ : TmpDir}
+  -> (TmpDir => EitherT PackErr io a)
+  -> EitherT PackErr io a
+withTmpDir' f =
   finally (rmDir tmpDir) f
 
   --------------------------------------------------------------------------------
