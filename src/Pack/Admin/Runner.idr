@@ -2,9 +2,6 @@ module Pack.Admin.Runner
 
 import Data.IORef
 import Data.SortedMap
-import IO.Async.Signal
-import IO.Async.Type
-import IO.Async.Util
 import Pack.Admin.Runner.Check
 import Pack.CmdLn.Opts
 import Pack.CmdLn.Types
@@ -129,20 +126,16 @@ writeLatestDB : HasIO io => File Abs -> Env -> EitherT PackErr io ()
 writeLatestDB path e = write path (printDB e.db)
 
 export covering
-runCmd : HasIO io => EitherT PackErr io ()
+runCmd : EitherT PackErr IO ()
 runCmd = do
-  pd <- getPackDir
-  td <- mkTmpDir
-  liftIO $ syncApp $ ignore $ race
-    [ onSignal SigINT (liftIO $ run $ rmDir tmpDir)
-    , liftIO $ run $ withTmpDir' $ do
-        cd       <- CD <$> curDir
-        cache    <- emptyCache
-        (mc,cmd) <- getConfig ACmd td
-        linebuf  <- getLineBufferingCmd
-        case cmd of
-          (CheckDB ** [p])  => idrisEnv mc True td >>= checkDB p
-          (FromHEAD ** [p]) => env mc True td >>= writeLatestDB p
-          (MakeDocs ** [])  => idrisEnv mc True td >>= makeDocs
-          (Help ** [c])     => putStrLn (usageDesc c)
-    ]
+  pd       <- getPackDir
+  withTmpDir $ do
+    cd       <- CD <$> curDir
+    cache    <- emptyCache
+    (mc,cmd) <- getConfig ACmd
+    linebuf  <- getLineBufferingCmd
+    case cmd of
+      (CheckDB ** [p])  => idrisEnv mc True >>= checkDB p
+      (FromHEAD ** [p]) => env mc True >>= writeLatestDB p
+      (MakeDocs ** [])  => idrisEnv mc True >>= makeDocs
+      (Help ** [c])     => putStrLn (usageDesc c)

@@ -6,7 +6,7 @@ authors = "Stefan Höck"
 
 brief   = "A package manager for Idris2 with curated package collections"
 
-langversion >= 0.6.0
+langversion >= 0.7.0
 
 -- script to run before building
 prebuild = "bash version.sh"

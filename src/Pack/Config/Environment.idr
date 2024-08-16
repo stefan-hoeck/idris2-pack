@@ -396,8 +396,8 @@ getPackDir = do
 
 ||| Update the package database.
 export
-updateDB : HasIO io => PackDir => (_ : TmpDir) -> EitherT PackErr io ()
-updateDB td = do
+updateDB : HasIO io => TmpDir => PackDir => EitherT PackErr io ()
+updateDB = do
   rmDir dbDir
   commit <- gitLatest dbRepo "main"
   withGit packDB dbRepo commit $ \d =>
@@ -428,9 +428,9 @@ copyLatest = do
 ||| Loads the name of the default collection (currently the latest
 ||| nightly)
 export
-defaultColl : HasIO io => PackDir => (td : TmpDir) -> EitherT PackErr io DBName
-defaultColl td = do
-  when !(missing dbDir) (updateDB td)
+defaultColl : HasIO io => TmpDir => PackDir => EitherT PackErr io DBName
+defaultColl = do
+  when !(missing dbDir) updateDB
   latestCollection dbDir
 
 ||| Resolve a meta commit by fetching the hash of the latest commit
@@ -464,12 +464,12 @@ getConfig :
   -> {auto _   : Command c}
   -> {auto _   : HasIO io}
   -> {auto pd  : PackDir}
+  -> {auto td  : TmpDir}
   -> {auto cur : CurDir}
-  -> (td : TmpDir)
   -> EitherT PackErr io (MetaConfig, CommandWithArgs c)
-getConfig c td = do
+getConfig c = do
   -- relevant directories
-  coll       <- defaultColl td
+  coll       <- defaultColl
 
   -- Initialize `pack.toml` if none exists
   when !(fileMissing globalPackToml) $
@@ -537,12 +537,12 @@ pkgs = fromList $ (\c => (corePkgName c, Core c)) <$> corePkgs
 export covering
 loadDB :
      {auto _ : HasIO io}
+  -> {auto _ : TmpDir}
   -> {auto _ : PackDir}
   -> MetaConfig
-  -> (td : TmpDir)
   -> EitherT PackErr io MetaDB
-loadDB mc td = do
-  when !(missing dbDir) (updateDB td)
+loadDB mc = do
+  when !(missing dbDir) updateDB
   debug "reading package collection"
   raw <- readFromTOML MetaDB dbFile
   case fileStem dbFile of
@@ -635,14 +635,14 @@ export covering
 env :
      {auto _   : HasIO io}
   -> {auto pd  : PackDir}
+  -> {auto td  : TmpDir}
   -> {auto ch  : LibCache}
   -> {auto lbf : LineBufferingCmd}
   -> (mc       : MetaConfig)
   -> (fetch    : Bool)
-  -> (td       : TmpDir)
   -> EitherT PackErr io Env
-env mc fetch td = do
-  mdb <- loadDB mc td
+env mc fetch = do
+  mdb <- loadDB mc
   db  <- traverseDB (resolveMeta fetch) mdb
   c   <- traverse (resolveMeta fetch) db.idrisURL mc
 

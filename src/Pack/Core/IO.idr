@@ -1,6 +1,9 @@
 module Pack.Core.IO
 
 import public Control.Monad.Either
+import IO.Async.Signal
+import IO.Async.Type
+import IO.Async.Util
 import Pack.Config.Types
 import Pack.Core.Logging
 import Pack.Core.Types
@@ -305,7 +308,6 @@ findInAllParentDirs p = go [] where
       Just parentD => go nextRes $ assert_smaller currD parentD
       Nothing      => pure nextRes
 
-export
 mkTmpDir : HasIO io => PackDir => EitherT PackErr io TmpDir
 mkTmpDir = go 100 0
 
@@ -327,24 +329,17 @@ mkTmpDir = go 100 0
          mkDir dir
          pure (TD dir)
 
-export
+export covering
 withTmpDir :
-     {auto _ : HasIO io}
-  -> {auto _ : PackDir}
-  -> (TmpDir => EitherT PackErr io a)
-  -> EitherT PackErr io a
+     {auto _ : PackDir}
+  -> (TmpDir => EitherT PackErr IO ())
+  -> EitherT PackErr IO ()
 withTmpDir f = do
   td <- mkTmpDir
-  finally (rmDir tmpDir) f
-
-export
-withTmpDir' :
-     {auto _ : HasIO io}
-  -> {auto _ : TmpDir}
-  -> (TmpDir => EitherT PackErr io a)
-  -> EitherT PackErr io a
-withTmpDir' f =
-  finally (rmDir tmpDir) f
+  liftIO $ syncApp $ ignore $ race
+    [ onSignal SigINT (liftIO $ run $ rmDir tmpDir)
+    , liftIO $ run $ finally (rmDir tmpDir) f
+    ]
 
   --------------------------------------------------------------------------------
   --         File Access
