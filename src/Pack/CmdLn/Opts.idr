@@ -61,7 +61,7 @@ setRlwrap : Maybe String -> AdjConf
 setRlwrap args _ = Right . {rlwrap := UseRlwrap $ maybe [] (\s => [NoEscape s]) args}
 
 addExtraArgs : String -> AdjConf
-addExtraArgs args _ = Right . {extraArgs $= (<+> PassExtraArgs [NoEscape args])}
+addExtraArgs args _ = Right . {extraArgs $= (++ [NoEscape args])}
 
 setIpkg : String -> AdjConf
 setIpkg v (CD dir) c = case readAbsFile dir v of

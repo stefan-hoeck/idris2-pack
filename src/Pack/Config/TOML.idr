@@ -37,10 +37,10 @@ FromTOML RlwrapConfig where
   fromTOML _ _ = Left $ WrongType [] "boolean, string or array of strings"
 
 export
-FromTOML ExtraIdris2ArgsConfig where
-  fromTOML _ (TStr str)  = Right $ PassExtraArgs [NoEscape str]
+FromTOML CmdArgList where
+  fromTOML _ (TStr str)  = Right $ [NoEscape str]
   fromTOML _ (TArr _ xs) =
-    PassExtraArgs . fromStrList <$>
+    fromStrList <$>
       traverse (extractString "array of strings") (xs <>> [])
   fromTOML _ _ = Left $ WrongType [] "string or array of strings"
 

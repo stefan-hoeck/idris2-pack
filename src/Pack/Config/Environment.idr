@@ -350,9 +350,7 @@ buildEnv =
 ||| Idris executable with extra arguments, if they are present in the config.
 export
 idrisCmd : (e : Env) => CmdArgList
-idrisCmd = case e.config.extraArgs of
-             NoExtraArgs      => [idrisExec]
-             PassExtraArgs as => idrisExec :: as
+idrisCmd = idrisExec :: e.config.extraArgs
 
 ||| Idris executable to use together with the
 ||| `--cg` (codegen) command line option.
