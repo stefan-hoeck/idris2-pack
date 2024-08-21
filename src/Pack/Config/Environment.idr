@@ -127,8 +127,10 @@ export %inline
 idrisBinDir : PackDir => DB => Path Abs
 idrisBinDir = idrisPrefixDir /> "bin"
 
-||| Location of the Idris2 executable used to build
-||| packages.
+||| Location of the Idris2 executable used to build packages.
+|||
+||| Notice that if you need an Idris command, you may need `idrisCmd` function
+||| instead because it takes extra arguments into account.
 export
 idrisExec : PackDir => DB => File Abs
 idrisExec = MkF idrisBinDir "idris2"
@@ -345,13 +347,20 @@ buildEnv =
   let pre := if useRacket then [("IDRIS2_CG", "racket")] else []
    in (pre ++ ) <$> sequence [packagePath, libPath, dataPath]
 
+||| Idris executable with extra arguments, if they are present in the config.
+export
+idrisCmd : (e : Env) => CmdArgList
+idrisCmd = case e.config.extraArgs of
+             NoExtraArgs      => [idrisExec]
+             PassExtraArgs as => idrisExec :: as
+
 ||| Idris executable to use together with the
 ||| `--cg` (codegen) command line option.
 export
 idrisWithCG : (e : Env) => CmdArgList
 idrisWithCG = case e.config.codegen of
-  Default => [idrisExec]
-  cg      => [idrisExec, "--cg", cg]
+  Default => idrisCmd
+  cg      => idrisCmd ++ ["--cg", cg]
 
 ||| Idris executable loading the given package plus the
 ||| environment variables needed to run it.
