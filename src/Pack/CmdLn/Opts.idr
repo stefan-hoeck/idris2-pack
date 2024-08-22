@@ -60,8 +60,8 @@ setBootstrap b _ = Right . {bootstrap := b}
 setRlwrap : Maybe String -> AdjConf
 setRlwrap args _ = Right . {rlwrap := UseRlwrap $ maybe [] (\s => [NoEscape s]) args}
 
-setExtraArgs : String -> AdjConf
-setExtraArgs args _ = Right . {extraArgs := PassExtraArgs [NoEscape args]}
+addExtraArgs : String -> AdjConf
+addExtraArgs args _ = Right . {extraArgs $= (++ [NoEscape args])}
 
 setIpkg : String -> AdjConf
 setIpkg v (CD dir) c = case readAbsFile dir v of
@@ -189,7 +189,7 @@ descs =
       """
   , MkOpt [] ["rlwrap"]   (OptArg setRlwrap "<rlwrap args>")
       "Run a REPL session in `rlwrap`."
-  , MkOpt [] ["extra-args"] (ReqArg setExtraArgs "<idris2 args>")
+  , MkOpt [] ["extra-args"] (ReqArg addExtraArgs "<idris2 args>")
       "Any extra arguments to pass to Idris2."
   , MkOpt ['v'] ["verbose"]   (NoArg debug)
       "Print debugging information"

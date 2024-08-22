@@ -134,21 +134,6 @@ data RlwrapConfig : Type where
   DoNotUseRlwrap : RlwrapConfig
   UseRlwrap      : CmdArgList -> RlwrapConfig
 
-||| Data type describing additional options to the `idris2` executable.
-|||
-||| It is isomoprhic to `Maybe CmdArgList`.
-||| See the docs for `RlwrapConfig` for the rationale behind the dedicated type.
-public export
-data ExtraIdris2ArgsConfig : Type where
-  NoExtraArgs   : ExtraIdris2ArgsConfig
-  PassExtraArgs : CmdArgList -> ExtraIdris2ArgsConfig
-
-export
-Semigroup ExtraIdris2ArgsConfig where
-  NoExtraArgs <+> rhs = rhs
-  PassExtraArgs a1 <+> NoExtraArgs = PassExtraArgs a1
-  PassExtraArgs a1 <+> PassExtraArgs a2 = PassExtraArgs $ a1 <+> a2
-
 ||| Type-level identity
 public export
 0 I : Type -> Type
@@ -230,7 +215,7 @@ record Config_ (f : Type -> Type) (c : Type) where
   rlwrap       : f RlwrapConfig
 
   ||| Any extra arguments to pass to Idris2 executable.
-  extraArgs    : f ExtraIdris2ArgsConfig
+  extraArgs    : f CmdArgList
 
   ||| Libraries to install automatically
   autoLibs     : f (List PkgName)
@@ -367,7 +352,7 @@ init coll = MkConfig {
   , useKatla        = False
   , withIpkg        = Search cur
   , rlwrap          = DoNotUseRlwrap
-  , extraArgs       = NoExtraArgs
+  , extraArgs       = []
   , autoLibs        = []
   , autoApps        = []
   , autoLoad        = NoPkgs
@@ -401,7 +386,7 @@ update ci cm = MkConfig {
   , useKatla        = fromMaybe ci.useKatla cm.useKatla
   , withIpkg        = fromMaybe ci.withIpkg cm.withIpkg
   , rlwrap          = fromMaybe ci.rlwrap cm.rlwrap
-  , extraArgs       = ci.extraArgs <+> fromMaybe NoExtraArgs cm.extraArgs
+  , extraArgs       = ci.extraArgs <+> fromMaybe [] cm.extraArgs
   , whitelist       = sortedNub (ci.whitelist ++ concat cm.whitelist)
   , autoLibs        = sortedNub (ci.autoLibs ++ concat cm.autoLibs)
   , autoApps        = sortedNub (ci.autoApps ++ concat cm.autoApps)
