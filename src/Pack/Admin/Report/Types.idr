@@ -56,7 +56,7 @@ ghCommitLink u c@(MkCommit commit)  =
 
 apiLink : PkgName -> String
 apiLink p =
-  "https://stefan-hoeck.github.io/idris2-pack-docs/docs/\{p}/index.html"
+  "https://stefan-hoeck.github.io/idris2-pack-db/docs/\{p}/docs/index.html"
 
 url : (e : Env) => Package -> URL
 url (Git u _ _ _ _)            = u
