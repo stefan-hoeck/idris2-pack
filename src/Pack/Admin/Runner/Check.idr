@@ -99,14 +99,13 @@ covering
 docsFor :
      {auto _ : HasIO io}
   -> {auto e : IdrisEnv}
-  -> {auto _ : CurDir}
+  -> Path Abs
   -> PkgName
   -> io (Maybe String)
-docsFor n = do
-  res <- runEitherT $ do
+docsFor p n = do
+  res  <- runEitherT $ do
     rl <- resolveLib n
-    installLibs [n]
-    copyDirInto (pkgDocs rl.name rl.pkg) (curDir /> "docs" <//> n)
+    copyDirInto (pkgDocs rl.name rl.pkg rl.desc) (p </> "docs" <//> n)
   case res of
     Left _  => pure (Just "\{n}")
     Right _ => pure Nothing
@@ -115,13 +114,11 @@ allPkgs : {auto e : IdrisEnv} -> List PkgName
 allPkgs = map corePkgName corePkgs ++ keys e.env.db.packages
 
 export covering
-makeDocs : HasIO io => {auto _ : CurDir} -> IdrisEnv -> EitherT PackErr io ()
-makeDocs e = do
-  ps <- catMaybes <$> traverse docsFor allPkgs
+makeDocs : HasIO io => Path Abs -> IdrisEnv -> EitherT PackErr io ()
+makeDocs p e = do
+  mkDir (p </> "docs")
+  ps <- catMaybes <$> traverse (docsFor p) allPkgs
   logMany Warning "Generating the docs of the following packages failed:" ps
-  case length ps of
-    0 => pure ()
-    n => throwE (BuildFailures n)
 
 export covering
 checkDB : HasIO io => Path Abs -> (e : IdrisEnv) -> EitherT PackErr io ()
@@ -138,5 +135,7 @@ checkDB p e = do
 
   let dbName := cast {to = Body} e.env.config.collection <+> ".toml"
   case numberOfFailures rep of
-    0 => copyFile (dbDir /> dbName) (p /> dbName)
+    0 =>
+      copyFile (dbDir /> dbName) (p /> dbName) >>
+      when e.env.config.withDocs (makeDocs p e)
     n => warn (printErr $ BuildFailures n)
