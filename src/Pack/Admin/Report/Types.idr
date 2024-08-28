@@ -13,12 +13,13 @@ import Pack.Runner.Database
 --------------------------------------------------------------------------------
 
 public export
-data TestResult = TestSuccess | TestFailure | NoTests
+data TestResult = TestSuccess | TestFailure | Skipped | NoTests
 
 export
 Interpolation TestResult where
   interpolate TestSuccess = "success"
   interpolate TestFailure = "failure"
+  interpolate Skipped     = "skipped"
   interpolate NoTests     = ""
 
 public export
@@ -150,6 +151,7 @@ numberOfFailures = foldl count 0
 testInfo : TestResult -> String
 testInfo TestSuccess = "all tests passed"
 testInfo TestFailure = "some tests failed"
+testInfo Skipped     = "tests skipped"
 testInfo NoTests     = "no tests run"
 
 export

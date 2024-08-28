@@ -193,6 +193,9 @@ record Config_ (f : Type -> Type) (c : Type) where
   ||| Whether to issue a warning in precense of a local `depends` directory
   warnDepends : f Bool
 
+  ||| Whether to skip tests during collection checking
+  skipTests : f Bool
+
   ||| List of package names, for which we will not issue a safety prompt
   ||| in case of custom `.ipkg` hooks, even if `safetyPrompt` is set
   ||| to `True`
@@ -346,6 +349,7 @@ init coll = MkConfig {
   , safetyPrompt    = True
   , gcPrompt        = True
   , warnDepends     = True
+  , skipTests       = False
   , whitelist       = []
   , withSrc         = False
   , withDocs        = False
@@ -381,6 +385,7 @@ update ci cm = MkConfig {
   , safetyPrompt    = fromMaybe ci.safetyPrompt cm.safetyPrompt
   , gcPrompt        = fromMaybe ci.gcPrompt cm.gcPrompt
   , warnDepends     = fromMaybe ci.warnDepends cm.warnDepends
+  , skipTests       = fromMaybe ci.warnDepends cm.warnDepends
   , withSrc         = fromMaybe ci.withSrc cm.withSrc
   , withDocs        = fromMaybe ci.withDocs cm.withDocs
   , useKatla        = fromMaybe ci.useKatla cm.useKatla

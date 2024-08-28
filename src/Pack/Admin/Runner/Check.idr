@@ -39,13 +39,16 @@ test :
   -> {auto e : IdrisEnv}
   -> SafeLib
   -> EitherT PackErr io TestResult
-test (RL pkg n d _ _) = case  pkg of
-  Git u c _ _ (Just t) => do
-    d <- withGit n u c pure
-    runIpkg (d </> t) [] e
-    pure TestSuccess
-  Local d _ _ (Just t) => runIpkg (d </> t) [] e $> TestSuccess
-  _                    => info "No tests to run for \{n}" $> NoTests
+test (RL pkg n d _ _) =
+  case e.env.config.skipTests of
+    True  => pure Skipped
+    False => case  pkg of
+      Git u c _ _ (Just t) => do
+        d <- withGit n u c pure
+        runIpkg (d </> t) [] e
+        pure TestSuccess
+      Local d _ _ (Just t) => runIpkg (d </> t) [] e $> TestSuccess
+      _                    => info "No tests to run for \{n}" $> NoTests
 
 covering
 testPkg :
@@ -113,7 +116,7 @@ docsFor p n = do
 allPkgs : {auto e : IdrisEnv} -> List PkgName
 allPkgs = map corePkgName corePkgs ++ keys e.env.db.packages
 
-export covering
+covering
 makeDocs : HasIO io => Path Abs -> IdrisEnv -> EitherT PackErr io ()
 makeDocs p e = do
   mkDir (p </> "docs")
