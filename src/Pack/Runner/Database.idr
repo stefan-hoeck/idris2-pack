@@ -228,7 +228,7 @@ libStatus :
   -> EitherT PackErr io (PkgStatus p)
 libStatus n p d deps = do
   True <- exists (pkgInstallDir n p d) | False => pure Missing
-  b    <- exists $ pkgDocs n p
+  b    <- exists $ pkgDocs n p d
   case isLocal p of
     No c     => pure $ (Installed b)
     Yes ploc =>

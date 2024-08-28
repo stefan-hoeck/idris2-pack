@@ -187,11 +187,6 @@ export %inline
 pkgDataDir : PackDir => DB => PkgName -> Package -> Path Abs
 pkgDataDir n p = pkgPathDir n p /> "support"
 
-||| Directory where the API docs of the package will be installed.
-export %inline
-pkgDocs : PackDir => DB => PkgName -> Package -> Path Abs
-pkgDocs n p = pkgPrefixDir n p /> "docs"
-
 ||| Timestamp used to monitor if a local library has been
 ||| modified and requires reinstalling.
 export %inline
@@ -226,6 +221,11 @@ pkgInstallDir n p d =
         Core c        => dir /> (c <-> vers)
         Git _ _ _ _ _ => dir </> pkgRelDir d
         Local _ _ _ _ => dir </> pkgRelDir d
+
+||| Directory where the API docs of the package will be installed.
+export %inline
+pkgDocs : PackDir => DB => PkgName -> Package -> Desc t -> Path Abs
+pkgDocs n p d = pkgInstallDir n p d /> "docs"
 
 ||| Location of an executable of the given name.
 export

@@ -339,7 +339,7 @@ installDocs rl = case rl.status of
          in sysAndLog Build [katla, "html", src, ttm, NoEscape ">", srcHtml] >>
             insertSources ds
 
-    let docs := pkgDocs rl.name rl.pkg
+    let docs := pkgDocs rl.name rl.pkg rl.desc
     when !(exists docs) (rmDir docs)
     copyDir docsDir docs
     uncacheLib (name rl)
