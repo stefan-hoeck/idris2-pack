@@ -51,6 +51,9 @@ setGCPrompt b _ = Right . {gcPrompt := b}
 setWarnDepends : Bool -> AdjConf
 setWarnDepends b _ = Right . {warnDepends := b}
 
+setSkipTests : Bool -> AdjConf
+setSkipTests b _ = Right . {skipTests := b}
+
 setScheme : String -> AdjConf
 setScheme s _ = Right . {scheme := fromString s}
 
@@ -162,6 +165,11 @@ descs =
   , MkOpt [] ["no-warn-depends"]   (NoArg $ setWarnDepends False)
       """
       Don't issue a warning in precense of a local `depends` directory.
+      """
+  , MkOpt [] ["skip-tests"]   (NoArg $ setSkipTests True)
+      """
+      Don't run library tests during collection checking.
+      This currently only affects the pack-admin utility.
       """
   , MkOpt [] ["with-src"]   (NoArg withSrc)
       """

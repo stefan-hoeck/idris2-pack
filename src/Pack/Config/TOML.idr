@@ -59,6 +59,7 @@ FromTOML UserConfig where
           (maybeValAt "install.safety-prompt" f v)
           (maybeValAt "install.gc-prompt" f v)
           (maybeValAt "install.warn-depends" f v)
+          (maybeValAt "admin.skip-tests" f v)
           (maybeValAt "install.whitelist" f v)
           (maybeValAt "install.with-src" f v)
           (maybeValAt "install.with-docs" f v)
