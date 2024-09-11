@@ -170,6 +170,19 @@ getTTCVersion = do
         Nothing => warn "Failed to parse TTC version \{str}" $> TTCV Nothing
     False => debug "No TTC version given by Idris" $> TTCV Nothing
 
+-- Tries to build Idris from an existing version of the compiler.
+tryDirectBuild : HasIO io => Env => io (Either PackErr ())
+tryDirectBuild =
+  runEitherT $
+    sysAndLog Build ["make", "support", prefixVar, schemeVar] >>
+    sysAndLog Build ["make", "idris2-exec", prefixVar, schemeVar]
+
+idrisCleanup : HasIO io => Env => io ()
+idrisCleanup =
+  ignore $ runEitherT $ do
+    sysAndLog Build ["make", "clean-libs"]
+    sysAndLog Build ["rm", "-r", "build/ttc", "build/exec"]
+
 ||| Builds and installs the Idris commit given in the environment.
 export covering
 mkIdris : HasIO io => (e : Env) => EitherT PackErr io IdrisEnv
@@ -182,13 +195,18 @@ mkIdris = do
         True  =>
           sysAndLog Build ["make", bootstrapCmd, prefixVar, schemeVar]
         False =>
-          sysAndLog Build ["make", "support", prefixVar, schemeVar] >>
-          sysAndLog Build ["make", "idris2-exec", prefixVar, schemeVar]
+          -- if building with an existing installation fails for whatever reason
+          -- we revert to bootstrapping
+          tryDirectBuild >>= \case
+            Left x => do
+              warn "Building Idris failed. Trying to bootstrap now."
+              idrisCleanup
+              sysAndLog Build ["make", bootstrapCmd, prefixVar, schemeVar]
+            Right () => pure ()
 
       sysAndLog Build ["make", "install-support", prefixVar]
       sysAndLog Build ["make", "install-idris2", prefixVar]
-      sysAndLog Build ["make", "clean-libs"]
-      sysAndLog Build ["rm", "-r", "build/ttc", "build/exec"]
+      idrisCleanup
       cacheCoreIpkgFiles dir
 
   appLink "idris2" "idris2" True Default
