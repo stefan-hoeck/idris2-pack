@@ -231,6 +231,7 @@ installImpl :
 installImpl dir rl =
   let pre      := libInstallPrefix rl
       instCmd  := installCmd e.env.config.withSrc
+      libDir   := rl.desc.path.parent </> "lib"
    in do
      info "Installing library\{withSrcStr}: \{name rl}"
      when (isInstalled rl) $ do
@@ -239,8 +240,10 @@ installImpl dir rl =
        rmDir (pkgLibDir rl.name rl.pkg)
      libPkg pre Build True ["--build"] rl.desc
      libPkg pre Debug False instCmd rl.desc
-     when !(exists $ dir /> "lib") $
-       copyDir (dir /> "lib") (pkgLibDir rl.name rl.pkg)
+     debug "checking if libdir at \{libDir} exists"
+     when !(exists libDir) $ do
+       debug "copying lib dir"
+       copyDir libDir (pkgLibDir rl.name rl.pkg)
 
 preInstall :
      {auto _ : HasIO io}
