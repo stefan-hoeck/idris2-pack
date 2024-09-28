@@ -1,0 +1,20 @@
+[custom.all.pack]
+type   = "local"
+path   = "."
+ipkg   = "pack.ipkg"
+
+[custom.all.pack-admin]
+type   = "local"
+path   = "."
+ipkg   = "pack-admin.ipkg"
+
+[custom.all.micropack]
+type   = "local"
+path   = "."
+ipkg   = "micropack.ipkg"
+
+[custom.all.filepath]
+type   = "git"
+url    = "https://github.com/stefan-hoeck/idris2-filepath"
+commit = "latest:main"
+ipkg   = "filepath.ipkg"
