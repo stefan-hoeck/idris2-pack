@@ -167,8 +167,8 @@ export
 FromTOML FilePath where fromTOML = tmap fromString
 
 toRelPath : FilePath -> Either TOMLErr (Path Rel)
-toRelPath (FP $ PRel sx) = Right (PRel sx)
-toRelPath (FP $ PAbs _)  = Left (WrongType [] "Relative Path")
+toRelPath (FP $ PRel sx)  = Right (PRel sx)
+toRelPath (FP $ PAbs _ _) = Left (WrongType [] "Relative Path")
 
 toRelFile : FilePath -> Either TOMLErr (File Rel)
 toRelFile (FP $ PRel (sx :< x)) = Right (MkF (PRel sx) x)

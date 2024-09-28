@@ -33,7 +33,7 @@ quote v = "\"\{v}\""
 ||| `../../quux`.
 export
 relativeTo : (origin, target : Path Abs) -> Path Rel
-relativeTo (PAbs sx) (PAbs sy) = PRel $ go (sx <>> []) (sy <>> [])
+relativeTo (PAbs _ sx) (PAbs _ sy) = PRel $ go (sx <>> []) (sy <>> [])
 
   where
     go : (o,t : List Body) -> SnocList Body
@@ -60,15 +60,15 @@ isHtmlBody = (Just "html" ==) . extension
 
 toRelPath : String -> Path Rel
 toRelPath s = case the FilePath (fromString s) of
-  FP (PAbs sx) => PRel sx
-  FP (PRel sx) => PRel sx
+  FP (PAbs _ sx) => PRel sx
+  FP (PRel sx)   => PRel sx
 
 ||| Converts a `FilePath` - which might hold a relative
 ||| or an absolute path - to an absolute path by interpreting
 ||| a relative path being relative to the given parent directory.
 export
 toAbsPath : (parent : Path Abs) -> FilePath -> Path Abs
-toAbsPath parent (FP $ PAbs sx) = PAbs sx
+toAbsPath parent (FP $ PAbs d sx) = PAbs d sx
 toAbsPath parent (FP $ PRel sx) = parent </> PRel sx
 
 ||| Parses a string, converting it to either a relative
