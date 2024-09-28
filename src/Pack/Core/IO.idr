@@ -189,8 +189,8 @@ fileMissing = map not . fileExists
 ||| Tries to create a director (including parent directories)
 export
 mkDir : HasIO io => (dir : Path Abs) -> EitherT PackErr io ()
-mkDir (PAbs [<]) = pure ()
-mkDir d          = sys ["mkdir", "-p", d]
+mkDir (PAbs _ [<]) = pure ()
+mkDir d            = sys ["mkdir", "-p", d]
 
 ||| Creates a parent directory of a (file) path
 export
@@ -208,8 +208,8 @@ curDir : HasIO io => EitherT PackErr io (Path Abs)
 curDir = do
   Just s <- currentDir | Nothing => throwE NoCurDir
   case the FilePath (fromString s) of
-    FP (PAbs sx) => pure (PAbs sx)
-    FP (PRel _)  => throwE NoCurDir
+    FP (PAbs u sx) => pure (PAbs u sx)
+    FP (PRel _)    => throwE NoCurDir
 
 ||| Changes the working directory
 export
@@ -279,11 +279,11 @@ findInParentDirs :  {auto _ : HasIO io}
   -> (Body -> Bool)
   -> Path Abs
   -> EitherT PackErr io (Maybe (File Abs))
-findInParentDirs p (PAbs sb) = go sb
+findInParentDirs p (PAbs d sb) = go sb
   where go : SnocList Body -> EitherT PackErr io (Maybe (File Abs))
         go [<]       = pure Nothing
         go (sb :< b) =
-          let dir := PAbs (sb :< b)
+          let dir := PAbs d (sb :< b)
            in do
              (h :: _) <- filter p <$> entries dir | Nil => go sb
              pure $ Just (MkF dir h)
