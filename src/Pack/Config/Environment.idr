@@ -282,6 +282,17 @@ export %inline
 packCommit : (c : Config) => Maybe Commit
 packCommit = c.packCommit
 
+||| URL of the pack DB repository to use
+export %inline
+packDbRepo : (c : Config) => URL
+packDbRepo = fromMaybe defaultPackDbRepo c.packDbURL
+
+-- should this be ref not commit? so we can use tags and branches?
+||| Commit of pack DB to use
+export %inline
+packDbCommit : (c : Config) => Maybe Commit
+packDbCommit = c.packDbCommit
+
 ||| True if the path to the scheme executable actually points
 ||| to `racket`.
 export
@@ -403,7 +414,7 @@ getPackDir = do
 
 ||| Update the package database.
 export
-updateDB : HasIO io => TmpDir => PackDir => EitherT PackErr io ()
+updateDB : HasIO io => TmpDir => PackDir => (dbRepo : PackDB) => EitherT PackErr io ()
 updateDB = do
   rmDir dbDir
   commit <- gitLatest dbRepo "main"
@@ -423,7 +434,7 @@ latestCollection dir = do
 
 ||| Update the package database.
 export
-copyLatest : HasIO io => TmpDir => PackDir => EitherT PackErr io DBName
+copyLatest : HasIO io => TmpDir => PackDir => (dbRepo : PackDB) => EitherT PackErr io DBName
 copyLatest = do
   commit <- gitLatest dbRepo "main"
   withGit packDB dbRepo commit $ \d => do
@@ -435,8 +446,8 @@ copyLatest = do
 ||| Loads the name of the default collection (currently the latest
 ||| nightly)
 export
-defaultColl : HasIO io => TmpDir => PackDir => EitherT PackErr io DBName
-defaultColl = do
+defaultColl : HasIO io => TmpDir => PackDir => PackDB => EitherT PackErr io DBName
+defaultColl dbRepo = do
   when !(missing dbDir) updateDB
   latestCollection dbDir
 
@@ -546,10 +557,11 @@ loadDB :
      {auto _ : HasIO io}
   -> {auto _ : TmpDir}
   -> {auto _ : PackDir}
+  -> {auto dbRepo : PackDBRef}
   -> MetaConfig
   -> EitherT PackErr io MetaDB
 loadDB mc = do
-  when !(missing dbDir) updateDB
+  when !(missing dbDir) (updateDB dbRepo)
   debug "reading package collection"
   raw <- readFromTOML MetaDB dbFile
   case fileStem dbFile of
@@ -642,6 +654,7 @@ export covering
 env :
      {auto _   : HasIO io}
   -> {auto pd  : PackDir}
+  -> {auto db  : PackDBRef}
   -> {auto td  : TmpDir}
   -> {auto ch  : LibCache}
   -> {auto lbf : LineBufferingCmd}
