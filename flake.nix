@@ -99,10 +99,10 @@
         deps;
 
       getDepsNamesAndFilterBase = depends:
-        lib.filter (name: name != "base" && name != "idris2") (map (dep: dep.name) depends);
+        lib.filter (name: name != "base" && name != "idris2") (builtins.attrNames depends);
 
       pack = buildIdris {
-        ipkgName = packIpkg.package;
+        ipkgName = packIpkg.name;
 
         src = ./.;
 
@@ -122,7 +122,7 @@
       };
 
       micropack = buildIdris {
-        ipkgName = micropackIpkg.package;
+        ipkgName = micropackIpkg.name;
 
         src = ./.;
 
@@ -142,7 +142,7 @@
       };
 
       pack-admin = buildIdris {
-        ipkgName = packAdminIpkg.package;
+        ipkgName = packAdminIpkg.name;
 
         src = ./.;
 
@@ -166,7 +166,7 @@
       packages.pack-admin = pack-admin.executable;
       packages.default = packages.pack;
 
-      # nix build .#pack && ./result/bin/pack help
+      # nix build && ./result/bin/pack help
       # nix build .#micropack && ./result/bin/micropack
       # nix build .#pack-admin && ./result/bin/pack-admin help
 
