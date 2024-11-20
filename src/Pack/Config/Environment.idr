@@ -525,6 +525,9 @@ getLineBufferingCmd = findCmd variants
       0 <- system $ escapeCmd
              ["type", cmd, NoEscape ">", "/dev/null", NoEscape "2>", "/dev/null"]
         | _ => findCmd rest
+      0 <- system $ escapeCmd
+             [ cmd, "-oL", "ls", NoEscape ">", "/dev/null", NoEscape "2>", "/dev/null"]
+        | _ => findCmd rest
       pure $ MkLineBufferingCmd $ [cmd] ++ args
 
     variants : List (String, CmdArgList)
