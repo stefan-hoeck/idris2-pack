@@ -1,0 +1,163 @@
+{
+  "nodes": {
+    "algebra": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1712293962,
+        "narHash": "sha256-etsWqF07j/XBgfnlaA8pyF06BeoXqg7iViG0o09s4Zc=",
+        "owner": "stefan-hoeck",
+        "repo": "idris2-algebra",
+        "rev": "829f44b7fd961e3f0a7ad9174b395f97ebc33336",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stefan-hoeck",
+        "repo": "idris2-algebra",
+        "type": "github"
+      }
+    },
+    "elab-util": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1712832655,
+        "narHash": "sha256-yHKTtUx91kvdGEwimpbMg+c4rEasfuk+W97yiwTNgcQ=",
+        "owner": "stefan-hoeck",
+        "repo": "idris2-elab-util",
+        "rev": "4ee05e54b80986f05ee5a79e16cb51d4ef6cfb65",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stefan-hoeck",
+        "repo": "idris2-elab-util",
+        "type": "github"
+      }
+    },
+    "filepath": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1728272259,
+        "narHash": "sha256-HiaT1Ggbzm7aAEMnCobhhavdheKbYyMA5D9BO0cdG7Y=",
+        "owner": "stefan-hoeck",
+        "repo": "idris2-filepath",
+        "rev": "0441eaee9ff1d921fc3f4619c2a8d542588c0e99",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stefan-hoeck",
+        "repo": "idris2-filepath",
+        "type": "github"
+      }
+    },
+    "flake-utils": {
+      "inputs": {
+        "systems": "systems"
+      },
+      "locked": {
+        "lastModified": 1726560853,
+        "narHash": "sha256-X6rJYSESBVr3hBoH0WbKE5KvhPU5bloyZ2L4K60/fPQ=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "c1dfcf08411b08f6b8615f7d8971a2bfa81d5e8a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "getopts": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1698479903,
+        "narHash": "sha256-CthWByg4uFic0ktri1AuFqkHtyRzIUrreCTegQgdpVo=",
+        "owner": "idris-community",
+        "repo": "idris2-getopts",
+        "rev": "0d41b98f83f3707deb0ffbc595ef36b7d9cb9eab",
+        "type": "github"
+      },
+      "original": {
+        "owner": "idris-community",
+        "repo": "idris2-getopts",
+        "type": "github"
+      }
+    },
+    "idris2-parser": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1712294182,
+        "narHash": "sha256-VSKaFNA6xPhX6PF1XoTBl42adu0WWuUwJrFZ1ghUtUA=",
+        "owner": "stefan-hoeck",
+        "repo": "idris2-parser",
+        "rev": "dd950e671f06bd936e48c95d33117ee042d35134",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stefan-hoeck",
+        "repo": "idris2-parser",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1727186771,
+        "narHash": "sha256-ISgcNGNOpHiwkLNX8EvGSJ2+sGvvqoKridgTIsKqhps=",
+        "owner": "mattpolzin",
+        "repo": "nixpkgs",
+        "rev": "8ed82c62be739f166c32512dc2b84e496f2d2855",
+        "type": "github"
+      },
+      "original": {
+        "owner": "mattpolzin",
+        "ref": "idris2Packages-pack",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "refined": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1712293322,
+        "narHash": "sha256-9YQjVpJ5McpgjJx6hXCaXMKyEAFCnynw4ahHdY3Kz8Y=",
+        "owner": "stefan-hoeck",
+        "repo": "idris2-refined",
+        "rev": "c585013c33ad5398c91beed71fec61a5b721a8da",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stefan-hoeck",
+        "repo": "idris2-refined",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "algebra": "algebra",
+        "elab-util": "elab-util",
+        "filepath": "filepath",
+        "flake-utils": "flake-utils",
+        "getopts": "getopts",
+        "idris2-parser": "idris2-parser",
+        "nixpkgs": "nixpkgs",
+        "refined": "refined"
+      }
+    },
+    "systems": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
