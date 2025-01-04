@@ -22,7 +22,7 @@ install-lib:
 
 .PHONY: docker-build
 docker-build:
-	docker build --no-cache=${NO_CACHE} -t ${DOCKER_IMAGE}:latest .
+	docker build --build-arg ubuntu_version=${UBUNTU_VERSION} --no-cache=${NO_CACHE} -t ${DOCKER_IMAGE}-${UBUNTU_VERSION}:latest .
 
 .PHONY: docker-run
 docker-run:

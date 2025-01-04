@@ -28,10 +28,11 @@ jobs:
           export DB_VERSION
           echo "DB_VERSION=$DB_VERSION" >> "$GITHUB_ENV"
 
-      - name: Build Docker Image
+      - name: Build Docker Images
         run: |
           export NO_CACHE="${{ github.ref == 'refs/heads/main' }}"
-          DB="$DB_VERSION" make docker-build
+          UBUNTU_VERSION=22.04 DB="$DB_VERSION" make docker-build
+          UBUNTU_VERSION=24.04 DB="$DB_VERSION" make docker-build
 
       - name: Log in to registry
         if: github.ref == 'refs/heads/main'
@@ -47,6 +48,13 @@ jobs:
           # Strip git ref prefix from version
           echo IMAGE_ID="$IMAGE_ID"
           echo DB_VERSION="$DB_VERSION"
-          docker tag "$IMAGE_ID:latest" "$IMAGE_ID:$DB_VERSION"
+          docker tag "$IMAGE_ID-22.04:latest" "$IMAGE_ID-22.04:$DB_VERSION"
+          docker tag "$IMAGE_ID-24.04:latest" "$IMAGE_ID-24.04:$DB_VERSION"
+          docker tag "$IMAGE_ID-24.04:latest" "$IMAGE_ID:$DB_VERSION"
+          docker tag "$IMAGE_ID-24.04:latest" "$IMAGE_ID:latest"
           docker push "$IMAGE_ID:latest"
+          docker push "$IMAGE_ID-22.04:latest"
+          docker push "$IMAGE_ID-24.04:latest"
           docker push "$IMAGE_ID:$DB_VERSION"
+          docker push "$IMAGE_ID-22.04:$DB_VERSION"
+          docker push "$IMAGE_ID-24.04:$DB_VERSION"
