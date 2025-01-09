@@ -3,6 +3,7 @@ export SCHEME ?= scheme
 export LD_LIBRARY_PATH = micropack
 export DYLD_LIBRARY_PATH = micropack
 
+UBUNTU_VERSION ?= 24.04
 DOCKER_IMAGE = ghcr.io/stefan-hoeck/idris2-pack
 NO_CACHE ?= false
 
