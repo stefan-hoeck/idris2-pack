@@ -17,7 +17,7 @@ jobs:
       packages: write
       contents: read
 
-    timeout-minutes: 90  # will this need updating?
+    timeout-minutes: 90
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
