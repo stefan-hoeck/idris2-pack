@@ -3,8 +3,8 @@ export SCHEME ?= scheme
 export LD_LIBRARY_PATH = micropack
 export DYLD_LIBRARY_PATH = micropack
 
-UBUNTU_VERSION ?= 24.04
 DOCKER_IMAGE = ghcr.io/stefan-hoeck/idris2-pack
+UBUNTU_RELEASE ?= noble
 NO_CACHE ?= false
 
 .PHONY: micropack
@@ -23,7 +23,7 @@ install-lib:
 
 .PHONY: docker-build
 docker-build:
-	docker build --build-arg ubuntu_version=${UBUNTU_VERSION} --no-cache=${NO_CACHE} -t ${DOCKER_IMAGE}-ubuntu${UBUNTU_VERSION}:latest .
+	docker build --build-arg ubuntu_release=${UBUNTU_RELEASE} --no-cache=${NO_CACHE} -t ${DOCKER_IMAGE}:${UBUNTU_RELEASE} .
 
 .PHONY: docker-run
 docker-run:

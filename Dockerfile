@@ -1,8 +1,8 @@
 #checkov:skip=CKV_DOCKER_3: we intend to use `root` user
 
-ARG ubuntu_version
+ARG ubuntu_release
 
-FROM ubuntu:$ubuntu_version AS build
+FROM ubuntu:$ubuntu_release AS build
 
 SHELL ["/bin/bash", "-c"]
 
@@ -25,7 +25,7 @@ ENV SCHEME=chezscheme
 
 RUN make micropack SCHEME=$SCHEME
 
-FROM ubuntu:$ubuntu_version
+FROM ubuntu:$ubuntu_release
 
 # hadolint ignore=DL3008,DL3015
 RUN apt-get update && apt-get install --yes gcc make chezscheme libgmp3-dev git && rm -rf /var/lib/apt/lists/*
