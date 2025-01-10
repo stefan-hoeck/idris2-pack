@@ -39,7 +39,7 @@ jobs:
         # This is where you will update the PAT to GITHUB_TOKEN
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Push image
+      - name: Push images
         if: github.ref == 'refs/heads/main'
         run: |
           IMAGE_ID="ghcr.io/${{ github.repository_owner }}/idris2-pack"
@@ -48,13 +48,13 @@ jobs:
           # Strip git ref prefix from version
           echo IMAGE_ID="$IMAGE_ID"
           echo DB_VERSION="$DB_VERSION"
-          docker tag "$IMAGE_ID-22.04:latest" "$IMAGE_ID-22.04:$DB_VERSION"
-          docker tag "$IMAGE_ID-24.04:latest" "$IMAGE_ID-24.04:$DB_VERSION"
-          docker tag "$IMAGE_ID-24.04:latest" "$IMAGE_ID:$DB_VERSION"
-          docker tag "$IMAGE_ID-24.04:latest" "$IMAGE_ID:latest"
+          docker tag "$IMAGE_ID-ubuntu22.04:latest" "$IMAGE_ID-ubuntu22.04:$DB_VERSION"
+          docker tag "$IMAGE_ID-ubuntu24.04:latest" "$IMAGE_ID-ubuntu24.04:$DB_VERSION"
+          docker tag "$IMAGE_ID-ubuntu24.04:latest" "$IMAGE_ID:$DB_VERSION"
+          docker tag "$IMAGE_ID-ubuntu24.04:latest" "$IMAGE_ID:latest"
           docker push "$IMAGE_ID:latest"
-          docker push "$IMAGE_ID-22.04:latest"
-          docker push "$IMAGE_ID-24.04:latest"
+          docker push "$IMAGE_ID-ubuntu22.04:latest"
+          docker push "$IMAGE_ID-ubuntu24.04:latest"
           docker push "$IMAGE_ID:$DB_VERSION"
-          docker push "$IMAGE_ID-22.04:$DB_VERSION"
-          docker push "$IMAGE_ID-24.04:$DB_VERSION"
+          docker push "$IMAGE_ID-ubuntu22.04:$DB_VERSION"
+          docker push "$IMAGE_ID-ubuntu24.04:$DB_VERSION"
