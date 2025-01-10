@@ -27,4 +27,4 @@ docker-build:
 
 .PHONY: docker-run
 docker-run:
-	docker run --rm -it ${DOCKER_IMAGE}-ubuntu${UBUNTU_VERSION}:latest /bin/bash
+	docker run --rm -it ${DOCKER_IMAGE}-ubuntu${UBUNTU_RELEASE}:latest /bin/bash
