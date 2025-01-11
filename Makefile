@@ -4,6 +4,7 @@ export LD_LIBRARY_PATH = micropack
 export DYLD_LIBRARY_PATH = micropack
 
 DOCKER_IMAGE = ghcr.io/stefan-hoeck/idris2-pack
+UBUNTU_RELEASE ?= noble
 NO_CACHE ?= false
 
 .PHONY: micropack
@@ -22,8 +23,8 @@ install-lib:
 
 .PHONY: docker-build
 docker-build:
-	docker build --no-cache=${NO_CACHE} -t ${DOCKER_IMAGE}:latest .
+	docker build --build-arg ubuntu_release=${UBUNTU_RELEASE} --no-cache=${NO_CACHE} -t ${DOCKER_IMAGE}:${UBUNTU_RELEASE} .
 
 .PHONY: docker-run
 docker-run:
-	docker run --rm -it ${DOCKER_IMAGE}:latest /bin/bash
+	docker run --rm -it ${DOCKER_IMAGE}:${UBUNTU_RELEASE} /bin/bash
