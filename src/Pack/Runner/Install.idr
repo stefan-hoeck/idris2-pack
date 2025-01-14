@@ -357,8 +357,9 @@ installDocs rl = case rl.status of
       for_ fs $ \htmlFile =>
         let Just ds@(MkDS _ src ttm srcHtml) := sourceForDoc rl.desc htmlFile
               | Nothing => pure ()
-         in sysAndLog Build [katla, "html", src, ttm, NoEscape ">", srcHtml] >>
-            insertSources ds
+         in when !(srcExists ds) $ do
+              sysAndLog Build [katla, "html", src, ttm, NoEscape ">", srcHtml]
+              insertSources ds
 
     let docs := pkgDocs rl.name rl.pkg rl.desc
     when !(exists docs) (rmDir docs)
