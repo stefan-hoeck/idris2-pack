@@ -147,25 +147,27 @@ appStatus qp = case qp.app of
     , "App          : \{status' st}"
     ]
 
-testFile : Maybe (File Rel) -> List String
-testFile Nothing  = []
-testFile (Just f) = ["Test File    : \{f}"]
+testFile : Maybe (File Rel) -> Maybe String
+testFile = map (\f => "Test File    : \{f}")
+
+notice : Maybe String -> Maybe String
+notice = map (\f =>   "Notice       : \{f}")
 
 details : QPkg -> List String
 details qp = case qp.lib.pkg of
-  Git url commit ipkg _ t => [
+  Git url commit ipkg _ t n => [
     "Type         : Git project"
   , "URL          : \{url}"
   , "Commit       : \{commit}"
   , "ipkg File    : \{ipkg}"
-  ] ++ testFile t
+  ] ++ (catMaybes [testFile t, notice n])
 
   Local d i _ t =>
     let ipkg := toAbsFile d i
      in [ "Type         : Local Idris project"
         , "Location     : \{ipkg.parent}"
         , "ipkg File    : \{ipkg.file}"
-        ] ++ testFile t
+        ] ++ (catMaybes [testFile t])
 
   Core _            => [
     "Type         : Idris core package"

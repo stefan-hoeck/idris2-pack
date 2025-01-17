@@ -59,12 +59,12 @@ apiLink p =
   "https://stefan-hoeck.github.io/idris2-pack-db/docs/\{p}/docs/index.html"
 
 url : (e : Env) => Package -> URL
-url (Git u _ _ _ _)            = u
+url (Git u _ _ _ _ _)            = u
 url (Local dir ipkg pkgPath _) = MkURL "\{dir}"
 url (Core _)                   = e.db.idrisURL
 
 commit : (e : Env) => Package -> Commit
-commit (Git _ c _ _ _)            = c
+commit (Git _ c _ _ _ _)            = c
 commit (Local dir ipkg pkgPath _) = ""
 commit (Core _)                   = e.db.idrisCommit
 
