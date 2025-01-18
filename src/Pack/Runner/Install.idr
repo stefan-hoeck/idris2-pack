@@ -222,6 +222,10 @@ withSrcStr = case c.withSrc of
   True  => " (with sources)"
   False => ""
 
+maybeGiveNotice : HasIO io => Config => SafeLib -> io ()
+maybeGiveNotice (RL (Git _ _ _ _ _ (Just notice)) _ _ _ _) = warn notice
+maybeGiveNotice _ = pure ()
+
 installImpl :
      {auto _ : HasIO io}
   -> {auto e : IdrisEnv}
@@ -234,6 +238,7 @@ installImpl dir rl =
       libDir   := rl.desc.path.parent </> "lib"
    in do
      info "Installing library\{withSrcStr}: \{name rl}"
+     maybeGiveNotice rl
      when (isInstalled rl) $ do
        info "Removing currently installed version of \{name rl}"
        rmDir (pkgInstallDir rl.name rl.pkg rl.desc)
