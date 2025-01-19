@@ -157,7 +157,7 @@ idrisDataDir = idrisInstallDir /> "support"
 ||| Directory where an installed library or app goes
 export %inline
 pkgPrefixDir : PackDir => DB => PkgName -> Package -> Path Abs
-pkgPrefixDir n (Git _ c _ _ _) = commitDir <//> n <//> c
+pkgPrefixDir n (Git _ c _ _ _ _) = commitDir <//> n <//> c
 pkgPrefixDir n (Local _ _ _ _) = commitDir </> "local" <//> n
 pkgPrefixDir n (Core _)        = idrisPrefixDir
 
@@ -219,7 +219,7 @@ pkgInstallDir n p d =
       dir  := pkgPrefixDir n p /> idrisDir
    in case p of
         Core c        => dir /> (c <-> vers)
-        Git _ _ _ _ _ => dir </> pkgRelDir d
+        Git _ _ _ _ _ _ => dir </> pkgRelDir d
         Local _ _ _ _ => dir </> pkgRelDir d
 
 ||| Directory where the API docs of the package will be installed.
@@ -577,7 +577,7 @@ cacheCoreIpkgFiles dir = for_ corePkgs $ \c =>
 
 export
 notCached : HasIO io => (e : Env) => PkgName -> Package -> io Bool
-notCached n (Git u c i _ _) = fileMissing $ ipkgCachePath n c i
+notCached n (Git u c i _ _ _) = fileMissing $ ipkgCachePath n c i
 notCached n (Local d i _ _) = pure False
 notCached n (Core c)        = fileMissing $ coreCachePath c
 
@@ -588,7 +588,7 @@ cachePkg :
   -> PkgName
   -> Package
   -> EitherT PackErr io ()
-cachePkg n (Git u c i _ _) =
+cachePkg n (Git u c i _ _ _) =
   let cache  := ipkgCachePath n c i
       tmpLoc := gitTmpDir n </> i
    in withGit n u c $ \dir => do

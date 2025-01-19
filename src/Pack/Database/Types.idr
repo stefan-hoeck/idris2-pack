@@ -143,6 +143,7 @@ data Package_ : (c : Type) -> Type where
       -> (ipkg     : File Rel)
       -> (pkgPath  : Bool)
       -> (testIpkg : Maybe (File Rel))
+      -> (notice   : Maybe String)
       -> Package_ c
 
   ||| A local Idris project given as an absolute path to a local
@@ -161,13 +162,13 @@ data Package_ : (c : Type) -> Type where
 
 export
 Functor Package_ where
-  map f (Git u c i p t) = Git u (f c) i p t
+  map f (Git u c i p t n) = Git u (f c) i p t n
   map f (Local d i p t) = Local d i p t
   map f (Core c)        = Core c
 
 export
 traverse : Applicative f => (URL -> a -> f b) -> Package_ a -> f (Package_ b)
-traverse g (Git u c i p t) = (\c' => Git u c' i p t) <$> g u c
+traverse g (Git u c i p t n) = (\c' => Git u c' i p t n) <$> g u c
 traverse _ (Local d i p t)    = pure $ Local d i p t
 traverse _ (Core c)           = pure $ Core c
 
@@ -250,14 +251,14 @@ isGit (Local {}) = No absurd
 ||| folders where Idris package are installed.
 export
 usePackagePath : Package_ c -> Bool
-usePackagePath (Git _ _ _ pp _) = pp
+usePackagePath (Git _ _ _ pp _ _) = pp
 usePackagePath (Local _ _ pp _) = pp
 usePackagePath (Core _)         = False
 
 ||| Absolute path to the `.ipkg` file of a package.
 export
 ipkg : (dir : Path Abs) -> Package -> File Abs
-ipkg dir (Git _ _ i _ _) = toAbsFile dir i
+ipkg dir (Git _ _ i _ _ _) = toAbsFile dir i
 ipkg dir (Local _ i _ _) = toAbsFile dir i
 ipkg dir (Core c)        = toAbsFile dir (coreIpkgPath c)
 
@@ -452,21 +453,23 @@ tomlBool : Bool -> String
 tomlBool True  = "true"
 tomlBool False = "false"
 
-testPath : Maybe (File Rel) -> List String
-testPath Nothing  = []
-testPath (Just x) = [ "test        = \{quote x}" ]
+testPath : Maybe (File Rel) -> Maybe String
+testPath = map (\x => "test        = \{quote x}")
+
+notice : Maybe String -> Maybe String
+notice = map (\x =>   "notice      = \{quote x}")
 
 -- we need to print `Git` packages as `"github"` at
 -- least for the time being for reasons of compatibility
 printPair : (PkgName,Package) -> List String
-printPair (x, Git url commit ipkg pp t) =
+printPair (x, Git url commit ipkg pp t n) =
   [ "[db.\{x}]"
   , "type        = \"github\""
   , "url         = \{quote url}"
   , "commit      = \{quote commit}"
   , "ipkg        = \{quote ipkg}"
   , "packagePath = \{tomlBool pp}"
-  ] ++ testPath t
+  ] ++ (catMaybes [testPath t, notice n])
 
 printPair (x, Local dir ipkg pp t) =
   [ "[db.\{x}]"
@@ -474,7 +477,7 @@ printPair (x, Local dir ipkg pp t) =
   , "path        = \{quote dir}"
   , "ipkg        = \{quote ipkg}"
   , "packagePath = \{tomlBool pp}"
-  ] ++ testPath t
+  ] ++ (catMaybes [testPath t])
 
 printPair (x, Core c) =
   [ "[db.\{x}]"

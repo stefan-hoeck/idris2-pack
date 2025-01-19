@@ -222,6 +222,10 @@ withSrcStr = case c.withSrc of
   True  => " (with sources)"
   False => ""
 
+maybeGiveNotice : HasIO io => Config => SafeLib -> io ()
+maybeGiveNotice (RL (Git _ _ _ _ _ (Just notice)) _ _ _ _) = warn notice
+maybeGiveNotice _ = pure ()
+
 installImpl :
      {auto _ : HasIO io}
   -> {auto e : IdrisEnv}
@@ -234,6 +238,7 @@ installImpl dir rl =
       libDir   := rl.desc.path.parent </> "lib"
    in do
      info "Installing library\{withSrcStr}: \{name rl}"
+     maybeGiveNotice rl
      when (isInstalled rl) $ do
        info "Removing currently installed version of \{name rl}"
        rmDir (pkgInstallDir rl.name rl.pkg rl.desc)
@@ -253,7 +258,7 @@ preInstall :
 preInstall rl = withPkgEnv rl.name rl.pkg $ \dir =>
   let ipkgAbs := ipkg dir rl.pkg
    in case rl.pkg of
-        Git u c ipkg _ _ => do
+        Git u c ipkg _ _ _ => do
           let cache := ipkgCachePath rl.name c ipkg
           copyFile cache ipkgAbs
         Local _ _ _ _ => pure ()
@@ -308,7 +313,7 @@ installApp b ra =
       let ipkgAbs := ipkg dir ra.pkg
        in case ra.pkg of
             Core _            => pure ()
-            Git u c ipkg pp _ => do
+            Git u c ipkg pp _ _ => do
               let cache   := ipkgCachePath ra.name c ipkg
               copyFile cache ipkgAbs
               libPkg [] Build True ["--build"] (notPackIsSafe ra.desc)

@@ -21,6 +21,7 @@ git f v =
        (valAt "ipkg" f v)
        (optValAt "packagePath" f False v)
        (maybeValAt "test" f v)
+       (maybeValAt "notice" f v)
   |]
 
 local : File Abs -> TomlValue -> Either TOMLErr (Package_ c)
