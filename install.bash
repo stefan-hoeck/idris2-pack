@@ -17,6 +17,8 @@ function check_installed {
 
 PACK_DIR="${PACK_DIR:-$HOME/.pack}"
 
+XDG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}"
+
 if command -v chezscheme &>/dev/null; then
 	DETECTED_SCHEME=chezscheme
 elif command -v scheme &>/dev/null; then
@@ -182,74 +184,82 @@ popd
 
 # Initialize `pack.toml`
 
+if [ -f "$XDG_DIR/pack/pack.toml" ]; then
+    echo "Found existing global pack.toml file"
+else
+
+    mkdir -p "$XDG_DIR/pack"
+    cat <<EOF >>"$XDG_DIR/pack/pack.toml"
+    [install]
+
+    # Whether to install packages together with their
+    # sources or not. This is mainly useful for programmers
+    # who have set their editor up with some *go to definition*
+    # functionality (for instance by using idris2-lsp with neovim).
+    with-src   = true
+
+    # Whether to prompt the user before building or installing
+    # packages or applications with custom build hooks in their
+    # \`.ipkg\` file.
+    safety-prompt = true
+
+    # Must-have libraries. These will be installed automatically
+    # when using a new package collection.
+    # libs       = [ "toml", "elab-util" ]
+
+    # Must-have applications. These will be installed automatically
+    # when using a new package collection.
+    # apps       = [ "idris2-lsp" ]
+
+    [idris2]
+
+    # Whether to build Idris2 with its bootstrap compiler.
+    # Bootstrapping takes longer than building with an existing
+    # Idris2 installation, but it will work even if the existing
+    # Idris2 compiler is outdated.
+    bootstrap  = false
+
+    # Name or path to the scheme executable to use.
+    scheme      = "$SCHEME"
+
+    # Default code generator to us
+    # codegen     = "chez"
+
+    # Set this to \`true\` in order to run REPL sessions from within
+    # \`rlwrap\`. This will give you additional features such as a
+    # command history.
+    repl.rlwrap = false
+
+    # Below are some examples for custom packages
+
+    # A local package to be available with all
+    # package collections.
+    # [custom.all.chem]
+    # type = "local"
+    # path = "/data/idris/chem"
+    # ipkg = "chem.ipkg"
+
+    # A package on GitHub to be available with all
+    # package collections.
+    # [custom.all.foo]
+    # type = "github"
+    # path = "https://github.com/bar/foo"
+    # ipkg = "foo.ipkg"
+
+    # Override library \`toml\` from package collection \`nightly-220503\`
+    # by using a custom commit hash.
+    # [custom.nightly-220503.toml]
+    # type   = "github"
+    # url    = "https://github.com/cuddlefishie/toml-idr"
+    # commit = "eb7a146f565276f82ebf30cb6d5502e9f65dcc3c"
+    # ipkg   = "toml.ipkg"
+    EOF
+fi
+
 mkdir -p "$PACK_DIR/user"
 cat <<EOF >>"$PACK_DIR/user/pack.toml"
 # The package collection to use
 collection = "$PACKAGE_COLLECTION"
-
-[install]
-
-# Whether to install packages together with their
-# sources or not. This is mainly useful for programmers
-# who have set their editor up with some *go to definition*
-# functionality (for instance by using idris2-lsp with neovim).
-with-src   = true
-
-# Whether to prompt the user before building or installing
-# packages or applications with custom build hooks in their
-# \`.ipkg\` file.
-safety-prompt = true
-
-# Must-have libraries. These will be installed automatically
-# when using a new package collection.
-# libs       = [ "toml", "elab-util" ]
-
-# Must-have applications. These will be installed automatically
-# when using a new package collection.
-# apps       = [ "idris2-lsp" ]
-
-[idris2]
-
-# Whether to build Idris2 with its bootstrap compiler.
-# Bootstrapping takes longer than building with an existing
-# Idris2 installation, but it will work even if the existing
-# Idris2 compiler is outdated.
-bootstrap  = false
-
-# Name or path to the scheme executable to use.
-scheme      = "$SCHEME"
-
-# Default code generator to us
-# codegen     = "chez"
-
-# Set this to \`true\` in order to run REPL sessions from within
-# \`rlwrap\`. This will give you additional features such as a
-# command history.
-repl.rlwrap = false
-
-# Below are some examples for custom packages
-
-# A local package to be available with all
-# package collections.
-# [custom.all.chem]
-# type = "local"
-# path = "/data/idris/chem"
-# ipkg = "chem.ipkg"
-
-# A package on GitHub to be available with all
-# package collections.
-# [custom.all.foo]
-# type = "github"
-# path = "https://github.com/bar/foo"
-# ipkg = "foo.ipkg"
-
-# Override library \`toml\` from package collection \`nightly-220503\`
-# by using a custom commit hash.
-# [custom.nightly-220503.toml]
-# type   = "github"
-# url    = "https://github.com/cuddlefishie/toml-idr"
-# commit = "eb7a146f565276f82ebf30cb6d5502e9f65dcc3c"
-# ipkg   = "toml.ipkg"
 EOF
 
 # Cleanup
