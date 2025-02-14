@@ -185,10 +185,10 @@ popd
 # Initialize `pack.toml`
 
 if [ -f "$XDG_DIR/pack/pack.toml" ]; then
-    echo "Found existing global pack.toml file"
+	echo "Found existing global pack.toml file"
 else
-    mkdir -p "$XDG_DIR/pack"
-    cat <<EOF >>"$XDG_DIR/pack/pack.toml"
+	mkdir -p "$XDG_DIR/pack"
+	cat <<EOF >>"$XDG_DIR/pack/pack.toml"
 [install]
 
 # Whether to install packages together with their
