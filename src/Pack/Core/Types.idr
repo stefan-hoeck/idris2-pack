@@ -125,8 +125,24 @@ export
 Cast (File t) (Path t) where cast = toPath
 
 ----------------------------------------------------------------------------------
-----          CurDir, PackDir, and TmpDir
+----          XDGDir, CurDir, PackDir, and TmpDir
 ----------------------------------------------------------------------------------
+
+||| Corresponds to `$XDG_CONFIG_HOME/pack`. Defaults to `$HOME/.config/pack`.
+public export
+data XDGDir : Type where
+  [noHints]
+  XD : (dir : Path Abs) -> XDGDir
+
+export %inline
+Interpolation XDGDir where
+  interpolate (XD dir) = interpolate dir
+
+||| Use this when you need access to the `XDG_CONFIG_HOME/pack` path with
+||| only a value of type `XDGDir` in scope.
+export %inline
+xdgDir : (xd : XDGDir) => Path Abs
+xdgDir {xd = XD dir} = dir
 
 ||| The directory where package collections, global user settings,
 ||| and cached `.ipkg` files are stored.
@@ -668,6 +684,9 @@ data PackErr : Type where
   ||| Failed to get package directory path
   NoPackDir  : PackErr
 
+  ||| Failed to get `$XDG_CONFIG_HOME` directory path
+  NoXDGDir   : PackErr
+
   ||| Failed to create temporary directory
   NoTmpDir  : PackErr
 
@@ -791,6 +810,12 @@ printErr NoCurDir = "Failed to get current directory."
 printErr NoPackDir = """
   Failed to figure out package directory.
   This means, that neither environment variable \"PACK_DIR\"
+  nor environment varaible \"HOME\" was set.
+  """
+
+printErr NoXDGDir = """
+  Failed to figure out the `$XDG_CONFIG_HOME` directory.
+  This means, that neither environment variable \"XDG_CONFIG_HOME\"
   nor environment varaible \"HOME\" was set.
   """
 
