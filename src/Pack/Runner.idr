@@ -139,9 +139,9 @@ isFetch _     = False
 
 ||| Main application entry point (modulo error handling).
 export covering
-runCmd : HasIO io => EitherT PackErr io ()
+runCmd : EitherT PackErr IO ()
 runCmd = do
-  pd <- getPackDir
+  pd       <- getPackDir
   withTmpDir $ do
     cd       <- CD <$> curDir
     cache    <- emptyCache

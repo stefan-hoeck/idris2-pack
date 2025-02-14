@@ -107,7 +107,7 @@ writeLatestDB : HasIO io => File Abs -> Env -> EitherT PackErr io ()
 writeLatestDB path e = write path (printDB e.db)
 
 export covering
-runCmd : HasIO io => EitherT PackErr io ()
+runCmd : EitherT PackErr IO ()
 runCmd = do
   pd       <- getPackDir
   withTmpDir $ do
