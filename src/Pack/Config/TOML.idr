@@ -78,13 +78,20 @@ FromTOML UserConfig where
           (maybeValAt "log" f v)
       |]
 
-||| Initial content of an auto-generated `PACK_DIR/user/pack.toml` file.
 export
-initToml : (scheme : String) -> (db : DBName) -> String
-initToml scheme db = """
+dbToml : (db : DBName) -> String
+dbToml db =
+  """
   # The package collection to use
   collection = "\{db}"
+  """
 
+
+||| Initial content of an auto-generated `PACK_DIR/user/pack.toml` file.
+export
+initToml : (scheme : String) -> String
+initToml scheme =
+  """
   [install]
 
   # Whether to install packages together with their

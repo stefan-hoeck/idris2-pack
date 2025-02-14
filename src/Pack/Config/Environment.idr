@@ -50,8 +50,13 @@ userDir = packDir /> "user"
 
 ||| Path to global `pack.toml` file.
 export %inline
-globalPackToml : PackDir => File Abs
-globalPackToml = MkF userDir packToml
+userPackToml : PackDir => File Abs
+userPackToml = MkF userDir packToml
+
+||| Path to global `pack.toml` file.
+export %inline
+globalPackToml : XDGDir => File Abs
+globalPackToml = MkF xdgDir packToml
 
 ||| File where package DB is located
 export
@@ -401,6 +406,18 @@ getPackDir = do
   Nothing <- getEnvPath "HOME"     | Just v => pure $ PD (v /> ".pack")
   throwE NoPackDir
 
+||| Return the path of the pack config directory, located at
+||| "$XDG_CONFIG_HOME/pack", where `$XDG_CONFIG_HOME` defaults
+||| to `$HOME/.config`.
+export
+getXDGDir : HasIO io => EitherT PackErr io XDGDir
+getXDGDir = do
+  Nothing <- getEnvPath "XDG_CONFIG_HOME"
+    | Just v => pure $ XD (v /> "pack")
+  Nothing <- getEnvPath "HOME"
+    | Just v => pure $ XD (v /> ".config" /> "pack")
+  throwE NoXDGDir
+
 ||| Update the package database.
 export
 updateDB : HasIO io => TmpDir => PackDir => EitherT PackErr io ()
@@ -470,6 +487,7 @@ getConfig :
      (0 c : Type)
   -> {auto _   : Command c}
   -> {auto _   : HasIO io}
+  -> {auto xd  : XDGDir}
   -> {auto pd  : PackDir}
   -> {auto td  : TmpDir}
   -> {auto cur : CurDir}
@@ -478,15 +496,21 @@ getConfig c = do
   -- relevant directories
   coll       <- defaultColl
 
-  -- Initialize `pack.toml` if none exists
+  -- Initialize `$XDG_CONFIG_HOME/pack/pack.toml` if none exists
   when !(fileMissing globalPackToml) $
-    write globalPackToml (initToml "scheme" coll)
+    write globalPackToml (initToml "scheme")
+
+  -- Initialize `$PACK_DIR/user/pack.toml` if none exists
+  when !(fileMissing userPackToml) $
+    write userPackToml (dbToml coll)
 
   localTomls  <- findInAllParentDirs (packToml ==) curDir
   localConfs  <- for localTomls $ readFromTOML UserConfig
   global      <- readOptionalFromTOML UserConfig globalPackToml
+  user        <- readOptionalFromTOML UserConfig userPackToml
 
-  let ini = foldl update (init coll `update` global) localConfs
+  let use := init coll `update` user
+      ini := foldl update (use `update` global) localConfs
 
   args'       <- getArgs
   let args : List String
@@ -680,5 +704,5 @@ writeCollection :
   -> {auto c : Config}
   -> EitherT PackErr io ()
 writeCollection = do
-  str <- read globalPackToml
-  write globalPackToml (unlines . map (adjCollection c.collection) $ lines str)
+  str <- read userPackToml
+  write userPackToml (unlines . map (adjCollection c.collection) $ lines str)
