@@ -151,7 +151,8 @@ pack --with-ipkg rhone.ipkg repl src/Data/MSF.idr
 ### Uninstalling pack
 
 If you installed pack directly (i.e. not through a package manager like AUR),
-you can uninstall it with `pack uninstall`.
+you can uninstall it with `pack uninstall`. This will also uninstall pack's
+Idris2 installation and packages.
 
 ### Further help
 
