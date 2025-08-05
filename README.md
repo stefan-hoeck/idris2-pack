@@ -148,12 +148,6 @@ pack repl Test.idr
 pack --with-ipkg rhone.ipkg repl src/Data/MSF.idr
 ```
 
-### Uninstalling pack
-
-If you installed pack directly (i.e. not through a package manager like AUR),
-you can uninstall it with `pack uninstall`. This will also uninstall pack's
-Idris2 installation and packages.
-
 ### Further help
 
 For a list of further commands and command-line options, type
@@ -346,4 +340,4 @@ If you would like to uninstall pack from your system, you can simply use the fol
 pack uninstall
 ```
 
-This will delete the `$PACK_DIR` directory.
+This will delete the `$PACK_DIR` directory, which includes pack's Idris2 installation and all its packages.
