@@ -110,6 +110,9 @@ To update pack's Idris2 installation:
 pack switch latest
 ```
 
+Note that because packages are tied to Idris2 versions, if you update
+Idris2 then you may need to update your packages too.
+
 To update pack itself:
 
 ```sh
