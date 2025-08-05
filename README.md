@@ -148,6 +148,11 @@ pack repl Test.idr
 pack --with-ipkg rhone.ipkg repl src/Data/MSF.idr
 ```
 
+### Uninstalling pack
+
+If you installed pack directly (i.e. not through a package manager like AUR),
+you can uninstall it with `pack uninstall`.
+
 ### Further help
 
 For a list of further commands and command-line options, type
@@ -161,11 +166,6 @@ You can then explore individual commands, for example:
 ```sh
 pack help update
 ```
-
-### Uninstalling pack
-
-If you installed pack directly (i.e. not through a package manager like AUR),
-you can uninstall it with `pack uninstall`.
 
 ## Customization
 
