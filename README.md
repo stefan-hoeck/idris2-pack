@@ -164,8 +164,8 @@ pack help update
 
 ### Uninstalling pack
 
-If installed pack directly (i.e. not through a package manager like AUR),
-you can uninstall pack with `pack uninstall`.
+If you installed pack directly (i.e. not through a package manager like AUR),
+you can uninstall it with `pack uninstall`.
 
 ## Customization
 
