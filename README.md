@@ -102,27 +102,18 @@ If you no longer require *katla* and want to remove it, run
 pack remove-app katla
 ```
 
-### Updating Idris2, pack, and packages
+### Updating Idris2, packages, and pack
 
-To update pack's Idris2 installation:
+To update pack's Idris2 installation (compiler and core libraries) and packages:
 
 ```sh
 pack switch latest
 ```
 
-Note that because packages are tied to Idris2 versions, if you update
-Idris2 then you may need to update your packages too.
-
 To update pack itself:
 
 ```sh
 pack update
-```
-
-To update your installed packages:
-
-```sh
-pack update-db
 ```
 
 ### Building packages and running executables
