@@ -162,6 +162,11 @@ You can then explore individual commands, for example:
 pack help update
 ```
 
+### Uninstalling pack
+
+If installed pack directly (i.e. not through a package manager like AUR),
+you can uninstall pack with `pack uninstall`.
+
 ## Customization
 
 User settings are stored in file `$PACK_DIR/user/pack.toml`.
