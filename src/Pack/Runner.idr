@@ -142,6 +142,7 @@ export covering
 runCmd : HasIO io => EitherT PackErr io ()
 runCmd = do
   pd <- getPackDir
+  xd <- getXDGDir
   withTmpDir $ do
     cd       <- CD <$> curDir
     cache    <- emptyCache

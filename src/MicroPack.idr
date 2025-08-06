@@ -53,9 +53,11 @@ microInit scheme db =
 covering
 main : IO ()
 main = run $ do
-  dir     <- getPackDir
+  dir  <- getPackDir
+  xdir <- getXDGDir
   cache   <- emptyCache
   mkDir packDir
+  mkDir xdgDir
   withTmpDir $ do
     defCol  <- defaultColl
     args    <- getArgs
@@ -68,7 +70,9 @@ main = run $ do
 
         conf = microInit scheme db
 
+    -- initialize `$XDG_CONFIG_HOME/pack/pack.toml`
+    write globalPackToml (initToml scheme)
     -- initialize `$HOME/.pack/user/pack.toml`
-    write (MkF (packDir /> "user") packToml) (initToml scheme db)
+    write userPackToml (dbToml db)
 
     idrisEnv conf True >>= update

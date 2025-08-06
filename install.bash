@@ -17,6 +17,8 @@ function check_installed {
 
 PACK_DIR="${PACK_DIR:-$HOME/.pack}"
 
+XDG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}"
+
 if command -v chezscheme &>/dev/null; then
 	DETECTED_SCHEME=chezscheme
 elif command -v scheme &>/dev/null; then
@@ -182,11 +184,11 @@ popd
 
 # Initialize `pack.toml`
 
-mkdir -p "$PACK_DIR/user"
-cat <<EOF >>"$PACK_DIR/user/pack.toml"
-# The package collection to use
-collection = "$PACKAGE_COLLECTION"
-
+if [ -f "$XDG_DIR/pack/pack.toml" ]; then
+	echo "Found existing global pack.toml file"
+else
+	mkdir -p "$XDG_DIR/pack"
+	cat <<EOF >>"$XDG_DIR/pack/pack.toml"
 [install]
 
 # Whether to install packages together with their
@@ -250,6 +252,13 @@ repl.rlwrap = false
 # url    = "https://github.com/cuddlefishie/toml-idr"
 # commit = "eb7a146f565276f82ebf30cb6d5502e9f65dcc3c"
 # ipkg   = "toml.ipkg"
+EOF
+fi
+
+mkdir -p "$PACK_DIR/user"
+cat <<EOF >>"$PACK_DIR/user/pack.toml"
+# The package collection to use
+collection = "$PACKAGE_COLLECTION"
 EOF
 
 # Cleanup
