@@ -35,15 +35,11 @@ folder `$HOME/.pack/bin` to your `$PATH` variable.
 
 ## Usage
 
-For a list of commands and command-line options, type
-
-```sh
-pack help
-```
-
 In the following sections, we assume the `$PACK_DIR/bin` folder
 is on your path and you have installed
 pack as described under [installation](INSTALL.md).
+
+### Creating a new library
 
 To create a new library project, type
 
@@ -55,6 +51,8 @@ This will create a new package in the current directory consisting of a source d
 A git repository will also be initialized together with a suitable `.gitignore` file.
 If you wish to create a new application project, replace `lib` with `app`.
 
+### Installing and removing libraries
+
 To install a library from the package collection, run
 
 ```sh
@@ -64,6 +62,20 @@ pack install hedgehog
 This will download and build the
 [idris2-hedgehog](https://github.com/stefan-hoeck/idris2-hedgehog)
 library together with all its dependencies.
+
+Removing is done by
+
+```sh
+pack remove hedgehog
+```
+
+You can install and remove multiple libraries at once, for example:
+
+```sh
+pack install algdata algebra
+```
+
+### Installing and removing applications
 
 To build and install an application (for instance, the
 [katla](https://github.com/idris-community/katla) app),
@@ -87,8 +99,24 @@ pack install-app katla
 If you no longer require *katla* and want to remove it, run
 
 ```sh
-pack remove katla
+pack remove-app katla
 ```
+
+### Updating Idris2, packages, and pack
+
+To update pack's Idris2 installation (compiler and core libraries) and packages:
+
+```sh
+pack switch latest
+```
+
+To update pack itself:
+
+```sh
+pack update
+```
+
+### Building packages and running executables
 
 It is also possible to work with local `.ipkg` files as long
 as they depend on packages known to pack:
@@ -108,6 +136,8 @@ pack run test.ipkg -n 50
 pack run katla --help
 ```
 
+### Starting an Idris REPL
+
 You can use pack to start an Idris REPL session, optionally
 with making dependencies listed in an `.ipkg` file available
 (these will first be built and installed if necessary):
@@ -116,6 +146,20 @@ with making dependencies listed in an `.ipkg` file available
 pack repl
 pack repl Test.idr
 pack --with-ipkg rhone.ipkg repl src/Data/MSF.idr
+```
+
+### Further help
+
+For a list of further commands and command-line options, type
+
+```sh
+pack help
+```
+
+You can then explore individual commands, for example:
+
+```sh
+pack help update
 ```
 
 ## Customization
@@ -296,4 +340,4 @@ If you would like to uninstall pack from your system, you can simply use the fol
 pack uninstall
 ```
 
-This will delete the `$PACK_DIR` directory.
+This will delete the `$PACK_DIR` directory, which includes pack's Idris2 installation and all its packages.
