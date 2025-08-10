@@ -75,6 +75,15 @@ You can install and remove multiple libraries at once, for example:
 pack install algdata algebra
 ```
 
+Note that adding and removing a library in this fashion only affects the
+current version of the Idris2 compiler. If you add a library using
+`pack install`, then when you switch to a new compiler version, it won't be
+available (unless you use the tools explained in
+[Updating](#updating-idris2-packages-and-pack)). Similarly if you remove a
+library with `pack remove`, it will only be removed with respect to the
+current compiler version. This also applies to installing and removing
+applications.
+
 ### Installing and removing applications
 
 To build and install an application (for instance, the
