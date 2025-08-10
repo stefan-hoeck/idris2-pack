@@ -17,15 +17,18 @@ before you continue:
 * `git` version >= 2.35.1. Earlier versions of `git` will cause issues
   when caching GitHub repositories locally.
 
-* A Scheme compiler; either [Chez Scheme](https://cisco.github.io/ChezScheme/)
-  (default), or Racket.
-  If you install Chez Scheme from source files, building it locally,
-  make sure you run `./configure --threads` to build multithreading support in.
+* A Scheme compiler; either Chez Scheme (default) or Racket.
 
-  Note: On Apple Silicon, Chez Scheme works out-of-the-box as of version 10.0.0,
+  * Some Linux distributions' package managers have Chez Scheme packages
+  readily available (e.g. Fedora's [DNF](https://packages.fedoraproject.org/pkgs/chez-scheme/chez-scheme/),
+  Arch's [AUR](https://aur.archlinux.org/packages/chez-scheme)).
+  * On Apple Silicon, Chez Scheme works out-of-the-box as of version 10.0.0,
   and `brew install chezscheme` should install the latest version. If for some
   reason you cannot upgrade your Chez version, see the
   [Apple M1 User](#apple-m1-user) appendix.
+  * Otherwise you can build Chez Scheme from [source](https://cisco.github.io/ChezScheme/).
+  If you do build from source, make sure you run `./configure --threads` to
+  build multithreading support in.
 
 * `bash`, `GNU make`, `gcc` or `clang`, `sha256sum`, and `GMP`. On Linux, you probably
   already have these. On macOS and major BSD flavours, you can install them
