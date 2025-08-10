@@ -104,13 +104,41 @@ pack remove-app katla
 
 ### Updating Idris2, packages, and pack
 
-To update pack's Idris2 installation (compiler and core libraries) and packages:
+To switch to the latest version of the Idris2 compiler and core libraries, run
 
 ```sh
 pack switch latest
 ```
 
-To update pack itself:
+When you switch to a version of the Idris2 compiler, pack
+will also install (if necessary) or update (if possible) the corresponding
+versions of any packages which you specified in your `pack.toml`'s auto-install
+lists, thereby automatically making them available for use with that compiler
+version. Adding applications, e.g. idris2-lsp, to your `pack.toml` application
+auto-install list is the best practice to make sure they're always available
+and updated no matter which Idris2 compiler version you're on.
+
+However, the best practice for keeping your *libraries* up-to-date is simply
+to record which libraries each pack project depends on in its `.ipkg` file
+(refer to the example projects [here](https://github.com/stefan-hoeck/idris2-pack/blob/main/example1/chem-core/chem-core-example.ipkg)
+and [here](https://github.com/stefan-hoeck/idris2-pack/blob/main/example2/chem-smiles/chem-smiles-example.ipkg)
+for demonstrations of this - see the `depends` field). Then whenever you build
+that project, pack will resolve and install your project's dependencies
+automatically and transitively if it can without the need to manually invoke
+`pack install`.
+
+If a package that you were using is no longer available on a newer Idris2
+compiler version, you can add it to your `pack.toml` as a custom library
+(refer to the example repos for details). But in the long run you might want
+to remove it as a dependency, as the authors might have good reasons for having
+removed it from the pack collection.
+
+Note that if you don't use the `pack.toml` auto-install list to record your
+packages or `.ipkg` files to record your libraries, then whenever you switch to
+a new Idris2 compiler version, you'll need to manually re-install whichever
+packages you want to be available for use with that compiler version.
+
+To update pack itself, run:
 
 ```sh
 pack update
@@ -226,7 +254,7 @@ of a project. Just as with the global `pack.toml` file in directory
 `$HOME/.pack/user/`, you can specify the package collection to
 use for a project as well as define additional local dependencies
 and even override global package settings. Local settings take
-precedence over global once. Pack will look for local `pack.toml`
+precedence over global ones. Pack will look for local `pack.toml`
 files in all parent directories of the current working directory
 (including the current working directory itself) and will stop
 at the first one it finds.
