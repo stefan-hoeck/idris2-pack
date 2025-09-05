@@ -241,8 +241,8 @@ readTOML :  HasIO io => File Abs -> EitherT PackErr io TomlValue
 readTOML file = do
   str <- read file
   case parse (FileSrc "\{file}") str of
-    Right v       => pure v
-    Left (fc,err) => throwE $ TOMLParse (printParseError str fc err)
+    Right v => pure v
+    Left x  => throwE $ TOMLParse "\{x}"
 
 ||| Reads a file, converts its content to a TOML value, and
 ||| extracts an Idris value from this.

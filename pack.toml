@@ -13,8 +13,14 @@ type   = "local"
 path   = "."
 ipkg   = "micropack.ipkg"
 
-[custom.all.filepath]
+[custom.all.parser]
 type   = "git"
-url    = "https://github.com/stefan-hoeck/idris2-filepath"
+url    = "https://github.com/stefan-hoeck/idris2-parser"
 commit = "latest:main"
-ipkg   = "filepath.ipkg"
+ipkg   = "parser.ipkg"
+
+[custom.all.parser-toml]
+type   = "git"
+url    = "https://github.com/stefan-hoeck/idris2-parser"
+commit = "latest:main"
+ipkg   = "toml/parser-toml.ipkg"
