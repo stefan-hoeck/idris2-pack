@@ -13,20 +13,20 @@ type   = "local"
 path   = "."
 ipkg   = "micropack.ipkg"
 
-[custom.all.parser]
+[custom.all.ilex]
 type   = "git"
-url    = "https://github.com/stefan-hoeck/idris2-parser"
+url    = "https://github.com/stefan-hoeck/idris2-ilex"
 commit = "latest:main"
-ipkg   = "parser.ipkg"
+ipkg   = "ilex.ipkg"
 
-[custom.all.parser-show]
+[custom.all.ilex-core]
 type   = "git"
-url    = "https://github.com/stefan-hoeck/idris2-parser"
+url    = "https://github.com/stefan-hoeck/idris2-ilex"
 commit = "latest:main"
-ipkg   = "show/parser-show.ipkg"
+ipkg   = "core/ilex-core.ipkg"
 
-[custom.all.parser-toml]
+[custom.all.ilex-toml]
 type   = "git"
-url    = "https://github.com/stefan-hoeck/idris2-parser"
+url    = "https://github.com/stefan-hoeck/idris2-ilex"
 commit = "latest:main"
-ipkg   = "toml/parser-toml.ipkg"
+ipkg   = "toml/ilex-toml.ipkg"

@@ -146,15 +146,19 @@ pushd "$PACK_DIR/clones/idris2-refined"
 "$BOOT_PATH" --install refined.ipkg
 popd
 
-# Install parser and parser-toml
+# Install ilex-core, ilex, and ilex-toml
 
-git clone https://github.com/stefan-hoeck/idris2-parser.git "$PACK_DIR/clones/idris2-parser"
-pushd "$PACK_DIR/clones/idris2-parser"
-"$BOOT_PATH" --install parser.ipkg
+git clone https://github.com/stefan-hoeck/idris2-ilex.git "$PACK_DIR/clones/idris2-ilex"
+pushd "$PACK_DIR/clones/idris2-ilex/core"
+"$BOOT_PATH" --install ilex-core.ipkg
 popd
 
-pushd "$PACK_DIR/clones/idris2-parser/toml"
-"$BOOT_PATH" --install parser-toml.ipkg
+pushd "$PACK_DIR/clones/idris2-ilex"
+"$BOOT_PATH" --install ilex.ipkg
+popd
+
+pushd "$PACK_DIR/clones/idris2-ilex/toml"
+"$BOOT_PATH" --install ilex-toml.ipkg
 popd
 
 # Install filepath

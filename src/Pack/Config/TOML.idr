@@ -29,19 +29,19 @@ extractString errMsg _ = Left $ WrongType [] errMsg
 
 export
 FromTOML RlwrapConfig where
-  fromTOML _ (TBool x)   = Right $ if x then UseRlwrap [] else DoNotUseRlwrap
-  fromTOML _ (TStr str)  = Right $ UseRlwrap [NoEscape str]
-  fromTOML _ (TArr _ xs) =
+  fromTOML _ (TBool x)  = Right $ if x then UseRlwrap [] else DoNotUseRlwrap
+  fromTOML _ (TStr str) = Right $ UseRlwrap [NoEscape str]
+  fromTOML _ (TArr xs)  =
     map (UseRlwrap . fromStrList) $
-      traverse (extractString "array of strings") (xs <>> [])
+      traverse (extractString "array of strings") xs
   fromTOML _ _ = Left $ WrongType [] "boolean, string or array of strings"
 
 export
 FromTOML CmdArgList where
-  fromTOML _ (TStr str)  = Right $ [NoEscape str]
-  fromTOML _ (TArr _ xs) =
+  fromTOML _ (TStr str) = Right $ [NoEscape str]
+  fromTOML _ (TArr xs)  =
     fromStrList <$>
-      traverse (extractString "array of strings") (xs <>> [])
+      traverse (extractString "array of strings") xs
   fromTOML _ _ = Left $ WrongType [] "string or array of strings"
 
 export

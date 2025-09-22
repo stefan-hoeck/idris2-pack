@@ -18,7 +18,7 @@ depends = base >= 0.6.0
         , filepath
         , getopts
         , idris2
-        , parser-toml
+        , ilex-toml
 
 modules = Pack.CmdLn
         , Pack.CmdLn.Completion

@@ -4,7 +4,7 @@ import Data.SortedMap as M
 import Idris.Package.Types
 import Pack.Core.IO
 import Pack.Core.Types
-import Text.FC
+import Text.ILex
 import Text.ParseError
 import Text.TOML
 
@@ -86,13 +86,13 @@ valAt' get path dflt = go (forget $ split ('.' ==) path)
 
   where
     go : List String -> TomlValue -> Either TOMLErr a
-    go []        v          = get v
-    go (x :: xs) (TTbl _ y) = case lookup x y of
+    go []        v        = get v
+    go (x :: xs) (TTbl y) = case lookup x y of
       Nothing => case dflt of
         Nothing => Left $ MissingKey [x]
         Just a  => Right a
       Just v2 => prefixKey x $ go xs v2
-    go _ _                  = Left $ WrongType [] "Table"
+    go _ _                = Left $ WrongType [] "Table"
 
 ||| Extract and convert a mandatory value from a TOML
 ||| value. The `path` string can contain several dot-separated
@@ -198,8 +198,8 @@ FromTOML Bool where
 
 export
 FromTOML a => FromTOML (List a) where
-  fromTOML f (TArr _ vs) = traverse (fromTOML f) (vs <>> [])
-  fromTOML _ _           = Left $ WrongType [] "Array"
+  fromTOML f (TArr vs) = traverse (fromTOML f) vs
+  fromTOML _ _         = Left $ WrongType [] "Array"
 
 readVersion : String -> Either TOMLErr PkgVersion
 readVersion s = case traverse parsePositive $ split ('.' ==) s of
@@ -219,9 +219,9 @@ keyVal f (x,y) = prefixKey x [| MkPair (fromKey x) (f y) |]
 
 export
 TOMLKey k => FromTOML v => FromTOML (SortedMap k v) where
-  fromTOML f (TTbl _ m) =
+  fromTOML f (TTbl m) =
     M.fromList <$> traverse (keyVal $ fromTOML f) (M.toList m)
-  fromTOML _ _          = Left $ WrongType [] "Table"
+  fromTOML _ _        = Left $ WrongType [] "Table"
 
 export
 FromTOML (Path Abs) where
@@ -240,8 +240,8 @@ export covering
 readTOML :  HasIO io => File Abs -> EitherT PackErr io TomlValue
 readTOML file = do
   str <- read file
-  case parse (FileSrc "\{file}") str of
-    Right v => pure v
+  case parseString toml (FileSrc "\{file}") str of
+    Right v => pure (TTbl v)
     Left x  => throwE $ TOMLParse "\{x}"
 
 ||| Reads a file, converts its content to a TOML value, and
@@ -268,5 +268,5 @@ readOptionalFromTOML :
   -> EitherT PackErr io a
 readOptionalFromTOML a f = do
   True <- fileExists f
-    | False => liftEither (mapFst (TOMLFile f) $ fromTOML f (TTbl None empty))
+    | False => liftEither (mapFst (TOMLFile f) $ fromTOML f (TTbl empty))
   readFromTOML a f
