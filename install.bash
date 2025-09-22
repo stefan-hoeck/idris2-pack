@@ -132,11 +132,12 @@ pushd "$PACK_DIR/clones/idris2-getopts"
 "$BOOT_PATH" --install getopts.ipkg
 popd
 
-# Install elab-util
+# Install elab-util and elab-pretty
 
 git clone https://github.com/stefan-hoeck/idris2-elab-util.git "$PACK_DIR/clones/idris2-elab-util"
 pushd "$PACK_DIR/clones/idris2-elab-util"
 "$BOOT_PATH" --install elab-util.ipkg
+"$BOOT_PATH" --install elab-pretty.ipkg
 popd
 
 # Install refined
