@@ -19,6 +19,12 @@ url    = "https://github.com/stefan-hoeck/idris2-ilex"
 commit = "latest:main"
 ipkg   = "ilex.ipkg"
 
+[custom.all.ilex-core]
+type   = "git"
+url    = "https://github.com/stefan-hoeck/idris2-ilex"
+commit = "latest:main"
+ipkg   = "core/ilex-core.ipkg"
+
 [custom.all.ilex-toml]
 type   = "git"
 url    = "https://github.com/stefan-hoeck/idris2-ilex"

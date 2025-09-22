@@ -132,12 +132,11 @@ pushd "$PACK_DIR/clones/idris2-getopts"
 "$BOOT_PATH" --install getopts.ipkg
 popd
 
-# Install elab-util and elab-pretty
+# Install elab-util
 
 git clone https://github.com/stefan-hoeck/idris2-elab-util.git "$PACK_DIR/clones/idris2-elab-util"
 pushd "$PACK_DIR/clones/idris2-elab-util"
 "$BOOT_PATH" --install elab-util.ipkg
-"$BOOT_PATH" --install elab-pretty.ipkg
 popd
 
 # Install refined
@@ -147,14 +146,13 @@ pushd "$PACK_DIR/clones/idris2-refined"
 "$BOOT_PATH" --install refined.ipkg
 popd
 
-# Install parser and ilex-toml
-
-git clone https://github.com/stefan-hoeck/idris2-parser.git "$PACK_DIR/clones/idris2-parser"
-pushd "$PACK_DIR/clones/idris2-parser"
-"$BOOT_PATH" --install parser.ipkg
-popd
+# Install ilex-core, ilex, and ilex-toml
 
 git clone https://github.com/stefan-hoeck/idris2-ilex.git "$PACK_DIR/clones/idris2-ilex"
+pushd "$PACK_DIR/clones/idris2-ilex/core"
+"$BOOT_PATH" --install ilex-core.ipkg
+popd
+
 pushd "$PACK_DIR/clones/idris2-ilex"
 "$BOOT_PATH" --install ilex.ipkg
 popd
