@@ -214,7 +214,7 @@ descs =
   , MkOpt [] ["git-init"] (NoArg setGitInit)
       """
       Initialize git for a pack project.
-      """ 
+      """
   ]
 
 ||| Names of all command line options (prefixed with "-" in case of
