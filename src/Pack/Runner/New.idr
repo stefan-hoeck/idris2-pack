@@ -134,7 +134,7 @@ new (CD curdir) pty pkgName e = do
 
     mkDir (srcDir)
 
-    when (e.env.config.gitInit)
+    when (e.env.config.gitInit) $ do
       debug "Initializing git repo"
       eitherT
         (\err => warn "Git repo creation failed: \{printErr err}")
