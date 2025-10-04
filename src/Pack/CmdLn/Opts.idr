@@ -83,7 +83,7 @@ codegen : String -> AdjConf
 codegen v _ = Right . {codegen := fromString v}
 
 setGitInit : AdjConf
-setGitInit _ = Right . {initializeGit := True}
+setGitInit _ = Right . {gitInit := True}
 
 -- command line options with description
 descs : List $ OptDescr AdjConf
