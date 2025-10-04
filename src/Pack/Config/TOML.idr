@@ -171,7 +171,8 @@ initToml scheme db = """
   # Override this to use a custom commit and branch for the Idris compiler
   # commit = "latest:main"
 
-  # Override this to initialize git
+  # Override this to have a .gitignore file and .git directory
+  # created inside of a new pack project upon its creation.
   git = false
 
   # Below are some examples for custom packages
