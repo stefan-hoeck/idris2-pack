@@ -76,6 +76,7 @@ FromTOML UserConfig where
           (maybeValAt "idris2.codegen" f v)
           (pure Nothing)
           (maybeValAt "log" f v)
+          (maybeValAt "idris2.git" f v)
       |]
 
 ||| Initial content of an auto-generated `PACK_DIR/user/pack.toml` file.
@@ -169,6 +170,9 @@ initToml scheme db = """
 
   # Override this to use a custom commit and branch for the Idris compiler
   # commit = "latest:main"
+
+  # Override this to initialize git
+  git = false
 
   # Below are some examples for custom packages
 
