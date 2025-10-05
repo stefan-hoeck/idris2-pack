@@ -48,7 +48,8 @@ pack new lib idris2-library
 ```
 replacing `idris2-library` with the name of your library.
 This will create a new package in the current directory consisting of a source directory, a default module, a skeleton test suite, a local pack.toml file and a .ipkg file.
-A git repository will also be initialized together with a suitable `.gitignore` file.
+Passing the `--git-init` command line option will create a git repository (`.git`) along with a suitable `.gitignore` file.  By default,
+calling `pack new` does not create the git repository or the `.gitignore` file.
 If you wish to create a new application project, replace `lib` with `app`.
 
 ### Installing and removing libraries
