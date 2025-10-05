@@ -266,6 +266,9 @@ cmdDesc New              = """
   Create a new package in the current directory
   consisting of a source directory, a default module, a skeleton test suite, a local pack.toml file and a .ipkg file.
 
+  In order to initialize a .gitignore file and a .git directory,
+  you can pass the `--git-init` command line option.
+
   Note: Since module names with a hyphen ('-') are not supported by
   Idris, any hyphen in the package name will be replaced with an
   underscore ('_') in the generated module name.
