@@ -54,7 +54,7 @@ before you continue:
   * Executables go to `$HOME/.local/bin`. Override this by setting
     environment variable `$PACK_BIN_DIR`.
 
-* Make sure that `$HOME/.local/bin` (or `$PACK_BIN_DIR; see above)
+* Make sure that `$HOME/.local/bin` (or `$PACK_BIN_DIR`; see above)
   is on your `PATH` and takes
   precedence over the bin folder(s) (if any) where existing versions of
   Idris2 are already installed.
