@@ -13,9 +13,22 @@ function check_installed {
 
 # end common functions
 
-# Detect Chez executable
+# Install directories
 
-PACK_DIR="${PACK_DIR:-$HOME/.pack}"
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.local/cache}"
+
+USER_DIR="${PACK_USER_DIR:-$CONFIG_HOME/pack}"
+STATE_DIR="${PACK_STATE_DIR:-$STATE_HOME/pack}"
+CACHE_DIR="${PACK_CACHE_DIR:-$CACHE_HOME/pack}"
+BIN_DIR="${PACK_BIN_DIR:-$HOME/.local/bin}"
+
+DB_DIR="$STATE_DIR/db"
+INSTALL_DIR="$STATE_DIR/install"
+CLONES_DIR="$CACHE_DIR/clones"
+
+# Detect Chez executable
 
 if command -v chezscheme &>/dev/null; then
 	DETECTED_SCHEME=chezscheme
@@ -41,11 +54,19 @@ else
 	echo "Using $SCHEME for code generation"
 fi
 
-if [ -d "$PACK_DIR" ]; then
-	echo "There is already a $PACK_DIR directory."
-	echo "Please remove it with the 'pack uninstall' command and rerun this script."
+# Check and create directories
+
+if [ -d "$STATE_DIR" ]; then
+	echo "Directory $STATE_DIR exists."
+	echo "Please remove it and rerun this script."
 	exit 1
 fi
+
+mkdir -p "$USER_DIR"
+mkdir -p "$DB_DIR"
+mkdir -p "$INSTALL_DIR"
+mkdir -p "$CLONES_DIR"
+mkdir -p "$BIN_DIR"
 
 # Homebrew gmp on M1 macos
 
@@ -59,25 +80,21 @@ check_installed make
 
 # Install package collection
 
-mkdir "$PACK_DIR"
-mkdir "$PACK_DIR/clones"
-mkdir "$PACK_DIR/db"
+git clone https://github.com/stefan-hoeck/idris2-pack-db.git "$CLONES_DIR/idris2-pack-db"
+cp "$CLONES_DIR/idris2-pack-db/collections/"* "$DB_DIR"
 
-git clone https://github.com/stefan-hoeck/idris2-pack-db.git "$PACK_DIR/clones/idris2-pack-db"
-cp "$PACK_DIR/clones/idris2-pack-db/collections/"* "$PACK_DIR/db"
-
-LATEST_DB="$(find "$PACK_DIR/db" -name 'nightly-*' | sort | tail -1)"
+LATEST_DB="$(find "$DB_DIR" -name 'nightly-*' | sort | tail -1)"
 PACKAGE_COLLECTION="$(basename -s .toml "$LATEST_DB")"
-IDRIS2_COMMIT=$(sed -ne '/^\[idris2\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p;}' "$PACK_DIR/db/$PACKAGE_COLLECTION.toml")
+IDRIS2_COMMIT=$(sed -ne '/^\[idris2\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p;}' "$DB_DIR/$PACKAGE_COLLECTION.toml")
 
 # Bootstrap the Idris compiler
 
-git clone https://github.com/idris-lang/Idris2.git "$PACK_DIR/clones/Idris2"
-pushd "$PACK_DIR/clones/Idris2"
+git clone https://github.com/idris-lang/Idris2.git "$CLONES_DIR/Idris2"
+pushd "$CLONES_DIR/Idris2"
 git checkout "$IDRIS2_COMMIT"
 
-PREFIX_PATH="$PACK_DIR/install/$IDRIS2_COMMIT/idris2"
-BOOT_PATH="$PACK_DIR/install/$IDRIS2_COMMIT/idris2/bin/idris2"
+PREFIX_PATH="$INSTALL_DIR/$IDRIS2_COMMIT/idris2"
+BOOT_PATH="$INSTALL_DIR/$IDRIS2_COMMIT/idris2/bin/idris2"
 
 if [ "$SCHEME" = "racket" ]; then
 	CG="racket"
@@ -99,93 +116,92 @@ popd
 
 # Install algebra
 
-git clone https://github.com/stefan-hoeck/idris2-algebra.git "$PACK_DIR/clones/idris2-algebra"
-pushd "$PACK_DIR/clones/idris2-algebra"
+git clone https://github.com/stefan-hoeck/idris2-algebra.git "$CLONES_DIR/idris2-algebra"
+pushd "$CLONES_DIR/idris2-algebra"
 "$BOOT_PATH" --install algebra.ipkg
 popd
 
 # Install ref1
 
-git clone https://github.com/stefan-hoeck/idris2-ref1.git "$PACK_DIR/clones/idris2-ref1"
-pushd "$PACK_DIR/clones/idris2-ref1"
+git clone https://github.com/stefan-hoeck/idris2-ref1.git "$CLONES_DIR/idris2-ref1"
+pushd "$CLONES_DIR/idris2-ref1"
 "$BOOT_PATH" --install ref1.ipkg
 popd
 
 # Install array
 
-git clone https://github.com/stefan-hoeck/idris2-array.git "$PACK_DIR/clones/idris2-array"
-pushd "$PACK_DIR/clones/idris2-array"
+git clone https://github.com/stefan-hoeck/idris2-array.git "$CLONES_DIR/idris2-array"
+pushd "$CLONES_DIR/idris2-array"
 "$BOOT_PATH" --install array.ipkg
 popd
 
 # Install bytestring
 
-git clone https://github.com/stefan-hoeck/idris2-bytestring.git "$PACK_DIR/clones/idris2-bytestring"
-pushd "$PACK_DIR/clones/idris2-bytestring"
+git clone https://github.com/stefan-hoeck/idris2-bytestring.git "$CLONES_DIR/idris2-bytestring"
+pushd "$CLONES_DIR/idris2-bytestring"
 "$BOOT_PATH" --install bytestring.ipkg
 popd
 
 # Install getopts
 
-git clone https://github.com/idris-community/idris2-getopts.git "$PACK_DIR/clones/idris2-getopts"
-pushd "$PACK_DIR/clones/idris2-getopts"
+git clone https://github.com/idris-community/idris2-getopts.git "$CLONES_DIR/idris2-getopts"
+pushd "$CLONES_DIR/idris2-getopts"
 "$BOOT_PATH" --install getopts.ipkg
 popd
 
 # Install elab-util
 
-git clone https://github.com/stefan-hoeck/idris2-elab-util.git "$PACK_DIR/clones/idris2-elab-util"
-pushd "$PACK_DIR/clones/idris2-elab-util"
+git clone https://github.com/stefan-hoeck/idris2-elab-util.git "$CLONES_DIR/idris2-elab-util"
+pushd "$CLONES_DIR/idris2-elab-util"
 "$BOOT_PATH" --install elab-util.ipkg
 popd
 
 # Install refined
 
-git clone https://github.com/stefan-hoeck/idris2-refined.git "$PACK_DIR/clones/idris2-refined"
-pushd "$PACK_DIR/clones/idris2-refined"
+git clone https://github.com/stefan-hoeck/idris2-refined.git "$CLONES_DIR/idris2-refined"
+pushd "$CLONES_DIR/idris2-refined"
 "$BOOT_PATH" --install refined.ipkg
 popd
 
 # Install ilex-core, ilex, and ilex-toml
 
-git clone https://github.com/stefan-hoeck/idris2-ilex.git "$PACK_DIR/clones/idris2-ilex"
-pushd "$PACK_DIR/clones/idris2-ilex/core"
+git clone https://github.com/stefan-hoeck/idris2-ilex.git "$CLONES_DIR/idris2-ilex"
+pushd "$CLONES_DIR/idris2-ilex/core"
 "$BOOT_PATH" --install ilex-core.ipkg
 popd
 
-pushd "$PACK_DIR/clones/idris2-ilex"
+pushd "$CLONES_DIR/idris2-ilex"
 "$BOOT_PATH" --install ilex.ipkg
 popd
 
-pushd "$PACK_DIR/clones/idris2-ilex/toml"
+pushd "$CLONES_DIR/idris2-ilex/toml"
 "$BOOT_PATH" --install ilex-toml.ipkg
 popd
 
 # Install filepath
 
-git clone https://github.com/stefan-hoeck/idris2-filepath.git "$PACK_DIR/clones/idris2-filepath"
-pushd "$PACK_DIR/clones/idris2-filepath"
+git clone https://github.com/stefan-hoeck/idris2-filepath.git "$CLONES_DIR/idris2-filepath"
+pushd "$CLONES_DIR/idris2-filepath"
 "$BOOT_PATH" --install filepath.ipkg
 popd
 
 # Install pack
 
-git clone https://github.com/stefan-hoeck/idris2-pack.git "$PACK_DIR/clones/idris2-pack"
-pushd "$PACK_DIR/clones/idris2-pack"
+git clone https://github.com/stefan-hoeck/idris2-pack.git "$CLONES_DIR/idris2-pack"
+pushd "$CLONES_DIR/idris2-pack"
 "$BOOT_PATH" --build pack.ipkg
-mkdir -p "$PACK_DIR/bin"
-cp -r build/exec/* "$PACK_DIR/bin"
+cp -r build/exec/* "$BIN_DIR"
 popd
 
-pushd "$PACK_DIR/bin"
+pushd "$BIN_DIR"
 
 cat <<EOF >>idris2
 #!/bin/sh
 
-APPLICATION="\$($PACK_DIR/bin/pack app-path idris2)"
-export IDRIS2_PACKAGE_PATH="\$($PACK_DIR/bin/pack package-path)"
-export IDRIS2_LIBS="\$($PACK_DIR/bin/pack libs-path)"
-export IDRIS2_DATA="\$($PACK_DIR/bin/pack data-path)"
+APPLICATION="\$($BIN_DIR/pack app-path idris2)"
+export IDRIS2_PACKAGE_PATH="\$($BIN_DIR/pack package-path)"
+export IDRIS2_LIBS="\$($BIN_DIR/pack libs-path)"
+export IDRIS2_DATA="\$($BIN_DIR/pack data-path)"
 export IDRIS2_CG="$CG"
 \$APPLICATION "\$@"
 EOF
@@ -193,13 +209,17 @@ EOF
 chmod +x idris2
 popd
 
-# Initialize `pack.toml`
-
-mkdir -p "$PACK_DIR/user"
-cat <<EOF >>"$PACK_DIR/user/pack.toml"
-# The package collection to use
+# Initialize `pack.toml`s
+#
+cat <<EOF >>"$STATE_DIR/pack.toml"
+# Warning: This file was auto-generated and is maintained by pack.
+#          Any changes could be overwritten by pack at any time.
+#          Custom settings should go to the global `pack.toml` file
+#          or any `pack.toml` file local to a project.
 collection = "$PACKAGE_COLLECTION"
+EOF
 
+cat <<EOF >>"$USER_DIR/pack.toml"
 [install]
 
 # Whether to install packages together with their
@@ -267,7 +287,7 @@ EOF
 
 # Cleanup
 
-rm -rf "$PACK_DIR/clones"
+rm -rf "$CLONES_DIR"
 rm -rf "$PREFIX_PATH/idris2-*/elab-util-*"
 rm -rf "$PREFIX_PATH/idris2-*/algebra-*"
 rm -rf "$PREFIX_PATH/idris2-*/getopts-*"
@@ -278,4 +298,4 @@ rm -rf "$PREFIX_PATH/idris2-*/ref1-*"
 rm -rf "$PREFIX_PATH/idris2-*/array-*"
 rm -rf "$PREFIX_PATH/idris2-*/bytestring-*"
 
-"$PACK_DIR/bin/pack" info
+"$BIN_DIR/pack" info
