@@ -134,11 +134,12 @@ new (CD curdir) pty pkgName e = do
 
     mkDir (srcDir)
 
-    debug "Initializing git repo"
-    eitherT
-      (\err => warn "Git repo creation failed: \{printErr err}")
-      (\_ => write (pkgRootDir </> ".gitignore") gitIgnoreFile)
-      (sysAndLog Info ["git", "init", pkgRootDir])
+    when (e.env.config.gitInit) $ do
+      debug "Initializing git repo"
+      eitherT
+        (\err => warn "Git repo creation failed: \{printErr err}")
+        (\_ => write (pkgRootDir </> ".gitignore") gitIgnoreFile)
+        (sysAndLog Info ["git", "init", pkgRootDir])
 
     debug "Writing ipkg file"
     write

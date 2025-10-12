@@ -82,6 +82,9 @@ noIpkg _ = Right . {withIpkg := None}
 codegen : String -> AdjConf
 codegen v _ = Right . {codegen := fromString v}
 
+setGitInit : AdjConf
+setGitInit _ = Right . {gitInit := True}
+
 -- command line options with description
 descs : List $ OptDescr AdjConf
 descs =
@@ -207,6 +210,10 @@ descs =
       """
       Specify the logging level to use. Accepted values are:
       \{joinBy ", " $ show . fst <$> logLevels}.
+      """
+  , MkOpt [] ["git-init"] (NoArg setGitInit)
+      """
+      Initialize git for a pack project.
       """
   ]
 

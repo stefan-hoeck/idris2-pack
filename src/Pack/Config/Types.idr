@@ -247,6 +247,9 @@ record Config_ (f : Type -> Type) (c : Type) where
   ||| Default LogLevels for different commands
   levels       : f (SortedMap String LogLevel)
 
+  ||| Whether to initialize git.
+  gitInit      : f Bool
+
 ||| Configuration with mandatory fields.
 public export
 0 IConfig : Type -> Type
@@ -366,6 +369,7 @@ init coll = MkConfig {
   , codegen         = Default
   , output          = "_tmppack"
   , levels          = empty
+  , gitInit         = False
   }
 
 export infixl 7 `update`
@@ -402,6 +406,7 @@ update ci cm = MkConfig {
   , codegen         = fromMaybe ci.codegen cm.codegen
   , output          = fromMaybe ci.output cm.output
   , levels          = mergeWith (\_,v => v) ci.levels (fromMaybe empty cm.levels)
+  , gitInit         = fromMaybe ci.gitInit cm.gitInit
   }
 
 --------------------------------------------------------------------------------
