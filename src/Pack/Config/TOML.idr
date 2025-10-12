@@ -79,13 +79,10 @@ FromTOML UserConfig where
           (maybeValAt "idris2.git" f v)
       |]
 
-||| Initial content of an auto-generated `PACK_DIR/user/pack.toml` file.
+||| Initial content of an auto-generated `PACK_USER_DIR/pack.toml` file.
 export
-initToml : (scheme : String) -> (db : DBName) -> String
-initToml scheme db = """
-  # The package collection to use
-  collection = "\{db}"
-
+initToml : (scheme : String) -> String
+initToml scheme = """
   [install]
 
   # Whether to install packages together with their

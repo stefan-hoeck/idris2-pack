@@ -14,8 +14,8 @@ gitTmpDir pkg = tmpDir <//> pkg
 
 ||| Cached directory to use for a Git project.
 export %inline
-gitCacheDir : PackDir => (url : URL) -> Path Abs
-gitCacheDir url = packDir <//> ".cache/git" <//> url
+gitCacheDir : (pd : PackDirs) => (url : URL) -> Path Abs
+gitCacheDir url = pd.cache <//> "git" <//> url
 
 parameters {auto has : HasIO io}
 
@@ -25,7 +25,7 @@ parameters {auto has : HasIO io}
 
   ||| Creates a shared clone of a cached local git clone
   cloneShared :
-       {auto _ : PackDir}
+       {auto _ : PackDirs}
     -> {auto _ : TmpDir}
     -> (url    : URL)
     -> PkgName
@@ -55,7 +55,7 @@ parameters {auto has : HasIO io}
   export
   withGit :
        {auto _ : TmpDir}
-    -> {auto _ : PackDir}
+    -> {auto _ : PackDirs}
     -> (pkg    : PkgName)
     -> (url    : URL)
     -> (commit : Commit)

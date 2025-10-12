@@ -38,18 +38,31 @@ before you continue:
   library, which means on some systems the package you need to install will
   be named something more like `libgmp3-dev`.
 
-* As a default, *pack* and all its managed libraries and binaries
-  will be installed to `$HOME/.pack`. You can change this by setting
-  the `PACK_DIR` environment variable to a different directory.
+* As a default, *pack* and all its managed libraries will be installed
+  in the following directories, which can be overridden as specified:
 
-* Make sure that `$HOME/.pack/bin` is on your `PATH` and takes
+  * The global `pack.toml` file goes to `$XDG_CONFIG_HOME/pack/pack.toml`.
+    Override the directory by setting environment variable `$PACK_USER_DIR`.
+
+  * The built compiler as well as installed libraries and applications
+    go to `$XDG_STATE_HOME/pack/`.
+    Override this by setting environment variable `$PACK_STATE_DIR`.
+
+  * Cached `.ipkg` files and git repositories go to `$XDG_CACHE_HOME/pack/`.
+    Override this by setting environment variable `$PACK_CACHE_DIR`.
+
+  * Executables go to `$HOME/.local/bin`. Override this by setting
+    environment variable `$PACK_BIN_DIR`.
+
+* Make sure that `$HOME/.local/bin` (or `$PACK_BIN_DIR`; see above)
+  is on your `PATH` and takes
   precedence over the bin folder(s) (if any) where existing versions of
   Idris2 are already installed.
 
   For instance:
 
   ```sh
-  export PATH="$HOME/.pack/bin:$HOME/.idris2/bin:$PATH"
+  export PATH="$HOME/.local/bin:$HOME/.idris2/bin:$PATH"
   ```
 
 ## 2. Install via the `install.bash` shell script

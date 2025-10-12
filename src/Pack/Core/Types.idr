@@ -131,19 +131,49 @@ Cast (File t) (Path t) where cast = toPath
 ||| The directory where package collections, global user settings,
 ||| and cached `.ipkg` files are stored.
 public export
-data PackDir : Type where
+record PackDirs where
   [noHints]
-  PD : (dir : Path Abs) -> PackDir
+  constructor PD
 
-export %inline
-Interpolation PackDir where
-  interpolate (PD dir) = interpolate dir
+  ||| Directory with user settings.
+  |||
+  ||| Depending on what environment variables are set, this defaults to
+  ||| (in decreasing order of priority):
+  |||
+  ||| * `PACK_USER_DIR`
+  ||| * `$XDG_CONFIG_HOME/pack`
+  ||| * `$HOME/.config/pack`
+  user    : Path Abs
 
-||| Use this when you need access to the `PACK_DIR` path with
-||| only a value of type `PackDir` in scope.
-export %inline
-packDir : (pd : PackDir) => Path Abs
-packDir {pd = PD dir} = dir
+  ||| Directory with application state (installed compiler and libraries).
+  |||
+  ||| Depending on what environment variables are set, this defaults to
+  ||| (in decreasing order of priority):
+  |||
+  ||| * `PACK_STATE_DIR`
+  ||| * `$XDG_STATE_HOME/pack`
+  ||| * `$HOME/.local/state/pack`
+  state   : Path Abs
+
+  ||| Directory with cached data such as cached `.ipkg` files, git repos,
+  ||| and temporary files used during installation of libs.
+  |||
+  ||| Depending on what environment variables are set, this defaults to
+  ||| (in decreasing order of priority):
+  |||
+  ||| * `PACK_CACHE_DIR`
+  ||| * `$XDG_CACHE_HOME/pack`
+  ||| * `$HOME/.cache/pack`
+  cache   : Path Abs
+
+  ||| Directory where executables will be installed.
+  |||
+  ||| Depending on what environment variables are set, this defaults to
+  ||| (in decreasing order of priority):
+  |||
+  ||| * `PACK_BIN_DIR`
+  ||| * `$HOME/.local/bin`
+  bin     : Path Abs
 
 ||| The directory from which the pack application was invoked.
 public export

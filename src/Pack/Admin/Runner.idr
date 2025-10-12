@@ -109,7 +109,7 @@ writeLatestDB path e = write path (printDB e.db)
 export covering
 runCmd : HasIO io => EitherT PackErr io ()
 runCmd = do
-  pd       <- getPackDir
+  pd       <- getPackDirs
   withTmpDir $ do
     cd       <- CD <$> curDir
     cache    <- emptyCache

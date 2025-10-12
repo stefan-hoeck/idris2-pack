@@ -48,14 +48,18 @@ microInit scheme db =
     , codegen           = Default
     , output            = "_tmppack"
     , levels            = empty
+    , gitInit           = False
     }
 
 covering
 main : IO ()
 main = run $ do
-  dir     <- getPackDir
+  dirs    <- getPackDirs
   cache   <- emptyCache
-  mkDir packDir
+  mkDir dirs.user
+  mkDir dirs.state
+  mkDir dirs.cache
+  mkDir dirs.bin
   withTmpDir $ do
     defCol  <- defaultColl
     args    <- getArgs
@@ -68,7 +72,9 @@ main = run $ do
 
         conf = microInit scheme db
 
-    -- initialize `$HOME/.pack/user/pack.toml`
-    write (MkF (packDir /> "user") packToml) (initToml scheme db)
+    -- initialize `$PACK_USER_DIR/pack.toml` and `$PACK_STATE_DIR/pack.toml`
+    when !(fileMissing globalPackToml) $
+      write globalPackToml (initToml scheme)
+    write collectionToml (collectionTomlContent db)
 
     idrisEnv conf True >>= update

@@ -463,21 +463,21 @@ uncacheLib n = modifyIORef ref (delete n)
 public export
 record Env where
   constructor MkEnv
-  packDir : PackDir
-  tmpDir  : TmpDir
-  config  : Config
-  cache   : LibCache
-  db      : DB
-  linebuf : LineBufferingCmd
+  packDirs : PackDirs
+  tmpDir   : TmpDir
+  config   : Config
+  cache    : LibCache
+  db       : DB
+  linebuf  : LineBufferingCmd
 
 ||| This allows us to use an `Env` in scope when we
-||| need an auto-implicit `PackDir`.
+||| need an auto-implicit `PackDirs`.
 export %inline %hint
-envToPackDir : (e : Env) => PackDir
-envToPackDir = e.packDir
+envToPackDirs : (e : Env) => PackDirs
+envToPackDirs = e.packDirs
 
 ||| This allows us to use an `Env` in scope when we
-||| need an auto-implicit `PackDir`.
+||| need an auto-implicit `TmpDir`.
 export %inline %hint
 envToTmpDir : (e : Env) => TmpDir
 envToTmpDir = e.tmpDir
@@ -676,7 +676,7 @@ interface Command c where
   ||| package collection read from the `pack.toml` files with the
   ||| latest package collection available.
   adjConfig_ :  HasIO io
-             => PackDir
+             => PackDirs
              => TmpDir
              => (cmd : c)
              -> All I (ArgTypes cmd)
@@ -769,7 +769,7 @@ readCommand c cd (h :: t) = case readCommand_ {c} h of
 export %inline
 adjConfig :  HasIO io
           => Command c
-          => PackDir
+          => PackDirs
           => TmpDir
           => CommandWithArgs c
           -> MetaConfig

@@ -24,88 +24,93 @@ packToml = "pack.toml"
 
 ||| Directory where databases are stored.
 export %inline
-dbDir : PackDir => Path Abs
-dbDir = packDir /> "db"
+dbDir : (pd : PackDirs) => Path Abs
+dbDir = pd.state /> "db"
 
-||| Directory where databases are stored.
+||| Directory where cached data is stored
 export %inline
-cacheDir : PackDir => Path Abs
-cacheDir = packDir /> ".cache"
+cacheDir : (pd : PackDirs) => Path Abs
+cacheDir = pd.cache
 
 ||| Path to cached `.ipkg` file.
 export
-ipkgCachePath : PackDir => PkgName -> Commit -> File Rel -> File Abs
+ipkgCachePath : PackDirs => PkgName -> Commit -> File Rel -> File Abs
 ipkgCachePath p com = toAbsFile (cacheDir <//> p <//> com)
 
 ||| Path to cached core library `.ipkg` file
 export
-coreCachePath : PackDir => (db : DB) => CorePkg -> File Abs
+coreCachePath : PackDirs => (db : DB) => CorePkg -> File Abs
 coreCachePath n =
   MkF (cacheDir <//> n <//> db.idrisCommit) (coreIpkgFile n)
 
 ||| Directory where user settings are stored.
 export %inline
-userDir : PackDir => Path Abs
-userDir = packDir /> "user"
+userDir : (pd : PackDirs) => Path Abs
+userDir = pd.user
 
 ||| Path to global `pack.toml` file.
 export %inline
-globalPackToml : PackDir => File Abs
+globalPackToml : PackDirs => File Abs
 globalPackToml = MkF userDir packToml
+
+||| Path to global `pack.toml` file containing the global pack collection.
+export %inline
+collectionToml : (pd : PackDirs) => File Abs
+collectionToml = MkF pd.state packToml
 
 ||| File where package DB is located
 export
-dbFile : PackDir => (c : MetaConfig) => File Abs
+dbFile : PackDirs => (c : MetaConfig) => File Abs
 dbFile = MkF dbDir $ c.collection.value <+> ".toml"
 
 ||| Directory where wrapper scripts to binaries
 ||| managed by pack are being stored. The only exception
 ||| is pack itself, which is stored as a symbolic link.
 export %inline
-packBinDir : PackDir => Path Abs
-packBinDir = packDir /> "bin"
+packBinDir : (pd : PackDirs) => Path Abs
+packBinDir = pd.bin
 
 ||| Where packages and built applications will be installed
 export %inline
-installDir : PackDir => Path Abs
-installDir = packDir </> "install"
+installDir : (pd : PackDirs) => Path Abs
+installDir = pd.state </> "install"
 
 ||| Where all pack versions are installed
 export %inline
-packParentDir : PackDir => Path Abs
+packParentDir : PackDirs => Path Abs
 packParentDir = installDir </> "pack"
 
 ||| Where the actual pack application is installed.
 export %inline
-packInstallDir : PackDir => Commit -> Path Abs
+packInstallDir : PackDirs => Commit -> Path Abs
 packInstallDir com = packParentDir </> cast com
 
 ||| Executable for an application
 export %inline
-pathExec : PackDir => Body -> File Abs
+pathExec : PackDirs => Body -> File Abs
 pathExec b = MkF packBinDir b
 
 ||| Symbolic link to the current pack executable.
 export
-packExec : PackDir => File Abs
+packExec : PackDirs => File Abs
 packExec = pathExec "pack"
 
 ||| Directory where `.ipkg` patches are stored.
 export
-patchesDir : PackDir => Path Abs
-patchesDir = dbDir /> "patches"
+patchesDir : PackDirs => Path Abs
+patchesDir = userDir /> "patches"
 
 ||| Path to file storing the last fetched commit of a Git
 ||| repo given as a URL and branch name.
 export
-commitFile : PackDir => URL -> Branch -> File Abs
+commitFile : PackDirs => URL -> Branch -> File Abs
 commitFile url b =
   let relPath := the (Path Rel) $ cast "\{url}/\{b}"
    in MkF (cacheDir </> relPath) "commit"
 
 ||| File where the patch (if any) for an `.ipkg` file is stored.
 export
-patchFile : PackDir => (c : Config) => PkgName -> File Rel -> File Abs
+patchFile : PackDirs => (c : Config) => PkgName -> File Rel -> File Abs
 patchFile n (MkF p b) =
   MkF
     (patchesDir //> c.collection <//> n </> p)
@@ -114,17 +119,17 @@ patchFile n (MkF p b) =
 ||| Directory where all packages (and Idris2) built with the
 ||| current Idris2 commit will be installed.
 export %inline
-commitDir : PackDir => (db : DB) => Path Abs
+commitDir : PackDirs => (db : DB) => Path Abs
 commitDir = installDir <//> db.idrisCommit
 
 ||| The directory where Idris2 and core libraries will be installed.
 export %inline
-idrisPrefixDir : PackDir => DB => Path Abs
+idrisPrefixDir : PackDirs => DB => Path Abs
 idrisPrefixDir = commitDir /> "idris2"
 
 ||| The directory where the Idris2 binary will be installed.
 export %inline
-idrisBinDir : PackDir => DB => Path Abs
+idrisBinDir : PackDirs => DB => Path Abs
 idrisBinDir = idrisPrefixDir /> "bin"
 
 ||| Location of the Idris2 executable used to build packages.
@@ -132,31 +137,31 @@ idrisBinDir = idrisPrefixDir /> "bin"
 ||| Notice that if you need an Idris command, you may need `idrisCmd` function
 ||| instead because it takes extra arguments into account.
 export
-idrisExec : PackDir => DB => File Abs
+idrisExec : PackDirs => DB => File Abs
 idrisExec = MkF idrisBinDir "idris2"
 
 %inline
-idrisDir : PackDir => (db : DB) => Body
+idrisDir : PackDirs => (db : DB) => Body
 idrisDir = the Body "idris2" <-> db.idrisVersion
 
 ||| The directory where Idris2 packages will be installed.
 export %inline
-idrisInstallDir : PackDir => DB => Path Abs
+idrisInstallDir : PackDirs => DB => Path Abs
 idrisInstallDir = idrisPrefixDir /> idrisDir
 
 ||| The `lib` directory in the Idris2 installation folder
 export %inline
-idrisLibDir : PackDir => DB => Path Abs
+idrisLibDir : PackDirs => DB => Path Abs
 idrisLibDir = idrisInstallDir /> "lib"
 
 ||| The `support` directory in the Idris2 installation folder
 export %inline
-idrisDataDir : PackDir => DB => Path Abs
+idrisDataDir : PackDirs => DB => Path Abs
 idrisDataDir = idrisInstallDir /> "support"
 
 ||| Directory where an installed library or app goes
 export %inline
-pkgPrefixDir : PackDir => DB => PkgName -> Package -> Path Abs
+pkgPrefixDir : PackDirs => DB => PkgName -> Package -> Path Abs
 pkgPrefixDir n (Git _ c _ _ _ _) = commitDir <//> n <//> c
 pkgPrefixDir n (Local _ _ _ _) = commitDir </> "local" <//> n
 pkgPrefixDir n (Core _)        = idrisPrefixDir
@@ -165,38 +170,38 @@ pkgPrefixDir n (Core _)        = idrisPrefixDir
 ||| Idris finds a library even though it is being installed in a
 ||| custom location.
 export %inline
-pkgPathDir : PackDir => DB => PkgName -> Package -> Path Abs
+pkgPathDir : PackDirs => DB => PkgName -> Package -> Path Abs
 pkgPathDir n p = pkgPrefixDir n p /> idrisDir
 
 ||| Directory where the binary of an Idris application is installed.
 export %inline
-pkgBinDir : PackDir => DB => PkgName -> Package -> Path Abs
+pkgBinDir : PackDirs => DB => PkgName -> Package -> Path Abs
 pkgBinDir n p = pkgPrefixDir n p /> "bin"
 
 ||| Directory to be used with the `IDRIS2_LIBS` variable, so that
 ||| Idris finds a libraries `.so` files even though they have been
 ||| installed in a custom location.
 export %inline
-pkgLibDir : PackDir => DB => PkgName -> Package -> Path Abs
+pkgLibDir : PackDirs => DB => PkgName -> Package -> Path Abs
 pkgLibDir n p = pkgPathDir n p /> "lib"
 
 ||| Directory to be used with the `IDRIS2_DATA` variable, so that
 ||| Idris finds a libraries support files even though they have been
 ||| installed in a custom location.
 export %inline
-pkgDataDir : PackDir => DB => PkgName -> Package -> Path Abs
+pkgDataDir : PackDirs => DB => PkgName -> Package -> Path Abs
 pkgDataDir n p = pkgPathDir n p /> "support"
 
 ||| Timestamp used to monitor if a local library has been
 ||| modified and requires reinstalling.
 export %inline
-libTimestamp :  PackDir => DB => PkgName -> Package -> File Abs
+libTimestamp :  PackDirs => DB => PkgName -> Package -> File Abs
 libTimestamp n p = MkF (pkgPathDir n p) ".timestamp"
 
 ||| Timestamp used to monitor if a local app has been
 ||| modified and requires reinstalling.
 export %inline
-appTimestamp :  PackDir => DB => PkgName -> Package -> File Abs
+appTimestamp :  PackDirs => DB => PkgName -> Package -> File Abs
 appTimestamp n p = MkF (pkgBinDir n p) ".timestamp"
 
 ||| Directory where the sources of a local package are
@@ -213,7 +218,7 @@ pkgRelDir d = case Body.parse d.desc.name of
 ||| Returns the directory where a package for the current
 ||| package collection is installed.
 export
-pkgInstallDir : PackDir => (db : DB) => PkgName -> Package -> Desc t -> Path Abs
+pkgInstallDir : PackDirs => (db : DB) => PkgName -> Package -> Desc t -> Path Abs
 pkgInstallDir n p d =
   let vers := db.idrisVersion
       dir  := pkgPrefixDir n p /> idrisDir
@@ -224,22 +229,22 @@ pkgInstallDir n p d =
 
 ||| Directory where the API docs of the package will be installed.
 export %inline
-pkgDocs : PackDir => DB => PkgName -> Package -> Desc t -> Path Abs
+pkgDocs : PackDirs => DB => PkgName -> Package -> Desc t -> Path Abs
 pkgDocs n p d = pkgInstallDir n p d /> "docs"
 
 ||| Location of an executable of the given name.
 export
-pkgExec : PackDir => DB => PkgName -> Package -> (exe : Body) -> File Abs
+pkgExec : PackDirs => DB => PkgName -> Package -> (exe : Body) -> File Abs
 pkgExec n p exe = MkF (pkgBinDir n p) exe
 
 ||| Path to the executable of an Idris application
 export
-resolvedExec : PackDir => DB => ResolvedApp t -> File Abs
+resolvedExec : PackDirs => DB => ResolvedApp t -> File Abs
 resolvedExec (RA p n d _ exe _) = pkgExec n p exe
 
 pathDirs :
      {auto _ : HasIO io}
-  -> {auto _ : PackDir}
+  -> {auto _ : PackDirs}
   -> {auto _ : DB}
   -> {auto _ : Config}
   -> (pre : String)
@@ -299,12 +304,12 @@ bootstrapCmd = if useRacket then "bootstrap-racket" else "bootstrap"
 
 ||| `$PREFIX` variable during Idris2 installation, unquoted
 export
-prefixVar : PackDir => DB => String
+prefixVar : PackDirs => DB => String
 prefixVar = "PREFIX=\{idrisPrefixDir}"
 
 ||| `$IDRIS2_BOOT` variable during Idris2 installation, unquoted
 export
-idrisBootVar : PackDir => DB => String
+idrisBootVar : PackDirs => DB => String
 idrisBootVar = "IDRIS2_BOOT=\{idrisExec}"
 
 ||| `$SCHEME` variable during Idris2 installation, unquoted
@@ -315,7 +320,7 @@ schemeVar = if useRacket then "IDRIS2_CG=racket" else "SCHEME=\{c.scheme}"
 ||| `IDRIS2_PREFIX` to be used with Idris when installing a library
 ||| to a custom location.
 export
-libInstallPrefix : PackDir => DB => ResolvedLib t -> List (String,String)
+libInstallPrefix : PackDirs => DB => ResolvedLib t -> List (String,String)
 libInstallPrefix rl =
   [("IDRIS2_PREFIX", "\{pkgPrefixDir rl.name rl.pkg}")]
 
@@ -391,19 +396,45 @@ idrisWithPkgs pkgs =
 getEnvPath : HasIO io => String -> io (Maybe (Path Abs))
 getEnvPath s = (>>= parse) <$> getEnv s
 
+getUserDir  : HasIO io => (home : Path Abs) -> io (Path Abs)
+getUserDir home = do
+  Nothing <- getEnvPath "PACK_USER_DIR"   | Just p => pure p
+  Nothing <- getEnvPath "XDG_CONFIG_HOME" | Just p => pure (p </> "pack")
+  pure (home </> ".config/pack")
+
+getStateDir : HasIO io => (home : Path Abs) -> io (Path Abs)
+getStateDir home = do
+  Nothing <- getEnvPath "PACK_STATE_DIR" | Just p => pure p
+  Nothing <- getEnvPath "XDG_STATE_HOME" | Just p => pure (p </> "pack")
+  pure (home </> ".local/state/pack")
+
+getCacheDir : HasIO io => (home : Path Abs) -> io (Path Abs)
+getCacheDir home = do
+  Nothing <- getEnvPath "PACK_CACHE_DIR" | Just p => pure p
+  Nothing <- getEnvPath "XDG_CACHE_HOME" | Just p => pure (p </> "pack")
+  pure (home </> ".cache/pack")
+
+getBinDir   : HasIO io => (home : Path Abs) -> io (Path Abs)
+getBinDir home = do
+  Nothing <- getEnvPath "PACK_BIN_DIR"   | Just p => pure p
+  pure (home </> ".local/bin")
+
 ||| Return the path of the pack root directory,
 ||| either from environment variable `$PACK_DIR`, or
 ||| as `$HOME/.pack`.
 export
-getPackDir : HasIO io => EitherT PackErr io PackDir
-getPackDir = do
-  Nothing <- getEnvPath "PACK_DIR" | Just v => pure $ PD v
-  Nothing <- getEnvPath "HOME"     | Just v => pure $ PD (v /> ".pack")
-  throwE NoPackDir
+getPackDirs : HasIO io => EitherT PackErr io PackDirs
+getPackDirs = do
+  Just h <- getEnvPath "HOME" | Nothing => throwE NoPackDir
+  u      <- getUserDir h
+  s      <- getStateDir h
+  c      <- getCacheDir h
+  b      <- getBinDir h
+  pure (PD u s c b)
 
 ||| Update the package database.
 export
-updateDB : HasIO io => TmpDir => PackDir => EitherT PackErr io ()
+updateDB : HasIO io => TmpDir => PackDirs => EitherT PackErr io ()
 updateDB = do
   rmDir dbDir
   commit <- gitLatest dbRepo "main"
@@ -423,7 +454,7 @@ latestCollection dir = do
 
 ||| Update the package database.
 export
-copyLatest : HasIO io => TmpDir => PackDir => EitherT PackErr io DBName
+copyLatest : HasIO io => TmpDir => PackDirs => EitherT PackErr io DBName
 copyLatest = do
   commit <- gitLatest dbRepo "main"
   withGit packDB dbRepo commit $ \d => do
@@ -435,7 +466,7 @@ copyLatest = do
 ||| Loads the name of the default collection (currently the latest
 ||| nightly)
 export
-defaultColl : HasIO io => TmpDir => PackDir => EitherT PackErr io DBName
+defaultColl : HasIO io => TmpDir => PackDirs => EitherT PackErr io DBName
 defaultColl = do
   when !(missing dbDir) updateDB
   latestCollection dbDir
@@ -447,7 +478,7 @@ defaultColl = do
 export
 resolveMeta :
      {auto _ : HasIO io}
-  -> {auto _ : PackDir}
+  -> {auto _ : PackDirs}
   -> (fetch : Bool)
   -> URL
   -> MetaCommit
@@ -464,13 +495,26 @@ resolveMeta b u (Latest x) = do
       pure c
     False => (\s => MkCommit $ trim s) <$> read cfile
 
+||| Content of pack-generated `pack.toml` containing the globally
+||| set pack collection.
+export
+collectionTomlContent : DBName -> String
+collectionTomlContent db =
+  """
+  # Warning: This file was auto-generated and is maintained by pack.
+  #          Any changes could be overwritten by pack at any time.
+  #          Custom settings should go to the global `pack.toml` file
+  #          or any `pack.toml` file local to a project.
+  collection = \{quote db}
+  """
+
 ||| Read application config from command line arguments.
 export covering
 getConfig :
      (0 c : Type)
   -> {auto _   : Command c}
   -> {auto _   : HasIO io}
-  -> {auto pd  : PackDir}
+  -> {auto pd  : PackDirs}
   -> {auto td  : TmpDir}
   -> {auto cur : CurDir}
   -> EitherT PackErr io (MetaConfig, CommandWithArgs c)
@@ -480,13 +524,18 @@ getConfig c = do
 
   -- Initialize `pack.toml` if none exists
   when !(fileMissing globalPackToml) $
-    write globalPackToml (initToml "scheme" coll)
+    write globalPackToml (initToml "scheme")
+
+  -- Initialize collection `pack.toml` if none exists
+  when !(fileMissing collectionToml) $
+    write collectionToml (collectionTomlContent coll)
 
   localTomls  <- findInAllParentDirs (packToml ==) curDir
   localConfs  <- for localTomls $ readFromTOML UserConfig
+  collToml    <- readOptionalFromTOML UserConfig collectionToml
   global      <- readOptionalFromTOML UserConfig globalPackToml
 
-  let ini = foldl update (init coll `update` global) localConfs
+  let ini = foldl update (init coll) (global::collToml::localConfs)
 
   args'       <- getArgs
   let args : List String
@@ -499,7 +548,10 @@ getConfig c = do
 
   let logRef := MkLogRef conf.logLevel
 
-  debug "Pack home is \{pd}"
+  debug "Pack user dir is \{pd.user}"
+  debug "Pack state dir is \{pd.state}"
+  debug "Pack cache dir is \{pd.cache}"
+  debug "Pack bin dir is \{pd.bin}"
   debug "Current directory is \{cur}"
   case localTomls of
     _::_ =>
@@ -511,7 +563,10 @@ getConfig c = do
     []   => debug "No local config found"
   info "Using package collection \{conf.collection}"
   debug "Config loaded"
-  mkDir packDir
+  mkDir pd.user
+  mkDir pd.state
+  mkDir pd.cache
+  mkDir pd.bin
   pure (conf,cmd)
 
 export
@@ -548,7 +603,7 @@ export covering
 loadDB :
      {auto _ : HasIO io}
   -> {auto _ : TmpDir}
-  -> {auto _ : PackDir}
+  -> {auto _ : PackDirs}
   -> MetaConfig
   -> EitherT PackErr io MetaDB
 loadDB mc = do
@@ -644,7 +699,7 @@ cachePkgs =
 export covering
 env :
      {auto _   : HasIO io}
-  -> {auto pd  : PackDir}
+  -> {auto pd  : PackDirs}
   -> {auto td  : TmpDir}
   -> {auto ch  : LibCache}
   -> {auto lbf : LineBufferingCmd}
@@ -666,19 +721,14 @@ env mc fetch = do
 
   cachePkgs $> env
 
-adjCollection : DBName -> String -> String
-adjCollection db str = case isPrefixOf "collection " str of
-  False => str
-  True  => "collection = \{quote db}"
-
 ||| Update the `collection` field in file `PACK_DIR/user/pack.toml`
 ||| with the name of the package collection given in config `c`.
 export covering
 writeCollection :
      {auto _ : HasIO io}
-  -> {auto _ : PackDir}
+  -> {auto _ : PackDirs}
   -> {auto c : Config}
   -> EitherT PackErr io ()
 writeCollection = do
   str <- read globalPackToml
-  write globalPackToml (unlines . map (adjCollection c.collection) $ lines str)
+  write collectionToml (collectionTomlContent c.collection)

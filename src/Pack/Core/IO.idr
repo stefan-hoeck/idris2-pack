@@ -305,7 +305,7 @@ findInAllParentDirs p = go [] where
       Just parentD => go nextRes $ assert_smaller currD parentD
       Nothing      => pure nextRes
 
-mkTmpDir : HasIO io => PackDir => EitherT PackErr io TmpDir
+mkTmpDir : HasIO io => (pd : PackDirs) => EitherT PackErr io TmpDir
 mkTmpDir = go 100 0
 
   where
@@ -313,14 +313,14 @@ mkTmpDir = go 100 0
     go 0     _ = throwE NoTmpDir
     go (S k) n =
       let Just body := Body.parse ".tmp\{show n}" | Nothing => go k (S n)
-          dir       := packDir /> body
+          dir       := pd.cache /> body
        in do
          False <- exists dir | True => go k (S n)
          when (n > 50) $
            warn {ref = MkLogRef Info}
              """
              Too many temporary directories. Please remove all `.tmpXY`
-             directories in `PACK_DIR` or run `pack gc` to let pack
+             directories in `\{pd.cache}` or run `pack gc` to let pack
              clean them up.
              """
          mkDir dir
@@ -329,7 +329,7 @@ mkTmpDir = go 100 0
 export
 withTmpDir :
      {auto _ : HasIO io}
-  -> {auto _ : PackDir}
+  -> {auto _ : PackDirs}
   -> (TmpDir => EitherT PackErr io a)
   -> EitherT PackErr io a
 withTmpDir f = do
