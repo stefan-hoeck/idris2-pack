@@ -391,7 +391,7 @@ packDelDir b =
 tmpDelDir : (e : Env) => Body -> Maybe (Path Abs)
 tmpDelDir b =
   let s := interpolate b
-      p := packDir /> b
+      p := cacheDir /> b
    in toMaybe ((".tmp" `isPrefixOf` s) && p /= Types.tmpDir) p
 
 ||| Delete installations from previous package collections.
@@ -400,7 +400,7 @@ garbageCollector : HasIO io => Env -> EitherT PackErr io ()
 garbageCollector e = do
   ds <- mapMaybe idrisDelDir <$> entries installDir
   ps <- mapMaybe packDelDir <$> entries packParentDir
-  ts <- mapMaybe tmpDelDir <$> entries packDir
+  ts <- mapMaybe tmpDelDir <$> entries cacheDir
 
   let all := ds ++ ps ++ ts
 

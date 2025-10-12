@@ -50,7 +50,7 @@ noAppError app = lines $ """
             directory. Try to reinstall it with `pack install-app \{app}`.
   """
 
-pthStr : (c : Config) => PackDir => Bool -> String
+pthStr : (c : Config) => PackDirs => Bool -> String
 pthStr False = ""
 pthStr True =
   let racket := if useRacket then "export \{schemeVar}" else ""
@@ -71,7 +71,7 @@ pthStr True =
 appLink :
      {auto _ : HasIO io}
   -> {auto e : Env}
-  -> {auto _ : PackDir}
+  -> {auto _ : PackDirs}
   -> (exec        : Body)
   -> (app         : PkgName)
   -> (withPkgPath : Bool)
@@ -436,7 +436,7 @@ installDeps = install . map (Library,) . dependencies
 export covering
 idrisEnv :
      {auto _ : HasIO io}
-  -> {auto _ : PackDir}
+  -> {auto _ : PackDirs}
   -> {auto _ : TmpDir}
   -> {auto _ : LibCache}
   -> {auto _ : LineBufferingCmd}
