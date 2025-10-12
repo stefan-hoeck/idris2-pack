@@ -48,6 +48,7 @@ microInit scheme db =
     , codegen           = Default
     , output            = "_tmppack"
     , levels            = empty
+    , gitInit           = False
     }
 
 covering
