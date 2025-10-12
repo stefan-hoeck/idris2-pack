@@ -36,3 +36,5 @@ uninstallPack = do
   rmDir pd.state
   rmDir pd.cache
   rmFile packExec
+  rmFile (pathExec "idris2")
+  rmFile (pathExec "idris2-lsp")
