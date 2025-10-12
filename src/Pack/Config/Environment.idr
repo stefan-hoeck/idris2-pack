@@ -98,7 +98,7 @@ packExec = pathExec "pack"
 ||| Directory where `.ipkg` patches are stored.
 export
 patchesDir : PackDirs => Path Abs
-patchesDir = dbDir /> "patches"
+patchesDir = userDir /> "patches"
 
 ||| Path to file storing the last fetched commit of a Git
 ||| repo given as a URL and branch name.

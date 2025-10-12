@@ -31,11 +31,11 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/stefan-hoeck/idris2-pack
 
 You will be asked about the name of your Chez Scheme executable during
 the installation procedure. If all goes well, make sure to add
-folder `$HOME/.pack/bin` to your `$PATH` variable.
+folder `$HOME/.local/bin` to your `$PATH` variable.
 
 ## Usage
 
-In the following sections, we assume the `$PACK_DIR/bin` folder
+In the following sections, we assume folder `$HOME/.local/bin`
 is on your path and you have installed
 pack as described under [installation](INSTALL.md).
 
@@ -47,8 +47,11 @@ To create a new library project, type
 pack new lib idris2-library
 ```
 replacing `idris2-library` with the name of your library.
-This will create a new package in the current directory consisting of a source directory, a default module, a skeleton test suite, a local pack.toml file and a .ipkg file.
-Passing the `--git-init` command-line option will create a git repository (`.git`) along with a suitable `.gitignore` file.  By default, calling `pack new` does not create the git repository or the `.gitignore` file.
+This will create a new package in the current directory consisting of a source directory,
+a default module, a skeleton test suite, a local `pack.toml` file and a `.ipkg` file.
+Passing the `--git-init` command-line option will create a git repository (`.git`)
+along with a suitable `.gitignore` file.  By default, calling `pack new`
+does not create the git repository or the `.gitignore` file.
 If you wish to create a new application project, replace `lib` with `app`.
 
 ### Installing and removing libraries
@@ -164,17 +167,18 @@ pack help update
 
 ## Customization
 
-User settings are stored in file `$PACK_DIR/user/pack.toml`.
+User settings are stored in file `$XDG_CONFIG_HOME/pack/pack.toml`,
+with `$XDG_CONFIG_HOME` defaulting to `$HOME/.config`.
 This file should have been generated automatically by pack
 when setting up the application for the first time. The
 different settings have been annotated with comments to
 make it more accessible.
 
 If you want to start using a new package collection,
-edit the `collection` field accordingly:
+use the `pack switch` command:
 
-```toml
-collection = "nightly-220507"
+```sh
+pack switch nightly-220507
 ```
 
 It is also possible to add local projects as well as GitHub
@@ -240,7 +244,8 @@ versions of the Idris2 compiler and libraries.
 
 ### Package Collections
 
-These are stored as `.toml` files in folder `$HOME/.pack/db`.
+These are stored as `.toml` files in folder `$XDG_STATE_HOME/pack/db`,
+with `$XDG_STATE_HOME` defaulting to `$HOME/.local/state`.
 If you want to download the latest package collections, you
 can do so with the following command:
 
@@ -262,14 +267,14 @@ with commit `7a8635` of the Idris compiler, the library will
 be found in folder
 
 ```sh
-$HOME/.pack/install/7a8635/collie/46bff04/
+$XDG_STATE_HOME/pack/install/7a8635/collie/46bff04/
 ```
 
 The corresponding Idris compiler plus its standard libraries
 can be found in directory
 
 ```sh
- $HOME/.pack/install/7a8635/idris2
+ $XDG_STATE_HOME/pack/install/7a8635/idris2
 ```
 
 Local packages listed in one of your `pack.toml` files will
@@ -279,7 +284,7 @@ built with the Idris compiler mentioned above - will
 be installed in folder
 
 ```sh
-$HOME/.pack/install/7a8635/local/chem
+$XDG_STATE_HOME/pack/install/7a8635/local/chem
 ```
 
 ### Application Binaries
@@ -289,7 +294,7 @@ listed above. In addition, a wrapper script will be added to the
 package collection's `bin` folder, which can be found at
 
 ```sh
-$HOME/.pack/[collection]/bin
+$XDG_STATE_HOME/pack/install/[collection]/bin
 ```
 
 This will be enough for executing an application via pack,
@@ -307,7 +312,7 @@ command-line, you need to do two things: First, invoke
 pack switch nightly-220518
 ```
 
-And second, add directory `$HOME/.pack/bin` to your `$PATH`
+And second, add directory `$HOME/.local/bin` to your `$PATH`
 variable.
 
 ## Developing Applications
@@ -340,4 +345,9 @@ If you would like to uninstall pack from your system, you can simply use the fol
 pack uninstall
 ```
 
-This will delete the `$PACK_DIR` directory, which includes pack's Idris2 installation and all its packages.
+This will delete directories `$XDG_STATE_HOME/pack` and `$XDG_CACHE_HOME/pack`, which
+contain the Idris compiler, installed libraries, and other executables, as well as
+cached `.ipkg` files and git repositories. The global `pack.toml` file located at
+`$XDG_CONFIG_HOME/pack/pack.toml` will not be removed. Additionally, the following
+executables will be removed from `$HOME/.local/bin`: `pack`, `idris2`, and `idris2-lsp`.
+Other executables that might be managed by pack will have to be cleaned up manually.
