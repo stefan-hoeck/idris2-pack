@@ -72,7 +72,8 @@ main = run $ do
 
         conf = microInit scheme db
 
-    -- initialize `$HOME/.pack/user/pack.toml`
-    write globalPackToml (initToml scheme db)
+    -- initialize `$PACK_USER_DIR/pack.toml` and `$PACK_STATE_DIR/pack.toml`
+    write globalPackToml (initToml scheme)
+    write collectionToml (collectionTomlContent db)
 
     idrisEnv conf True >>= update

@@ -495,6 +495,19 @@ resolveMeta b u (Latest x) = do
       pure c
     False => (\s => MkCommit $ trim s) <$> read cfile
 
+||| Content of pack-generated `pack.toml` containing the globally
+||| set pack collection.
+export
+collectionTomlContent : DBName -> String
+collectionTomlContent db =
+  """
+  # Warning: This file was auto-generated and is maintained by pack.
+  #          Any changes could be overwritten by pack at any time.
+  #          Custom settings should go to the global `pack.toml` file
+  #          or any `pack.toml` file local to a project.
+  collection = \{quote db}
+  """
+
 ||| Read application config from command line arguments.
 export covering
 getConfig :
@@ -511,7 +524,11 @@ getConfig c = do
 
   -- Initialize `pack.toml` if none exists
   when !(fileMissing globalPackToml) $
-    write globalPackToml (initToml "scheme" coll)
+    write globalPackToml (initToml "scheme")
+
+  -- Initialize collection `pack.toml` if none exists
+  when !(fileMissing collectionToml) $
+    write collectionToml (collectionTomlContent coll)
 
   localTomls  <- findInAllParentDirs (packToml ==) curDir
   localConfs  <- for localTomls $ readFromTOML UserConfig
@@ -703,16 +720,6 @@ env mc fetch = do
       env    := MkEnv pd td c' ch db' lbf
 
   cachePkgs $> env
-
-collectionTomlContent : DBName -> String
-collectionTomlContent db =
-  """
-  # Warning: This file was auto-generated and is maintained by pack.
-  #          Any changes could be overwritten by pack at any time.
-  #          Custom settings should go to the global `pack.toml` file
-  #          or any `pack.toml` file local to a project.
-  collection = \{quote db}
-  """
 
 ||| Update the `collection` field in file `PACK_DIR/user/pack.toml`
 ||| with the name of the package collection given in config `c`.
