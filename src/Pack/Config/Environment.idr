@@ -53,6 +53,11 @@ export %inline
 globalPackToml : PackDirs => File Abs
 globalPackToml = MkF userDir packToml
 
+||| Path to global `pack.toml` file containing the global pack collection.
+export %inline
+collectionToml : (pd : PackDirs) => File Abs
+collectionToml = MkF pd.state packToml
+
 ||| File where package DB is located
 export
 dbFile : PackDirs => (c : MetaConfig) => File Abs
@@ -510,9 +515,10 @@ getConfig c = do
 
   localTomls  <- findInAllParentDirs (packToml ==) curDir
   localConfs  <- for localTomls $ readFromTOML UserConfig
+  collToml    <- readOptionalFromTOML UserConfig collectionToml
   global      <- readOptionalFromTOML UserConfig globalPackToml
 
-  let ini = foldl update (init coll `update` global) localConfs
+  let ini = foldl update (init coll) (global::collToml::localConfs)
 
   args'       <- getArgs
   let args : List String
@@ -698,14 +704,18 @@ env mc fetch = do
 
   cachePkgs $> env
 
-adjCollection : DBName -> String -> String
-adjCollection db str = case isPrefixOf "collection " str of
-  False => str
-  True  => "collection = \{quote db}"
+collectionTomlContent : DBName -> String
+collectionTomlContent db =
+  """
+  # Warning: This file was auto-generated and is maintained by pack.
+  #          Any changes could be overwritten by pack at any time.
+  #          Custom settings should go to the global `pack.toml` file
+  #          or any `pack.toml` file local to a project.
+  collection = \{quote db}
+  """
 
 ||| Update the `collection` field in file `PACK_DIR/user/pack.toml`
 ||| with the name of the package collection given in config `c`.
--- TODO: Collection should be written to `pack.toml` file in state
 export covering
 writeCollection :
      {auto _ : HasIO io}
@@ -714,4 +724,4 @@ writeCollection :
   -> EitherT PackErr io ()
 writeCollection = do
   str <- read globalPackToml
-  write globalPackToml (unlines . map (adjCollection c.collection) $ lines str)
+  write collectionToml (collectionTomlContent c.collection)
