@@ -35,12 +35,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Build lib
-        run: |
-          echo "$PATH"
-          ls /root/.local/bin
-          pack typecheck pack.ipkg
+        run: /root/.local/bin/pack typecheck pack.ipkg
       - name: Build admin
-        run: pack typecheck pack-admin.ipkg
+        run: /root/.local/bin/pack typecheck pack-admin.ipkg
 
   micropack:
     name: Bootstrap with micropack
@@ -57,13 +54,13 @@ jobs:
           make micropack SCHEME=chezscheme
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Install application
-        run: pack install graph
+        run: $HOME/.local/bin/pack install graph
       - name: Run examples
         run: |
           cd example1
-          pack run chem-formula-example-test -n 1000
+          $HOME/.local/bin/pack run chem-formula-example-test -n 1000
           cd ../example2
-          pack run chem-smiles-example-test -n 1000
+          $HOME/.local/bin/pack run chem-smiles-example-test -n 1000
 
   micropack-racket:
     name: Bootstrap with micropack-racket
@@ -80,13 +77,13 @@ jobs:
           make micropack-racket
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Install application
-        run: pack install graph
+        run: $HOME/.local/bin/pack install graph
       - name: Run examples
         run: |
           cd example1
-          pack run chem-formula-example-test -n 1000
+          $HOME/.local/bin/pack run chem-formula-example-test -n 1000
           cd ../example2
-          pack run chem-smiles-example-test -n 1000
+          $HOME/.local/bin/pack run chem-smiles-example-test -n 1000
 
   shellscript:
     name: Bootstrap with the shell script
@@ -103,13 +100,13 @@ jobs:
           echo chezscheme | bash -c ./install.bash
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Install application
-        run: pack install graph
+        run: $HOME/.local/bin/pack install graph
       - name: Run examples
         run: |
           cd example1
-          pack run chem-formula-example-test -n 1000
+          $HOME/.local/bin/pack run chem-formula-example-test -n 1000
           cd ../example2
-          pack run chem-smiles-example-test -n 1000
+          $HOME/.local/bin/pack run chem-smiles-example-test -n 1000
 
   shellscript-racket:
     name: Bootstrap with the shell script and racket
@@ -126,10 +123,10 @@ jobs:
           echo racket | bash -c ./install.bash
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Install application
-        run: pack install graph
+        run: $HOME/.local/bin/pack install graph
       - name: Run examples
         run: |
           cd example1
-          pack run chem-formula-example-test -n 1000
+          $HOME/.local/bin/pack run chem-formula-example-test -n 1000
           cd ../example2
-          pack run chem-smiles-example-test -n 1000
+          $HOME/.local/bin/pack run chem-smiles-example-test -n 1000
