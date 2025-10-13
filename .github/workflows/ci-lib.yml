@@ -50,15 +50,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes chezscheme libgmp3-dev nodejs
       - name: Run installation script
-        run: make micropack SCHEME=chezscheme
+        run: |
+          make micropack SCHEME=chezscheme
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Install application
-        run: "$HOME/.local/bin/pack" install graph
+        run: "$HOME"/.local/bin/pack install graph
       - name: Run examples
         run: |
           cd example1
-          "$HOME/.local/bin/pack" run chem-formula-example-test -n 1000
+          "$HOME"/.local/bin/pack run chem-formula-example-test -n 1000
           cd ../example2
-          "$HOME/.local/bin/pack" run chem-smiles-example-test -n 1000
+          "$HOME"/.local/bin/pack run chem-smiles-example-test -n 1000
 
   micropack-racket:
     name: Bootstrap with micropack-racket
@@ -71,15 +73,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes racket libgmp3-dev nodejs
       - name: Run installation script
-        run: make micropack-racket
+        run: |
+          make micropack-racket
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Install application
-        run: "$HOME/.local/bin/pack" install graph
+        run: "$HOME"/.local/bin/pack install graph
       - name: Run examples
         run: |
           cd example1
-          "$HOME/.local/bin/pack" run chem-formula-example-test -n 1000
+          "$HOME"/.local/bin/pack run chem-formula-example-test -n 1000
           cd ../example2
-          "$HOME/.local/bin/pack" run chem-smiles-example-test -n 1000
+          "$HOME"/.local/bin/pack run chem-smiles-example-test -n 1000
 
   shellscript:
     name: Bootstrap with the shell script
@@ -92,15 +96,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes chezscheme libgmp3-dev nodejs
       - name: Run installation script
-        run: echo chezscheme | bash -c ./install.bash
+        run: |
+          echo chezscheme | bash -c ./install.bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Install application
-        run: "$HOME/.local/bin/pack" install graph
+        run: "$HOME"/.local/bin/pack install graph
       - name: Run examples
         run: |
           cd example1
-          "$HOME/.local/bin/pack" run chem-formula-example-test -n 1000
+          "$HOME"/.local/bin/pack run chem-formula-example-test -n 1000
           cd ../example2
-          "$HOME/.local/bin/pack" run chem-smiles-example-test -n 1000
+          "$HOME"/.local/bin/pack run chem-smiles-example-test -n 1000
 
   shellscript-racket:
     name: Bootstrap with the shell script and racket
@@ -113,12 +119,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes racket libgmp3-dev nodejs
       - name: Run installation script
-        run: echo racket | bash -c ./install.bash
+        run: |
+          echo racket | bash -c ./install.bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Install application
-        run: "$HOME/.local/bin/pack" install graph
+        run: "$HOME"/.local/bin/pack install graph
       - name: Run examples
         run: |
           cd example1
-          "$HOME/.local/bin/pack" run chem-formula-example-test -n 1000
+          "$HOME"/.local/bin/pack run chem-formula-example-test -n 1000
           cd ../example2
-          "$HOME/.local/bin/pack" run chem-smiles-example-test -n 1000
+          "$HOME"/.local/bin/pack run chem-smiles-example-test -n 1000
