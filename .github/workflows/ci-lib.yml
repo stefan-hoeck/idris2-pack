@@ -49,7 +49,7 @@ jobs:
       - name: Run installation script
         run: |
           make micropack SCHEME=chezscheme
-          echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Install application
         run: pack install graph
       - name: Run examples
@@ -72,7 +72,7 @@ jobs:
       - name: Run installation script
         run: |
           make micropack-racket
-          echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Install application
         run: pack install graph
       - name: Run examples
@@ -95,7 +95,7 @@ jobs:
       - name: Run installation script
         run: |
           echo chezscheme | bash -c ./install.bash
-          echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Install application
         run: pack install graph
       - name: Run examples
@@ -118,7 +118,7 @@ jobs:
       - name: Run installation script
         run: |
           echo racket | bash -c ./install.bash
-          echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Install application
         run: pack install graph
       - name: Run examples
