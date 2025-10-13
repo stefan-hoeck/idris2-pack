@@ -35,7 +35,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Build lib
-        run: pack typecheck pack.ipkg
+        run: |
+          echo "$PATH"
+          ls /root/.local/bin
+          pack typecheck pack.ipkg
       - name: Build admin
         run: pack typecheck pack-admin.ipkg
 
