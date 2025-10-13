@@ -185,7 +185,7 @@ runTest :
 runTest n args e = case lookup n allPackages of
   Nothing                     => throwE (UnknownPkg n)
   Just (Git u c _ _ (Just t) _) => do
-    d <- withGit n u c pure
+    d <- withGit n u c False pure
     runIpkg (d </> t) args e
   Just (Local d _ _ $ Just t) => runIpkg (d </> t) args e
   Just _                      => do

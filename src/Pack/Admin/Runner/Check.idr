@@ -44,7 +44,7 @@ test (RL pkg n d _ _) =
     True  => pure Skipped
     False => case  pkg of
       Git u c _ _ (Just t) _ => do
-        d <- withGit n u c pure
+        d <- withGit n u c False pure
         runIpkg (d </> t) [] e
         pure TestSuccess
       Local d _ _ (Just t) => runIpkg (d </> t) [] e $> TestSuccess

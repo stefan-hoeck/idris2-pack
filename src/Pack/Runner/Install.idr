@@ -455,7 +455,7 @@ update e =
      commit <- maybe (gitLatest packRepo "main") pure packCommit
      info "Using commit \{commit}"
 
-     withGit "pack" packRepo commit $ \dir => do
+     withGit "pack" packRepo commit True $ \dir => do
        let ipkg := MkF dir "pack.ipkg"
        d <- parseLibIpkg ipkg ipkg
        installDeps d

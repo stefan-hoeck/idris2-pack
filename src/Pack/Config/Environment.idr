@@ -438,7 +438,7 @@ updateDB : HasIO io => TmpDir => PackDirs => EitherT PackErr io ()
 updateDB = do
   rmDir dbDir
   commit <- gitLatest dbRepo "main"
-  withGit packDB dbRepo commit $ \d =>
+  withGit packDB dbRepo commit True $ \d =>
     copyDir (d /> "collections") dbDir
 
 ||| Extract the name of the latest collection from a directory
@@ -457,7 +457,7 @@ export
 copyLatest : HasIO io => TmpDir => PackDirs => EitherT PackErr io DBName
 copyLatest = do
   commit <- gitLatest dbRepo "main"
-  withGit packDB dbRepo commit $ \d => do
+  withGit packDB dbRepo commit True $ \d => do
     db <- latestCollection (d /> "collections")
     let body := cast {to = Body} db <+> ".toml"
     copyFile (d /> "collections" /> body) (dbDir /> body)
@@ -621,7 +621,7 @@ withCoreGit :
   -> {auto e : Env}
   -> (Path Abs -> EitherT PackErr io a)
   -> EitherT PackErr io a
-withCoreGit = withGit compiler e.db.idrisURL e.db.idrisCommit
+withCoreGit = withGit compiler e.db.idrisURL e.db.idrisCommit False
 
 ||| Caches the `.ipkg` files of the core libraries to make them
 ||| quickly available when running queries.
@@ -646,7 +646,7 @@ cachePkg :
 cachePkg n (Git u c i _ _ _) =
   let cache  := ipkgCachePath n c i
       tmpLoc := gitTmpDir n </> i
-   in withGit n u c $ \dir => do
+   in withGit n u c False $ \dir => do
         let pf := patchFile n i
         when !(fileExists pf) (patch tmpLoc pf)
         copyFile tmpLoc cache

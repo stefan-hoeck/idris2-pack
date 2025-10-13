@@ -54,19 +54,23 @@ parameters {auto has : HasIO io}
   ||| given commit and run the given action.
   export
   withGit :
-       {auto _ : TmpDir}
-    -> {auto _ : PackDirs}
-    -> (pkg    : PkgName)
-    -> (url    : URL)
-    -> (commit : Commit)
-    -> (act    : Path Abs -> EitherT PackErr io a)
+       {auto _     : TmpDir}
+    -> {auto _     : PackDirs}
+    -> (pkg        : PkgName)
+    -> (url        : URL)
+    -> (commit     : Commit)
+    -> (forceFetch : Bool)
+    -> (act        : Path Abs -> EitherT PackErr io a)
     -> EitherT PackErr io a
-  withGit pkg url commit act =
+  withGit pkg url commit forceFetch act =
     let cache := gitCacheDir url
         tmp   := gitTmpDir pkg
 
      in do
-       False <- exists tmp | True => inDir tmp act
+       False <- exists tmp
+         | True => case forceFetch of
+             False => inDir tmp act
+             True  => inDir tmp (\d => fetch commit >> checkout commit >> act d)
 
        -- clone a Git repo if it's not already cached
        when !(missing cache) $ do

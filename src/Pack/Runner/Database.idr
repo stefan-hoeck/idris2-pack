@@ -181,7 +181,7 @@ withPkgEnv :
   -> Package
   -> (Path Abs -> EitherT PackErr io a)
   -> EitherT PackErr io a
-withPkgEnv n (Git u c i _ _ _) f = withGit n u c f
+withPkgEnv n (Git u c i _ _ _) f = withGit n u c False f
 withPkgEnv n (Local d i _ _)   f = inDir d f
 withPkgEnv n (Core _)          f = withCoreGit f
 
