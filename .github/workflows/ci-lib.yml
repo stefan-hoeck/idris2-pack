@@ -33,11 +33,11 @@ jobs:
         uses: actions/checkout@v2
       - name: Build lib
         run: |
-          ls "$HOME/.local/bin"
           echo "$PATH"
-          $HOME/.local/bin/pack typecheck pack.ipkg
+          ls "/root/.local/bin"
+          /root/.local/bin/pack typecheck pack.ipkg
       - name: Build admin
-        run: $HOME/.local/bin/pack typecheck pack-admin.ipkg
+        run: /root/.local/bin/pack typecheck pack-admin.ipkg
 
   micropack:
     name: Bootstrap with micropack
