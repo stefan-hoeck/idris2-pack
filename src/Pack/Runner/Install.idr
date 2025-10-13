@@ -453,6 +453,7 @@ update e =
    in do
      info "Updating pack. If this fails, try switching to the latest package collection."
      commit <- maybe (gitLatest packRepo "main") pure packCommit
+     info "Using commit \{commit}"
 
      withGit "pack" packRepo commit $ \dir => do
        let ipkg := MkF dir "pack.ipkg"
