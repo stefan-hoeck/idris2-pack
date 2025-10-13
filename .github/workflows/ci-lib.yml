@@ -42,6 +42,11 @@ jobs:
   micropack:
     name: Bootstrap with micropack
     runs-on: ubuntu-latest
+    env:
+      PACK_USER_DIR: /root/.config/pack
+      PACK_STATE_DIR: /root/.local/state/pack
+      PACK_CACHE_DIR: /root/.cache/pack
+      PACK_BIN_DIR: /root/.local/bin
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,17 +59,22 @@ jobs:
           make micropack SCHEME=chezscheme
       - name: Install application
         run: |
-          "$HOME/.local/bin/pack" install graph
+          /root/.local/bin/pack --verbose install graph
       - name: Run examples
         run: |
           cd example1
-          "$HOME/.local/bin/pack" run chem-formula-example-test -n 1000
+          /root/.local/bin/pack run chem-formula-example-test -n 1000
           cd ../example2
-          "$HOME/.local/bin/pack" run chem-smiles-example-test -n 1000
+          /root/.local/bin/pack run chem-smiles-example-test -n 1000
 
   micropack-racket:
     name: Bootstrap with micropack-racket
     runs-on: ubuntu-latest
+    env:
+      PACK_USER_DIR: /root/.config/pack
+      PACK_STATE_DIR: /root/.local/state/pack
+      PACK_CACHE_DIR: /root/.cache/pack
+      PACK_BIN_DIR: /root/.local/bin
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -77,17 +87,22 @@ jobs:
           make micropack-racket
       - name: Install application
         run: |
-          "$HOME/.local/bin/pack" install graph
+          /root/.local/bin/pack --verbose install graph
       - name: Run examples
         run: |
           cd example1
-          "$HOME/.local/bin/pack" run chem-formula-example-test -n 1000
+          /root/.local/bin/pack run chem-formula-example-test -n 1000
           cd ../example2
-          "$HOME/.local/bin/pack" run chem-smiles-example-test -n 1000
+          /root/.local/bin/pack run chem-smiles-example-test -n 1000
 
   shellscript:
     name: Bootstrap with the shell script
     runs-on: ubuntu-latest
+    env:
+      PACK_USER_DIR: /root/.config/pack
+      PACK_STATE_DIR: /root/.local/state/pack
+      PACK_CACHE_DIR: /root/.cache/pack
+      PACK_BIN_DIR: /root/.local/bin
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -100,17 +115,22 @@ jobs:
           echo chezscheme | bash -c ./install.bash
       - name: Install application
         run: |
-          "$HOME/.local/bin/pack" install graph
+          /root/.local/bin/pack --verbose install graph
       - name: Run examples
         run: |
           cd example1
-          "$HOME/.local/bin/pack" run chem-formula-example-test -n 1000
+          /root/.local/bin/pack run chem-formula-example-test -n 1000
           cd ../example2
-          "$HOME/.local/bin/pack" run chem-smiles-example-test -n 1000
+          /root/.local/bin/pack run chem-smiles-example-test -n 1000
 
   shellscript-racket:
     name: Bootstrap with the shell script and racket
     runs-on: ubuntu-latest
+    env:
+      PACK_USER_DIR: /root/.config/pack
+      PACK_STATE_DIR: /root/.local/state/pack
+      PACK_CACHE_DIR: /root/.cache/pack
+      PACK_BIN_DIR: /root/.local/bin
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -123,10 +143,10 @@ jobs:
           echo racket | bash -c ./install.bash
       - name: Install application
         run: |
-          "$HOME/.local/bin/pack" install graph
+          /root/.local/bin/pack --verbose install graph
       - name: Run examples
         run: |
           cd example1
-          "$HOME/.local/bin/pack" run chem-formula-example-test -n 1000
+          /root/.local/bin/pack run chem-formula-example-test -n 1000
           cd ../example2
-          pack run chem-smiles-example-test -n 1000
+          /root/.local/bin/pack run chem-smiles-example-test -n 1000
