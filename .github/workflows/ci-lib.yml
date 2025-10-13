@@ -24,7 +24,10 @@ jobs:
     name: Build pack with Idris2 latest
     runs-on: ubuntu-latest
     env:
-      PACK_DIR: /root/.pack
+      PACK_USER_DIR: /root/.config/pack
+      PACK_STATE_DIR: /root/.local/state/pack
+      PACK_CACHE_DIR: /root/.cache/pack
+      PACK_BIN_DIR: /root/.local/bin
     strategy:
       fail-fast: false
     container: ghcr.io/stefan-hoeck/idris2-pack:latest
@@ -32,12 +35,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Build lib
-        run: |
-          echo "$PATH"
-          ls "/root/.local/bin"
-          /root/.local/bin/pack typecheck pack.ipkg
+        run: pack typecheck pack.ipkg
       - name: Build admin
-        run: /root/.local/bin/pack typecheck pack-admin.ipkg
+        run: pack typecheck pack-admin.ipkg
 
   micropack:
     name: Bootstrap with micropack
