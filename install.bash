@@ -17,7 +17,7 @@ function check_installed {
 
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
-CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.local/cache}"
+CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
 
 USER_DIR="${PACK_USER_DIR:-$CONFIG_HOME/pack}"
 STATE_DIR="${PACK_STATE_DIR:-$STATE_HOME/pack}"

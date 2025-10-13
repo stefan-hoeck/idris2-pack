@@ -33,12 +33,12 @@ RUN apt-get update && apt-get install --yes gcc make chezscheme libgmp3-dev git 
 SHELL ["/bin/bash", "-c"]
 
 ENV HOME="/root"
-ENV PACK_USER_DIR="$HOME/.config/pack"
-ENV PACK_STATE_DIR="$HOME/.local/state/pack"
-ENV PACK_CACHE_DIR="$HOME/.cache/pack"
-ENV PACK_BIN_DIR="$HOME/.local/bin"
+ENV PACK_USER_DIR="/root/.config/pack"
+ENV PACK_STATE_DIR="/root/.local/state/pack"
+ENV PACK_CACHE_DIR="/root/.cache/pack"
+ENV PACK_BIN_DIR="/root/.local/bin"
 
-ENV PATH "$PACK_BIN_DIR/bin:$PATH"
+ENV PATH "$PACK_BIN_DIR:$PATH"
 COPY --from=build $PACK_BIN_DIR $PACK_BIN_DIR
 COPY --from=build $PACK_USER_DIR $PACK_USER_DIR
 COPY --from=build $PACK_STATE_DIR $PACK_STATE_DIR
