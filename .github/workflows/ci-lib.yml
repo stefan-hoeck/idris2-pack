@@ -50,9 +50,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes chezscheme libgmp3-dev nodejs
       - name: Run installation script
-        run: |
-          make micropack SCHEME=chezscheme
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+        run: make micropack SCHEME=chezscheme
       - name: Install application
         run: "$HOME/.local/bin/pack" install graph
       - name: Run examples
@@ -73,9 +71,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes racket libgmp3-dev nodejs
       - name: Run installation script
-        run: |
-          make micropack-racket
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+        run: make micropack-racket
       - name: Install application
         run: "$HOME/.local/bin/pack" install graph
       - name: Run examples
@@ -96,9 +92,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes chezscheme libgmp3-dev nodejs
       - name: Run installation script
-        run: |
-          echo chezscheme | bash -c ./install.bash
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+        run: echo chezscheme | bash -c ./install.bash
       - name: Install application
         run: "$HOME/.local/bin/pack" install graph
       - name: Run examples
@@ -119,9 +113,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes racket libgmp3-dev nodejs
       - name: Run installation script
-        run: |
-          echo racket | bash -c ./install.bash
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+        run: echo racket | bash -c ./install.bash
       - name: Install application
         run: "$HOME/.local/bin/pack" install graph
       - name: Run examples
