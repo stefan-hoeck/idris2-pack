@@ -4,6 +4,8 @@ name: Docker Build
 permissions: read-all
 
 on:
+  workflow_dispatch:
+
   pull_request:
     branches:
       - main
