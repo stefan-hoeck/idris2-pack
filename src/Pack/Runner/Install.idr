@@ -14,6 +14,97 @@ import System.Escape
 %default total
 
 --------------------------------------------------------------------------------
+--          Paths
+--------------------------------------------------------------------------------
+
+pathDirs :
+     {auto _ : HasIO io}
+  -> {auto _ : PackDirs}
+  -> {auto e : Env}
+  -> (pre : String)
+  -> (pth : PkgName -> Hash -> Package -> Path Abs)
+  -> EitherT PackErr io String
+pathDirs pre pth = do
+  rs <- traverse resolveLib (keys e.all)
+  ps <- filterM (\r => exists $ pth r.name r.hash r.pkg) rs
+  let ps' := filter (not . isCorePkg . value . name) ps
+  pure $
+      fastConcat
+    . intersperse ":"
+    . (pre ::)
+    $ map (\r => "\{pth r.name r.hash r.pkg}") ps'
+
+||| Directories to be listed in the `IDRIS2_PACKAGE_PATH` variable, so
+||| that Idris finds all libraries installed by pack in custom locations.
+export
+packagePathDirs : HasIO io => Env -> EitherT PackErr io String
+packagePathDirs _ = pathDirs "\{idrisInstallDir}" pkgPathDir
+
+||| Directories to be listed in the `IDRIS2_LIBS` variable, so
+||| that Idris finds all `.so` files installed by pack in custom locations.
+export
+packageLibDirs : HasIO io => Env -> EitherT PackErr io String
+packageLibDirs _ = pathDirs "\{idrisLibDir}" pkgLibDir
+
+||| Directories to be listed in the `IDRIS2_DATA` variable, so
+||| that Idris finds all support files installed by pack in custom locations.
+export
+packageDataDirs : HasIO io => Env -> EitherT PackErr io String
+packageDataDirs _ = pathDirs "\{idrisDataDir}" pkgDataDir
+
+||| `IDRIS2_PACKAGE_PATH` variable to be used with Idris, so
+||| that it finds all libraries installed by pack in custom locations.
+export
+packagePath : HasIO io => Env => EitherT PackErr io (String, String)
+packagePath =
+  ("IDRIS2_PACKAGE_PATH",) <$>  packagePathDirs %search
+
+||| `IDRIS2_LIBS` variable to be used with Idris, so
+||| that it finds all `.so` files installed by pack in custom locations.
+export
+libPath : HasIO io => Env => EitherT PackErr io (String, String)
+libPath = ("IDRIS2_LIBS",) <$> packageLibDirs %search
+
+||| `IDRIS2_DATA` variable to be used with Idris, so
+||| that it finds all support files installed by pack in custom locations.
+export
+dataPath : HasIO io => Env => EitherT PackErr io (String, String)
+dataPath = ("IDRIS2_DATA",) <$> packageDataDirs %search
+
+||| This unifies `packagePath`, `libPath` and `dataPath`,
+||| to generate an environment necessary to build packages with Idris
+||| the dependencies of which are handled by pack.
+export
+buildEnv : HasIO io => Env => EitherT PackErr io (List (String,String))
+buildEnv =
+  let pre := if useRacket then [("IDRIS2_CG", "racket")] else []
+   in (pre ++ ) <$> sequence [packagePath, libPath, dataPath]
+
+||| Idris executable loading the given package plus the
+||| environment variables needed to run it.
+export
+idrisWithPkg :
+     {auto _ : HasIO io}
+  -> {auto _ : IdrisEnv}
+  -> ResolvedLib t
+  -> EitherT PackErr io (CmdArgList, List (String,String))
+idrisWithPkg rl =
+  (idrisWithCG ++ ["-p", name rl],) <$> buildEnv
+
+||| Idris executable loading the given packages plus the
+||| environment variables needed to run it.
+export
+idrisWithPkgs :
+     {auto _ : HasIO io}
+  -> {auto _ : IdrisEnv}
+  -> List (ResolvedLib t)
+  -> EitherT PackErr io (CmdArgList, List (String,String))
+idrisWithPkgs [] = pure (idrisWithCG, [])
+idrisWithPkgs pkgs =
+  let ps = concatMap (\p => ["-p", name p]) pkgs
+   in (idrisWithCG ++ ps,) <$> buildEnv
+
+--------------------------------------------------------------------------------
 --          Utilities
 --------------------------------------------------------------------------------
 
@@ -36,7 +127,7 @@ coreGitDir = gitTmpDir compiler
 
 copyApp : HasIO io => IdrisEnv => SafeApp -> EitherT PackErr io ()
 copyApp ra =
-  let dir := pkgBinDir ra.name ra.pkg
+  let dir := pkgBinDir ra.name ra.hash ra.pkg
    in do
      debug "Copying application to \{dir}"
      mkDir dir
@@ -223,7 +314,7 @@ withSrcStr = case c.withSrc of
   False => ""
 
 maybeGiveNotice : HasIO io => Config => SafeLib -> io ()
-maybeGiveNotice (RL (Git _ _ _ _ _ (Just notice)) _ _ _ _) = warn notice
+maybeGiveNotice (RL (Git _ _ _ _ _ (Just notice)) _ _ _ _ _) = warn notice
 maybeGiveNotice _ = pure ()
 
 installImpl :
@@ -241,14 +332,14 @@ installImpl dir rl =
      maybeGiveNotice rl
      when (isInstalled rl) $ do
        info "Removing currently installed version of \{name rl}"
-       rmDir (pkgInstallDir rl.name rl.pkg rl.desc)
-       rmDir (pkgLibDir rl.name rl.pkg)
+       rmDir (pkgInstallDir rl.name rl.hash rl.pkg rl.desc)
+       rmDir (pkgLibDir rl.name rl.hash rl.pkg)
      libPkg pre Build True ["--build"] rl.desc
      libPkg pre Debug False instCmd rl.desc
      debug "checking if libdir at \{libDir} exists"
      when !(exists libDir) $ do
        debug "copying lib dir"
-       copyDir libDir (pkgLibDir rl.name rl.pkg)
+       copyDir libDir (pkgLibDir rl.name rl.hash rl.pkg)
 
 preInstall :
      {auto _ : HasIO io}
@@ -278,13 +369,13 @@ installLib :
   -> SafeLib
   -> EitherT PackErr io ()
 installLib rl = case rl.status of
-  Installed _ => pure ()
-  _           => do
+  Installed _ _ => pure ()
+  _             => do
     preInstall rl
     withPkgEnv rl.name rl.pkg $ \dir => do
       installImpl dir rl
       case rl.pkg of
-       Local _ _ _ _ => write (libTimestamp rl.name rl.pkg) ""
+       Local _ _ _ _ => write (libTimestamp rl.name) nanoString
        _             => pure ()
 
     uncacheLib (name rl)
@@ -305,8 +396,8 @@ installApp :
 installApp b ra =
   let cg := ipkgCodeGen ra.desc.desc
   in case ra.status of
-    BinInstalled => pure ()
-    Installed    => case b of
+    BinInstalled _ => pure ()
+    Installed    _ => case b of
       False => pure ()
       True  => appLink ra.exec ra.name (usePackagePath ra) cg
     _            => withPkgEnv ra.name ra.pkg $ \dir =>
@@ -323,7 +414,7 @@ installApp b ra =
               libPkg [] Build True ["--build"] (notPackIsSafe ra.desc)
               copyApp ra
               when b $ appLink ra.exec ra.name pp cg
-              write (appTimestamp ra.name ra.pkg) ""
+              write (libTimestamp ra.name) nanoString
 
 
 --------------------------------------------------------------------------------
@@ -338,8 +429,8 @@ installDocs :
   -> SafeLib
   -> EitherT PackErr io ()
 installDocs rl = case rl.status of
-  Installed True => pure ()
-  _              => withPkgEnv rl.name rl.pkg $ \dir => do
+  Installed _ True => pure ()
+  _                => withPkgEnv rl.name rl.pkg $ \dir => do
     let docsDir : Path Abs
         docsDir = buildPath rl.desc /> "docs"
 
@@ -357,7 +448,7 @@ installDocs rl = case rl.status of
       info "Building highlighted sources for: \{name rl}"
       mkDir htmlDir
       rp <- resolveApp "katla"
-      let katla := pkgExec rp.name rp.pkg rp.exec
+      let katla := pkgExec rp.name rp.hash rp.pkg rp.exec
       fs <- map (MkF htmlDir) <$> htmlFiles htmlDir
       for_ fs $ \htmlFile =>
         let Just ds@(MkDS _ src ttm srcHtml) := sourceForDoc rl.desc htmlFile
@@ -366,7 +457,7 @@ installDocs rl = case rl.status of
               sysAndLog Build [katla, "html", src, ttm, NoEscape ">", srcHtml]
               insertSources ds
 
-    let docs := pkgDocs rl.name rl.pkg rl.desc
+    let docs := pkgDocs rl.name rl.hash rl.pkg rl.desc
     when !(exists docs) (rmDir docs)
     copyDir docsDir docs
     uncacheLib (name rl)
@@ -480,7 +571,7 @@ removeApp n = do
   info "Removing application \{n}"
   ra <- resolveApp n
   rmFile (pathExec ra.exec)
-  rmDir (pkgBinDir ra.name ra.pkg)
+  rmDir (pkgBinDir ra.name ra.hash ra.pkg)
 
 covering
 removeLib : HasIO io => Env => PkgName -> EitherT PackErr io ()
@@ -489,8 +580,8 @@ removeLib n = do
   case isInstalled rl of
     True  => do
       info "Removing library \{n}"
-      rmDir (pkgInstallDir rl.name rl.pkg rl.desc)
-      rmDir (pkgLibDir rl.name rl.pkg)
+      rmDir (pkgInstallDir rl.name rl.hash rl.pkg rl.desc)
+      rmDir (pkgLibDir rl.name rl.hash rl.pkg)
     False => warn "Package \{n} is not installed. Ignoring."
 
 ||| Remove the given libs or apps

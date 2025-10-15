@@ -34,8 +34,8 @@ collections = do
 
 -- list of packages in the currently selected data
 -- collection
-packages : Env => List String
-packages = value <$> keys allPackages
+packages : (e : Env) => List String
+packages = value <$> keys e.all
 
 -- list of packages in the currently selected data
 -- collection

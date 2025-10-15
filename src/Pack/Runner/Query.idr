@@ -52,29 +52,27 @@ isApp (QP _ a) = isJust a
 export
 installedLib : QPkg -> Bool
 installedLib qp = case qp.lib.status of
-  Installed _ => True
-  Outdated    => True
-  Missing     => False
+  Installed _ _ => True
+  Missing     _ => False
 
 export
 installedApp : QPkg -> Bool
 installedApp qp = case map status qp.app of
-  Just Installed    => True
-  Just BinInstalled => True
-  Just Outdated     => True
-  Just Missing      => False
-  Nothing           => False
+  Just (Installed    _) => True
+  Just (BinInstalled _) => True
+  Just (Missing      _) => False
+  Nothing               => False
 
 covering
 resolve : HasIO io => Env => PkgName -> EitherT PackErr io QPkg
 resolve n = do
   lib <- resolveLib n
   Just exe <- pure (exec lib.desc) | Nothing => pure (QP lib Nothing)
-  st       <- appStatus n lib.pkg lib.desc lib.deps exe
+  st       <- appStatus n lib.hash lib.pkg exe
   pure $ QP lib (Just $ AI exe st)
 
-pkgNames : Env => List PkgName
-pkgNames = keys allPackages
+pkgNames : (e : Env) => List PkgName
+pkgNames = keys e.all
 
 export covering
 resolveAll :
@@ -91,11 +89,14 @@ resolveAll = do
 --         Queries
 --------------------------------------------------------------------------------
 
+hashLookup : PkgName -> SortedMap PkgName (ResolvedLib U) -> Hash
+hashLookup x = maybe (MkHash "") hash . lookup x
+
 covering
 query_ :
      {auto _ : HasIO io}
   -> {auto _ : Env}
-  -> (q : (parents,children : Tree PkgName) -> QPkg -> Maybe b)
+  -> (q : Hash -> (parents,children : Tree PkgName) -> QPkg -> Maybe b)
   -> EitherT PackErr io (List b)
 query_ q = do
   (sm,ps) <- resolveAll
@@ -106,7 +107,7 @@ query_ q = do
 
   pure $
     mapMaybe
-      (\p => q (treeLookup (name p) parents) (treeLookup (name p) children) p)
+      (\p => let n := name p in q (hashLookup n sm) (treeLookup n parents) (treeLookup n children) p)
       ps
 
 shortDesc : QPkg -> Maybe String
@@ -126,15 +127,13 @@ prettyModules s qp = case filter (isInfixOf s) (modules qp) of
   h :: t => "Modules : \{h}" :: map (indent 10) t
 
 status : PkgStatus p -> String
-status Missing        = "not installed"
-status (Installed _ ) = "installed"
-status Outdated       = "outdated"
+status (Missing   _)   = "not installed"
+status (Installed _ _) = "installed"
 
 status' : AppStatus p -> String
-status' Missing      = "not installed"
-status' Installed    = "installed"
-status' BinInstalled = "installed and on $PATH"
-status' Outdated     = "outdated"
+status' (Missing h)      = "not installed"
+status' (Installed h)    = "installed"
+status' (BinInstalled h) = "installed and on $PATH"
 
 libStatus : QPkg -> List String
 libStatus q = [ "Library      : \{status q.lib.status}" ]
@@ -153,12 +152,13 @@ testFile = map (\f => "Test File    : \{f}")
 notice : Maybe String -> Maybe String
 notice = map (\f =>   "Notice       : \{f}")
 
-details : QPkg -> List String
-details qp = case qp.lib.pkg of
+details : Hash -> QPkg -> List String
+details hash qp = case qp.lib.pkg of
   Git url commit ipkg _ t n => [
     "Type         : Git project"
   , "URL          : \{url}"
   , "Commit       : \{commit}"
+  , "Install hash : \{hash}"
   , "ipkg File    : \{ipkg}"
   ] ++ (catMaybes [testFile t, notice n])
 
@@ -166,6 +166,7 @@ details qp = case qp.lib.pkg of
     let ipkg := toAbsFile d i
      in [ "Type         : Local Idris project"
         , "Location     : \{ipkg.parent}"
+        , "Install hash : \{hash}"
         , "ipkg File    : \{ipkg.file}"
         ] ++ (catMaybes [testFile t])
 
@@ -187,11 +188,12 @@ resultString :
      {auto e : Env}
   -> (query : String)
   -> QueryMode
+  -> Hash
   -> (parents, children : Tree PkgName)
   -> QPkg
   -> String
-resultString q Module _  _  qp = namePlusModules q qp
-resultString _ _      ps cs qp = case e.config.queryType of
+resultString q Module h _  _  qp = namePlusModules q qp
+resultString _ _      h ps cs qp = case e.config.queryType of
   NameOnly => nameStr qp
 
   ShortDesc =>
@@ -204,7 +206,7 @@ resultString _ _      ps cs qp = case e.config.queryType of
 
   Details => unlines . (nameStr qp ::) . map (indent 2) $ concat [
       toList (("Brief        : " ++) <$> shortDesc qp)
-    , details qp
+    , details h qp
     , libStatus qp
     , appStatus qp
     , prettyDeps qp
@@ -228,7 +230,7 @@ query :
   -> Env
   -> EitherT PackErr io ()
 query m n e = do
-  ss <- query_ $ \ps,cs,p => toMaybe (keep m n p) (resultString n m ps cs p)
+  ss <- query_ $ \h,ps,cs,p => toMaybe (keep m n p) (resultString n m h ps cs p)
   putStrLn $ unlines ss
 
 --------------------------------------------------------------------------------
@@ -237,16 +239,14 @@ query m n e = do
 
 instLib : QPkg -> Maybe String
 instLib qp = case qp.lib.status of
-  Installed _ => Just "\{qp.lib.name}"
-  Outdated    => Just "\{qp.lib.name} (outdated)"
-  Missing     => Nothing
+  Installed _ _ => Just "\{qp.lib.name}"
+  Missing     _ => Nothing
 
 instApp : QPkg -> Maybe String
 instApp (QP lib $ Just (AI _ st))  = case st of
-  Installed    => Just "\{lib.name} (not on $PATH)"
-  BinInstalled => Just "\{lib.name}"
-  Outdated     => Just "\{lib.name} (outdated)"
-  Missing      => Nothing
+  Installed    _ => Just "\{lib.name} (not on $PATH)"
+  BinInstalled _ => Just "\{lib.name}"
+  Missing      _ => Nothing
 instApp _ = Nothing
 
 apps : List QPkg -> String

@@ -12,6 +12,7 @@ import Libraries.Data.List.Extra
 import Pack.Core.Git.Consts
 import Pack.Core.Types
 import Pack.Database.Types
+import System.Clock
 
 %default total
 
@@ -322,20 +323,9 @@ metaConfigToLogRef = MkLogRef c.logLevel
 
 export infixl 8 `mergeRight`
 
+export
 mergeRight : SortedMap k v -> SortedMap k v -> SortedMap k v
 mergeRight = mergeWith (\_,v => v)
-
-pkgs : SortedMap PkgName Package
-pkgs = fromList $ (\c => (corePkgName c, Core c)) <$> corePkgs
-
-||| Merges the "official" package collection with user
-||| defined settings, which will take precedence.
-export
-allPackages : (c : Config) => (db : DB) => SortedMap PkgName Package
-allPackages =
-  let all = fromMaybe empty $ lookup All c.custom
-      loc = fromMaybe empty $ lookup c.collection c.custom
-   in db.packages `mergeRight` all `mergeRight` loc `mergeRight` pkgs
 
 ||| Initial config
 export
@@ -467,8 +457,15 @@ record Env where
   tmpDir   : TmpDir
   config   : Config
   cache    : LibCache
-  db       : DB
+  db       : DB -- pack collection
+  all      : SortedMap PkgName Package -- packages merged from config and db
   linebuf  : LineBufferingCmd
+  clock    : Clock UTC
+
+||| Returns the current nanoseconds as a string.
+export
+nanoString : (e : Env) => String
+nanoString = show $ toNano e.clock
 
 ||| This allows us to use an `Env` in scope when we
 ||| need an auto-implicit `PackDirs`.
