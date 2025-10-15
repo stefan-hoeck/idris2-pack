@@ -617,6 +617,7 @@ env :
 env mc fetch = do
   mdb <- loadDB mc
   clk <- liftIO $ clockTime UTC
+  debug "clock time is \{show $ toNano clk}"
   db  <- traverseDB (resolveMeta fetch) mdb
   c   <- traverse (resolveMeta fetch) db.idrisURL mc
 

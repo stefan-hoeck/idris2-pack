@@ -204,7 +204,7 @@ libStatus :
   -> EitherT PackErr io (PkgStatus p)
 libStatus n p d deps = do
   h    <- pkgHash
-  True <- exists (pkgInstallDir n h p d) | False => pure (Missing h)
+  True <- exists (pkgInstallDir n h p d) | False => do pure (Missing missingHash)
   b    <- exists $ pkgDocs n h p d
   pure (Installed h b)
   where
@@ -215,19 +215,27 @@ libStatus n p d deps = do
     localHash : Hash
     localHash = mkHash nanoString
 
+    missingHash : Hash
+    missingHash =
+      case p of
+        Git _ c _ _ _ _          => mkHash c.value
+        Core                   _ => MkHash e.db.idrisCommit.value
+        Local {}                 => localHash
+
     pkgHash : EitherT PackErr io Hash
     pkgHash =
       case p of
-        Git _ c _ _ _ _          => pure (mkHash c.value)
-        Core                   _ => pure (MkHash e.db.idrisCommit.value)
         Local dir ipkg pkgPath _ => do
           let ts  := libTimestamp n
               dir := localSrcDir d
-          True <- fileExists ts | False => pure localHash
-          ""   <- newerSrc (libTimestamp n) dir     | _ => pure localHash
-          ""   <- newerIpkg (libTimestamp n) d.path | _ => pure localHash
-          s    <- read (libTimestamp n)
+          True <- fileExists ts       | False => pure localHash
+          ""   <- newerSrc ts dir     | s     => pure localHash
+          ""   <- newerIpkg ts d.path | s     => pure localHash
+          s    <- read ts
+          debug "timestamp for \{n}: \{s}"
+          debug "hash for \{n}: \{mkHash $ trim s}"
           pure (mkHash $ trim s)
+        _ => pure missingHash
 
 ||| Generates the `AppStatus` of a package representing an application.
 export

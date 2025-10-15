@@ -375,8 +375,11 @@ installLib rl = case rl.status of
     withPkgEnv rl.name rl.pkg $ \dir => do
       installImpl dir rl
       case rl.pkg of
-       Local _ _ _ _ => write (libTimestamp rl.name) nanoString
-       _             => pure ()
+        Local _ _ _ _ =>
+          when (not $ isInstalled rl) $ do
+            debug "writing \{nanoString} to \{libTimestamp rl.name}"
+            write (libTimestamp rl.name) nanoString
+        _             => pure ()
 
     uncacheLib (name rl)
 
