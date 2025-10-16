@@ -66,17 +66,6 @@ parameters (v : MArray t n Bits64)
     vx <- get v x
     set v x (xor vx r)
 
-  -- #define G(r,i,a,b,c,d)                      \
-  --   do {                                      \
-  --     a = a + b + m[blake2b_sigma[r][2*i+0]]; \
-  --     d = rotr64(d ^ a, 32);                  \
-  --     c = c + d;                              \
-  --     b = rotr64(b ^ c, 24);                  \
-  --     a = a + b + m[blake2b_sigma[r][2*i+1]]; \
-  --     d = rotr64(d ^ a, 16);                  \
-  --     c = c + d;                              \
-  --     b = rotr64(b ^ c, 63);                  \
-  --   } while(0)
   mix : (a,b,c,d : Fin n) -> (x,y : Bits64) -> F1' t
   mix a b c d x y = T1.do
     addI a b x    -- Va ← Va + Vb + x
