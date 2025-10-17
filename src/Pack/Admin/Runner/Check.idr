@@ -31,7 +31,7 @@ getRep : HasIO io => {auto db : ReportDB} -> PkgName -> io (Maybe Report)
 getRep p = lookup p <$> readIORef db
 
 missing : ResolvedLib t -> ResolvedLib t
-missing = {status := Missing}
+missing rl = {status := Missing rl.hash} rl
 
 covering
 test :
@@ -39,7 +39,7 @@ test :
   -> {auto e : IdrisEnv}
   -> SafeLib
   -> EitherT PackErr io TestResult
-test (RL pkg n d _ _) =
+test (RL pkg h n d _ _) =
   case e.env.config.skipTests of
     True  => pure Skipped
     False => case  pkg of
@@ -108,7 +108,7 @@ docsFor :
 docsFor p n = do
   res  <- runEitherT $ do
     rl <- resolveLib n
-    copyDirInto (pkgDocs rl.name rl.pkg rl.desc) (p </> "docs" <//> n)
+    copyDirInto (pkgDocs rl.name rl.hash rl.pkg rl.desc) (p </> "docs" <//> n)
   case res of
     Left _  => pure (Just "\{n}")
     Right _ => pure Nothing

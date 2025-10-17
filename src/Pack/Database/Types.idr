@@ -266,14 +266,16 @@ ipkg dir (Core c)        = toAbsFile dir (coreIpkgPath c)
 --          Resolved Packages
 --------------------------------------------------------------------------------
 
-||| Installation status of an Idris package. Local packages can be
-||| `Outdated`, if some of their source files contain changes newer
-||| a timestamp created during package installation.
+||| Installation status of an Idris package.
 public export
 data PkgStatus : Package -> Type where
-  Missing     : PkgStatus p
-  Installed   : (withDocs : Bool) -> PkgStatus p
-  Outdated    : (0 isLocal : IsLocal p) => PkgStatus p
+  Missing     : Hash -> PkgStatus p
+  Installed   : Hash -> (withDocs : Bool) -> PkgStatus p
+
+export
+hash : PkgStatus p -> Hash
+hash (Missing h)     = h
+hash (Installed h _) = h
 
 ||| A resolved library, which was cloned from a Git repo
 ||| or looked up in the local file system. This comes with
@@ -282,6 +284,7 @@ public export
 record ResolvedLib t where
   constructor RL
   pkg     : Package
+  hash    : Hash
   name    : PkgName
   desc    : Desc t
   status  : PkgStatus pkg
@@ -307,28 +310,22 @@ namespace ResolvedLib
   export
   isInstalled : ResolvedLib t -> Bool
   isInstalled rl = case rl.status of
-    Missing => False
-    _       => True
+    Missing _ => False
+    _         => True
 
 namespace AppStatus
-  ||| Installation status of an Idris app. Local apps can be
-  ||| `Outdated`, if some of their source files contain changes newer
-  ||| a timestamp created during package installation.
+  ||| Installation status of an Idris app.
   public export
   data AppStatus : Package -> Type where
     ||| The app has not been compiled and is therfore missing
-    Missing      :  AppStatus p
+    Missing      :  Hash -> AppStatus p
 
     ||| The app has been built but is not on the `PATH`.
-    Installed    :  AppStatus p
+    Installed    :  Hash -> AppStatus p
 
     ||| The app has been built and a wrapper script has been added
     ||| to `$PACK_DIR/bin`, so it should be on the `PATH`.
-    BinInstalled :  AppStatus p
-
-    ||| The local app has changes in its source files, which have
-    ||| not yet been included in the installed version.
-    Outdated     :  (0 isLocal : IsLocal p) => AppStatus p
+    BinInstalled :  Hash -> AppStatus p
 
 ||| A resolved application, which was cloned from a Git repo
 ||| or looked up in the local file system. This comes with
@@ -337,6 +334,7 @@ public export
 record ResolvedApp t where
   constructor RA
   pkg     : Package
+  hash    : Hash
   name    : PkgName
   desc    : Desc t
   status  : AppStatus pkg

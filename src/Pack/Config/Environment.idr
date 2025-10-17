@@ -10,6 +10,7 @@ import Pack.Config.Types
 import Pack.Core
 import Pack.Database
 import System
+import System.Clock
 
 %default total
 
@@ -161,48 +162,42 @@ idrisDataDir = idrisInstallDir /> "support"
 
 ||| Directory where an installed library or app goes
 export %inline
-pkgPrefixDir : PackDirs => DB => PkgName -> Package -> Path Abs
-pkgPrefixDir n (Git _ c _ _ _ _) = commitDir <//> n <//> c
-pkgPrefixDir n (Local _ _ _ _) = commitDir </> "local" <//> n
-pkgPrefixDir n (Core _)        = idrisPrefixDir
+pkgPrefixDir : PackDirs => DB => PkgName -> Hash -> Package -> Path Abs
+pkgPrefixDir n h (Git {})   = commitDir <//> n <//> h
+pkgPrefixDir n h (Local {}) = commitDir <//> n <//> h
+pkgPrefixDir n h (Core _)   = idrisPrefixDir
 
 ||| Directory to be used with the `IDRIS2_PACKAGE_PATH` variable, so that
 ||| Idris finds a library even though it is being installed in a
 ||| custom location.
 export %inline
-pkgPathDir : PackDirs => DB => PkgName -> Package -> Path Abs
-pkgPathDir n p = pkgPrefixDir n p /> idrisDir
+pkgPathDir : PackDirs => DB => PkgName -> Hash -> Package -> Path Abs
+pkgPathDir n h p = pkgPrefixDir n h p /> idrisDir
 
 ||| Directory where the binary of an Idris application is installed.
 export %inline
-pkgBinDir : PackDirs => DB => PkgName -> Package -> Path Abs
-pkgBinDir n p = pkgPrefixDir n p /> "bin"
+pkgBinDir : PackDirs => DB => PkgName -> Hash -> Package -> Path Abs
+pkgBinDir n h p = pkgPrefixDir n h p /> "bin"
 
 ||| Directory to be used with the `IDRIS2_LIBS` variable, so that
 ||| Idris finds a libraries `.so` files even though they have been
 ||| installed in a custom location.
 export %inline
-pkgLibDir : PackDirs => DB => PkgName -> Package -> Path Abs
-pkgLibDir n p = pkgPathDir n p /> "lib"
+pkgLibDir : PackDirs => DB => PkgName -> Hash -> Package -> Path Abs
+pkgLibDir n h p = pkgPathDir n h p /> "lib"
 
 ||| Directory to be used with the `IDRIS2_DATA` variable, so that
 ||| Idris finds a libraries support files even though they have been
 ||| installed in a custom location.
 export %inline
-pkgDataDir : PackDirs => DB => PkgName -> Package -> Path Abs
-pkgDataDir n p = pkgPathDir n p /> "support"
+pkgDataDir : PackDirs => DB => PkgName -> Hash -> Package -> Path Abs
+pkgDataDir n h p = pkgPathDir n h p /> "support"
 
 ||| Timestamp used to monitor if a local library has been
 ||| modified and requires reinstalling.
 export %inline
-libTimestamp :  PackDirs => DB => PkgName -> Package -> File Abs
-libTimestamp n p = MkF (pkgPathDir n p) ".timestamp"
-
-||| Timestamp used to monitor if a local app has been
-||| modified and requires reinstalling.
-export %inline
-appTimestamp :  PackDirs => DB => PkgName -> Package -> File Abs
-appTimestamp n p = MkF (pkgBinDir n p) ".timestamp"
+libTimestamp :  PackDirs => DB => PkgName -> File Abs
+libTimestamp n = MkF (cacheDir </> "local" <//> n) ".timestamp"
 
 ||| Directory where the sources of a local package are
 ||| stored.
@@ -218,64 +213,29 @@ pkgRelDir d = case Body.parse d.desc.name of
 ||| Returns the directory where a package for the current
 ||| package collection is installed.
 export
-pkgInstallDir : PackDirs => (db : DB) => PkgName -> Package -> Desc t -> Path Abs
-pkgInstallDir n p d =
+pkgInstallDir : PackDirs => (db : DB) => PkgName -> Hash -> Package -> Desc t -> Path Abs
+pkgInstallDir n h p d =
   let vers := db.idrisVersion
-      dir  := pkgPrefixDir n p /> idrisDir
+      dir  := pkgPrefixDir n h p /> idrisDir
    in case p of
-        Core c        => dir /> (c <-> vers)
+        Core c          => dir /> (c <-> vers)
         Git _ _ _ _ _ _ => dir </> pkgRelDir d
-        Local _ _ _ _ => dir </> pkgRelDir d
+        Local _ _ _ _   => dir </> pkgRelDir d
 
 ||| Directory where the API docs of the package will be installed.
 export %inline
-pkgDocs : PackDirs => DB => PkgName -> Package -> Desc t -> Path Abs
-pkgDocs n p d = pkgInstallDir n p d /> "docs"
+pkgDocs : PackDirs => DB => PkgName -> Hash -> Package -> Desc t -> Path Abs
+pkgDocs n h p d = pkgInstallDir n h p d /> "docs"
 
 ||| Location of an executable of the given name.
 export
-pkgExec : PackDirs => DB => PkgName -> Package -> (exe : Body) -> File Abs
-pkgExec n p exe = MkF (pkgBinDir n p) exe
+pkgExec : PackDirs => DB => PkgName -> Hash -> Package -> (exe : Body) -> File Abs
+pkgExec n h p exe = MkF (pkgBinDir n h p) exe
 
 ||| Path to the executable of an Idris application
 export
 resolvedExec : PackDirs => DB => ResolvedApp t -> File Abs
-resolvedExec (RA p n d _ exe _) = pkgExec n p exe
-
-pathDirs :
-     {auto _ : HasIO io}
-  -> {auto _ : PackDirs}
-  -> {auto _ : DB}
-  -> {auto _ : Config}
-  -> (pre : String)
-  -> (pth : PkgName -> Package -> Path Abs)
-  -> io String
-pathDirs pre pth = do
-  ps <- filterM (\(n,p) => exists $ pth n p) (SM.toList allPackages)
-  let ps' := filter (not . isCorePkg . value . fst) ps
-  pure $
-      fastConcat
-    . intersperse ":"
-    . (pre ::)
-    $ map (\(n,p) => "\{pth n p}") ps'
-
-||| Directories to be listed in the `IDRIS2_PACKAGE_PATH` variable, so
-||| that Idris finds all libraries installed by pack in custom locations.
-export
-packagePathDirs : HasIO io => Env -> io String
-packagePathDirs _ = pathDirs "\{idrisInstallDir}" pkgPathDir
-
-||| Directories to be listed in the `IDRIS2_LIBS` variable, so
-||| that Idris finds all `.so` files installed by pack in custom locations.
-export
-packageLibDirs : HasIO io => Env -> io String
-packageLibDirs _ = pathDirs "\{idrisLibDir}" pkgLibDir
-
-||| Directories to be listed in the `IDRIS2_DATA` variable, so
-||| that Idris finds all support files installed by pack in custom locations.
-export
-packageDataDirs : HasIO io => Env -> io String
-packageDataDirs _ = pathDirs "\{idrisDataDir}" pkgDataDir
+resolvedExec (RA p h n d _ exe _) = pkgExec n h p exe
 
 ||| URL of the pack repository to use
 export %inline
@@ -322,35 +282,7 @@ schemeVar = if useRacket then "IDRIS2_CG=racket" else "SCHEME=\{c.scheme}"
 export
 libInstallPrefix : PackDirs => DB => ResolvedLib t -> List (String,String)
 libInstallPrefix rl =
-  [("IDRIS2_PREFIX", "\{pkgPrefixDir rl.name rl.pkg}")]
-
-||| `IDRIS2_PACKAGE_PATH` variable to be used with Idris, so
-||| that it finds all libraries installed by pack in custom locations.
-export
-packagePath : HasIO io => Env => io (String, String)
-packagePath =
-  ("IDRIS2_PACKAGE_PATH",) <$>  packagePathDirs %search
-
-||| `IDRIS2_LIBS` variable to be used with Idris, so
-||| that it finds all `.so` files installed by pack in custom locations.
-export
-libPath : HasIO io => Env => io (String, String)
-libPath = ("IDRIS2_LIBS",) <$> packageLibDirs %search
-
-||| `IDRIS2_DATA` variable to be used with Idris, so
-||| that it finds all support files installed by pack in custom locations.
-export
-dataPath : HasIO io => Env => io (String, String)
-dataPath = ("IDRIS2_DATA",) <$> packageDataDirs %search
-
-||| This unifies `packagePath`, `libPath` and `dataPath`,
-||| to generate an environment necessary to build packages with Idris
-||| the dependencies of which are handled by pack.
-export
-buildEnv : HasIO io => Env => io (List (String,String))
-buildEnv =
-  let pre := if useRacket then [("IDRIS2_CG", "racket")] else []
-   in (pre ++ ) <$> sequence [packagePath, libPath, dataPath]
+  [("IDRIS2_PREFIX", "\{pkgPrefixDir rl.name rl.hash rl.pkg}")]
 
 ||| Idris executable with extra arguments, if they are present in the config.
 export
@@ -364,30 +296,6 @@ idrisWithCG : (e : Env) => CmdArgList
 idrisWithCG = case e.config.codegen of
   Default => idrisCmd
   cg      => idrisCmd ++ ["--cg", cg]
-
-||| Idris executable loading the given package plus the
-||| environment variables needed to run it.
-export
-idrisWithPkg :
-     {auto _ : HasIO io}
-  -> {auto _ : IdrisEnv}
-  -> ResolvedLib t
-  -> io (CmdArgList, List (String,String))
-idrisWithPkg rl =
-  (idrisWithCG ++ ["-p", name rl],) <$> buildEnv
-
-||| Idris executable loading the given packages plus the
-||| environment variables needed to run it.
-export
-idrisWithPkgs :
-     {auto _ : HasIO io}
-  -> {auto _ : IdrisEnv}
-  -> List (ResolvedLib t)
-  -> io (CmdArgList, List (String,String))
-idrisWithPkgs [] = pure (idrisWithCG, [])
-idrisWithPkgs pkgs =
-  let ps = concatMap (\p => ["-p", name p]) pkgs
-   in (idrisWithCG ++ ps,) <$> buildEnv
 
 --------------------------------------------------------------------------------
 --          Environment
@@ -659,7 +567,7 @@ cachePkg n (Core c)           =
 export
 cachePkgs : HasIO io => (e : Env) => EitherT PackErr io ()
 cachePkgs =
-  let pkgs := toList allPackages
+  let pkgs := toList e.all
    in do
      (S n,ml,ps) <- needCaching Lin 0 60 pkgs | (0,_,_) => pure ()
      traverse_ (doCache (S n) ml) ps
@@ -708,6 +616,8 @@ env :
   -> EitherT PackErr io Env
 env mc fetch = do
   mdb <- loadDB mc
+  clk <- liftIO $ clockTime UTC
+  debug "clock time is \{show $ toNano clk}"
   db  <- traverseDB (resolveMeta fetch) mdb
   c   <- traverse (resolveMeta fetch) db.idrisURL mc
 
@@ -717,7 +627,11 @@ env mc fetch = do
       c'     := {allIdrisCommits $= (db.idrisCommit ::)} c
       -- adjust the idrisCommit and URL to use according to user overrides
       db'    := {idrisURL := url, idrisCommit := commit} db
-      env    := MkEnv pd td c' ch db' lbf
+      pkgs   := SortedMap.fromList $ (\c => (corePkgName c, Core c)) <$> corePkgs
+      all    := fromMaybe empty $ lookup All c'.custom
+      loc    := fromMaybe empty $ lookup c'.collection c.custom
+      allps  := db.packages `mergeRight` all `mergeRight` loc `mergeRight` pkgs
+      env    := MkEnv pd td c' ch db' allps lbf clk
 
   cachePkgs $> env
 

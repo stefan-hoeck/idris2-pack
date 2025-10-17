@@ -12,6 +12,7 @@ import Libraries.Data.List.Extra
 import Pack.Core.Git.Consts
 import Pack.Core.Types
 import Pack.Database.Types
+import System.Clock
 
 %default total
 
@@ -190,6 +191,11 @@ record Config_ (f : Type -> Type) (c : Type) where
   ||| installation directories.
   gcPrompt : f Bool
 
+  ||| Whether to remove not only stuff compiled with outdated version
+  ||| of the compiler but also libs and apps whose install hash does not
+  ||| match the current one.
+  gcPurge : f Bool
+
   ||| Whether to issue a warning in precense of a local `depends` directory
   warnDepends : f Bool
 
@@ -322,20 +328,9 @@ metaConfigToLogRef = MkLogRef c.logLevel
 
 export infixl 8 `mergeRight`
 
+export
 mergeRight : SortedMap k v -> SortedMap k v -> SortedMap k v
 mergeRight = mergeWith (\_,v => v)
-
-pkgs : SortedMap PkgName Package
-pkgs = fromList $ (\c => (corePkgName c, Core c)) <$> corePkgs
-
-||| Merges the "official" package collection with user
-||| defined settings, which will take precedence.
-export
-allPackages : (c : Config) => (db : DB) => SortedMap PkgName Package
-allPackages =
-  let all = fromMaybe empty $ lookup All c.custom
-      loc = fromMaybe empty $ lookup c.collection c.custom
-   in db.packages `mergeRight` all `mergeRight` loc `mergeRight` pkgs
 
 ||| Initial config
 export
@@ -351,6 +346,7 @@ init coll = MkConfig {
   , bootstrap       = True
   , safetyPrompt    = True
   , gcPrompt        = True
+  , gcPurge         = False
   , warnDepends     = True
   , skipTests       = False
   , whitelist       = []
@@ -388,6 +384,7 @@ update ci cm = MkConfig {
   , bootstrap       = fromMaybe ci.bootstrap cm.bootstrap
   , safetyPrompt    = fromMaybe ci.safetyPrompt cm.safetyPrompt
   , gcPrompt        = fromMaybe ci.gcPrompt cm.gcPrompt
+  , gcPurge         = fromMaybe ci.gcPrompt cm.gcPrompt
   , warnDepends     = fromMaybe ci.warnDepends cm.warnDepends
   , skipTests       = fromMaybe ci.warnDepends cm.warnDepends
   , withSrc         = fromMaybe ci.withSrc cm.withSrc
@@ -467,8 +464,15 @@ record Env where
   tmpDir   : TmpDir
   config   : Config
   cache    : LibCache
-  db       : DB
+  db       : DB -- pack collection
+  all      : SortedMap PkgName Package -- packages merged from config and db
   linebuf  : LineBufferingCmd
+  clock    : Clock UTC
+
+||| Returns the current nanoseconds as a string.
+export
+nanoString : (e : Env) => String
+nanoString = show $ toNano e.clock
 
 ||| This allows us to use an `Env` in scope when we
 ||| need an auto-implicit `PackDirs`.
