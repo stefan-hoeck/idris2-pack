@@ -191,6 +191,11 @@ record Config_ (f : Type -> Type) (c : Type) where
   ||| installation directories.
   gcPrompt : f Bool
 
+  ||| Whether to remove not only stuff compiled with outdated version
+  ||| of the compiler but also libs and apps whose install hash does not
+  ||| match the current one.
+  gcPurge : f Bool
+
   ||| Whether to issue a warning in precense of a local `depends` directory
   warnDepends : f Bool
 
@@ -341,6 +346,7 @@ init coll = MkConfig {
   , bootstrap       = True
   , safetyPrompt    = True
   , gcPrompt        = True
+  , gcPurge         = False
   , warnDepends     = True
   , skipTests       = False
   , whitelist       = []
@@ -378,6 +384,7 @@ update ci cm = MkConfig {
   , bootstrap       = fromMaybe ci.bootstrap cm.bootstrap
   , safetyPrompt    = fromMaybe ci.safetyPrompt cm.safetyPrompt
   , gcPrompt        = fromMaybe ci.gcPrompt cm.gcPrompt
+  , gcPurge         = fromMaybe ci.gcPrompt cm.gcPrompt
   , warnDepends     = fromMaybe ci.warnDepends cm.warnDepends
   , skipTests       = fromMaybe ci.warnDepends cm.warnDepends
   , withSrc         = fromMaybe ci.withSrc cm.withSrc

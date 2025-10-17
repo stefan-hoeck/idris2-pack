@@ -30,6 +30,7 @@ microInit scheme db =
     , bootstrap         = True
     , safetyPrompt      = False
     , gcPrompt          = False
+    , gcPurge           = False
     , warnDepends       = True
     , skipTests         = False
     , whitelist         = []

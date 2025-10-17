@@ -58,6 +58,7 @@ FromTOML UserConfig where
           (maybeValAt "idris2.bootstrap" f v)
           (maybeValAt "install.safety-prompt" f v)
           (maybeValAt "install.gc-prompt" f v)
+          (maybeValAt "install.gc-purge" f v)
           (maybeValAt "install.warn-depends" f v)
           (maybeValAt "admin.skip-tests" f v)
           (maybeValAt "install.whitelist" f v)

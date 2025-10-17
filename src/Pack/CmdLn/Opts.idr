@@ -48,6 +48,9 @@ setPrompt b _ = Right . {safetyPrompt := b}
 setGCPrompt : Bool -> AdjConf
 setGCPrompt b _ = Right . {gcPrompt := b}
 
+setGCPurge : Bool -> AdjConf
+setGCPurge b _ = Right . {gcPurge := b}
+
 setWarnDepends : Bool -> AdjConf
 setWarnDepends b _ = Right . {warnDepends := b}
 
@@ -144,9 +147,19 @@ descs =
       """
       Prompt before deleting directories when running command `gc`.
       """
+  , MkOpt [] ["gc-purge"]   (NoArg $ setGCPurge True)
+      """
+      Remove *all* outdated libraries during garbage collection.
+      """
   , MkOpt [] ["no-gc-prompt"]   (NoArg $ setGCPrompt False)
       """
       Don't prompt before deleting directories when running command `gc`.
+      """
+  , MkOpt [] ["no-gc-purge"]   (NoArg $ setGCPurge False)
+      """
+      Only remove libraries built with an outdated compiler but not
+      outdated libraries built with the current compiler during garbage
+      collection.
       """
   , MkOpt [] ["bootstrap"]   (NoArg $ setBootstrap True)
       """

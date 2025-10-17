@@ -396,16 +396,33 @@ tmpDelDir b =
       p := cacheDir /> b
    in toMaybe ((".tmp" `isPrefixOf` s) && p /= Types.tmpDir) p
 
+purgeDirs : HasIO io => (e : Env) => EitherT PackErr io (List $ Path Abs)
+purgeDirs = join <$> (entries commitDir >>= traverse purgePaths)
+  where
+    purgePaths : Body -> EitherT PackErr io (List $ Path Abs)
+    purgePaths "idris2" = pure []
+    purgePaths x        =
+     let pkg := MkPkgName (interpolate x)
+      in case lookup pkg e.all of
+           Nothing => pure [commitDir /> x]
+           Just _  => do
+             rl <- resolveLib pkg
+             es <- entries (commitDir /> x)
+             pure $ (commitDir />) <$> filter (\b => "\{b}" /= rl.hash.value) es
+
+gcDirs : HasIO io => (e : Env) => EitherT PackErr io (List $ Path Abs)
+gcDirs = do
+  ds <- mapMaybe idrisDelDir <$> entries installDir
+  ps <- mapMaybe packDelDir <$> entries packParentDir
+  ts <- mapMaybe tmpDelDir <$> entries cacheDir
+  pd <- if e.config.gcPurge then purgeDirs else pure []
+  pure (ds ++ ps ++ ts ++ pd)
+
 ||| Delete installations from previous package collections.
 export
 garbageCollector : HasIO io => Env -> EitherT PackErr io ()
 garbageCollector e = do
-  ds <- mapMaybe idrisDelDir <$> entries installDir
-  ps <- mapMaybe packDelDir <$> entries packParentDir
-  ts <- mapMaybe tmpDelDir <$> entries cacheDir
-
-  let all := ds ++ ps ++ ts
-
+  all <- gcDirs
   when (e.config.gcPrompt && not (null all)) $ do
     let msg := "The following directories will be deleted. Continue (yes/*no)?"
     "yes" <- promptMany Warning msg (interpolate <$> all)

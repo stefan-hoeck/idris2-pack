@@ -331,8 +331,11 @@ cmdDesc UpdateDB         = """
 
 cmdDesc CollectGarbage   = """
   Clean up installations of older package collections by removing
-  all sub-directories of `$PACK_DIR/install` not belonging to the
+  all sub-directories of `$PACK_STATE_DIR/install` not belonging to the
   currently used compiler commit.
+
+  In case the `--gc-purge` option is set, this will also remove all
+  outdated libraries installed with the current compiler commit.
   """
 
 cmdDesc Info             = """
