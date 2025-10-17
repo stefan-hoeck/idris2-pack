@@ -403,12 +403,13 @@ purgeDirs = join <$> (entries commitDir >>= traverse purgePaths)
     purgePaths "idris2" = pure []
     purgePaths x        =
      let pkg := MkPkgName (interpolate x)
+         dir := commitDir /> x
       in case lookup pkg e.all of
-           Nothing => pure [commitDir /> x]
+           Nothing => pure [dir]
            Just _  => do
              rl <- resolveLib pkg
              es <- entries (commitDir /> x)
-             pure $ (commitDir />) <$> filter (\b => "\{b}" /= rl.hash.value) es
+             pure $ (dir />) <$> filter (\b => "\{b}" /= rl.hash.value) es
 
 gcDirs : HasIO io => (e : Env) => EitherT PackErr io (List $ Path Abs)
 gcDirs = do
