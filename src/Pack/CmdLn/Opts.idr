@@ -88,6 +88,8 @@ codegen v _ = Right . {codegen := fromString v}
 setGitInit : AdjConf
 setGitInit _ = Right . {gitInit := True}
 
+%hide Literal.fromString
+
 -- command line options with description
 descs : List $ OptDescr AdjConf
 descs =

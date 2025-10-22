@@ -17,6 +17,12 @@ type   = "local"
 path   = "."
 ipkg   = "micropack.ipkg"
 
+[custom.all.literal]
+type   = "git"
+url    = "https://github.com/stefan-hoeck/idris2-literal"
+commit = "latest:main"
+ipkg   = "literal.ipkg"
+
 [custom.all.ilex]
 type   = "git"
 url    = "https://github.com/stefan-hoeck/idris2-ilex"
