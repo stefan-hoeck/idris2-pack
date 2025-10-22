@@ -5,12 +5,17 @@
 module Pack.Core.Types
 
 import public Data.FilePath.File
+import public Literal
+
 import Data.Either
 import Data.Maybe
+import Derive.Literal
+import Derive.Prelude
 import Idris.Package.Types
 import System.File
 
 %default total
+%language ElabReflection
 
 ----------------------------------------------------------------------------------
 ----          Quoted Strings
@@ -249,11 +254,7 @@ record URL where
   constructor MkURL
   value : String
 
-export %inline
-Eq URL where (==) = (==) `on` value
-
-export %inline
-FromString URL where fromString = MkURL
+%runElab derive "URL" [Show,Eq,StringLit]
 
 export %inline
 Interpolation URL where interpolate = value
@@ -275,11 +276,7 @@ record Commit where
   constructor MkCommit
   value : String
 
-export %inline
-Eq Commit where (==) = (==) `on` value
-
-export %inline
-FromString Commit where fromString = MkCommit
+%runElab derive "Commit" [Show,Eq,StringLit]
 
 export %inline
 Interpolation Commit where interpolate = value
@@ -294,11 +291,7 @@ record Hash where
   constructor MkHash
   value : String
 
-export %inline
-Eq Hash where (==) = (==) `on` value
-
-export %inline
-FromString Hash where fromString = MkHash
+%runElab derive "Hash" [Show,Eq,StringLit]
 
 export %inline
 Interpolation Hash where interpolate = value
@@ -317,11 +310,7 @@ record Branch where
   constructor MkBranch
   value : String
 
-export %inline
-Eq Branch where (==) = (==) `on` value
-
-export %inline
-FromString Branch where fromString = MkBranch
+%runElab derive "Branch" [Show,Eq,StringLit]
 
 export %inline
 Interpolation Branch where interpolate = value
@@ -340,14 +329,7 @@ record PkgName where
   constructor MkPkgName
   value : String
 
-export %inline
-Eq PkgName where (==) = (==) `on` value
-
-export %inline
-Ord PkgName where compare = compare `on` value
-
-export %inline
-FromString PkgName where fromString = MkPkgName
+%runElab derive "PkgName" [Show,Eq,Ord,StringLit]
 
 export %inline
 Interpolation PkgName where interpolate = value
@@ -833,6 +815,8 @@ data PackErr : Type where
   SafetyAbort : PackErr
 
   CyclicDeps : List PkgName -> PackErr
+
+%hide Literal.fromString
 
 ||| Prints an error that occured during program execution.
 export

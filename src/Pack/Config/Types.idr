@@ -711,6 +711,8 @@ usageHeader cmd =
 ind : String -> String
 ind = unlines . map (indent 2) . lines
 
+%hide Literal.fromString
+
 ||| Detailed description how to use the given command.
 |||
 ||| This is a general description of the application

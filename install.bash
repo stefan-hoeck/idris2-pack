@@ -163,6 +163,13 @@ pushd "$CLONES_DIR/idris2-refined"
 "$BOOT_PATH" --install refined.ipkg
 popd
 
+# Install literal
+
+git clone https://github.com/stefan-hoeck/idris2-literal.git "$CLONES_DIR/idris2-literal"
+pushd "$CLONES_DIR/idris2-literal"
+"$BOOT_PATH" --install literal.ipkg
+popd
+
 # Install ilex-core, ilex, and ilex-toml
 
 git clone https://github.com/stefan-hoeck/idris2-ilex.git "$CLONES_DIR/idris2-ilex"
