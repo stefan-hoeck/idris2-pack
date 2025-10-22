@@ -5,11 +5,9 @@
 module Pack.Core.Types
 
 import public Data.FilePath.File
-import public Literal
 
 import Data.Either
 import Data.Maybe
-import Derive.Literal
 import Derive.Prelude
 import Idris.Package.Types
 import System.File
@@ -254,7 +252,7 @@ record URL where
   constructor MkURL
   value : String
 
-%runElab derive "URL" [Show,Eq,StringLit]
+%runElab derive "URL" [Show,Eq,FromString]
 
 export %inline
 Interpolation URL where interpolate = value
@@ -276,7 +274,7 @@ record Commit where
   constructor MkCommit
   value : String
 
-%runElab derive "Commit" [Show,Eq,StringLit]
+%runElab derive "Commit" [Show,Eq,FromString]
 
 export %inline
 Interpolation Commit where interpolate = value
@@ -291,7 +289,7 @@ record Hash where
   constructor MkHash
   value : String
 
-%runElab derive "Hash" [Show,Eq,StringLit]
+%runElab derive "Hash" [Show,Eq,FromString]
 
 export %inline
 Interpolation Hash where interpolate = value
@@ -310,7 +308,7 @@ record Branch where
   constructor MkBranch
   value : String
 
-%runElab derive "Branch" [Show,Eq,StringLit]
+%runElab derive "Branch" [Show,Eq,FromString]
 
 export %inline
 Interpolation Branch where interpolate = value
@@ -329,7 +327,7 @@ record PkgName where
   constructor MkPkgName
   value : String
 
-%runElab derive "PkgName" [Show,Eq,Ord,StringLit]
+%runElab derive "PkgName" [Show,Eq,Ord,FromString]
 
 export %inline
 Interpolation PkgName where interpolate = value
@@ -815,8 +813,6 @@ data PackErr : Type where
   SafetyAbort : PackErr
 
   CyclicDeps : List PkgName -> PackErr
-
-%hide Literal.fromString
 
 ||| Prints an error that occured during program execution.
 export
