@@ -246,34 +246,34 @@ if [ ! -f "$USER_DIR/pack.toml" ]; then
 
 		# Whether to prompt the user before building or installing
 		# packages or applications with custom build hooks in their
-		# `.ipkg` file.
+		# '.ipkg' file.
 		# safety-prompt = true
 
 		# Whether to prompt the user before running the garbage collector
-		# via command `gc`.
+		# via command 'gc'.
 		# gc-prompt = true
 
 		# Whether to remove all outdated libraries and applications during
-		# garbage collection (command `gc`).
+		# garbage collection (command 'gc').
 		# gc-purge = false
 
-		# Whether to issue a warning in presence of a local `depends` directory
+		# Whether to issue a warning in presence of a local 'depends' directory
 		# which might interfere with the libraries managed by pack
 		# warn-depends = true
 
 		# List of packages and apps with custom build hooks we trust to
 		# be safe. This gives more fine grained control over package safety
-		# than `safety-prompt`.
+		# than 'safety-prompt'.
 		# whitelist = [ "pack", "idris2-lsp" ]
 
 		# Must-have libraries. These will be installed automatically
 		# when using a new package collection.
-		# Example: `libs       = [ "toml", "elab-util" ]`
+		# Example: 'libs       = [ "toml", "elab-util" ]'
 		# libs       = []
 
 		# Must-have applications. These will be installed automatically
 		# when using a new package collection.
-		# Example: `apps       = [ "idris2-lsp" ]`
+		# Example: 'apps       = [ "idris2-lsp" ]'
 		# apps       = []
 
 		[pack]
@@ -298,16 +298,16 @@ if [ ! -f "$USER_DIR/pack.toml" ]; then
 		# Default code generator to us
 		# codegen     = "chez"
 
-		# Set this to `true` in order to run REPL sessions from within
-		# `rlwrap`. This will give you additional features such as a
+		# Set this to 'true' in order to run REPL sessions from within
+		# 'rlwrap'. This will give you additional features such as a
 		# command history.
 		# Alternatively, you can pass additional command-line arguments
-		# to `rlwrap` by setting this to a string or an array of strings,
+		# to 'rlwrap' by setting this to a string or an array of strings,
 		# e.g. to "-pGreen -aN" or ["-pGreen", "--no-children"].
 		# repl.rlwrap = false
 
 		# Packages to load automatically when starting a REPL session
-		# without an `.ipkg` file in scope. This defaults to "none".
+		# without an '.ipkg' file in scope. This defaults to "none".
 		# Note: Uncomment only one of the following examples:
 		# repl.autoload   = "installed"
 		# repl.autoload   = "autolibs"
@@ -333,11 +333,11 @@ if [ ! -f "$USER_DIR/pack.toml" ]; then
 		# package collections. The path to the package's root
 		# directory can be absolute or relative. In the latter
 		# case, it will be considered to be relative to the
-		# parent directory of the `pack.toml` file where it is
+		# parent directory of the 'pack.toml' file where it is
 		# defined.
 		#
-		# The path to `.ipkg` files must always relative to the
-		# given `path`.
+		# The path to '.ipkg' files must always relative to the
+		# given 'path'.
 		# [custom.all.chem]
 		# type = "local"
 		# path = "/data/idris/chem"
@@ -350,7 +350,7 @@ if [ ! -f "$USER_DIR/pack.toml" ]; then
 		# url  = "https://github.com/bar/foo"
 		# ipkg = "foo.ipkg"
 
-		# Override library `toml` from package collection `nightly-220503`
+		# Override library 'toml' from package collection 'nightly-220503'
 		# by using a custom commit hash.
 		# [custom.nightly-251023.ilex]
 		# type   = "git"
