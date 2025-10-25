@@ -273,7 +273,7 @@ if [ ! -f "$USER_DIR/pack.toml" ]; then
 
 		# Must-have applications. These will be installed automatically
 		# when using a new package collection.
-		# Example: `apps       = [ "idris2-lsp" ]
+		# Example: `apps       = [ "idris2-lsp" ]`
 		# apps       = []
 
 		[pack]
