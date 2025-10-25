@@ -293,7 +293,7 @@ if [ ! -f "$USER_DIR/pack.toml" ]; then
 		# bootstrap  = true
 
 		# Name or path to the scheme executable to use.
-		scheme      = "\{scheme}"
+		scheme      = "$SCHEME"
 
 		# Default code generator to us
 		# codegen     = "chez"
