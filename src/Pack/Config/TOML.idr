@@ -90,7 +90,7 @@ initToml scheme = """
   # sources or not. This is mainly useful for programmers
   # who have set their editor up with some *go to definition*
   # functionality (for instance by using idris2-lsp with neovim).
-  with-src   = true
+  # with-src   = true
 
   # Whether to install API docs together with installed
   # libraries.
@@ -103,28 +103,34 @@ initToml scheme = """
   # Whether to prompt the user before building or installing
   # packages or applications with custom build hooks in their
   # `.ipkg` file.
-  safety-prompt = true
+  # safety-prompt = true
 
   # Whether to prompt the user before running the garbage collector
   # via command `gc`.
-  gc-prompt = true
+  # gc-prompt = true
+
+  # Whether to remove all outdated libraries and applications during
+  # garbage collection (command `gc`).
+  # gc-purge = false
 
   # Whether to issue a warning in presence of a local `depends` directory
   # which might interfere with the libraries managed by pack
-  warn-depends = true
+  # warn-depends = true
 
   # List of packages and apps with custom build hooks we trust to
   # be safe. This gives more fine grained control over package safety
   # than `safety-prompt`.
-  whitelist = [ "pack", "idris2-lsp" ]
+  # whitelist = [ "pack", "idris2-lsp" ]
 
   # Must-have libraries. These will be installed automatically
   # when using a new package collection.
-  # libs       = [ "toml", "elab-util" ]
+  # Example: `libs       = [ "toml", "elab-util" ]`
+  # libs       = []
 
   # Must-have applications. These will be installed automatically
   # when using a new package collection.
-  # apps       = [ "idris2-lsp" ]
+  # Example: `apps       = [ "idris2-lsp" ]
+  # apps       = []
 
   [pack]
 
@@ -140,7 +146,7 @@ initToml scheme = """
   # Bootstrapping takes longer than building with an existing
   # Idris2 installation, but it will work even if the existing
   # Idris2 compiler is outdated.
-  bootstrap  = false
+  # bootstrap  = true
 
   # Name or path to the scheme executable to use.
   scheme      = "\{scheme}"
@@ -154,7 +160,7 @@ initToml scheme = """
   # Alternatively, you can pass additional command-line arguments
   # to `rlwrap` by setting this to a string or an array of strings,
   # e.g. to "-pGreen -aN" or ["-pGreen", "--no-children"].
-  repl.rlwrap = false
+  # repl.rlwrap = false
 
   # Packages to load automatically when starting a REPL session
   # without an `.ipkg` file in scope. This defaults to "none".
@@ -171,7 +177,11 @@ initToml scheme = """
 
   # Override this to have a .gitignore file and .git directory
   # created inside of a new pack project upon its creation.
-  git = false
+  # git = false
+
+  # Additional arguments to be passed to the Idris compiler
+  # This can be a single string or a list of strings.
+  # extra-args = []
 
   # Below are some examples for custom packages
 
@@ -198,17 +208,51 @@ initToml scheme = """
 
   # Override library `toml` from package collection `nightly-220503`
   # by using a custom commit hash.
-  # [custom.nightly-220503.toml]
+  # [custom.nightly-251023.ilex]
   # type   = "git"
-  # url    = "https://github.com/cuddlefishie/toml-idr"
+  # url    = "https://github.com/stefan-hoeck/idirs2-ilex"
   # commit = "eb7a146f565276f82ebf30cb6d5502e9f65dcc3c"
-  # ipkg   = "toml.ipkg"
+  # ipkg   = "ilex.ipkg"
 
   # Uncomment and adjust the following entries to specify the
   # default log level associated with each pack command.
-  # [log]
+  # Possible log levels are:
+  #   "debug"
+  #   "build"
+  #   "info"
+  #   "cache"
+  #   "warning"
+  #   "silence"
+  [log]
 
-  # exec = "debug"
-  # run  = "info"
-  # test = "warning"
+  # build             = "build"
+  # install-deps      = "build"
+  # typecheck         = "build"
+  # clean             = "build"
+  # cleanbuild        = "build"
+  # repl              = "warning"
+  # exec              = "warning"
+  # install           = "build"
+  # install-app       = "build"
+  # remove            = "build"
+  # remove-app        = "build"
+  # run               = "warning"
+  # test              = "warning"
+  # new               = "build"
+  # update            = "build"
+  # fetch             = "build"
+  # package-path      = "silence"
+  # libs-path         = "silence"
+  # data-path         = "silence"
+  # app-path          = "silence"
+  # switch            = "build"
+  # update-db         = "build"
+  # gc                = "info"
+  # info              = "cache"
+  # query             = "cache"
+  # fuzzy             = "cache"
+  # completion        = "silence"
+  # completion-script = "silence"
+  # uninstall         = "info"
+  # help              = "silence"
   """
