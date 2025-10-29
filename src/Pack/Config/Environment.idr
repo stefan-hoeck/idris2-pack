@@ -141,8 +141,8 @@ export
 idrisExec : PackDirs => DB => File Abs
 idrisExec = MkF idrisBinDir "idris2"
 
-%inline
-idrisDir : PackDirs => (db : DB) => Body
+export %inline
+idrisDir : (db : DB) => Body
 idrisDir = the Body "idris2" <-> db.idrisVersion
 
 ||| The directory where Idris2 packages will be installed.
@@ -262,20 +262,36 @@ bootstrapCmd = if useRacket then "bootstrap-racket" else "bootstrap"
 --          Environment Variables
 --------------------------------------------------------------------------------
 
+%inline
+mkEnvVar : Interpolation a => String -> a -> String
+mkEnvVar var val = "\{var}=\{val}"
+
+export %inline
+mkPrefixVar :  Path Abs -> String
+mkPrefixVar = mkEnvVar "PREFIX"
+
+export %inline
+mkIdrisBootVar : File Abs -> String
+mkIdrisBootVar = mkEnvVar "IDRIS2_BOOT"
+
+export %inline
+mkIdrisDataVar : Path Abs -> String
+mkIdrisDataVar = mkEnvVar "IDRIS2_DATA"
+
 ||| `$PREFIX` variable during Idris2 installation, unquoted
 export
 prefixVar : PackDirs => DB => String
-prefixVar = "PREFIX=\{idrisPrefixDir}"
+prefixVar = mkPrefixVar idrisPrefixDir
 
 ||| `$IDRIS2_BOOT` variable during Idris2 installation, unquoted
 export
 idrisBootVar : PackDirs => DB => String
-idrisBootVar = "IDRIS2_BOOT=\{idrisExec}"
+idrisBootVar = mkIdrisBootVar idrisExec
 
 ||| `$SCHEME` variable during Idris2 installation, unquoted
 export
 schemeVar : (c : Config) => String
-schemeVar = if useRacket then "IDRIS2_CG=racket" else "SCHEME=\{c.scheme}"
+schemeVar = if useRacket then mkEnvVar "IDRIS2_CG" "racket" else mkEnvVar "SCHEME" c.scheme
 
 ||| `IDRIS2_PREFIX` to be used with Idris when installing a library
 ||| to a custom location.

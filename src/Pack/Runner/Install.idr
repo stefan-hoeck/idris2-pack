@@ -264,32 +264,29 @@ getTTCVersion = do
 -- Tries to build Idris from an existing version of the compiler.
 tryDirectBuild : HasIO io => Env => io (Either PackErr ())
 tryDirectBuild =
-  runEitherT $
-    sysAndLog Build ["make", "support", prefixVar, schemeVar] >>
+  runEitherT $ do
+    sysAndLog Build ["make", "support", prefixVar, schemeVar]
     sysAndLog Build ["make", "idris2-exec", prefixVar, schemeVar]
 
 idrisCleanup : HasIO io => Env => io ()
 idrisCleanup =
-  ignore $ runEitherT $ do
+  ignoreError $ do
     sysAndLog Build ["make", "clean-libs"]
     sysAndLog Build ["rm", "-r", "build/ttc", "build/exec"]
 
 idrisBootstrapStage3 : HasIO io => (e : Env) => Path Abs -> EitherT PackErr io ()
 idrisBootstrapStage3 dir = do
-  let prefVar = "PREFIX=\{dir}"
+  let prefVar = mkPrefixVar dir
   debug "Install bootstrapped Idris..."
   sysAndLog Build ["make", "bootstrap-install", prefVar, schemeVar]
   idrisCleanup
 
   debug "Stage 3: Rebuilding Idris..."
-  let idrisBootPath : Path Abs = dir /> "bin" /> "idris2"
-  let idrisBootVar = "IDRIS2_BOOT=\{idrisBootPath}"
-  let idrisDataPath : Path Abs = dir /> (the Body "idris2" <-> e.db.idrisVersion) /> "support"
-  let idrisDataVar = "IDRIS2_DATA=\{idrisDataPath}"
+  let idrisBootVar = mkIdrisBootVar $ dir /> "bin" /> "idris2"
+  let idrisDataVar = mkIdrisDataVar $ dir /> idrisDir /> "support"
   sysAndLog Build ["make", "idris2-exec", prefixVar, idrisBootVar, idrisDataVar, schemeVar]
-  sysAndLog Build ["make", "install-idris2", prefVar, schemeVar]
 
-  ignore $ runEitherT $ sysAndLog Build ["make", "-rf", dir]
+  ignoreError $ sysAndLog Build ["make", "-rf", dir]
 
 idrisBootstrap : HasIO io => (e : Env) => Path Abs -> EitherT PackErr io ()
 idrisBootstrap dir = do
@@ -297,7 +294,7 @@ idrisBootstrap dir = do
   sysAndLog Build ["make", bootstrapCmd, prefixVar, schemeVar]
   when e.config.bootstrapStage3 $ do
     idrisBootstrapStage3 $ dir </> "bootstrapped"
-  ignore $ runEitherT $ sysAndLog Build ["make", "bootstrap-clean"]
+  ignoreError $ sysAndLog Build ["make", "bootstrap-clean"]
 
 ||| Builds and installs the Idris commit given in the environment.
 export covering
