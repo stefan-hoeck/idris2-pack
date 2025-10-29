@@ -181,6 +181,9 @@ record Config_ (f : Type -> Type) (c : Type) where
   ||| Whether to bootstrap when building Idris2
   bootstrap    : f Bool
 
+  ||| Whether to rebuild Idris2 with the stage 2 compiler
+  bootstrapStage3 : f Bool
+
   ||| Whether to prompt for a confirmation when
   ||| building or installing a package with custom
   ||| build or install hooks.
@@ -344,6 +347,7 @@ init coll = MkConfig {
   , packCommit      = Nothing
   , scheme          = "scheme"
   , bootstrap       = False
+  , bootstrapStage3 = False
   , safetyPrompt    = True
   , gcPrompt        = True
   , gcPurge         = False
@@ -382,6 +386,7 @@ update ci cm = MkConfig {
   , packCommit      = cm.packCommit <|> ci.packCommit
   , scheme          = fromMaybe ci.scheme cm.scheme
   , bootstrap       = fromMaybe ci.bootstrap cm.bootstrap
+  , bootstrapStage3 = fromMaybe ci.bootstrapStage3 cm.bootstrapStage3
   , safetyPrompt    = fromMaybe ci.safetyPrompt cm.safetyPrompt
   , gcPrompt        = fromMaybe ci.gcPrompt cm.gcPrompt
   , gcPurge         = fromMaybe ci.gcPrompt cm.gcPrompt

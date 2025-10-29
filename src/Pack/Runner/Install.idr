@@ -274,10 +274,29 @@ idrisCleanup =
     sysAndLog Build ["make", "clean-libs"]
     sysAndLog Build ["rm", "-r", "build/ttc", "build/exec"]
 
-idrisBootstrap : HasIO io => Env => EitherT PackErr io ()
-idrisBootstrap = do
+idrisBootstrapStage3 : HasIO io => (e : Env) => Path Abs -> EitherT PackErr io ()
+idrisBootstrapStage3 dir = do
+  let prefVar = "PREFIX=\{dir}"
+  debug "Install bootstrapped Idris..."
+  sysAndLog Build ["make", "bootstrap-install", prefVar, schemeVar]
+  idrisCleanup
+
+  debug "Stage 3: Rebuilding Idris..."
+  let idrisBootPath : Path Abs = dir /> "bin" /> "idris2"
+  let idrisBootVar = "IDRIS2_BOOT=\{idrisBootPath}"
+  let idrisDataPath : Path Abs = dir /> (the Body "idris2" <-> e.db.idrisVersion) /> "support"
+  let idrisDataVar = "IDRIS2_DATA=\{idrisDataPath}"
+  sysAndLog Build ["make", "idris2-exec", prefixVar, idrisBootVar, idrisDataVar, schemeVar]
+  sysAndLog Build ["make", "install-idris2", prefVar, schemeVar]
+
+  ignore $ runEitherT $ sysAndLog Build ["make", "-rf", dir]
+
+idrisBootstrap : HasIO io => (e : Env) => Path Abs -> EitherT PackErr io ()
+idrisBootstrap dir = do
   debug "Bootstrapping Idris..."
   sysAndLog Build ["make", bootstrapCmd, prefixVar, schemeVar]
+  when e.config.bootstrapStage3 $ do
+    idrisBootstrapStage3 $ dir </> "bootstrapped"
   ignore $ runEitherT $ sysAndLog Build ["make", "bootstrap-clean"]
 
 ||| Builds and installs the Idris commit given in the environment.
@@ -289,14 +308,14 @@ mkIdris = do
     debug "No Idris compiler found. Installing..."
     withCoreGit $ \dir => do
       case e.config.bootstrap of
-        True  => idrisBootstrap
+        True  => idrisBootstrap dir
         False =>
           -- if building with an existing installation fails for whatever reason
           -- we revert to bootstrapping
           tryDirectBuild >>= \case
             Left x => do
               warn "Building Idris failed. Trying to bootstrap now."
-              idrisBootstrap
+              idrisBootstrap dir
             Right () => pure ()
 
       sysAndLog Build ["make", "install-support", prefixVar]
