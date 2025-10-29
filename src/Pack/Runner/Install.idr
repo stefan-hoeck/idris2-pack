@@ -274,6 +274,12 @@ idrisCleanup =
     sysAndLog Build ["make", "clean-libs"]
     sysAndLog Build ["rm", "-r", "build/ttc", "build/exec"]
 
+idrisBootstrap : HasIO io => Env => EitherT PackErr io ()
+idrisBootstrap = do
+  debug "Bootstrapping Idris..."
+  sysAndLog Build ["make", bootstrapCmd, prefixVar, schemeVar]
+  ignore $ runEitherT $ sysAndLog Build ["make", "bootstrap-clean"]
+
 ||| Builds and installs the Idris commit given in the environment.
 export covering
 mkIdris : HasIO io => (e : Env) => EitherT PackErr io IdrisEnv
@@ -283,16 +289,14 @@ mkIdris = do
     debug "No Idris compiler found. Installing..."
     withCoreGit $ \dir => do
       case e.config.bootstrap of
-        True  =>
-          sysAndLog Build ["make", bootstrapCmd, prefixVar, schemeVar]
+        True  => idrisBootstrap
         False =>
           -- if building with an existing installation fails for whatever reason
           -- we revert to bootstrapping
           tryDirectBuild >>= \case
             Left x => do
               warn "Building Idris failed. Trying to bootstrap now."
-              idrisCleanup
-              sysAndLog Build ["make", bootstrapCmd, prefixVar, schemeVar]
+              idrisBootstrap
             Right () => pure ()
 
       sysAndLog Build ["make", "install-support", prefixVar]
