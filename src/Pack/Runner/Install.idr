@@ -264,15 +264,37 @@ getTTCVersion = do
 -- Tries to build Idris from an existing version of the compiler.
 tryDirectBuild : HasIO io => Env => io (Either PackErr ())
 tryDirectBuild =
-  runEitherT $
-    sysAndLog Build ["make", "support", prefixVar, schemeVar] >>
-    sysAndLog Build ["make", "idris2-exec", prefixVar, schemeVar]
+  runEitherT $ do
+    sysAndLog Build ["make", "support"]
+    sysAndLog Build ["make", "idris2-exec", schemeVar]
 
 idrisCleanup : HasIO io => Env => io ()
 idrisCleanup =
-  ignore $ runEitherT $ do
+  ignoreError $ do
     sysAndLog Build ["make", "clean-libs"]
     sysAndLog Build ["rm", "-r", "build/ttc", "build/exec"]
+
+idrisBootstrapStage3 : HasIO io => (e : Env) => Path Abs -> EitherT PackErr io ()
+idrisBootstrapStage3 dir = do
+  let prefVar = mkPrefixVar dir
+  debug "Install bootstrapped Idris..."
+  sysAndLog Build ["make", "bootstrap-install", prefVar, schemeVar]
+  idrisCleanup
+
+  debug "Stage 3: Rebuilding Idris..."
+  let idrisBootVar = mkIdrisBootVar $ dir /> "bin" /> "idris2"
+  let idrisDataVar = mkIdrisDataVar $ dir /> idrisDir /> "support"
+  sysAndLog Build ["make", "idris2-exec", idrisBootVar, idrisDataVar, schemeVar]
+
+  ignoreError $ sysAndLog Build ["make", "-rf", dir]
+
+idrisBootstrap : HasIO io => (e : Env) => Path Abs -> EitherT PackErr io ()
+idrisBootstrap dir = do
+  debug "Bootstrapping Idris..."
+  sysAndLog Build ["make", bootstrapCmd, schemeVar]
+  when e.config.bootstrapStage3 $ do
+    idrisBootstrapStage3 $ dir </> "bootstrapped"
+  ignoreError $ sysAndLog Build ["make", "bootstrap-clean"]
 
 ||| Builds and installs the Idris commit given in the environment.
 export covering
@@ -283,16 +305,14 @@ mkIdris = do
     debug "No Idris compiler found. Installing..."
     withCoreGit $ \dir => do
       case e.config.bootstrap of
-        True  =>
-          sysAndLog Build ["make", bootstrapCmd, prefixVar, schemeVar]
+        True  => idrisBootstrap dir
         False =>
           -- if building with an existing installation fails for whatever reason
           -- we revert to bootstrapping
           tryDirectBuild >>= \case
             Left x => do
               warn "Building Idris failed. Trying to bootstrap now."
-              idrisCleanup
-              sysAndLog Build ["make", bootstrapCmd, prefixVar, schemeVar]
+              idrisBootstrap dir
             Right () => pure ()
 
       sysAndLog Build ["make", "install-support", prefixVar]

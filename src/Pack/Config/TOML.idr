@@ -56,6 +56,7 @@ FromTOML UserConfig where
           (maybeValAt "pack.commit" f v)
           (maybeValAt "idris2.scheme" f v)
           (maybeValAt "idris2.bootstrap" f v)
+          (maybeValAt "idris2.bootstrap-stage3" f v)
           (maybeValAt "install.safety-prompt" f v)
           (maybeValAt "install.gc-prompt" f v)
           (maybeValAt "install.gc-purge" f v)
@@ -147,6 +148,11 @@ initToml scheme = """
   # Idris2 installation, but it will work even if the existing
   # Idris2 compiler is outdated.
   # bootstrap  = false
+
+  # Whether to rebuild Idris2 when bootstrapping, using the newly
+  # built compiler. Produces a more optimised final executable,
+  # but increases build time.
+  # bootstrap-stage3 = true
 
   # Name or path to the scheme executable to use.
   scheme      = "\{scheme}"

@@ -28,6 +28,10 @@ filterM f (x :: xs) = do
   True <- f x | False => filterM f xs
   (x ::) <$> filterM f xs
 
+export
+ignoreError : Monad m => EitherT err m () -> m ()
+ignoreError = ignore . runEitherT
+
 ||| Convert an IO action with the potential of failure
 ||| to an `EitherT PackErr`.
 export
@@ -48,7 +52,7 @@ finally :
   -> EitherT err m a
 finally cleanup act = MkEitherT $ do
   res <- runEitherT act
-  ignore $ runEitherT cleanup
+  ignoreError cleanup
   pure res
 
 ||| Runs a *pack* program, printing errors to standard out.

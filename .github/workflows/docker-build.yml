@@ -33,8 +33,8 @@ jobs:
       - name: Build Docker Images
         run: |
           export NO_CACHE="${{ github.ref == 'refs/heads/main' }}"
-          UBUNTU_RELEASE=noble make docker-build
-          UBUNTU_RELEASE=jammy make docker-build
+          UBUNTU_RELEASE=noble OWNER=${{ github.repository_owner }} make docker-build
+          UBUNTU_RELEASE=jammy OWNER=${{ github.repository_owner }} make docker-build
 
       - name: Log in to registry
         if: github.ref == 'refs/heads/main'

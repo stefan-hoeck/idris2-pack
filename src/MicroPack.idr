@@ -28,6 +28,7 @@ microInit scheme db =
     , packCommit        = Nothing
     , scheme            = fromString scheme
     , bootstrap         = True
+    , bootstrapStage3   = True
     , safetyPrompt      = False
     , gcPrompt          = False
     , gcPurge           = False
