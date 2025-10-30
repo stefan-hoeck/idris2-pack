@@ -1,9 +1,9 @@
-export PACK_DIR ?= ${HOME}/.pack
+export OWNER ?= stefan-hoeck
 export SCHEME ?= scheme
 export LD_LIBRARY_PATH = micropack
 export DYLD_LIBRARY_PATH = micropack
 
-DOCKER_IMAGE = ghcr.io/stefan-hoeck/idris2-pack
+DOCKER_IMAGE = ghcr.io/${OWNER}/idris2-pack
 UBUNTU_RELEASE ?= noble
 NO_CACHE ?= false
 
