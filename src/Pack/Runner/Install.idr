@@ -265,8 +265,8 @@ getTTCVersion = do
 tryDirectBuild : HasIO io => Env => io (Either PackErr ())
 tryDirectBuild =
   runEitherT $ do
-    sysAndLog Build ["make", "support", prefixVar, schemeVar]
-    sysAndLog Build ["make", "idris2-exec", prefixVar, schemeVar]
+    sysAndLog Build ["make", "support"]
+    sysAndLog Build ["make", "idris2-exec", schemeVar]
 
 idrisCleanup : HasIO io => Env => io ()
 idrisCleanup =
@@ -284,14 +284,14 @@ idrisBootstrapStage3 dir = do
   debug "Stage 3: Rebuilding Idris..."
   let idrisBootVar = mkIdrisBootVar $ dir /> "bin" /> "idris2"
   let idrisDataVar = mkIdrisDataVar $ dir /> idrisDir /> "support"
-  sysAndLog Build ["make", "idris2-exec", prefixVar, idrisBootVar, idrisDataVar, schemeVar]
+  sysAndLog Build ["make", "idris2-exec", idrisBootVar, idrisDataVar, schemeVar]
 
   ignoreError $ sysAndLog Build ["make", "-rf", dir]
 
 idrisBootstrap : HasIO io => (e : Env) => Path Abs -> EitherT PackErr io ()
 idrisBootstrap dir = do
   debug "Bootstrapping Idris..."
-  sysAndLog Build ["make", bootstrapCmd, prefixVar, schemeVar]
+  sysAndLog Build ["make", bootstrapCmd, schemeVar]
   when e.config.bootstrapStage3 $ do
     idrisBootstrapStage3 $ dir </> "bootstrapped"
   ignoreError $ sysAndLog Build ["make", "bootstrap-clean"]
