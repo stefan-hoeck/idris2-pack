@@ -146,7 +146,7 @@ initToml scheme = """
   # Bootstrapping takes longer than building with an existing
   # Idris2 installation, but it will work even if the existing
   # Idris2 compiler is outdated.
-  # bootstrap  = true
+  # bootstrap  = false
 
   # Name or path to the scheme executable to use.
   scheme      = "\{scheme}"
