@@ -38,6 +38,11 @@ export
 ipkgCachePath : PackDirs => PkgName -> Commit -> File Rel -> File Abs
 ipkgCachePath p com = toAbsFile (cacheDir <//> p <//> com)
 
+||| Path where the cached compiler version is stored.
+export
+versionCachePath : PackDirs => (db : DB) => File Abs
+versionCachePath = MkF (cacheDir <//> IdrisApi <//> db.idrisCommit) "version"
+
 ||| Path to cached core library `.ipkg` file
 export
 coreCachePath : PackDirs => (db : DB) => CorePkg -> File Abs
@@ -551,8 +556,13 @@ withCoreGit = withGit compiler e.db.idrisURL e.db.idrisCommit False
 ||| quickly available when running queries.
 export
 cacheCoreIpkgFiles : HasIO io => Env => Path Abs -> EitherT PackErr io ()
-cacheCoreIpkgFiles dir = for_ corePkgs $ \c =>
-  copyFile (toAbsFile dir (coreIpkgPath c)) (coreCachePath c)
+cacheCoreIpkgFiles dir = do
+  for_ corePkgs $ \c =>
+    copyFile (toAbsFile dir (coreIpkgPath c)) (coreCachePath c)
+  let api := coreCachePath IdrisApi
+  desc <- parseIpkgFile api api
+  write versionCachePath (maybe "0.0.0" show desc.desc.version)
+
 
 export
 notCached : HasIO io => (e : Env) => PkgName -> Package -> io Bool
@@ -581,12 +591,13 @@ cachePkg n (Core c)           =
    in withCoreGit cacheCoreIpkgFiles
 
 export
-cachePkgs : HasIO io => (e : Env) => EitherT PackErr io ()
+cachePkgs : HasIO io => (e : Env) => EitherT PackErr io PkgVersion
 cachePkgs =
   let pkgs := toList e.all
    in do
-     (S n,ml,ps) <- needCaching Lin 0 60 pkgs | (0,_,_) => pure ()
+     (S n,ml,ps) <- needCaching Lin 0 60 pkgs | (0,_,_) => readIdrisVersion
      traverse_ (doCache (S n) ml) ps
+     readIdrisVersion
 
   where
     needCaching :
@@ -617,6 +628,15 @@ cachePkgs =
     doCache tot ml (n,pn,pkg) = do
       cache (cacheInfo tot ml n pn)
       cachePkg pn pkg
+
+    readIdrisVersion : EitherT PackErr io PkgVersion
+    readIdrisVersion = do
+      when !(fileMissing versionCachePath)
+        (cachePkg (corePkgName IdrisApi) $ Core IdrisApi)
+      s <- trim <$> read versionCachePath
+      let vers := MkPkgVersion $ map cast $ split ('.' ==) s
+      debug "compiler version is \{show vers}"
+      pure vers
 
 ||| Load the package collection as given in the (auto-implicit) user config
 ||| and convert the result to a pack environment.
@@ -649,7 +669,8 @@ env mc fetch = do
       allps  := db.packages `mergeRight` all `mergeRight` loc `mergeRight` pkgs
       env    := MkEnv pd td c' ch db' allps lbf clk
 
-  cachePkgs $> env
+  vers <- cachePkgs
+  pure $ {db $= setVersion vers} env
 
 ||| Update the `collection` field in file `PACK_DIR/user/pack.toml`
 ||| with the name of the package collection given in config `c`.

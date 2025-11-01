@@ -49,12 +49,15 @@ export
 idrisRepo : URL
 idrisRepo = "https://github.com/idris-lang/Idris2.git"
 
+v0 : PkgVersion
+v0 = MkPkgVersion (0:::[0,0])
+
 export
 FromTOML MetaDB where
   fromTOML f v =
     [| MkDB
          (optValAt "idris2.url" f idrisRepo v)
          (valAt "idris2.commit" f v)
-         (valAt "idris2.version" f v)
+         (pure v0)
          (optValAt "db" f empty v)
     |]
