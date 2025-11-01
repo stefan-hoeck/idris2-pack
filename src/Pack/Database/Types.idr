@@ -432,6 +432,11 @@ public export
 0 MetaDB : Type
 MetaDB = DB_ MetaCommit
 
+||| Sets the package version.
+export %inline
+setVersion : PkgVersion -> DB -> DB
+setVersion v = {idrisVersion := v}
+
 ||| Effectfully convert package descriptions in a DB
 export
 traverseDB :
