@@ -286,7 +286,7 @@ idrisBootstrapStage3 dir = do
   let idrisDataVar = mkIdrisDataVar $ dir /> idrisDir /> "support"
   sysAndLog Build ["make", "idris2-exec", idrisBootVar, idrisDataVar, schemeVar]
 
-  ignoreError $ sysAndLog Build ["make", "-rf", dir]
+  ignoreError $ sysAndLog Build ["rm", "-rf", dir]
 
 idrisBootstrap : HasIO io => (e : Env) => Path Abs -> EitherT PackErr io ()
 idrisBootstrap dir = do
