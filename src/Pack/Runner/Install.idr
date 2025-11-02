@@ -266,7 +266,7 @@ tryDirectBuild : HasIO io => Env => io (Either PackErr ())
 tryDirectBuild =
   runEitherT $ do
     sysAndLog Build ["make", "support"]
-    sysAndLog Build ["make", "idris2-exec", schemeVar]
+    sysAndLog Build ["make", "idris2-exec", prefixVar, schemeVar]
 
 idrisCleanup : HasIO io => Env => io ()
 idrisCleanup =
@@ -274,26 +274,27 @@ idrisCleanup =
     sysAndLog Build ["make", "clean-libs"]
     sysAndLog Build ["rm", "-r", "build/ttc", "build/exec"]
 
-idrisBootstrapStage3 : HasIO io => (e : Env) => Path Abs -> EitherT PackErr io ()
-idrisBootstrapStage3 dir = do
-  let prefVar = mkPrefixVar dir
+idrisBootstrapWithStage3 : HasIO io => (e : Env) => Path Abs -> EitherT PackErr io ()
+idrisBootstrapWithStage3 dir = do
+  let bootstrappedPrefixVar = mkPrefixVar dir
+  sysAndLog Build ["make", bootstrapCmd, bootstrappedPrefixVar, schemeVar]
   debug "Install bootstrapped Idris..."
-  sysAndLog Build ["make", "bootstrap-install", prefVar, schemeVar]
+  sysAndLog Build ["make", "bootstrap-install", bootstrappedPrefixVar, schemeVar]
   idrisCleanup
 
   debug "Stage 3: Rebuilding Idris..."
   let idrisBootVar = mkIdrisBootVar $ dir /> "bin" /> "idris2"
   let idrisDataVar = mkIdrisDataVar $ dir /> idrisDir /> "support"
-  sysAndLog Build ["make", "idris2-exec", idrisBootVar, idrisDataVar, schemeVar]
+  sysAndLog Build ["make", "idris2-exec", prefixVar, idrisBootVar, idrisDataVar, schemeVar]
 
-  ignoreError $ sysAndLog Build ["make", "-rf", dir]
+  ignoreError $ sysAndLog Build ["rm", "-rf", dir]
 
 idrisBootstrap : HasIO io => (e : Env) => Path Abs -> EitherT PackErr io ()
 idrisBootstrap dir = do
   debug "Bootstrapping Idris..."
-  sysAndLog Build ["make", bootstrapCmd, schemeVar]
-  when e.config.bootstrapStage3 $ do
-    idrisBootstrapStage3 $ dir </> "bootstrapped"
+  if e.config.bootstrapStage3
+     then idrisBootstrapWithStage3 $ dir </> "bootstrapped"
+     else sysAndLog Build ["make", bootstrapCmd, prefixVar, schemeVar]
   ignoreError $ sysAndLog Build ["make", "bootstrap-clean"]
 
 ||| Builds and installs the Idris commit given in the environment.
