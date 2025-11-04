@@ -355,6 +355,7 @@ installImpl dir rl =
        info "Removing currently installed version of \{name rl}"
        rmDir (pkgInstallDir rl.name rl.hash rl.pkg rl.desc)
        rmDir (pkgLibDir rl.name rl.hash rl.pkg)
+     info "Building\: \{name rl}"
      libPkg pre Build True ["--build"] rl.desc
      libPkg pre Debug False instCmd rl.desc
      debug "checking if libdir at \{libDir} exists"
@@ -431,10 +432,12 @@ installApp b ra =
             Git u c ipkg pp _ _ => do
               let cache   := ipkgCachePath ra.name c ipkg
               copyFile cache ipkgAbs
+              info "Building\: \{name ra}"
               libPkg [] Build True ["--build"] (notPackIsSafe ra.desc)
               copyApp ra
               when b $ appLink ra.exec ra.name pp cg
             Local _ _ pp _    => do
+              info "Building\: \{name ra}"
               libPkg [] Build True ["--build"] (notPackIsSafe ra.desc)
               copyApp ra
               when b $ appLink ra.exec ra.name pp cg
