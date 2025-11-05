@@ -1,5 +1,7 @@
 module Pack.Core.Logging
 
+import Control.Monad.Either
+import Control.Monad.Trans
 import Pack.Core.Types
 
 import System
@@ -33,6 +35,14 @@ confirmMessage msg =
 
     continueMessage : String
     continueMessage = "Continue (yes/*no)?"
+
+mustConfirm :
+     HasIO io
+  => io ConfirmResult
+  -> EitherT PackErr io ()
+mustConfirm action = case !(lift action) of
+  Yes => pure ()
+  _   => throwE SafetyAbort
 
 --------------------------------------------------------------------------------
 --          Logging
@@ -88,6 +98,14 @@ confirm : HasIO io => (lvl : LogLevel) -> (msg : String) -> io ConfirmResult
 confirm lvl msg =
   map parseConfirmResult $ prompt lvl $ confirmMessage msg
 
+export %inline
+confirmOrAbort :
+     HasIO io
+  => (lvl : LogLevel)
+  -> (msg : String)
+  -> EitherT PackErr io ()
+confirmOrAbort = mustConfirm .: confirm
+
 ||| Logs an idented list of values to stdout if the given log level
 ||| is greater than or equal than the (auto-implicit) reference level `ref`.
 ||| If messages list is empty, no log message is printed.
@@ -136,6 +154,15 @@ confirmMany :
   -> io ConfirmResult
 confirmMany lvl msg msgs =
   map parseConfirmResult $ promptMany lvl (confirmMessage msg) msgs
+
+export %inline
+confirmManyOrAbort :
+     {auto _ : HasIO io}
+  -> (lvl : LogLevel)
+  -> (msg : String)
+  -> (msgs : List String)
+  -> EitherT PackErr io ()
+confirmManyOrAbort lvl = mustConfirm .: confirmMany lvl
 
 ||| Alias for `log ref Debug`.
 |||
