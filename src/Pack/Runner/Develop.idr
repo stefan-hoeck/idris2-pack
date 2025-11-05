@@ -23,6 +23,7 @@ runIdrisOn :
   -> EitherT PackErr io ()
 runIdrisOn lvl cleanBuild c d = do
   installDeps d
+  info "Building\: \{name d}"
   libPkg [] lvl cleanBuild c d
 
 findIpkg :
