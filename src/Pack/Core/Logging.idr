@@ -7,6 +7,34 @@ import System
 %default total
 
 --------------------------------------------------------------------------------
+--          Support
+--------------------------------------------------------------------------------
+
+public export
+data ConfirmResult = Yes | No | Unknown
+
+parseConfirmResult : String -> ConfirmResult
+parseConfirmResult x = case toLower x of
+  "y"   => Yes
+  "yes" => Yes
+  "n"   => No
+  "no"  => No
+  ""    => No -- Default
+  _     => Unknown
+
+confirmMessage : String -> String
+confirmMessage msg =
+  if isLong
+     then "\{msg}\n\n\{continueMessage}"
+     else "\{msg} \{continueMessage}"
+  where
+    isLong : Bool
+    isLong = length msg > 80 || isInfixOf "\n\n" msg
+
+    continueMessage : String
+    continueMessage = "Continue (yes/*no)?"
+
+--------------------------------------------------------------------------------
 --          Logging
 --------------------------------------------------------------------------------
 
@@ -55,6 +83,11 @@ export %inline
 prompt : HasIO io => (lvl : LogLevel) -> (msg : String) -> io String
 prompt lvl msg = log (MkLogRef lvl) lvl msg >> map trim getLine
 
+export %inline
+confirm : HasIO io => (lvl : LogLevel) -> (msg : String) -> io ConfirmResult
+confirm lvl msg =
+  map parseConfirmResult $ prompt lvl $ confirmMessage msg
+
 ||| Logs an idented list of values to stdout if the given log level
 ||| is greater than or equal than the (auto-implicit) reference level `ref`.
 ||| If messages list is empty, no log message is printed.
@@ -93,6 +126,16 @@ promptMany :
 promptMany lvl msg msgs =
   let ref := MkLogRef lvl
    in logMany lvl msg msgs >> map trim getLine
+
+export %inline
+confirmMany :
+     {auto _ : HasIO io}
+  -> (lvl : LogLevel)
+  -> (msg : String)
+  -> (msgs : List String)
+  -> io ConfirmResult
+confirmMany lvl msg msgs =
+  map parseConfirmResult $ promptMany lvl (confirmMessage msg) msgs
 
 ||| Alias for `log ref Debug`.
 |||
