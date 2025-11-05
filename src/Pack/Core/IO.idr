@@ -1,6 +1,7 @@
 module Pack.Core.IO
 
 import public Control.Monad.Either
+import Pack.Config.Environment.Variable
 import Pack.Config.Types
 import Pack.Core.Logging
 import Pack.Core.Types
@@ -67,8 +68,8 @@ run (MkEitherT io) = io >>= either fatal pure
 ||| Display a list of variable-value pairs in the format
 ||| `VAR1="val1" VAR2="val2"`.
 export
-dispEnv : List (String,String) -> String
-dispEnv = unwords . map (\(e,v) => "\{e}=\{quote v}")
+dispEnv : List EnvVar -> String
+dispEnv = unwords . map interpolate
 
 ||| Tries to run a system command.
 export
@@ -104,7 +105,7 @@ sysAndLog lvl cmd = do
     | n => throwE (Sys cmd n)
   pure ()
 
-cmdWithEnv : CmdArgList -> List (String,String) -> String
+cmdWithEnv : CmdArgList -> List EnvVar -> String
 cmdWithEnv cmd []  = escapeCmd cmd
 cmdWithEnv cmd env = "\{dispEnv env} \{escapeCmd cmd}"
 
@@ -120,7 +121,7 @@ export
 sysWithEnv :
      {auto _ : HasIO io}
   -> (cmd : CmdArgList)
-  -> (env : List (String,String))
+  -> (env : List EnvVar)
   -> EitherT PackErr io ()
 sysWithEnv cmd env = do
   0 <- system (cmdWithEnv cmd env) | n => throwE (Sys cmd n)
@@ -132,7 +133,7 @@ sysWithEnvAndLog :
   -> {auto _ : Env}
   -> (lvl : LogLevel)
   -> (cmd : CmdArgList)
-  -> (env : List (String,String))
+  -> (env : List EnvVar)
   -> EitherT PackErr io ()
 sysWithEnvAndLog lvl cmd env = do
   0 <- runProcessingOutput
@@ -160,7 +161,7 @@ export covering
 sysRunWithEnv :
      {auto _ : HasIO io}
   -> (cmd : CmdArgList)
-  -> (env : List (String,String))
+  -> (env : List EnvVar)
   -> EitherT PackErr io String
 sysRunWithEnv cmd env = do
   (res,0) <- System.run (cmdWithEnv cmd env) | (_,n) => throwE (Sys cmd n)

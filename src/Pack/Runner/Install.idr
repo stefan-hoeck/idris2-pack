@@ -21,63 +21,58 @@ pathDirs :
      {auto _ : HasIO io}
   -> {auto _ : PackDirs}
   -> {auto e : Env}
-  -> (pre : String)
+  -> (pre : Path Abs)
   -> (pth : PkgName -> Hash -> Package -> Path Abs)
-  -> EitherT PackErr io String
+  -> EitherT PackErr io DirList
 pathDirs pre pth = do
   rs <- traverse resolveLib (keys e.all)
   ps <- filterM (\r => exists $ pth r.name r.hash r.pkg) rs
   let ps' := filter (not . isCorePkg . value . name) ps
-  pure $
-      fastConcat
-    . intersperse ":"
-    . (pre ::)
-    $ map (\r => "\{pth r.name r.hash r.pkg}") ps'
+  pure $ (pre ::) $ map (\r => pth r.name r.hash r.pkg) ps'
 
 ||| Directories to be listed in the `IDRIS2_PACKAGE_PATH` variable, so
 ||| that Idris finds all libraries installed by pack in custom locations.
 export
-packagePathDirs : HasIO io => Env -> EitherT PackErr io String
-packagePathDirs _ = pathDirs "\{idrisInstallDir}" pkgPathDir
+packagePathDirs : HasIO io => Env -> EitherT PackErr io DirList
+packagePathDirs _ = pathDirs idrisInstallDir pkgPathDir
 
 ||| Directories to be listed in the `IDRIS2_LIBS` variable, so
 ||| that Idris finds all `.so` files installed by pack in custom locations.
 export
-packageLibDirs : HasIO io => Env -> EitherT PackErr io String
-packageLibDirs _ = pathDirs "\{idrisLibDir}" pkgLibDir
+packageLibDirs : HasIO io => Env -> EitherT PackErr io DirList
+packageLibDirs _ = pathDirs idrisLibDir pkgLibDir
 
 ||| Directories to be listed in the `IDRIS2_DATA` variable, so
 ||| that Idris finds all support files installed by pack in custom locations.
 export
-packageDataDirs : HasIO io => Env -> EitherT PackErr io String
-packageDataDirs _ = pathDirs "\{idrisDataDir}" pkgDataDir
+packageDataDirs : HasIO io => Env -> EitherT PackErr io DirList
+packageDataDirs _ = pathDirs idrisDataDir pkgDataDir
 
 ||| `IDRIS2_PACKAGE_PATH` variable to be used with Idris, so
 ||| that it finds all libraries installed by pack in custom locations.
 export
-packagePath : HasIO io => Env => EitherT PackErr io (String, String)
-packagePath =
-  ("IDRIS2_PACKAGE_PATH",) <$>  packagePathDirs %search
+packagePath : HasIO io => Env => EitherT PackErr io EnvVar
+packagePath = IdrisPackagePathVar <$> packagePathDirs %search
 
 ||| `IDRIS2_LIBS` variable to be used with Idris, so
 ||| that it finds all `.so` files installed by pack in custom locations.
 export
-libPath : HasIO io => Env => EitherT PackErr io (String, String)
-libPath = ("IDRIS2_LIBS",) <$> packageLibDirs %search
+libPath : HasIO io => Env => EitherT PackErr io EnvVar
+libPath = IdrisLibsVar <$> packageLibDirs %search
 
 ||| `IDRIS2_DATA` variable to be used with Idris, so
 ||| that it finds all support files installed by pack in custom locations.
 export
-dataPath : HasIO io => Env => EitherT PackErr io (String, String)
-dataPath = ("IDRIS2_DATA",) <$> packageDataDirs %search
+dataPath : HasIO io => Env => EitherT PackErr io EnvVar
+dataPath = IdrisDataVar <$> packageDataDirs %search
 
 ||| This unifies `packagePath`, `libPath` and `dataPath`,
 ||| to generate an environment necessary to build packages with Idris
 ||| the dependencies of which are handled by pack.
 export
-buildEnv : HasIO io => Env => EitherT PackErr io (List (String,String))
+buildEnv : HasIO io => Env => EitherT PackErr io (List EnvVar)
 buildEnv =
-  let pre := if useRacket then [("IDRIS2_CG", "racket")] else []
+  let pre := if useRacket then [IdrisCodegenVar Racket] else []
    in (pre ++ ) <$> sequence [packagePath, libPath, dataPath]
 
 ||| Idris executable loading the given package plus the
@@ -87,7 +82,7 @@ idrisWithPkg :
      {auto _ : HasIO io}
   -> {auto _ : IdrisEnv}
   -> ResolvedLib t
-  -> EitherT PackErr io (CmdArgList, List (String,String))
+  -> EitherT PackErr io (CmdArgList, List EnvVar)
 idrisWithPkg rl =
   (idrisWithCG ++ ["-p", name rl],) <$> buildEnv
 
@@ -98,7 +93,7 @@ idrisWithPkgs :
      {auto _ : HasIO io}
   -> {auto _ : IdrisEnv}
   -> List (ResolvedLib t)
-  -> EitherT PackErr io (CmdArgList, List (String,String))
+  -> EitherT PackErr io (CmdArgList, List EnvVar)
 idrisWithPkgs [] = pure (idrisWithCG, [])
 idrisWithPkgs pkgs =
   let ps = concatMap (\p => ["-p", name p]) pkgs
@@ -221,7 +216,7 @@ export covering
 libPkg :
      {auto _     : HasIO io}
   -> {auto e     : IdrisEnv}
-  -> (env        : List (String,String))
+  -> (env        : List EnvVar)
   -> (logLevel   : LogLevel)
   -> (cleanBuild : Bool)
   -> (cmd        : CmdArgList)
@@ -276,15 +271,15 @@ idrisCleanup =
 
 idrisBootstrapWithStage3 : HasIO io => (e : Env) => Path Abs -> EitherT PackErr io ()
 idrisBootstrapWithStage3 dir = do
-  let bootstrappedPrefixVar = mkPrefixVar dir
+  let bootstrappedPrefixVar = PrefixVar dir
   sysAndLog Build ["make", bootstrapCmd, bootstrappedPrefixVar, schemeVar]
   debug "Install bootstrapped Idris..."
   sysAndLog Build ["make", "bootstrap-install", bootstrappedPrefixVar, schemeVar]
   idrisCleanup
 
   debug "Stage 3: Rebuilding Idris..."
-  let idrisBootVar = mkIdrisBootVar $ dir /> "bin" /> "idris2"
-  let idrisDataVar = mkIdrisDataVar $ dir /> idrisDir /> "support"
+  let idrisBootVar = IdrisBootVar $ dir /> "bin" /> "idris2"
+  let idrisDataVar = IdrisDataVar [dir /> idrisDir /> "support"]
   sysAndLog Build ["make", "idris2-exec", prefixVar, idrisBootVar, idrisDataVar, schemeVar]
 
   ignoreError $ sysAndLog Build ["rm", "-rf", dir]
@@ -461,7 +456,7 @@ installDocs rl = case rl.status of
     let docsDir : Path Abs
         docsDir = buildPath rl.desc /> "docs"
 
-        pre : List (String,String)
+        pre : List EnvVar
         pre = libInstallPrefix rl
 
         htmlDir : Path Abs
