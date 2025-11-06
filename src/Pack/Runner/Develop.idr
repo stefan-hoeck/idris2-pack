@@ -21,8 +21,9 @@ runIdrisOn :
   -> (cmd        : CmdArgList)
   -> Desc Safe
   -> EitherT PackErr io ()
-runIdrisOn lvl cleanBuild c d = do
+runIdrisOn lvl cleanBuild c d@(MkDesc x _ _ _) = do
   installDeps d
+  info "Building\: \{name x}"
   libPkg [] lvl cleanBuild c d
 
 findIpkg :
