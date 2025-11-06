@@ -7,6 +7,7 @@ import Idris.Package.Types
 import Pack.CmdLn
 import Pack.Config.TOML
 import Pack.Config.Types
+import public Pack.Config.Environment.Variable
 import Pack.Core
 import Pack.Database
 import System
@@ -267,43 +268,26 @@ bootstrapCmd = if useRacket then "bootstrap-racket" else "bootstrap"
 --          Environment Variables
 --------------------------------------------------------------------------------
 
-%inline
-mkEnvVar : Interpolation a => String -> a -> String
-mkEnvVar var val = "\{var}=\{val}"
-
-export %inline
-mkPrefixVar :  Path Abs -> String
-mkPrefixVar = mkEnvVar "PREFIX"
-
-export %inline
-mkIdrisBootVar : File Abs -> String
-mkIdrisBootVar = mkEnvVar "IDRIS2_BOOT"
-
-export %inline
-mkIdrisDataVar : Path Abs -> String
-mkIdrisDataVar = mkEnvVar "IDRIS2_DATA"
-
 ||| `$PREFIX` variable during Idris2 installation, unquoted
 export
-prefixVar : PackDirs => DB => String
-prefixVar = mkPrefixVar idrisPrefixDir
+prefixVar : PackDirs => DB => EnvVar
+prefixVar = PrefixVar idrisPrefixDir
 
 ||| `$IDRIS2_BOOT` variable during Idris2 installation, unquoted
 export
-idrisBootVar : PackDirs => DB => String
-idrisBootVar = mkIdrisBootVar idrisExec
+idrisBootVar : PackDirs => DB => EnvVar
+idrisBootVar = IdrisBootVar idrisExec
 
 ||| `$SCHEME` variable during Idris2 installation, unquoted
 export
-schemeVar : (c : Config) => String
-schemeVar = if useRacket then mkEnvVar "IDRIS2_CG" "racket" else mkEnvVar "SCHEME" c.scheme
+schemeVar : (c : Config) => EnvVar
+schemeVar = if useRacket then IdrisCodegenVar Racket else SchemeVar c.scheme
 
 ||| `IDRIS2_PREFIX` to be used with Idris when installing a library
 ||| to a custom location.
 export
-libInstallPrefix : PackDirs => DB => ResolvedLib t -> List (String,String)
-libInstallPrefix rl =
-  [("IDRIS2_PREFIX", "\{pkgPrefixDir rl.name rl.hash rl.pkg}")]
+libInstallPrefix : PackDirs => DB => ResolvedLib t -> List EnvVar
+libInstallPrefix rl = [IdrisPrefixVar $ pkgPrefixDir rl.name rl.hash rl.pkg]
 
 ||| Idris executable with extra arguments, if they are present in the config.
 export

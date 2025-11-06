@@ -173,9 +173,9 @@ runCmd = do
       (RemoveApp ** [ps])       => idrisEnv mc fetch >>= \e => removeApps ps
       (Update ** [])            => idrisEnv mc fetch >>= update
       (Fetch ** [])             => idrisEnv mc fetch >>= \e => install []
-      (PackagePath ** [])       => env mc fetch >>= packagePathDirs >>= putStrLn
-      (LibsPath ** [])          => env mc fetch >>= packageLibDirs  >>= putStrLn
-      (DataPath ** [])          => env mc fetch >>= packageDataDirs >>= putStrLn
+      (PackagePath ** [])       => env mc fetch >>= packagePathDirs >>= putStrLn . interpolate
+      (LibsPath ** [])          => env mc fetch >>= packageLibDirs  >>= putStrLn . interpolate
+      (DataPath ** [])          => env mc fetch >>= packageDataDirs >>= putStrLn . interpolate
       (AppPath ** [n])          => env mc fetch >>= appPath n
       (Info ** [])              => env mc fetch >>= printInfo
       (New ** [pty,p])          => idrisEnv mc fetch >>= new cd pty p
