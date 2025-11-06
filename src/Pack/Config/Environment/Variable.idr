@@ -8,12 +8,16 @@ import Pack.Config.Types
 --------------------------------------------------------------------------------
 
 public export %inline
-DirList : Type
+0 DirList : Type
 DirList = List (Path Abs)
 
 export
 data EnvVar : Type where
-  MkEnvVar : (name : String) -> Interpolation a => (value : a) -> EnvVar
+  MkEnvVar : (name : String) -> (value : String) -> EnvVar
+
+%inline
+envVar : Interpolation a => (name : String) -> (val : a) -> EnvVar
+envVar name = MkEnvVar name . interpolate
 
 --------------------------------------------------------------------------------
 ---         Interpolation
@@ -37,43 +41,43 @@ Interpolation EnvVar where
 -- https://github.com/idris-lang/Idris2/blob/main/docs/source/reference/envvars.rst
 
 ||| Code generation backend used by the Idris 2 compiler
-public export %inline
+export %inline
 IdrisCodegenVar : Codegen -> EnvVar
-IdrisCodegenVar = MkEnvVar "IDRIS2_CG"
+IdrisCodegenVar = envVar "IDRIS2_CG"
 
 ||| Path to the Scheme executable used by the Scheme backend
-public export %inline
+export %inline
 SchemeVar : FilePath -> EnvVar
-SchemeVar = MkEnvVar "SCHEME"
+SchemeVar = envVar "SCHEME"
 
 ||| Path to the Idris 2 boot file, used by Idris 2 Makefile
-public export %inline
+export %inline
 IdrisBootVar : File Abs -> EnvVar
-IdrisBootVar = MkEnvVar "IDRIS2_BOOT"
+IdrisBootVar = envVar "IDRIS2_BOOT"
 
 ||| Installation prefix for Idris 2
-public export %inline
+export %inline
 PrefixVar : Path Abs -> EnvVar
-PrefixVar = MkEnvVar "PREFIX"
+PrefixVar = envVar "PREFIX"
 
 ||| Alternative way to set the Idris 2 installation prefix
-public export %inline
+export %inline
 IdrisPrefixVar : Path Abs -> EnvVar
-IdrisPrefixVar = MkEnvVar "IDRIS2_PREFIX"
+IdrisPrefixVar = envVar "IDRIS2_PREFIX"
 
 ||| Directories where Idris 2 searches for package definitions,
 ||| in addition to the default locations
-public export %inline
+export %inline
 IdrisPackagePathVar : DirList -> EnvVar
-IdrisPackagePathVar = MkEnvVar "IDRIS2_PACKAGE_PATH"
+IdrisPackagePathVar = envVar "IDRIS2_PACKAGE_PATH"
 
 ||| Directories where Idris 2 looks for data files, typically
 ||| support code for code generators
-public export %inline
+export %inline
 IdrisDataVar : DirList -> EnvVar
-IdrisDataVar = MkEnvVar "IDRIS2_DATA"
+IdrisDataVar = envVar "IDRIS2_DATA"
 
 ||| Directories where Idris 2 searches for libraries used by code generators
-public export %inline
+export %inline
 IdrisLibsVar : DirList -> EnvVar
-IdrisLibsVar = MkEnvVar "IDRIS2_LIBS"
+IdrisLibsVar = envVar "IDRIS2_LIBS"
