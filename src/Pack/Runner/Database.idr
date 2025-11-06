@@ -76,8 +76,8 @@ safe (MkDesc d s f _) =
            not (MkPkgName d.name `elem` e.config.whitelist) of
         False => pure $ MkDesc d s f IsSafe
         True  => do
-          let msg := "Package \{name d} uses custom build hooks. Continue (yes/*no)?"
-          "yes" <- prompt Warning msg | _ => throwE SafetyAbort
+          let msg := "Package \{name d} uses custom build hooks."
+          confirmOrAbort Warning msg
           pure $ MkDesc d s f IsSafe
 
 ||| Like `safe` but verify also that the package does not
@@ -372,9 +372,7 @@ checkDeletable : HasIO io => (e : Env) => List PkgName -> EitherT PackErr io ()
 checkDeletable ns = do
   ss <- filter (consider ns) <$> traverse resolveLib (keys e.all)
   bs <- traverse (printDeps ss) ns
-  when (any id bs) $ do
-    "yes" <- prompt Warning delPrompt | _ => throwE SafetyAbort
-    pure ()
+  when (any id bs) $ confirmOrAbort Warning delPrompt
 
 --------------------------------------------------------------------------------
 --         Garbage Collection
@@ -425,10 +423,8 @@ garbageCollector : HasIO io => Env -> EitherT PackErr io ()
 garbageCollector e = do
   all <- gcDirs
   when (e.config.gcPrompt && not (null all)) $ do
-    let msg := "The following directories will be deleted. Continue (yes/*no)?"
-    "yes" <- promptMany Warning msg (interpolate <$> all)
-      | _ => throwE SafetyAbort
-    pure ()
+    let msg := "The following directories will be deleted."
+    confirmManyOrAbort Warning msg (interpolate <$> all)
   when (null all) $ info "Nothing to clean up."
   for_ all rmDir
 

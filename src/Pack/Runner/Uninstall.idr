@@ -29,10 +29,8 @@ uninstallPack = do
 
     Please note that your personal settings at `\{userDir}` will not
     be removed.
-
-    Continue (yes/*no)?
     """
-  "yes" <- prompt Info msg | _ => throwE SafetyAbort
+  confirmOrAbort Info msg
   rmDir pd.state
   rmDir pd.cache
   rmFile packExec
