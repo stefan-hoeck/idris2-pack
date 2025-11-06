@@ -218,7 +218,7 @@ popd
 
 # Initialize `pack.toml`s
 #
-cat <<EOF >>"$STATE_DIR/pack.toml"
+cat <<EOF >"$STATE_DIR/pack.toml"
 # Warning: This file was auto-generated and is maintained by pack.
 #          Any changes could be overwritten by pack at any time.
 #          Custom settings should go to the global pack.toml file
