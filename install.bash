@@ -353,6 +353,7 @@ if [ ! -f "$USER_DIR/pack.toml" ]; then
 		# [custom.all.foo]
 		# type = "git"
 		# url  = "https://github.com/bar/foo"
+		# commit = "commit-ref"
 		# ipkg = "foo.ipkg"
 
 		# Override library 'toml' from package collection 'nightly-220503'
