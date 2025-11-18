@@ -227,7 +227,7 @@ a fork on GitHub).
 
 You can also add a `pack.toml` file locally to the root folder
 of a project. Just as with the global `pack.toml` file in directory
-`$HOME/.pack/user/`, you can specify the package collection to
+`$HOME/.config/pack`, you can specify the package collection to
 use for a project as well as define additional local dependencies
 and even override global package settings. Local settings take
 precedence over global once. Pack will look for local `pack.toml`
@@ -256,8 +256,8 @@ pack update-db
 ### Idris Compiler and Libraries
 
 All packages, applications, and different versions of the Idris
-compiler can be found in the subdirectories of
-`$HOME/.pack/install`. The path to a library or application
+compiler can be found in
+`$HOME/.local/bin`. The path to a library or application
 includes the commit hash of the Idris compiler it was built with,
 as well as the commit hash used for the library or application itself.
 
