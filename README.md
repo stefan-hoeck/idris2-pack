@@ -107,11 +107,16 @@ pack remove-app katla
 
 ### Updating Idris2, packages, and pack
 
-To update pack's Idris2 installation (compiler and core libraries) and packages:
+To switch to the latest pack collection:
 
 ```sh
 pack switch latest
 ```
+
+Note that if there's a library or application (e.g. idris2-lsp) that you always want
+to be installed upon switching to a new pack collection, then you should specify
+this in the `pack.toml` file located in the `~/.config/pack` directory. More detailed
+instructions can be found in the comments of that file.
 
 To update pack itself:
 
