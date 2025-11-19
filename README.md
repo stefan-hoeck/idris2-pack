@@ -114,9 +114,9 @@ pack switch latest
 ```
 
 Note that if there's a library or application (e.g. idris2-lsp) that you always want
-to be installed upon switching to a new pack collection, then you need to specify
-that in the `pack.toml` file located in the `~/.config/pack` directory. More detailed
-instructions can be found in the comments of this file.
+to be installed upon switching to a new pack collection, then you should specify
+this in the `pack.toml` file located in the `~/.config/pack` directory. More detailed
+instructions can be found in the comments of that file.
 
 To update pack itself:
 
