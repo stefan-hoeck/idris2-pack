@@ -1,10 +1,10 @@
 # Contributing to pack
 
-Contributions are highly welcome! To help new contributor
-find their way around the codebase and understand, how
+Contributions are highly welcome! To help new contributors
+navigate the codebase and understand how
 *pack* is implemented, this document provides a source
-map and some details about the structure of the `$HOME/.pack`
-directory.
+map and some details about the directory layout of pack and its
+managed libraries.
 
 ## General Recommendations
 
@@ -20,9 +20,9 @@ consider the following guidelines:
 
 * When adding a new command-line option, the same as
   for new commands holds: It should be well documented and
-  support tab completion. In addition, consider to allow
+  support tab completion. In addition, consider allowing
   users to permanently set this option in the
-  `$HOME/.pack/user/pack.toml` file.
+  `$XDG_CONFIG_HOME/pack/pack.toml` file.
 
 * When adding new user settings, micropack should include
   these in its automatically generated `pack.toml` file
