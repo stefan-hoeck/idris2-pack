@@ -33,8 +33,11 @@ jobs:
       - name: Build Docker Images
         run: |
           export NO_CACHE="${{ github.ref == 'refs/heads/main' }}"
-          UBUNTU_RELEASE=noble OWNER=${{ github.repository_owner }} make docker-build
-          UBUNTU_RELEASE=jammy OWNER=${{ github.repository_owner }} make docker-build
+          # Change all uppercase to lowercase
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "REPO_OWNER=$REPO_OWNER" >> "$GITHUB_ENV"
+          UBUNTU_RELEASE=noble OWNER=$REPO_OWNER make docker-build
+          UBUNTU_RELEASE=jammy OWNER=$REPO_OWNER make docker-build
 
       - name: Log in to registry
         if: github.ref == 'refs/heads/main'
@@ -44,9 +47,7 @@ jobs:
       - name: Push images
         if: github.ref == 'refs/heads/main'
         run: |
-          IMAGE_ID="ghcr.io/${{ github.repository_owner }}/idris2-pack"
-          # Change all uppercase to lowercase
-          IMAGE_ID="$(echo "$IMAGE_ID" | tr '[:upper:]' '[:lower:]')"
+          IMAGE_ID="ghcr.io/$REPO_OWNER/idris2-pack"
           # Strip git ref prefix from version
           echo IMAGE_ID="$IMAGE_ID"
           echo DB_VERSION="$DB_VERSION"
