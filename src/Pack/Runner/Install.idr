@@ -136,14 +136,14 @@ noAppError app = lines $ """
             directory. Try to reinstall it with `pack install-app \{app}`.
   """
 
-pthStr : (c : Config) => PackDirs => Bool -> String
-pthStr False = ""
-pthStr True =
+pthStr : (c : Config) => PackDirs => Bool -> (packBinaryLoc : String) -> String
+pthStr False _ = ""
+pthStr True packBinaryLoc =
   let racket := if useRacket then "export \{schemeVar}" else ""
    in """
-   export IDRIS2_PACKAGE_PATH="$(\{packExec} package-path)"
-   export IDRIS2_LIBS="$(\{packExec} libs-path)"
-   export IDRIS2_DATA="$(\{packExec} data-path)"
+   export IDRIS2_PACKAGE_PATH="$(\{packBinaryLoc} package-path)"
+   export IDRIS2_LIBS="$(\{packBinaryLoc} libs-path)"
+   export IDRIS2_DATA="$(\{packBinaryLoc} data-path)"
    \{racket}
    """
 
@@ -172,11 +172,16 @@ appLink exec app withPkgPath cg =
       content := """
       #!/bin/sh
 
-      if ! APPLICATION="$(\{packExec} app-path \{app})" || [ ! -r "$APPLICATION" ]; then {
+      PACK=pack
+      if [ -f "\{packExec}" ] && [ -x "\{packExec}" ]; then
+        PACK="\{packExec}"
+      fi
+
+      if ! APPLICATION="$(${PACK} app-path \{app})" || [ ! -r "$APPLICATION" ]; then {
       \{unlines $ noAppError app <&> \s => "  echo '\{s}'"}
         } >&2; exit 2
       fi
-      \{pthStr withPkgPath}
+      \{pthStr withPkgPath "${PACK}"}
 
       \{interp}$APPLICATION "$@"
       """
