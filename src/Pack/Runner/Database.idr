@@ -486,6 +486,10 @@ transitiveDeps ps = go empty Lin (map Right ps)
         let deps := (\d => Right (Library, d)) <$> dependencies loa
         go ps sx $ deps ++ Left loa :: xs
 
+compilerApp : (InstallType, PkgName) -> Bool
+compilerApp (App _, MkPkgName "idris2") = True
+compilerApp _ = False
+
 ||| Create a build plan for the given list of packages and apps
 ||| plus their dependencies.
 |||
@@ -498,7 +502,10 @@ plan :
   -> List (InstallType, PkgName)
   -> EitherT PackErr io (List SafePkg)
 plan ps =
-  let ps' := (Library, "prelude") :: (Library, "base") :: ps
+  let neededPs := filter (not . compilerApp) ps
+  -- ^ we never need the compiler app because it is installed as part of the
+  -- requisite environment to run any Install command.
+      ps' := (Library, "prelude") :: (Library, "base") :: neededPs
    in do
      debug "Building plan for the following libraries: \n\{showPlan ps}"
      loas <- filter needsInstalling <$> transitiveDeps ps'
