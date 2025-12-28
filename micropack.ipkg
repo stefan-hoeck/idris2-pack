@@ -6,9 +6,9 @@ authors = "Stefan Höck"
 
 brief   = "Minimalistic installer for pack"
 
-langversion >= 0.6.0
+langversion >= 0.8.0
 
-depends = base >= 0.6.0
+depends = base >= 0.8.0
         , elab-util
         , filepath
         , getopts
