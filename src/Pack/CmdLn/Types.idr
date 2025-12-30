@@ -44,128 +44,141 @@ Arg FuzzyQuery where
   readArg [s] = Just (MkFQ [] s, [])
   readArg []  = Nothing
 
+||| Trivial Commands accepted by *pack*. These commands do not require
+||| information about pack's configuration on the system.
+public export
+data TrivialCmd : Type where
+  -- Tab completion
+  CompletionScript : TrivialCmd
+
+||| Configured Commands accepted by *pack*. These commands require information
+||| about pack's configuration on the system.
+public export
+data ConfiguredCmd : Type where
+  -- Developing Idris libs and apps
+  Build            : ConfiguredCmd
+  BuildDeps        : ConfiguredCmd
+  Typecheck        : ConfiguredCmd
+  Clean            : ConfiguredCmd
+  CleanBuild       : ConfiguredCmd
+  Repl             : ConfiguredCmd
+  Exec             : ConfiguredCmd
+
+  -- Package management
+  Install          : ConfiguredCmd
+  InstallApp       : ConfiguredCmd
+  Remove           : ConfiguredCmd
+  RemoveApp        : ConfiguredCmd
+  Run              : ConfiguredCmd
+  Test             : ConfiguredCmd
+  New              : ConfiguredCmd
+  Update           : ConfiguredCmd
+  Fetch            : ConfiguredCmd
+
+  -- Idris environment
+  PackagePath      : ConfiguredCmd
+  LibsPath         : ConfiguredCmd
+  DataPath         : ConfiguredCmd
+  AppPath          : ConfiguredCmd
+
+  -- Managing package collections
+  Switch           : ConfiguredCmd
+  UpdateDB         : ConfiguredCmd
+  CollectGarbage   : ConfiguredCmd
+
+  -- Queries
+  Info             : ConfiguredCmd
+  Query            : ConfiguredCmd
+  Fuzzy            : ConfiguredCmd
+
+  -- Tab completion
+  Completion       : ConfiguredCmd
+  -- CompletionScript : Cmd (this is a trivial command)
+
+  -- Uninstall
+  Uninstall        : ConfiguredCmd
+
+  -- Help
+  PrintHelp        : ConfiguredCmd
+
 ||| Commands accepted by *pack*. Most of these
 ||| operate on a list of packages and/or
 ||| projects with an `.ipkg` file.
 public export
-data Cmd : Type where
-  -- Developing Idris libs and apps
-  Build            : Cmd
-  BuildDeps        : Cmd
-  Typecheck        : Cmd
-  Clean            : Cmd
-  CleanBuild       : Cmd
-  Repl             : Cmd
-  Exec             : Cmd
-
-  -- Package management
-  Install          : Cmd
-  InstallApp       : Cmd
-  Remove           : Cmd
-  RemoveApp        : Cmd
-  Run              : Cmd
-  Test             : Cmd
-  New              : Cmd
-  Update           : Cmd
-  Fetch            : Cmd
-
-  -- Idris environment
-  PackagePath      : Cmd
-  LibsPath         : Cmd
-  DataPath         : Cmd
-  AppPath          : Cmd
-
-  -- Managing package collections
-  Switch           : Cmd
-  UpdateDB         : Cmd
-  CollectGarbage   : Cmd
-
-  -- Queries
-  Info             : Cmd
-  Query            : Cmd
-  Fuzzy            : Cmd
-
-  -- Tab completion
-  Completion       : Cmd
-  CompletionScript : Cmd
-
-  -- Uninstall
-  Uninstall        : Cmd
-
-  -- Help
-  PrintHelp        : Cmd
+data Cmd = Trivial TrivialCmd
+         | Configured ConfiguredCmd
 
 ||| List of all available commands.
 |||
-||| `Pack.CmdLn.Types.cmdInCommands` proofs that none was forgotten.
+||| `Pack.CmdLn.Types.cmdInCommands` proves that none were forgotten.
 public export
 commands : List Cmd
 commands =
-  [ Build
-  , BuildDeps
-  , Typecheck
-  , Clean
-  , CleanBuild
-  , Repl
-  , Exec
-  , Install
-  , InstallApp
-  , Remove
-  , RemoveApp
-  , Run
-  , Test
-  , New
-  , Update
-  , Fetch
-  , PackagePath
-  , LibsPath
-  , DataPath
-  , AppPath
-  , Switch
-  , UpdateDB
-  , CollectGarbage
-  , Info
-  , Query
-  , Fuzzy
-  , Completion
-  , CompletionScript
-  , Uninstall
-  , PrintHelp
+  [ Configured Build
+  , Configured BuildDeps
+  , Configured Typecheck
+  , Configured Clean
+  , Configured CleanBuild
+  , Configured Repl
+  , Configured Exec
+  , Configured Install
+  , Configured InstallApp
+  , Configured Remove
+  , Configured RemoveApp
+  , Configured Run
+  , Configured Test
+  , Configured New
+  , Configured Update
+  , Configured Fetch
+  , Configured PackagePath
+  , Configured LibsPath
+  , Configured DataPath
+  , Configured AppPath
+  , Configured Switch
+  , Configured UpdateDB
+  , Configured CollectGarbage
+  , Configured Info
+  , Configured Query
+  , Configured Fuzzy
+  , Configured Completion
+  , Trivial    CompletionScript
+  , Configured Uninstall
+  , Configured PrintHelp
   ]
 
 ||| Name to use at the command-line for running a pack command
 public export
 name : Cmd -> String
-name Build            = "build"
-name BuildDeps        = "install-deps"
-name Typecheck        = "typecheck"
-name Clean            = "clean"
-name CleanBuild       = "cleanbuild"
-name Repl             = "repl"
-name Exec             = "exec"
-name Install          = "install"
-name InstallApp       = "install-app"
-name Remove           = "remove"
-name RemoveApp        = "remove-app"
-name Run              = "run"
-name Test             = "test"
-name New              = "new"
-name Update           = "update"
-name Fetch            = "fetch"
-name PackagePath      = "package-path"
-name LibsPath         = "libs-path"
-name DataPath         = "data-path"
-name AppPath          = "app-path"
-name Switch           = "switch"
-name UpdateDB         = "update-db"
-name CollectGarbage   = "gc"
-name Info             = "info"
-name Query            = "query"
-name Fuzzy            = "fuzzy"
-name Completion       = "completion"
-name CompletionScript = "completion-script"
-name Uninstall        = "uninstall"
-name PrintHelp        = "help"
+name (Configured Build           ) = "build"
+name (Configured BuildDeps       ) = "install-deps"
+name (Configured Typecheck       ) = "typecheck"
+name (Configured Clean           ) = "clean"
+name (Configured CleanBuild      ) = "cleanbuild"
+name (Configured Repl            ) = "repl"
+name (Configured Exec            ) = "exec"
+name (Configured Install         ) = "install"
+name (Configured InstallApp      ) = "install-app"
+name (Configured Remove          ) = "remove"
+name (Configured RemoveApp       ) = "remove-app"
+name (Configured Run             ) = "run"
+name (Configured Test            ) = "test"
+name (Configured New             ) = "new"
+name (Configured Update          ) = "update"
+name (Configured Fetch           ) = "fetch"
+name (Configured PackagePath     ) = "package-path"
+name (Configured LibsPath        ) = "libs-path"
+name (Configured DataPath        ) = "data-path"
+name (Configured AppPath         ) = "app-path"
+name (Configured Switch          ) = "switch"
+name (Configured UpdateDB        ) = "update-db"
+name (Configured CollectGarbage  ) = "gc"
+name (Configured Info            ) = "info"
+name (Configured Query           ) = "query"
+name (Configured Fuzzy           ) = "fuzzy"
+name (Configured Completion      ) = "completion"
+name (Trivial    CompletionScript) = "completion-script"
+name (Configured Uninstall       ) = "uninstall"
+name (Configured PrintHelp       ) = "help"
 
 ||| List pairing a command with its name used for parsing commands.
 public export
@@ -175,33 +188,33 @@ namesAndCommands = map (\c => (name c, c)) commands
 ||| Usage info for each command. This is printed when invoking `pack help <cmd>`.
 export
 cmdDesc : Cmd -> String
-cmdDesc Build            = """
+cmdDesc (Configured Build)      = """
   Build a local package given as an `.ipkg` file or package name.
   When no package is given, try to find the only one in the current directory.
   This will also install the package's dependencies.
   """
 
-cmdDesc BuildDeps        = """
+cmdDesc (Configured BuildDeps)  = """
   Install the dependencies of a local package given as an `.ipkg` file
   or package name. When no package is given, try to find the only one
   in the current directory.
   """
 
-cmdDesc Typecheck        = """
+cmdDesc (Configured Typecheck)  = """
   Typecheck a local package given as an `.ipkg` file or package name.
   When no package is given, try to find the only one in the current directory.
   """
 
-cmdDesc Clean            = """
+cmdDesc (Configured Clean)      = """
   Clean up a local package by removing its build directory.
   When no package is given, try to find the only one in the current directory.
   """
 
-cmdDesc CleanBuild       = """
+cmdDesc (Configured CleanBuild) = """
   Convenience combination of `clean` followed by `build`.
   """
 
-cmdDesc Repl             = """
+cmdDesc (Configured Repl)       = """
   Start a REPL session loading an optional `.idr` file.
   Use command line option `--with-ipkg` to load settings
   and packages from an `.ipkg` file. Option `--no-ipkg` can be used
@@ -215,7 +228,7 @@ cmdDesc Repl             = """
   additional arguments to be used when running `rlwrap`.
   """
 
-cmdDesc Exec             = """
+cmdDesc (Configured Exec)       = """
   Compile the given Idris source file and execute its main function
   with the given list of arguments. This will look for `.ipkg` files
   in the source file's parent directories and will apply the settings
@@ -227,15 +240,15 @@ cmdDesc Exec             = """
   To change the codegen to use, use the `--cg` command-line option.
   """
 
-cmdDesc Install          = "Install the given packages."
+cmdDesc (Configured Install)    = "Install the given packages."
 
-cmdDesc InstallApp       = "Install the given applications."
+cmdDesc (Configured InstallApp) = "Install the given applications."
 
-cmdDesc Remove           = "Uninstall the given libraries."
+cmdDesc (Configured Remove)     = "Uninstall the given libraries."
 
-cmdDesc RemoveApp        = "Uninstall the given applications."
+cmdDesc (Configured RemoveApp)  = "Uninstall the given applications."
 
-cmdDesc Run              = """
+cmdDesc (Configured Run)        = """
   Run an application from the package collection or a local `.ipkg`
   file passing it the given command line arguments.
   When no package and no arguments are given, try to find the only one
@@ -249,7 +262,7 @@ cmdDesc Run              = """
   To change the codegen to use, use the `--cg` command-line option.
   """
 
-cmdDesc Test              = """
+cmdDesc (Configured Test)       = """
   Run a test suite as specified in a package description's `test` field.
 
   The `test` field should consist of a file path relative to a package's
@@ -262,7 +275,7 @@ cmdDesc Test              = """
   test   = "test/test.ipkg"
   """
 
-cmdDesc New              = """
+cmdDesc (Configured New)        = """
   Create a new package in the current directory
   consisting of a source directory, a default module, a skeleton test suite, a local pack.toml file and a .ipkg file.
 
@@ -274,7 +287,7 @@ cmdDesc New              = """
   underscore ('_') in the generated module name.
   """
 
-cmdDesc Update           = """
+cmdDesc (Configured Update)     = """
   Update the pack installation by downloading and building
   the current main branch of
   https://github.com/stefan-hoeck/idris2-pack.
@@ -288,33 +301,33 @@ cmdDesc Update           = """
   the latest nightly.
   """
 
-cmdDesc Fetch            = """
+cmdDesc (Configured Fetch)      = """
   Fetch the latest commit hashes from a repository for Git packages with a
   commit entry of "latest:branch".
   """
 
-cmdDesc PackagePath      = """
+cmdDesc (Configured PackagePath) = """
   Return a colon-separated list of paths where Idris packages are
   installed. This is useful for programs like `idris2-lsp`,
   which need to know where to look for installed packages.
   """
 
-cmdDesc LibsPath         = """
+cmdDesc (Configured LibsPath)   = """
   Return a colon-separated list of paths where libraries
   for code generation are installed.
   """
 
-cmdDesc DataPath         = """
+cmdDesc (Configured DataPath)   = """
   Return a colon-separated list of paths where data files
   are installed.
   """
 
-cmdDesc AppPath          = """
+cmdDesc (Configured AppPath)    = """
   Return the absolute path to the given application managed by pack.
   `pack app-path idris2` returns the path to the current Idris compiler
   """
 
-cmdDesc Switch           = """
+cmdDesc (Configured Switch)     = """
   Switch to the given package collection. This will adjust your
   `$PACK_DIR/user/pack.toml` file to use the given package
   collection. It will also install all auto libs and apps from the
@@ -324,12 +337,12 @@ cmdDesc Switch           = """
   collection by using "latest" as the collection name.
   """
 
-cmdDesc UpdateDB         = """
+cmdDesc (Configured UpdateDB)   = """
   Update the pack data base by downloading the package collections
   from https://github.com/stefan-hoeck/idris2-pack-db.
   """
 
-cmdDesc CollectGarbage   = """
+cmdDesc (Configured CollectGarbage) = """
   Clean up installations of older package collections by removing
   all sub-directories of `$PACK_STATE_DIR/install` not belonging to the
   currently used compiler commit.
@@ -338,12 +351,12 @@ cmdDesc CollectGarbage   = """
   outdated libraries installed with the current compiler commit.
   """
 
-cmdDesc Info             = """
+cmdDesc (Configured Info)       = """
   Print general information about the current package
   collection and list installed applications and libraries.
   """
 
-cmdDesc Query            = """
+cmdDesc (Configured Query)      = """
   Query the package collection for the given name.
   Several command line options exist to specify the type
   of information printed. The optional mode argument
@@ -373,7 +386,7 @@ cmdDesc Query            = """
     -l --long-desc    : Prints detailed description of each query result
   """
 
-cmdDesc Fuzzy            = """
+cmdDesc (Configured Fuzzy)      = """
   Run a fuzzy search by type over a comma-separated list of packages.
   If no packages are given, all installed packages will be queried
   (which might take several minutes).
@@ -383,25 +396,25 @@ cmdDesc Fuzzy            = """
   *base* library.
   """
 
-cmdDesc Completion       = """
+cmdDesc (Configured Completion) = """
   Returns a list of possible completion strings for the given arguments.
-  This is invoked by the shell script returned by `pack \{name CompletionScript}`.
+  This is invoked by the shell script returned by `pack \{name $ Trivial CompletionScript}`.
   See the installation instructions about how to enable TAB-completion
   for your shell.
   """
 
-cmdDesc CompletionScript = """
+cmdDesc (Trivial CompletionScript) = """
   Prints a shell script, which can be used for BASH-like TAB-completion.
   See the installation instructions about how to enable TAB-completion
   for your shell.
   """
 
-cmdDesc Uninstall        = """
+cmdDesc (Configured Uninstall)  = """
   Uninstalls pack.
   Deletes the $PACK_DIR directory.
   """
 
-cmdDesc PrintHelp        = """
+cmdDesc (Configured PrintHelp)  = """
   Without an additional <cmd> argument, this prints general information
   about using pack, including a list of available command-line options
   and a description of what each of them does.
@@ -424,33 +437,33 @@ Arg Cmd where
 --------------------------------------------------------------------------------
 
 0 cmdInCommands : (c : Cmd) -> Elem c Types.commands
-cmdInCommands Build            = %search
-cmdInCommands BuildDeps        = %search
-cmdInCommands Typecheck        = %search
-cmdInCommands Clean            = %search
-cmdInCommands CleanBuild       = %search
-cmdInCommands Repl             = %search
-cmdInCommands Exec             = %search
-cmdInCommands Install          = %search
-cmdInCommands InstallApp       = %search
-cmdInCommands Remove           = %search
-cmdInCommands RemoveApp        = %search
-cmdInCommands Run              = %search
-cmdInCommands Test             = %search
-cmdInCommands New              = %search
-cmdInCommands Update           = %search
-cmdInCommands Fetch            = %search
-cmdInCommands PackagePath      = %search
-cmdInCommands LibsPath         = %search
-cmdInCommands DataPath         = %search
-cmdInCommands AppPath          = %search
-cmdInCommands Switch           = %search
-cmdInCommands UpdateDB         = %search
-cmdInCommands CollectGarbage   = %search
-cmdInCommands Info             = %search
-cmdInCommands Query            = %search
-cmdInCommands Fuzzy            = %search
-cmdInCommands Completion       = %search
-cmdInCommands CompletionScript = %search
-cmdInCommands Uninstall        = %search
-cmdInCommands PrintHelp        = %search
+cmdInCommands (Configured Build           ) = %search
+cmdInCommands (Configured BuildDeps       ) = %search
+cmdInCommands (Configured Typecheck       ) = %search
+cmdInCommands (Configured Clean           ) = %search
+cmdInCommands (Configured CleanBuild      ) = %search
+cmdInCommands (Configured Repl            ) = %search
+cmdInCommands (Configured Exec            ) = %search
+cmdInCommands (Configured Install         ) = %search
+cmdInCommands (Configured InstallApp      ) = %search
+cmdInCommands (Configured Remove          ) = %search
+cmdInCommands (Configured RemoveApp       ) = %search
+cmdInCommands (Configured Run             ) = %search
+cmdInCommands (Configured Test            ) = %search
+cmdInCommands (Configured New             ) = %search
+cmdInCommands (Configured Update          ) = %search
+cmdInCommands (Configured Fetch           ) = %search
+cmdInCommands (Configured PackagePath     ) = %search
+cmdInCommands (Configured LibsPath        ) = %search
+cmdInCommands (Configured DataPath        ) = %search
+cmdInCommands (Configured AppPath         ) = %search
+cmdInCommands (Configured Switch          ) = %search
+cmdInCommands (Configured UpdateDB        ) = %search
+cmdInCommands (Configured CollectGarbage  ) = %search
+cmdInCommands (Configured Info            ) = %search
+cmdInCommands (Configured Query           ) = %search
+cmdInCommands (Configured Fuzzy           ) = %search
+cmdInCommands (Configured Completion      ) = %search
+cmdInCommands (Trivial    CompletionScript) = %search
+cmdInCommands (Configured Uninstall       ) = %search
+cmdInCommands (Configured PrintHelp       ) = %search
