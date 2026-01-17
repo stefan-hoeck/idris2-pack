@@ -331,5 +331,5 @@ usageInfo = """
   Run `pack help <cmd>` to get detailed information about a command.
 
   Available commands:
-  \{unlines $ map (indent 2 . fst) namesAndCommands}
+  \{unlines $ map (indent 2 . fst) Types.namesAndCommands}
   """
