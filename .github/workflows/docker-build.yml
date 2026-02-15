@@ -38,6 +38,7 @@ jobs:
           echo "REPO_OWNER=$REPO_OWNER" >> "$GITHUB_ENV"
           UBUNTU_RELEASE=noble OWNER=$REPO_OWNER make docker-build
           UBUNTU_RELEASE=jammy OWNER=$REPO_OWNER make docker-build
+          ALPINE_RELEASE=latest OWNER=$REPO_OWNER make docker-build-alpine
 
       - name: Log in to registry
         if: github.ref == 'refs/heads/main'
@@ -55,9 +56,12 @@ jobs:
           docker tag "$IMAGE_ID:noble" "$IMAGE_ID:$DB_VERSION-noble"
           docker tag "$IMAGE_ID:noble" "$IMAGE_ID:$DB_VERSION"
           docker tag "$IMAGE_ID:noble" "$IMAGE_ID:latest"
+          docker tag "$IMAGE_ID:alpine-latest" "$IMAGE_ID:$DB_VERSION-alpine-latest"
           docker push "$IMAGE_ID:latest"
           docker push "$IMAGE_ID:jammy"
           docker push "$IMAGE_ID:noble"
+          docker push "$IMAGE_ID:alpine-latest"
           docker push "$IMAGE_ID:$DB_VERSION"
           docker push "$IMAGE_ID:$DB_VERSION-jammy"
           docker push "$IMAGE_ID:$DB_VERSION-noble"
+          docker push "$IMAGE_ID:$DB_VERSION-alpine-latest"
