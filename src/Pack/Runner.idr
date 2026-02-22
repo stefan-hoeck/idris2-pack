@@ -25,67 +25,67 @@ Command ConfiguredCmd where
 
   appName = "pack"
 
-  defaultLevel (Build           ) = Build
-  defaultLevel (BuildDeps       ) = Build
-  defaultLevel (Typecheck       ) = Build
-  defaultLevel (Clean           ) = Build
-  defaultLevel (CleanBuild      ) = Build
-  defaultLevel (Exec            ) = Warning
-  defaultLevel (New             ) = Build
-  defaultLevel (Repl            ) = Warning
-  defaultLevel (Install         ) = Build
-  defaultLevel (InstallApp      ) = Build
-  defaultLevel (Remove          ) = Build
-  defaultLevel (RemoveApp       ) = Build
-  defaultLevel (Run             ) = Warning
-  defaultLevel (Test            ) = Warning
-  defaultLevel (Update          ) = Build
-  defaultLevel (Fetch           ) = Build
-  defaultLevel (PackagePath     ) = Silence
-  defaultLevel (LibsPath        ) = Silence
-  defaultLevel (DataPath        ) = Silence
-  defaultLevel (AppPath         ) = Silence
-  defaultLevel (Switch          ) = Build
-  defaultLevel (UpdateDB        ) = Build
-  defaultLevel (CollectGarbage  ) = Info
-  defaultLevel (Info            ) = Cache
-  defaultLevel (Query           ) = Cache
-  defaultLevel (Fuzzy           ) = Cache
-  defaultLevel (Completion      ) = Silence
-  defaultLevel (Uninstall       ) = Info
-  defaultLevel (PrintHelp       ) = Silence
+  defaultLevel Build            = Build
+  defaultLevel BuildDeps        = Build
+  defaultLevel Typecheck        = Build
+  defaultLevel Clean            = Build
+  defaultLevel CleanBuild       = Build
+  defaultLevel Exec             = Warning
+  defaultLevel New              = Build
+  defaultLevel Repl             = Warning
+  defaultLevel Install          = Build
+  defaultLevel InstallApp       = Build
+  defaultLevel Remove           = Build
+  defaultLevel RemoveApp        = Build
+  defaultLevel Run              = Warning
+  defaultLevel Test             = Warning
+  defaultLevel Update           = Build
+  defaultLevel Fetch            = Build
+  defaultLevel PackagePath      = Silence
+  defaultLevel LibsPath         = Silence
+  defaultLevel DataPath         = Silence
+  defaultLevel AppPath          = Silence
+  defaultLevel Switch           = Build
+  defaultLevel UpdateDB         = Build
+  defaultLevel CollectGarbage   = Info
+  defaultLevel Info             = Cache
+  defaultLevel Query            = Cache
+  defaultLevel Fuzzy            = Cache
+  defaultLevel Completion       = Silence
+  defaultLevel Uninstall        = Info
+  defaultLevel PrintHelp        = Silence
 
   desc = cmdDesc
 
-  ArgTypes (Build           ) = [Maybe PkgOrIpkg]
-  ArgTypes (BuildDeps       ) = [Maybe PkgOrIpkg]
-  ArgTypes (Typecheck       ) = [Maybe PkgOrIpkg]
-  ArgTypes (Clean           ) = [Maybe PkgOrIpkg]
-  ArgTypes (CleanBuild      ) = [Maybe PkgOrIpkg]
-  ArgTypes (Repl            ) = [Maybe (File Abs)]
-  ArgTypes (Exec            ) = [File Abs, CmdArgList]
-  ArgTypes (Install         ) = [List PkgName]
-  ArgTypes (InstallApp      ) = [List PkgName]
-  ArgTypes (Remove          ) = [List PkgName]
-  ArgTypes (RemoveApp       ) = [List PkgName]
-  ArgTypes (Run             ) = [Maybe PkgOrIpkg, CmdArgList]
-  ArgTypes (Test            ) = [PkgName, CmdArgList]
-  ArgTypes (New             ) = [PkgType, Body]
-  ArgTypes (Update          ) = []
-  ArgTypes (Fetch           ) = []
-  ArgTypes (PackagePath     ) = []
-  ArgTypes (LibsPath        ) = []
-  ArgTypes (DataPath        ) = []
-  ArgTypes (AppPath         ) = [PkgName]
-  ArgTypes (Switch          ) = [DBName]
-  ArgTypes (UpdateDB        ) = []
-  ArgTypes (CollectGarbage  ) = []
-  ArgTypes (Info            ) = []
-  ArgTypes (Query           ) = [PkgQuery]
-  ArgTypes (Fuzzy           ) = [FuzzyQuery]
-  ArgTypes (Completion      ) = [String, String]
-  ArgTypes (Uninstall       ) = []
-  ArgTypes (PrintHelp       ) = [Maybe Cmd]
+  ArgTypes Build          = [Maybe PkgOrIpkg]
+  ArgTypes BuildDeps      = [Maybe PkgOrIpkg]
+  ArgTypes Typecheck      = [Maybe PkgOrIpkg]
+  ArgTypes Clean          = [Maybe PkgOrIpkg]
+  ArgTypes CleanBuild     = [Maybe PkgOrIpkg]
+  ArgTypes Repl           = [Maybe (File Abs)]
+  ArgTypes Exec           = [File Abs, CmdArgList]
+  ArgTypes Install        = [List PkgName]
+  ArgTypes InstallApp     = [List PkgName]
+  ArgTypes Remove         = [List PkgName]
+  ArgTypes RemoveApp      = [List PkgName]
+  ArgTypes Run            = [Maybe PkgOrIpkg, CmdArgList]
+  ArgTypes Test           = [PkgName, CmdArgList]
+  ArgTypes New            = [PkgType, Body]
+  ArgTypes Update         = []
+  ArgTypes Fetch          = []
+  ArgTypes PackagePath    = []
+  ArgTypes LibsPath       = []
+  ArgTypes DataPath       = []
+  ArgTypes AppPath        = [PkgName]
+  ArgTypes Switch         = [DBName]
+  ArgTypes UpdateDB       = []
+  ArgTypes CollectGarbage = []
+  ArgTypes Info           = []
+  ArgTypes Query          = [PkgQuery]
+  ArgTypes Fuzzy          = [FuzzyQuery]
+  ArgTypes Completion     = [String, String]
+  ArgTypes Uninstall      = []
+  ArgTypes PrintHelp      = [Maybe Cmd]
 
   readCommand_ n = lookup n namesAndCommands
 
@@ -100,35 +100,35 @@ Command ConfiguredCmd where
   adjConfig_ (Update) []  c = pure $ {safetyPrompt := False} c
   adjConfig_ _        _   c = pure c
 
-  readArgs (Build           ) = %search
-  readArgs (BuildDeps       ) = %search
-  readArgs (Typecheck       ) = %search
-  readArgs (Clean           ) = %search
-  readArgs (CleanBuild      ) = %search
-  readArgs (Repl            ) = %search
-  readArgs (Exec            ) = %search
-  readArgs (Install         ) = %search
-  readArgs (InstallApp      ) = %search
-  readArgs (Remove          ) = %search
-  readArgs (RemoveApp       ) = %search
-  readArgs (Run             ) = %search
-  readArgs (Test            ) = %search
-  readArgs (New             ) = %search
-  readArgs (Update          ) = %search
-  readArgs (Fetch           ) = %search
-  readArgs (PackagePath     ) = %search
-  readArgs (LibsPath        ) = %search
-  readArgs (DataPath        ) = %search
-  readArgs (AppPath         ) = %search
-  readArgs (Switch          ) = %search
-  readArgs (UpdateDB        ) = %search
-  readArgs (CollectGarbage  ) = %search
-  readArgs (Info            ) = %search
-  readArgs (Query           ) = %search
-  readArgs (Fuzzy           ) = %search
-  readArgs (Completion      ) = %search
-  readArgs (Uninstall       ) = %search
-  readArgs (PrintHelp       ) = %search
+  readArgs Build           = %search
+  readArgs BuildDeps       = %search
+  readArgs Typecheck       = %search
+  readArgs Clean           = %search
+  readArgs CleanBuild      = %search
+  readArgs Repl            = %search
+  readArgs Exec            = %search
+  readArgs Install         = %search
+  readArgs InstallApp      = %search
+  readArgs Remove          = %search
+  readArgs RemoveApp       = %search
+  readArgs Run             = %search
+  readArgs Test            = %search
+  readArgs New             = %search
+  readArgs Update          = %search
+  readArgs Fetch           = %search
+  readArgs PackagePath     = %search
+  readArgs LibsPath        = %search
+  readArgs DataPath        = %search
+  readArgs AppPath         = %search
+  readArgs Switch          = %search
+  readArgs UpdateDB        = %search
+  readArgs CollectGarbage  = %search
+  readArgs Info            = %search
+  readArgs Query           = %search
+  readArgs Fuzzy           = %search
+  readArgs Completion      = %search
+  readArgs Uninstall       = %search
+  readArgs PrintHelp       = %search
 
 public export
 Command TrivialCmd where
@@ -179,9 +179,9 @@ Command Cmd where
   readArgs (Configured cmd) = readArgs cmd
   readArgs (Trivial    cmd) = readArgs cmd
 
-isFetch : ConfiguredCmd -> Bool
-isFetch Fetch = True
-isFetch _     = False
+fetchMethod : ConfiguredCmd -> FetchMethod
+fetchMethod Fetch  = All
+fetchMethod _      = MissingOnly
 
 runConfiguredCmd :
      {auto _ : HasIO io}
@@ -191,7 +191,7 @@ runConfiguredCmd :
   -> {auto _ : LineBufferingCmd}
   -> CurDir
   -> MetaConfig
-  -> (fetch : Bool)
+  -> (fetch : FetchMethod)
   -> (cmd : CommandWithArgs ConfiguredCmd)
   -> EitherT PackErr io ()
 runConfiguredCmd cd mc fetch = go
@@ -226,9 +226,11 @@ runConfiguredCmd cd mc fetch = go
     go (AppPath ** [n])       = env mc fetch >>= appPath n
     go (Info ** [])           = env mc fetch >>= printInfo
     go (New ** [pty,p])       = idrisEnv mc fetch >>= new cd pty p
-    go (Switch ** [db])       = do env <- idrisEnv mc fetch
-                                   install []
-                                   writeCollection
+    go (Switch ** [db])       = Prelude.do
+      let fetch2 := if db == MkDBName "latest" then ClearCommits else fetch
+      env <- idrisEnv mc fetch2
+      install []
+      writeCollection
     go (Uninstall ** [])      = uninstallPack @{metaConfigToLogRef @{mc}}
 
 ||| Main application entry point (modulo error handling).
@@ -245,6 +247,6 @@ runCmd = do
          withTmpDir $ do
            cache    <- emptyCache
            mc <- getConfig Cmd parsedArgs
-           let fetch := isFetch cmd
+           let fetch := fetchMethod cmd
            linebuf  <- getLineBufferingCmd
            runConfiguredCmd cd mc fetch (cmd ** args)
