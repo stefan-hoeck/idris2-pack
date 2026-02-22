@@ -11,7 +11,7 @@ import Libraries.Data.String.Extra
 import Libraries.Text.Parser
 import Pack.Core.Types
 import Pack.Core.IO
-import Parser.Package
+import Idris.Parser.Core.Package
 import System.File
 
 %default total
