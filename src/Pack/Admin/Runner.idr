@@ -118,6 +118,6 @@ runCmd = do
     mc       <- getConfig ACmd parsedArgs
     linebuf  <- getLineBufferingCmd
     case parsedArgs.cmd of
-      (CheckDB ** [p])  => idrisEnv mc True >>= checkDB p
-      (FromHEAD ** [p]) => env mc True >>= writeLatestDB p
+      (CheckDB ** [p])  => idrisEnv mc ClearCommits >>= checkDB p
+      (FromHEAD ** [p]) => env mc ClearCommits >>= writeLatestDB p
       (Help ** [c])     => putStrLn (usageDesc c)

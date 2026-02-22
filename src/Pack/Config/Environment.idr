@@ -107,13 +107,17 @@ export
 patchesDir : PackDirs => Path Abs
 patchesDir = userDir /> "patches"
 
+export
+commitsDir : PackDirs => Path Abs
+commitsDir = cacheDir </> "commits"
+
 ||| Path to file storing the last fetched commit of a Git
 ||| repo given as a URL and branch name.
 export
 commitFile : PackDirs => URL -> Branch -> File Abs
 commitFile url b =
   let relPath := the (Path Rel) $ cast "\{url}/\{b}"
-   in MkF (cacheDir </> relPath) "commit"
+   in MkF (commitsDir </> relPath) "commit"
 
 ||| File where the patch (if any) for an `.ipkg` file is stored.
 export
@@ -627,14 +631,15 @@ env :
   -> {auto ch  : LibCache}
   -> {auto lbf : LineBufferingCmd}
   -> (mc       : MetaConfig)
-  -> (fetch    : Bool)
+  -> (fetch    : FetchMethod)
   -> EitherT PackErr io Env
 env mc fetch = do
   mdb <- loadDB mc
   clk <- liftIO $ clockTime UTC
   debug "clock time is \{show $ toNano clk}"
-  db  <- traverseDB (resolveMeta fetch) mdb
-  c   <- traverse (resolveMeta fetch) db.idrisURL mc
+  when (fetch == ClearCommits) (rmDir commitsDir)
+  db  <- traverseDB (resolveMeta $ fetch > MissingOnly) mdb
+  c   <- traverse (resolveMeta $ fetch > MissingOnly) db.idrisURL mc
 
   let url    := fromMaybe db.idrisURL c.idrisURL
       commit := fromMaybe db.idrisCommit c.idrisCommit

@@ -556,7 +556,7 @@ idrisEnv :
   -> {auto _ : LibCache}
   -> {auto _ : LineBufferingCmd}
   -> MetaConfig
-  -> (fetch : Bool)
+  -> (fetch : FetchMethod)
   -> EitherT PackErr io IdrisEnv
 idrisEnv mc fetch = env mc fetch >>= (\e => mkIdris)
 

@@ -5,10 +5,12 @@ import Data.List1
 import Data.List.Elem
 import Data.SortedMap
 import Data.String
+import Derive.Prelude
 import Idris.Package.Types
 import Pack.Core.Types
 
 %default total
+%language ElabReflection
 
 --------------------------------------------------------------------------------
 --          MetaCommits
@@ -38,6 +40,24 @@ export
 toLatest : MetaCommit -> MetaCommit
 toLatest (MC x) = Latest (MkBranch x.value)
 toLatest x      = x
+
+||| Strategy for resolving `MetaCommit`s
+public export
+data FetchMethod : Type where
+  ||| Update only meta commits, which don't have a cached entry in the
+  ||| "commits" directory. This is the default.
+  MissingOnly  : FetchMethod
+
+  ||| Update all custom commits. This is the strategy used with the `fetch`
+  ||| command.
+  All          : FetchMethod
+
+  ||| Remove the "commits" directory, thus forcing all meta commits to
+  ||| be resolved again. This is the strategy used with the `switch latest`
+  ||| command
+  ClearCommits : FetchMethod
+
+%runElab derive "FetchMethod" [Show,Eq,Ord]
 
 --------------------------------------------------------------------------------
 --          Core Packages
