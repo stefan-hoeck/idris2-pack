@@ -6,6 +6,7 @@ import Pack.Core
 import Pack.Database
 import Pack.Config.Types
 import System.GetOpts
+import System
 
 %default total
 
@@ -254,6 +255,39 @@ optionNames = foldMap names descs
     names (MkOpt sns lns _ _) =
       map (\c => "-\{String.singleton c}") sns ++ map ("--" ++) lns
 
+||| A Package of the current directory, current command, its arguments, and the
+||| options.
+public export
+record ParsedArgs (0 c : Type) {auto 0 prf : Command c} where
+  constructor MkParsedArgs
+  curDir : CurDir
+  cmd    : CommandWithArgs c
+  opts   : List AdjConf
+
+||| Get the arguments (not including the defacto first argument that is the
+||| name of the binary).
+export
+getArgs' : HasIO io => io (List String)
+getArgs' = drop 1 <$> getArgs
+
+||| Given the current directory (from which pack was
+||| invoked) parse the arguments into a command, positional arguments, and
+||| options.
+export
+parseOpts :
+     (0 c : Type)
+  -> {auto _ : Command c}
+  -> (curDir : CurDir)
+  -> (args : List String)
+  -> Either PackErr (ParsedArgs c)
+parseOpts c dir args =
+  case getOpt RequireOrder descs args of
+    MkResult opts n  []      []       => do
+      cmd <- readCommand c dir n
+      pure $ MkParsedArgs dir cmd opts
+    MkResult _    _ (u :: _) _        => Left (UnknownArg u)
+    MkResult _    _ _        (e :: _) => Left (ErroneousArg e)
+
 ||| Given the current directory (from which pack was invoked)
 ||| and an initial config assembled from the `pack.toml` files
 ||| in scope, generates the application
@@ -273,23 +307,15 @@ export
 applyArgs :
      (0 c : Type)
   -> {auto _ : Command c}
-  -> (curDir : CurDir)
   -> (init   : MetaConfig)
-  -> (args   : List String)
-  -> Either PackErr (MetaConfig, CommandWithArgs c)
-applyArgs c dir init args =
-  case getOpt RequireOrder descs args of
-    MkResult opts n  []      []       => do
-      cmd  <- readCommand c dir n
-      let lvl_m := lookup (cmdName $ fst cmd) init.levels
-          dflt  := defaultLevel $ fst cmd
+  -> (args   : ParsedArgs c)
+  -> Either PackErr MetaConfig
+applyArgs c init args = do
+  let lvl_m := lookup (cmdName $ fst args.cmd) init.levels
+      dflt  := defaultLevel $ fst args.cmd
 
-          init' = {logLevel := fromMaybe dflt lvl_m} init
-      conf <- foldlM (\c,f => f dir c) init' opts
-      Right (conf, cmd)
-
-    MkResult _    _ (u :: _) _        => Left (UnknownArg u)
-    MkResult _    _ _        (e :: _) => Left (ErroneousArg e)
+      init' = {logLevel := fromMaybe dflt lvl_m} init
+  foldlM (\c,f => f args.curDir c) init' args.opts
 
 --------------------------------------------------------------------------------
 --          Usage Info
@@ -305,5 +331,5 @@ usageInfo = """
   Run `pack help <cmd>` to get detailed information about a command.
 
   Available commands:
-  \{unlines $ map (indent 2 . fst) namesAndCommands}
+  \{unlines $ map (indent 2 . fst) Types.namesAndCommands}
   """

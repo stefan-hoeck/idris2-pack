@@ -426,14 +426,15 @@ export covering
 getConfig :
      (0 c : Type)
   -> {auto _   : Command c}
+  -> (args : ParsedArgs c)
   -> {auto _   : HasIO io}
   -> {auto pd  : PackDirs}
   -> {auto td  : TmpDir}
-  -> {auto cur : CurDir}
-  -> EitherT PackErr io (MetaConfig, CommandWithArgs c)
-getConfig c = do
+  -> EitherT PackErr io MetaConfig
+getConfig c args = do
   -- relevant directories
   coll       <- defaultColl
+  let cur = args.curDir
 
   -- Initialize `pack.toml` if none exists
   when !(fileMissing globalPackToml) $
@@ -450,14 +451,8 @@ getConfig c = do
 
   let ini = foldl update (init coll) (global::collToml::localConfs)
 
-  args'       <- getArgs
-  let args : List String
-      args = case args' of
-        h :: t => t
-        []     => [] -- this should not happen
-
-  (conf',cmd) <- liftEither $ applyArgs c cur ini args
-  conf        <- adjConfig cmd conf'
+  conf' <- liftEither $ applyArgs c ini args
+  conf  <- adjConfig args.cmd conf'
 
   let logRef := MkLogRef conf.logLevel
 
@@ -480,7 +475,7 @@ getConfig c = do
   mkDir pd.state
   mkDir pd.cache
   mkDir pd.bin
-  pure (conf,cmd)
+  pure conf
 
 export
 getLineBufferingCmd : HasIO io => io LineBufferingCmd

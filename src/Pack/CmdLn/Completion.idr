@@ -93,7 +93,7 @@ codegens =
   ]
 
 commands : List String
-commands = map fst namesAndCommands
+commands = map fst Types.namesAndCommands
 
 optionFlags : List String
 optionFlags = commands ++ optionNames
