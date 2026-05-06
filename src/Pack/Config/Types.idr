@@ -34,7 +34,7 @@ data Autoload : Type where
   AutoPkgs  : List PkgName -> Autoload
 
   ||| Use the given explicit list of packages even in the
-  ||| precense of an `.ipkg` file.
+  ||| presence of an `.ipkg` file.
   ForcePkgs : List PkgName -> Autoload
 
 ||| What to show when querying the data base
@@ -199,7 +199,7 @@ record Config_ (f : Type -> Type) (c : Type) where
   ||| match the current one.
   gcPurge : f Bool
 
-  ||| Whether to issue a warning in precense of a local `depends` directory
+  ||| Whether to issue a warning in presence of a local `depends` directory
   warnDepends : f Bool
 
   ||| Whether to skip tests during collection checking
