@@ -124,7 +124,7 @@ descs =
       "Print a dependency tree of a package known to pack"
   , MkOpt [] ["reverse-tree"]   (NoArg $ setQuery ReverseTree)
       """
-      Print a tree of packages depending on a package know to pack.
+      Print a tree of packages depending on a package known to pack.
       Use this to find all packages transitively depending on a specific
       library
       """
@@ -188,12 +188,12 @@ descs =
       """
   , MkOpt [] ["warn-depends"]   (NoArg $ setWarnDepends True)
       """
-      Issue a warning in precense of a local `depends` directory, which might
+      Issue a warning in presence of a local `depends` directory, which might
       interfere with the libraries managed by pack.
       """
   , MkOpt [] ["no-warn-depends"]   (NoArg $ setWarnDepends False)
       """
-      Don't issue a warning in precense of a local `depends` directory.
+      Don't issue a warning in presence of a local `depends` directory.
       """
   , MkOpt [] ["skip-tests"]   (NoArg $ setSkipTests True)
       """
