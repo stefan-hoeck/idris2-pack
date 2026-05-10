@@ -135,11 +135,6 @@ data RlwrapConfig : Type where
   DoNotUseRlwrap : RlwrapConfig
   UseRlwrap      : CmdArgList -> RlwrapConfig
 
-||| Type-level identity
-public export
-0 I : Type -> Type
-I t = t
-
 ||| User-defined configuration
 |||
 ||| @ f : This is used to represent the context of values.
@@ -239,7 +234,7 @@ record Config_ (f : Type -> Type) (c : Type) where
   autoLoad     : f Autoload
 
   ||| Customizations to the package data base
-  custom       : f (SortedMap DBName (SortedMap PkgName $ Package_ c))
+  custom       : f (SortedMap DBName (SortedMap PkgName $ Package_ f c))
 
   ||| Type of query to run
   queryType    : f (QueryType)
@@ -304,7 +299,7 @@ traverse g idrisURL cfg =
     where adj :  (idrisCommit : Maybe b)
               -> (allidrisCommits : List b)
               -> (packCommit  : Maybe b)
-              -> SortedMap DBName (SortedMap PkgName $ Package_ b)
+              -> SortedMap DBName (SortedMap PkgName $ Package_ I b)
               -> Config_ I b
           adj ic ics pc cb =
             { idrisCommit     := ic
@@ -374,6 +369,38 @@ init coll = MkConfig {
 
 export infixl 7 `update`
 
+resolve :
+     SortedMap DBName (SortedMap PkgName $ Package_ I c)
+  -> SortedMap DBName (SortedMap PkgName $ Package_ Maybe c)
+  -> SortedMap DBName (SortedMap PkgName $ Package_ I c)
+resolve known = fromList . map adj . kvList
+  where
+    rslv :
+         DBName
+      -> (PkgName, Package_ Maybe c)
+      -> Maybe (PkgName, Package_ I c)
+    rslv db (pn, p) =
+      case p of
+        Local d i p t => Just (pn, Local d i p t)
+        Core c        => Just (pn, Core c)
+        Git (Just u) (Just c) (Just i) (Just p) t n => Just (pn, Git u c i p t n)
+        Git mu mc mi mp t n => Prelude.do
+          m <- lookup db known
+          Git u c i p t2 n2 <- lookup pn m | _ => Nothing
+          Just $ MkPair pn $
+            Git
+              (fromMaybe u mu)
+              (fromMaybe c mc)
+              (fromMaybe i mi)
+              (fromMaybe p mp)
+              (t <|> t2)
+              (n <|> n2)
+
+    adj :
+         (DBName, SortedMap PkgName (Package_ Maybe c))
+      -> (DBName, SortedMap PkgName (Package_ I c))
+    adj (db,m) = (db, fromList . mapMaybe (rslv db) $ kvList m)
+
 ||| Update a config with optional settings
 export
 update : IConfig c -> MConfig c -> IConfig c
@@ -402,7 +429,7 @@ update ci cm = MkConfig {
   , autoLibs        = sortedNub (ci.autoLibs ++ concat cm.autoLibs)
   , autoApps        = sortedNub (ci.autoApps ++ concat cm.autoApps)
   , autoLoad        = fromMaybe ci.autoLoad cm.autoLoad
-  , custom          = mergeWith mergeRight ci.custom (fromMaybe empty cm.custom)
+  , custom          = mergeWith mergeRight ci.custom (maybe empty (resolve ci.custom) cm.custom)
   , queryType       = fromMaybe ci.queryType cm.queryType
   , logLevel        = fromMaybe ci.logLevel cm.logLevel
   , codegen         = fromMaybe ci.codegen cm.codegen
