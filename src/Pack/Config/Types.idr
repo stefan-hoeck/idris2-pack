@@ -369,74 +369,46 @@ init coll = MkConfig {
 
 export infixl 7 `update`
 
-resolve :
-     SortedMap DBName (SortedMap PkgName $ Package_ I c)
-  -> SortedMap DBName (SortedMap PkgName $ Package_ Maybe c)
-  -> SortedMap DBName (SortedMap PkgName $ Package_ I c)
-resolve known = fromList . map adj . kvList
-  where
-    rslv :
-         DBName
-      -> (PkgName, Package_ Maybe c)
-      -> Maybe (PkgName, Package_ I c)
-    rslv db (pn, p) =
-      case p of
-        Local d i p t => Just (pn, Local d i p t)
-        Core c        => Just (pn, Core c)
-        Git (Just u) (Just c) (Just i) (Just p) t n => Just (pn, Git u c i p t n)
-        Git mu mc mi mp t n => Prelude.do
-          m <- lookup db known
-          Git u c i p t2 n2 <- lookup pn m | _ => Nothing
-          Just $ MkPair pn $
-            Git
-              (fromMaybe u mu)
-              (fromMaybe c mc)
-              (fromMaybe i mi)
-              (fromMaybe p mp)
-              (t <|> t2)
-              (n <|> n2)
-
-    adj :
-         (DBName, SortedMap PkgName (Package_ Maybe c))
-      -> (DBName, SortedMap PkgName (Package_ I c))
-    adj (db,m) = (db, fromList . mapMaybe (rslv db) $ kvList m)
-
 ||| Update a config with optional settings
 export
-update : IConfig c -> MConfig c -> IConfig c
-update ci cm = MkConfig {
-    collection      = fromMaybe ci.collection cm.collection
-  , idrisURL        = cm.idrisURL <|> ci.idrisURL
-  , idrisCommit     = cm.idrisCommit <|> ci.idrisCommit
-  , allIdrisCommits = cm.allIdrisCommits <+> ci.allIdrisCommits
-  , packURL         = cm.packURL <|> ci.packURL
-  , packCommit      = cm.packCommit <|> ci.packCommit
-  , scheme          = fromMaybe ci.scheme cm.scheme
-  , bootstrap       = fromMaybe ci.bootstrap cm.bootstrap
-  , bootstrapStage3 = fromMaybe ci.bootstrapStage3 cm.bootstrapStage3
-  , safetyPrompt    = fromMaybe ci.safetyPrompt cm.safetyPrompt
-  , gcPrompt        = fromMaybe ci.gcPrompt cm.gcPrompt
-  , gcPurge         = fromMaybe ci.gcPurge cm.gcPurge
-  , warnDepends     = fromMaybe ci.warnDepends cm.warnDepends
-  , skipTests       = fromMaybe ci.skipTests cm.skipTests
-  , withSrc         = fromMaybe ci.withSrc cm.withSrc
-  , withDocs        = fromMaybe ci.withDocs cm.withDocs
-  , useKatla        = fromMaybe ci.useKatla cm.useKatla
-  , withIpkg        = fromMaybe ci.withIpkg cm.withIpkg
-  , rlwrap          = fromMaybe ci.rlwrap cm.rlwrap
-  , extraArgs       = ci.extraArgs <+> fromMaybe [] cm.extraArgs
-  , whitelist       = sortedNub (ci.whitelist ++ concat cm.whitelist)
-  , autoLibs        = sortedNub (ci.autoLibs ++ concat cm.autoLibs)
-  , autoApps        = sortedNub (ci.autoApps ++ concat cm.autoApps)
-  , autoLoad        = fromMaybe ci.autoLoad cm.autoLoad
-  , custom          = mergeWith mergeRight ci.custom (maybe empty (resolve ci.custom) cm.custom)
-  , queryType       = fromMaybe ci.queryType cm.queryType
-  , logLevel        = fromMaybe ci.logLevel cm.logLevel
-  , codegen         = fromMaybe ci.codegen cm.codegen
-  , output          = fromMaybe ci.output cm.output
-  , levels          = mergeWith (\_,v => v) ci.levels (fromMaybe empty cm.levels)
-  , gitInit         = fromMaybe ci.gitInit cm.gitInit
-  }
+update : IConfig c -> MConfig c -> Either PackErr (IConfig c)
+update ci cm =
+  case resolve ci.custom cm.custom of
+    Left  x => Left x
+    Right m => Right $
+      MkConfig {
+        collection      = fromMaybe ci.collection cm.collection
+      , idrisURL        = cm.idrisURL <|> ci.idrisURL
+      , idrisCommit     = cm.idrisCommit <|> ci.idrisCommit
+      , allIdrisCommits = cm.allIdrisCommits <+> ci.allIdrisCommits
+      , packURL         = cm.packURL <|> ci.packURL
+      , packCommit      = cm.packCommit <|> ci.packCommit
+      , scheme          = fromMaybe ci.scheme cm.scheme
+      , bootstrap       = fromMaybe ci.bootstrap cm.bootstrap
+      , bootstrapStage3 = fromMaybe ci.bootstrapStage3 cm.bootstrapStage3
+      , safetyPrompt    = fromMaybe ci.safetyPrompt cm.safetyPrompt
+      , gcPrompt        = fromMaybe ci.gcPrompt cm.gcPrompt
+      , gcPurge         = fromMaybe ci.gcPurge cm.gcPurge
+      , warnDepends     = fromMaybe ci.warnDepends cm.warnDepends
+      , skipTests       = fromMaybe ci.skipTests cm.skipTests
+      , withSrc         = fromMaybe ci.withSrc cm.withSrc
+      , withDocs        = fromMaybe ci.withDocs cm.withDocs
+      , useKatla        = fromMaybe ci.useKatla cm.useKatla
+      , withIpkg        = fromMaybe ci.withIpkg cm.withIpkg
+      , rlwrap          = fromMaybe ci.rlwrap cm.rlwrap
+      , extraArgs       = ci.extraArgs <+> fromMaybe [] cm.extraArgs
+      , whitelist       = sortedNub (ci.whitelist ++ concat cm.whitelist)
+      , autoLibs        = sortedNub (ci.autoLibs ++ concat cm.autoLibs)
+      , autoApps        = sortedNub (ci.autoApps ++ concat cm.autoApps)
+      , autoLoad        = fromMaybe ci.autoLoad cm.autoLoad
+      , custom          = mergeWith mergeRight ci.custom m
+      , queryType       = fromMaybe ci.queryType cm.queryType
+      , logLevel        = fromMaybe ci.logLevel cm.logLevel
+      , codegen         = fromMaybe ci.codegen cm.codegen
+      , output          = fromMaybe ci.output cm.output
+      , levels          = mergeWith (\_,v => v) ci.levels (fromMaybe empty cm.levels)
+      , gitInit         = fromMaybe ci.gitInit cm.gitInit
+      }
 
 --------------------------------------------------------------------------------
 --          HasIdris

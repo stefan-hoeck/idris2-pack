@@ -721,6 +721,9 @@ data PackErr : Type where
   ||| The given package is not in the package data base
   UnknownPkg : (name : PkgName) -> PackErr
 
+  ||| Not enough data has been given for this package
+  IncompletePkg : (name : PkgName) -> PackErr
+
   ||| The given package is not a local package
   NotLocalPkg : (name : PkgName) -> PackErr
 
@@ -882,6 +885,8 @@ printErr (InvalidLogLevel s) = """
   """
 
 printErr (UnknownPkg name) = "Unknown package: \{name}"
+
+printErr (IncompletePkg name) = "Incomplete data for custom package: \{name}"
 
 printErr (NotLocalPkg name) = "Not a local package: \{name}"
 

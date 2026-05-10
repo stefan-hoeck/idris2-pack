@@ -1,6 +1,7 @@
 module Pack.Database.Types
 
 import Core.Name.Namespace
+import Data.Either
 import Data.List1
 import Data.List.Elem
 import Data.SortedMap
@@ -523,6 +524,45 @@ printDB (MkDB u c v db) =
         commit  = "\{c}"
         """
    in unlines $ header :: (SortedMap.toList db >>= \p => "" :: printPair p)
+
+--------------------------------------------------------------------------------
+--          Resolving Packages
+--------------------------------------------------------------------------------
+
+export
+resolve :
+     SortedMap DBName (SortedMap PkgName $ Package_ I c)
+  -> Maybe (SortedMap DBName (SortedMap PkgName $ Package_ Maybe c))
+  -> Either PackErr $ SortedMap DBName (SortedMap PkgName $ Package_ I c)
+resolve known Nothing  = Right empty
+resolve known (Just m) = map fromList . traverse adj $ kvList m
+  where
+    rslv :
+         DBName
+      -> (PkgName, Package_ Maybe c)
+      -> Either PackErr (PkgName, Package_ I c)
+    rslv db (pn, p) =
+      case p of
+        Local d i p t => Right (pn, Local d i p t)
+        Core c        => Right (pn, Core c)
+        Git (Just u) (Just c) (Just i) (Just p) t n => Right (pn, Git u c i p t n)
+        Git mu mc mi mp t n =>
+          maybeToEither (IncompletePkg pn) $ Prelude.do
+            m <- lookup db known
+            Git u c i p t2 n2 <- lookup pn m | _ => Nothing
+            Just $ MkPair pn $
+              Git
+                (fromMaybe u mu)
+                (fromMaybe c mc)
+                (fromMaybe i mi)
+                (fromMaybe p mp)
+                (t <|> t2)
+                (n <|> n2)
+
+    adj :
+         (DBName, SortedMap PkgName (Package_ Maybe c))
+      -> Either PackErr (DBName, SortedMap PkgName (Package_ I c))
+    adj (db,m) = map (\ps => (db, fromList ps)) . traverse (rslv db) $ kvList m
 
 --------------------------------------------------------------------------------
 --          Tests

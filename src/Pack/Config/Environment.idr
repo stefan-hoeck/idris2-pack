@@ -453,7 +453,7 @@ getConfig c args = do
   collToml    <- readOptionalFromTOML UserConfig collectionToml
   global      <- readOptionalFromTOML UserConfig globalPackToml
 
-  let ini = foldl update (init coll) (global::collToml::localConfs)
+  ini         <- liftEither $ foldlM update (init coll) (global::collToml::localConfs)
 
   conf' <- liftEither $ applyArgs c ini args
   conf  <- adjConfig args.cmd conf'
