@@ -135,11 +135,6 @@ data RlwrapConfig : Type where
   DoNotUseRlwrap : RlwrapConfig
   UseRlwrap      : CmdArgList -> RlwrapConfig
 
-||| Type-level identity
-public export
-0 I : Type -> Type
-I t = t
-
 ||| User-defined configuration
 |||
 ||| @ f : This is used to represent the context of values.
@@ -239,7 +234,7 @@ record Config_ (f : Type -> Type) (c : Type) where
   autoLoad     : f Autoload
 
   ||| Customizations to the package data base
-  custom       : f (SortedMap DBName (SortedMap PkgName $ Package_ c))
+  custom       : f CustomMap
 
   ||| Type of query to run
   queryType    : f (QueryType)
@@ -296,21 +291,18 @@ traverse :  Applicative f
 traverse g idrisURL cfg =
   let iurl = fromMaybe idrisURL cfg.idrisURL
       purl = fromMaybe defaultPackRepo cfg.packURL
-      cst = traverse (traverse $ traverse g) cfg.custom
       ic  = traverse (g iurl) cfg.idrisCommit
       ics = traverse (g iurl) cfg.allIdrisCommits
       pc  = traverse (g purl) cfg.packCommit
-   in [| adj ic ics pc cst |]
+   in [| adj ic ics pc |]
     where adj :  (idrisCommit : Maybe b)
               -> (allidrisCommits : List b)
               -> (packCommit  : Maybe b)
-              -> SortedMap DBName (SortedMap PkgName $ Package_ b)
               -> Config_ I b
-          adj ic ics pc cb =
+          adj ic ics pc =
             { idrisCommit     := ic
             , allIdrisCommits := ics
             , packCommit      := pc
-            , custom          := cb
             } cfg
 
 ||| This allows us to use a `Config` in scope when we
@@ -377,7 +369,8 @@ export infixl 7 `update`
 ||| Update a config with optional settings
 export
 update : IConfig c -> MConfig c -> IConfig c
-update ci cm = MkConfig {
+update ci cm =
+  MkConfig {
     collection      = fromMaybe ci.collection cm.collection
   , idrisURL        = cm.idrisURL <|> ci.idrisURL
   , idrisCommit     = cm.idrisCommit <|> ci.idrisCommit
@@ -402,7 +395,7 @@ update ci cm = MkConfig {
   , autoLibs        = sortedNub (ci.autoLibs ++ concat cm.autoLibs)
   , autoApps        = sortedNub (ci.autoApps ++ concat cm.autoApps)
   , autoLoad        = fromMaybe ci.autoLoad cm.autoLoad
-  , custom          = mergeWith mergeRight ci.custom (fromMaybe empty cm.custom)
+  , custom          = mergeWith (mergeWith mergeUP) ci.custom (fromMaybe empty cm.custom)
   , queryType       = fromMaybe ci.queryType cm.queryType
   , logLevel        = fromMaybe ci.logLevel cm.logLevel
   , codegen         = fromMaybe ci.codegen cm.codegen

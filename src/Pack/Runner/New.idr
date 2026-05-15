@@ -6,6 +6,7 @@ import Data.String
 import Idris.Package.Types
 import Pack.Config
 import Pack.Core
+import Pack.Database.Types
 import Core.Name.Namespace
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Doc

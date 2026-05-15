@@ -1,6 +1,7 @@
 module Pack.Database.Types
 
 import Core.Name.Namespace
+import Data.Either
 import Data.List1
 import Data.List.Elem
 import Data.SortedMap
@@ -16,12 +17,19 @@ import Pack.Core.Types
 --          MetaCommits
 --------------------------------------------------------------------------------
 
+||| Type-level identity
+public export
+0 I : Type -> Type
+I t = t
+
 ||| A git commit hash or tag, or a meta commit: The latest commit of a branch.
 public export
 data MetaCommit : Type where
   MC     : Commit -> MetaCommit
   Latest : Branch -> MetaCommit
   Fetch  : Branch -> MetaCommit
+
+%runElab derive "MetaCommit" [Show,Eq]
 
 public export
 FromString MetaCommit where
@@ -152,19 +160,19 @@ isCorePkg = isJust . readCorePkg
 ||| Note: This does not contain the package name, as it
 ||| will be paired with its name in a `SortedMap`.
 public export
-data Package_ : (c : Type) -> Type where
+data Package_ : (f : Type -> Type) -> (c : Type) -> Type where
   ||| A Git repository, given as the package's URL,
   ||| commit (hash or tag), and name of `.ipkg` file to use.
   ||| `pkgPath` should be set to `True` for executables which need
   ||| access to the `IDRIS2_PACKAGE_PATH`: The list of directories
   ||| where Idris packages are installed.
-  Git :  (url      : URL)
-      -> (commit   : c)
-      -> (ipkg     : File Rel)
-      -> (pkgPath  : Bool)
+  Git :  (url      : f URL)
+      -> (commit   : f c)
+      -> (ipkg     : f $ File Rel)
+      -> (pkgPath  : f $ Bool)
       -> (testIpkg : Maybe (File Rel))
       -> (notice   : Maybe String)
-      -> Package_ c
+      -> Package_ f c
 
   ||| A local Idris project given as an absolute path to a local
   ||| directory, and `.ipkg` file to use.
@@ -175,19 +183,19 @@ data Package_ : (c : Type) -> Type where
          -> (ipkg     : File Rel)
          -> (pkgPath  : Bool)
          -> (testIpkg : Maybe (File Rel))
-         -> Package_ c
+         -> Package_ f c
 
   ||| A core package of the Idris2 project
-  Core   : (core : CorePkg) -> Package_ c
+  Core   : (core : CorePkg) -> Package_ f c
 
 export
-Functor Package_ where
+Functor (Package_ I) where
   map f (Git u c i p t n) = Git u (f c) i p t n
   map f (Local d i p t) = Local d i p t
   map f (Core c)        = Core c
 
 export
-traverse : Applicative f => (URL -> a -> f b) -> Package_ a -> f (Package_ b)
+traverse : Applicative f => (URL -> a -> f b) -> Package_ I a -> f (Package_ I b)
 traverse g (Git u c i p t n) = (\c' => Git u c' i p t n) <$> g u c
 traverse _ (Local d i p t)    = pure $ Local d i p t
 traverse _ (Core c)           = pure $ Core c
@@ -196,13 +204,21 @@ traverse _ (Core c)           = pure $ Core c
 ||| meta commits already resolved.
 public export
 0 Package : Type
-Package = Package_ Commit
+Package = Package_ I Commit
 
 ||| An alias for `Package_ MetaCommit`: A package description where
 ||| the commit might still contain meta information.
 public export
 0 UserPackage : Type
-UserPackage = Package_ MetaCommit
+UserPackage = Package_ Maybe MetaCommit
+
+public export
+0 PackageMap : Type
+PackageMap = SortedMap PkgName Package
+
+public export
+0 CustomMap : Type
+CustomMap = SortedMap DBName (SortedMap PkgName UserPackage)
 
 ||| Proof that a package is a core package
 public export
@@ -270,7 +286,7 @@ isGit (Local {}) = No absurd
 ||| True, if the given application needs access to the
 ||| folders where Idris package are installed.
 export
-usePackagePath : Package_ c -> Bool
+usePackagePath : Package_ I c -> Bool
 usePackagePath (Git _ _ _ pp _ _) = pp
 usePackagePath (Local _ _ pp _) = pp
 usePackagePath (Core _)         = False
@@ -435,7 +451,7 @@ record DB_ c where
   idrisURL     : URL
   idrisCommit  : c
   idrisVersion : PkgVersion
-  packages     : SortedMap PkgName (Package_ c)
+  packages     : SortedMap PkgName (Package_ I c)
 
 export
 Functor DB_ where
@@ -469,7 +485,7 @@ traverseDB g db =
       pkgs := traverse (traverse g) db.packages
    in [| adj ic pkgs |]
     where
-      adj : b -> SortedMap PkgName (Package_ b) -> DB_ b
+      adj : b -> SortedMap PkgName (Package_ I b) -> DB_ b
       adj ic cb = {idrisCommit := ic, packages := cb} db
 
 tomlBool : Bool -> String
@@ -518,6 +534,16 @@ printDB (MkDB u c v db) =
         commit  = "\{c}"
         """
    in unlines $ header :: (SortedMap.toList db >>= \p => "" :: printPair p)
+
+--------------------------------------------------------------------------------
+--          Resolving Packages
+--------------------------------------------------------------------------------
+
+export
+mergeUP : UserPackage -> UserPackage -> UserPackage
+mergeUP (Git u1 c1 i1 p1 t1 n1) (Git u2 c2 i2 p2 t2 n2) =
+  Git (u1<|>u2)(c1<|>c2)(i1<|>i2)(p1<|>p2)(t1<|>t2)(n1<|>n2)
+mergeUP _ y = y
 
 --------------------------------------------------------------------------------
 --          Tests

@@ -79,4 +79,4 @@ main = run $ do
       write globalPackToml (initToml scheme)
     write collectionToml (collectionTomlContent db)
 
-    idrisEnv conf True >>= update
+    idrisEnv conf All >>= update

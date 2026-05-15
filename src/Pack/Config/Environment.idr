@@ -412,6 +412,38 @@ resolveMeta b u (Latest x) = do
       pure c
     False => (\s => MkCommit $ trim s) <$> read cfile
 
+-- make adjustments to package map from user-defined packages
+adjPkgMap :
+     {auto _ : HasIO io}
+  -> {auto _ : PackDirs}
+  -> (fetch : Bool)
+  -> List (PkgName, UserPackage)
+  -> PackageMap
+  -> EitherT PackErr io PackageMap
+adjPkgMap fetch []            m = pure m
+adjPkgMap fetch ((nm,up)::ps) m = adj >>= adjPkgMap fetch ps
+  where
+    adj : EitherT PackErr io PackageMap
+    adj =
+      case up of
+        Local d i p t => pure $ insert nm (Local d i p t) m
+        Core c        => pure $ insert nm (Core c) m
+        Git (Just u) (Just c) (Just i) p t n =>
+          (\x => insert nm (Git u x i (fromMaybe False p) t n) m) <$> resolveMeta fetch u c
+        Git mu mc mi mp mt mn => case lookup nm m of
+          Just (Git u c i p t n) =>
+           let u2 := fromMaybe u mu
+               i2 := fromMaybe i mi
+               p2 := fromMaybe p mp
+               t2 := mt <|> t
+               n2 := mn <|> n
+            in case mc of
+                 Nothing => pure $ insert nm (Git u2 c i2 p2 t2 n2) m
+                 Just y  =>
+                   (\x => insert nm (Git u2 x i2 p2 t2 n2) m) <$> resolveMeta fetch u y
+          _ => putStrLn "\{show mu}, \{show mc}, \{show mi} \{show mp}" >>
+               throwE (IncompletePkg nm)
+
 ||| Content of pack-generated `pack.toml` containing the globally
 ||| set pack collection.
 export
@@ -453,7 +485,7 @@ getConfig c args = do
   collToml    <- readOptionalFromTOML UserConfig collectionToml
   global      <- readOptionalFromTOML UserConfig globalPackToml
 
-  let ini = foldl update (init coll) (global::collToml::localConfs)
+  let ini     := foldl update (init coll) (global::collToml::localConfs)
 
   conf' <- liftEither $ applyArgs c ini args
   conf  <- adjConfig args.cmd conf'
@@ -507,8 +539,8 @@ getLineBufferingCmd = findCmd variants
 --          Environment
 --------------------------------------------------------------------------------
 
-pkgs : SortedMap PkgName Package
-pkgs = fromList $ (\c => (corePkgName c, Core c)) <$> corePkgs
+addCore : PackageMap -> PackageMap
+addCore m = foldl (\m,c => insert (corePkgName c) (Core c) m) m corePkgs
 
 ||| Load the package collection as given in the (auto-implicit) user config.
 export covering
@@ -647,11 +679,13 @@ env mc fetch = do
       c'     := {allIdrisCommits $= (db.idrisCommit ::)} c
       -- adjust the idrisCommit and URL to use according to user overrides
       db'    := {idrisURL := url, idrisCommit := commit} db
-      pkgs   := SortedMap.fromList $ (\c => (corePkgName c, Core c)) <$> corePkgs
       all    := fromMaybe empty $ lookup All c'.custom
-      loc    := fromMaybe empty $ lookup c'.collection c.custom
-      allps  := db.packages `mergeRight` all `mergeRight` loc `mergeRight` pkgs
-      env    := MkEnv pd td c' ch db' allps lbf clk
+      loc    := fromMaybe empty $ lookup c'.collection c'.custom
+
+  -- adjusting list of packages to customizations
+  p1   <- adjPkgMap (fetch > MissingOnly) (kvList all) (addCore db.packages)
+  p2   <- adjPkgMap (fetch > MissingOnly) (kvList loc) p1
+  let env    := MkEnv pd td c' ch db' p2 lbf clk
 
   vers <- cachePkgs
   pure $ {db $= setVersion vers} env
