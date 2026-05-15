@@ -53,7 +53,7 @@ gitM f v =
   |]
 
 packageM : FromTOML c => File Abs -> TomlValue -> Either TOMLErr (Package_ Maybe c)
-packageM f v = valAt {a = String} "type" f v >>=
+packageM f v = optValAt {a = String} "type" f "git" v >>=
   \case
     "git"    => gitM f v
     "github" => gitM f v -- for compatibility

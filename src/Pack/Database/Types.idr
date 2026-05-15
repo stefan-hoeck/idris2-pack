@@ -29,6 +29,8 @@ data MetaCommit : Type where
   Latest : Branch -> MetaCommit
   Fetch  : Branch -> MetaCommit
 
+%runElab derive "MetaCommit" [Show,Eq]
+
 public export
 FromString MetaCommit where
   fromString s = case forget $ split (':' ==) s of
@@ -209,6 +211,14 @@ Package = Package_ I Commit
 public export
 0 UserPackage : Type
 UserPackage = Package_ Maybe MetaCommit
+
+public export
+0 PackageMap : Type
+PackageMap = SortedMap PkgName Package
+
+public export
+0 CustomMap : Type
+CustomMap = SortedMap DBName (SortedMap PkgName UserPackage)
 
 ||| Proof that a package is a core package
 public export
@@ -530,39 +540,10 @@ printDB (MkDB u c v db) =
 --------------------------------------------------------------------------------
 
 export
-resolve :
-     SortedMap DBName (SortedMap PkgName $ Package_ I c)
-  -> Maybe (SortedMap DBName (SortedMap PkgName $ Package_ Maybe c))
-  -> Either PackErr $ SortedMap DBName (SortedMap PkgName $ Package_ I c)
-resolve known Nothing  = Right empty
-resolve known (Just m) = map fromList . traverse adj $ kvList m
-  where
-    rslv :
-         DBName
-      -> (PkgName, Package_ Maybe c)
-      -> Either PackErr (PkgName, Package_ I c)
-    rslv db (pn, p) =
-      case p of
-        Local d i p t => Right (pn, Local d i p t)
-        Core c        => Right (pn, Core c)
-        Git (Just u) (Just c) (Just i) (Just p) t n => Right (pn, Git u c i p t n)
-        Git mu mc mi mp t n =>
-          maybeToEither (IncompletePkg pn) $ Prelude.do
-            m <- lookup db known
-            Git u c i p t2 n2 <- lookup pn m | _ => Nothing
-            Just $ MkPair pn $
-              Git
-                (fromMaybe u mu)
-                (fromMaybe c mc)
-                (fromMaybe i mi)
-                (fromMaybe p mp)
-                (t <|> t2)
-                (n <|> n2)
-
-    adj :
-         (DBName, SortedMap PkgName (Package_ Maybe c))
-      -> Either PackErr (DBName, SortedMap PkgName (Package_ I c))
-    adj (db,m) = map (\ps => (db, fromList ps)) . traverse (rslv db) $ kvList m
+mergeUP : UserPackage -> UserPackage -> UserPackage
+mergeUP (Git u1 c1 i1 p1 t1 n1) (Git u2 c2 i2 p2 t2 n2) =
+  Git (u1<|>u2)(c1<|>c2)(i1<|>i2)(p1<|>p2)(t1<|>t2)(n1<|>n2)
+mergeUP _ y = y
 
 --------------------------------------------------------------------------------
 --          Tests
