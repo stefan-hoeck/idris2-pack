@@ -441,8 +441,7 @@ adjPkgMap fetch ((nm,up)::ps) m = adj >>= adjPkgMap fetch ps
                  Nothing => pure $ insert nm (Git u2 c i2 p2 t2 n2) m
                  Just y  =>
                    (\x => insert nm (Git u2 x i2 p2 t2 n2) m) <$> resolveMeta fetch u y
-          _ => putStrLn "\{show mu}, \{show mc}, \{show mi} \{show mp}" >>
-               throwE (IncompletePkg nm)
+          _ => throwE (IncompletePkg nm)
 
 ||| Content of pack-generated `pack.toml` containing the globally
 ||| set pack collection.
