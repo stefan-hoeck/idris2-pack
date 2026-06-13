@@ -300,19 +300,21 @@ export
 findInAllParentDirs :  {auto _ : HasIO io}
   -> (Body -> Bool)
   -> Path Abs
-  -> EitherT PackErr io $ List $ File Abs
-findInAllParentDirs p = go [] where
-  go : List (File Abs) -> Path Abs -> EitherT PackErr io $ List $ File Abs
-  go presentRes currD = do
-    Just af <-
-      catchE
-        (findInParentDirs p currD)
-        (handlePermissionDenied presentRes)
-      | Nothing => pure presentRes
-    let nextRes = af::presentRes
-    case parentDir $ parent af of
-      Just parentD => go nextRes $ assert_smaller currD parentD
-      Nothing      => pure nextRes
+  -> EitherT PackErr io (List (File Abs))
+findInAllParentDirs p = go []
+
+  where
+    go : List (File Abs) -> Path Abs -> EitherT PackErr io (List (File Abs))
+    go presentRes currD = do
+      Just af <-
+        catchE
+          (findInParentDirs p currD)
+          (handlePermissionDenied presentRes)
+        | Nothing => pure presentRes
+      let nextRes := af::presentRes
+      case parentDir $ parent af of
+        Just parentD => go nextRes $ assert_smaller currD parentD
+        Nothing      => pure nextRes
 
       where
         -- If we get a PermissionDenied FileError when some `pack.toml` where
