@@ -295,20 +295,39 @@ findInParentDirs p (PAbs d sb) = go sb
 
 ||| Tries to find the first file, the body of which return `True` for
 ||| the given predicate, in each parent directory.
+||| Will stop the aggregation at the first encountered `PermissionDenied`.
 export
 findInAllParentDirs :  {auto _ : HasIO io}
   -> (Body -> Bool)
   -> Path Abs
-  -> EitherT PackErr io $ List $ File Abs
-findInAllParentDirs p = go [] where
-  go : List (File Abs) -> Path Abs -> EitherT PackErr io $ List $ File Abs
-  go presentRes currD = do
-    Just af <- findInParentDirs p currD
-      | Nothing => pure presentRes
-    let nextRes = af::presentRes
-    case parentDir $ parent af of
-      Just parentD => go nextRes $ assert_smaller currD parentD
-      Nothing      => pure nextRes
+  -> EitherT PackErr io (List (File Abs))
+findInAllParentDirs p = go []
+
+  where
+    go : List (File Abs) -> Path Abs -> EitherT PackErr io (List (File Abs))
+    go presentRes currD = do
+      Just af <-
+        catchE
+          (findInParentDirs p currD)
+          (handlePermissionDenied presentRes)
+        | Nothing => pure presentRes
+      let nextRes := af::presentRes
+      case parentDir $ parent af of
+        Just parentD => go nextRes $ assert_smaller currD parentD
+        Nothing      => pure nextRes
+
+      where
+        -- If we get a PermissionDenied FileError when some `pack.toml` where
+        -- already found, then we simply pretend that `findInParentDirs`
+        -- couldn't find anything above. Otherwise we forward the error.
+        -- (See github #386)
+        handlePermissionDenied :
+             (presentRes : List (File Abs))
+          -> PackErr
+          -> EitherT PackErr io (Maybe (File Abs))
+        handlePermissionDenied (_::_) (DirEntries path PermissionDenied) =
+          pure Nothing
+        handlePermissionDenied _ err = throwE err
 
 mkTmpDir : HasIO io => (pd : PackDirs) => EitherT PackErr io TmpDir
 mkTmpDir = go 100 0
