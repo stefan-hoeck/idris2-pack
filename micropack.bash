@@ -2,7 +2,7 @@
 
 set -eux
 
-git clone https://github.com/idris-lang/Idris2.git idris2
+git clone --depth=1 https://github.com/idris-lang/Idris2.git idris2
 pushd idris2
 make support
 libidris=libidris2_support
