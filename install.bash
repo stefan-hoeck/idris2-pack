@@ -80,7 +80,7 @@ check_installed make
 
 # Install package collection
 
-git clone https://github.com/stefan-hoeck/idris2-pack-db.git "$CLONES_DIR/idris2-pack-db"
+git clone --depth=1 https://github.com/stefan-hoeck/idris2-pack-db.git "$CLONES_DIR/idris2-pack-db"
 cp "$CLONES_DIR/idris2-pack-db/collections/"* "$DB_DIR"
 
 LATEST_DB="$(find "$DB_DIR" -name 'nightly-*' | sort | tail -1)"
@@ -89,7 +89,7 @@ IDRIS2_COMMIT=$(sed -ne '/^\[idris2\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-
 
 # Bootstrap the Idris compiler
 
-git clone https://github.com/idris-lang/Idris2.git "$CLONES_DIR/Idris2"
+git clone --depth=1 https://github.com/idris-lang/Idris2.git "$CLONES_DIR/Idris2"
 pushd "$CLONES_DIR/Idris2"
 git checkout "$IDRIS2_COMMIT"
 
@@ -116,63 +116,63 @@ popd
 
 # Install algebra
 
-git clone https://github.com/stefan-hoeck/idris2-algebra.git "$CLONES_DIR/idris2-algebra"
+git clone --depth=1 https://github.com/stefan-hoeck/idris2-algebra.git "$CLONES_DIR/idris2-algebra"
 pushd "$CLONES_DIR/idris2-algebra"
 "$BOOT_PATH" --install algebra.ipkg
 popd
 
 # Install ref1
 
-git clone https://github.com/stefan-hoeck/idris2-ref1.git "$CLONES_DIR/idris2-ref1"
+git clone --depth=1 https://github.com/stefan-hoeck/idris2-ref1.git "$CLONES_DIR/idris2-ref1"
 pushd "$CLONES_DIR/idris2-ref1"
 "$BOOT_PATH" --install ref1.ipkg
 popd
 
 # Install array
 
-git clone https://github.com/stefan-hoeck/idris2-array.git "$CLONES_DIR/idris2-array"
+git clone --depth=1 https://github.com/stefan-hoeck/idris2-array.git "$CLONES_DIR/idris2-array"
 pushd "$CLONES_DIR/idris2-array"
 "$BOOT_PATH" --install array.ipkg
 popd
 
 # Install bytestring
 
-git clone https://github.com/stefan-hoeck/idris2-bytestring.git "$CLONES_DIR/idris2-bytestring"
+git clone --depth=1 https://github.com/stefan-hoeck/idris2-bytestring.git "$CLONES_DIR/idris2-bytestring"
 pushd "$CLONES_DIR/idris2-bytestring"
 "$BOOT_PATH" --install bytestring.ipkg
 popd
 
 # Install getopts
 
-git clone https://github.com/idris-community/idris2-getopts.git "$CLONES_DIR/idris2-getopts"
+git clone --depth=1 https://github.com/idris-community/idris2-getopts.git "$CLONES_DIR/idris2-getopts"
 pushd "$CLONES_DIR/idris2-getopts"
 "$BOOT_PATH" --install getopts.ipkg
 popd
 
 # Install elab-util
 
-git clone https://github.com/stefan-hoeck/idris2-elab-util.git "$CLONES_DIR/idris2-elab-util"
+git clone --depth=1 https://github.com/stefan-hoeck/idris2-elab-util.git "$CLONES_DIR/idris2-elab-util"
 pushd "$CLONES_DIR/idris2-elab-util"
 "$BOOT_PATH" --install elab-util.ipkg
 popd
 
 # Install refined
 
-git clone https://github.com/stefan-hoeck/idris2-refined.git "$CLONES_DIR/idris2-refined"
+git clone --depth=1 https://github.com/stefan-hoeck/idris2-refined.git "$CLONES_DIR/idris2-refined"
 pushd "$CLONES_DIR/idris2-refined"
 "$BOOT_PATH" --install refined.ipkg
 popd
 
 # Install literal
 
-git clone https://github.com/stefan-hoeck/idris2-literal.git "$CLONES_DIR/idris2-literal"
+git clone --depth=1 https://github.com/stefan-hoeck/idris2-literal.git "$CLONES_DIR/idris2-literal"
 pushd "$CLONES_DIR/idris2-literal"
 "$BOOT_PATH" --install literal.ipkg
 popd
 
 # Install ilex-core, ilex, and ilex-toml
 
-git clone https://github.com/stefan-hoeck/idris2-ilex.git "$CLONES_DIR/idris2-ilex"
+git clone --depth=1 https://github.com/stefan-hoeck/idris2-ilex.git "$CLONES_DIR/idris2-ilex"
 pushd "$CLONES_DIR/idris2-ilex/core"
 "$BOOT_PATH" --install ilex-core.ipkg
 popd
@@ -187,14 +187,14 @@ popd
 
 # Install filepath
 
-git clone https://github.com/stefan-hoeck/idris2-filepath.git "$CLONES_DIR/idris2-filepath"
+git clone --depth=1 https://github.com/stefan-hoeck/idris2-filepath.git "$CLONES_DIR/idris2-filepath"
 pushd "$CLONES_DIR/idris2-filepath"
 "$BOOT_PATH" --install filepath.ipkg
 popd
 
 # Install pack
 
-git clone https://github.com/stefan-hoeck/idris2-pack.git "$CLONES_DIR/idris2-pack"
+git clone --depth=1 https://github.com/stefan-hoeck/idris2-pack.git "$CLONES_DIR/idris2-pack"
 pushd "$CLONES_DIR/idris2-pack"
 "$BOOT_PATH" --build pack.ipkg
 cp -r build/exec/* "$BIN_DIR"

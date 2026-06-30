@@ -91,7 +91,7 @@ If you don't have `curl` installed, you can - as an alternative -
 clone this GitHub repository and execute the shell script like so:
 
 ```sh
-git clone https://github.com/stefan-hoeck/idris2-pack.git pack
+git clone --depth=1 https://github.com/stefan-hoeck/idris2-pack.git pack
 bash -c pack/install.bash
 ```
 ### 2.1. Installation via *micropack*
@@ -179,7 +179,7 @@ enabled, so make sure to pass the `--threads` flag to Chez's `./configure`.
 For example:
 
 ```sh
-git clone 'https://github.com/racket/ChezScheme.git'
+git clone --depth=1 'https://github.com/racket/ChezScheme.git'
 cd ChezScheme
 ./configure --threads
 make
