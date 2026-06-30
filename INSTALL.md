@@ -1,11 +1,11 @@
 # Installing
 
 This section describes in detail the installation
-procedure for installing _pack_ for the first time.
+procedure for installing *pack* for the first time.
 Although it is possible to use an existing Idris2
 compiler to build and install pack, it is best to use
 the installation script bundled with this project.
-As an alternative, the pre-built _micropack_ installer
+As an alternative, the pre-built *micropack* installer
 can be used.
 
 ## 1. Preparations
@@ -14,23 +14,23 @@ The following libraries and applications are required
 for working with Idris2. Make sure you have them installed
 before you continue:
 
-- `git` version >= 2.35.1. Earlier versions of `git` will cause issues
+* `git` version >= 2.35.1. Earlier versions of `git` will cause issues
   when caching GitHub repositories locally.
 
-- A Scheme compiler; either Chez Scheme (default) or Racket.
+* A Scheme compiler; either Chez Scheme (default) or Racket.
 
-  - Some Linux distributions' package managers have Chez Scheme packages
-    readily available (e.g. Fedora's [DNF](https://packages.fedoraproject.org/pkgs/chez-scheme/chez-scheme/),
-    Arch's [AUR](https://aur.archlinux.org/packages/chez-scheme)).
-  - On Apple Silicon, Chez Scheme works out-of-the-box as of version 10.0.0,
-    and `brew install chezscheme` should install the latest version. If for some
-    reason you cannot upgrade your Chez version, see the
-    [Apple M1 User](#apple-m1-user) appendix.
-  - Otherwise you can build Chez Scheme from [source](https://cisco.github.io/ChezScheme/).
-    If you do build from source, make sure you run `./configure --threads` to
-    build multithreading support in.
+  * Some Linux distributions' package managers have Chez Scheme packages
+  readily available (e.g. Fedora's [DNF](https://packages.fedoraproject.org/pkgs/chez-scheme/chez-scheme/),
+  Arch's [AUR](https://aur.archlinux.org/packages/chez-scheme)).
+  * On Apple Silicon, Chez Scheme works out-of-the-box as of version 10.0.0,
+  and `brew install chezscheme` should install the latest version. If for some
+  reason you cannot upgrade your Chez version, see the
+  [Apple M1 User](#apple-m1-user) appendix.
+  * Otherwise you can build Chez Scheme from [source](https://cisco.github.io/ChezScheme/).
+  If you do build from source, make sure you run `./configure --threads` to
+  build multithreading support in.
 
-- `bash`, `GNU make`, `gcc` or `clang`, `sha256sum`, and `GMP`. On Linux, you probably
+* `bash`, `GNU make`, `gcc` or `clang`, `sha256sum`, and `GMP`. On Linux, you probably
   already have these. On macOS and major BSD flavours, you can install them
   using a package manager: for instance, on macOS, you can install with the
   `brew install coreutils gmp` and on OpenBSD, with the
@@ -38,23 +38,23 @@ before you continue:
   library, which means on some systems the package you need to install will
   be named something more like `libgmp3-dev`.
 
-- As a default, _pack_ and all its managed libraries will be installed
+* As a default, *pack* and all its managed libraries will be installed
   in the following directories, which can be overridden as specified:
 
-  - The global `pack.toml` file goes to `$XDG_CONFIG_HOME/pack/pack.toml`.
+  * The global `pack.toml` file goes to `$XDG_CONFIG_HOME/pack/pack.toml`.
     Override the directory by setting environment variable `$PACK_USER_DIR`.
 
-  - The built compiler as well as installed libraries and applications
+  * The built compiler as well as installed libraries and applications
     go to `$XDG_STATE_HOME/pack/`.
     Override this by setting environment variable `$PACK_STATE_DIR`.
 
-  - Cached `.ipkg` files and git repositories go to `$XDG_CACHE_HOME/pack/`.
+  * Cached `.ipkg` files and git repositories go to `$XDG_CACHE_HOME/pack/`.
     Override this by setting environment variable `$PACK_CACHE_DIR`.
 
-  - Executables go to `$HOME/.local/bin`. Override this by setting
+  * Executables go to `$HOME/.local/bin`. Override this by setting
     environment variable `$PACK_BIN_DIR`.
 
-- Make sure that `$HOME/.local/bin` (or `$PACK_BIN_DIR`; see above)
+* Make sure that `$HOME/.local/bin` (or `$PACK_BIN_DIR`; see above)
   is on your `PATH` and takes
   precedence over the bin folder(s) (if any) where existing versions of
   Idris2 are already installed.
@@ -69,7 +69,7 @@ before you continue:
 
 After having installed all the necessary libraries and applications,
 and having decided on a package collection to use, you are ready
-to bootstrap the Idris compiler and set up _pack_ and its root
+to bootstrap the Idris compiler and set up *pack* and its root
 directory. To make things easier, there is shell script to do
 all this for you bundled with this repository.
 
@@ -94,11 +94,10 @@ clone this GitHub repository and execute the shell script like so:
 git clone --depth=1 https://github.com/stefan-hoeck/idris2-pack.git pack
 bash -c pack/install.bash
 ```
-
-### 2.1. Installation via _micropack_
+### 2.1. Installation via *micropack*
 
 As an alternative to the installation script described above,
-you can use the pre-built _micropack_ installer bundled with
+you can use the pre-built *micropack* installer bundled with
 this repository. This will install the latest nightly package
 collection (the list of available package collections can be found
 [here](https://github.com/stefan-hoeck/idris2-pack-db/tree/main/collections)).
@@ -117,7 +116,7 @@ following:
 make micropack-racket
 ```
 
-Wait a couple of seconds. If _micropack_ starts writing non-stop
+Wait a couple of seconds. If *micropack* starts writing non-stop
 to standard out, this means that bootstrapping of the Idris2
 compiler has successfully started. This will take a couple of
 minutes, so it's probably a good idea to go and have a cup of
@@ -132,7 +131,7 @@ idris2
 ```
 
 This should start an Idris2 REPL session. You should also check that
-_pack_ has been installed properly. The following should print
+*pack* has been installed properly. The following should print
 the application's help text:
 
 ```sh
@@ -141,7 +140,7 @@ pack help
 
 ## 4. (Optional) Shell Auto-completion
 
-_pack_ supports tab auto-completion for Bash-like shells.
+*pack* supports tab auto-completion for Bash-like shells.
 
 ### For Bash Users
 
@@ -164,6 +163,7 @@ eval "$(pack completion-script pack)"
 ```
 
 You can also add them to your `.zshrc` file.
+
 
 ## Apple M1 user
 
