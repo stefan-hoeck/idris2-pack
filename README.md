@@ -347,7 +347,8 @@ on several packages in parallel via git. Details can be found
 For those writing an Idris2 package that requires a shared library (via
 Idris2's FFI), pack installs the shared library alongside your package such
 that downstream applications will also get packaged up with your shared library.
-Note that this mechanism is different from that listed in the Idris documentation.
+Note that this mechanism is different from, and replaces, that listed in the
+Idris documentation.
 
 In your project's `ipkg` file, add a `preinstall` script that builds/installs
 the required shared library (a `.so` file or `.dylib` file) into a `./lib`
