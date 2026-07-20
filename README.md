@@ -343,10 +343,11 @@ on several packages in parallel via git. Details can be found
 > Technical details can be found [here](https://github.com/stefan-hoeck/idris2-pack/issues/256#issuecomment-1689305587).
 
 ## Packaging Shared Libraries
-If you are writing an Idris2 package that requires a shared library (via
-Idris2's FFI), pack can help you install the shared library alongside your
-package such that downstream applications will also get packaged up with your
-shared library.
+
+For those writing an Idris2 package that requires a shared library (via
+Idris2's FFI), pack installs the shared library alongside your package such
+that downstream applications will also get packaged up with your shared library.
+Note that this mechanism is different from that listed in the Idris documentation.
 
 In your project's `ipkg` file, add a `preinstall` script that builds/installs
 the required shared library (a `.so` file or `.dylib` file) into a `./lib`
