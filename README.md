@@ -15,15 +15,15 @@ There is a second GitHub repository containing the package collections:
 [idris2-pack-db](https://github.com/stefan-hoeck/idris2-pack-db).
 See instructions there if you want to make your own packages
 available to pack. The list of currently available packages plus
-their current build status can also be found
-[here](https://github.com/stefan-hoeck/idris2-pack-db/blob/main/STATUS.md).
+their current build status can also be found on the collection
+[status page](https://github.com/stefan-hoeck/idris2-pack-db/blob/main/STATUS.md).
 
 ## Quick Installation
 
 For detailed instructions and prerequisites, see [installation](INSTALL.md).
-Assuming, you have already installed Chez Scheme
+Assuming you have already installed Chez Scheme,
 you can set up pack and the corresponding Idris2
-compiler with the following command:
+compiler with
 
 ```sh
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/stefan-hoeck/idris2-pack/main/install.bash)"
@@ -52,8 +52,7 @@ pack new lib idris2-library
 ```
 replacing `idris2-library` with the name of your library.
 This will create a new package in the current directory consisting of a source directory, a default module, a skeleton test suite, a local pack.toml file and a .ipkg file.
-A git repository will also be initialized together with a suitable `.gitignore` file.
-If you wish to create a new application project, replace `lib` with `app`.
+If you wish to create a new application project, replace `lib` with `bin`.
 
 To install a library from the package collection, run
 
@@ -159,7 +158,7 @@ path = "/data/me/idris/hello"
 ipkg = "hello.ipkg"
 ```
 
-Likewise, you could at a GitHub project not yet known to pack
+Likewise, you could add a GitHub project not yet known to pack
 to one or all of the package collections:
 
 ```toml
@@ -189,8 +188,8 @@ at the first one it finds.
 
 ## Directory Structure
 
-It is important to understand, how pack keeps track of the
-libraries it installed, where it looks for user settings
+It is useful to understand how pack keeps track of the
+libraries it installs, where it looks for user settings
 and package collections, and how it reuses existing
 versions of the Idris2 compiler and libraries.
 
@@ -207,7 +206,7 @@ pack update-db
 ### Idris Compiler and Libraries
 
 All packages, applications, and different versions of the Idris
-compiler can be found in the subdirectories of
+compiler can be found in subdirectories of
 `$HOME/.pack/install`. The path to a library or application
 includes the commit hash of the Idris compiler it was built with,
 as well as the commit hash used for the library or application itself.
@@ -248,7 +247,7 @@ package collection's `bin` folder, which can be found at
 $HOME/.pack/[collection]/bin
 ```
 
-This will be enough for executing an application via pack,
+This will be enough to execute an application via pack,
 for instance by running
 
 ```sh
