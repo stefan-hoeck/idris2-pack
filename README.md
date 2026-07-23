@@ -2,10 +2,7 @@
 
 [![Check Collection](https://github.com/stefan-hoeck/idris2-pack-db/actions/workflows/ci-db.yml/badge.svg)](https://github.com/stefan-hoeck/idris2-pack-db/blob/main/STATUS.md)
 
-This is a simple package manager taking a slightly different
-approach than other available options like
-[sirdi](https://github.com/eayus/sirdi) or
-[inigo](https://github.com/idris-community/inigo): It makes use
+This is a simple package manager that makes use
 of curated collections of packages linked to a specific version/commit
 of Idris2, which are guaranteed to properly work together (otherwise,
 that's a bug in the package collection). This is similar to what
