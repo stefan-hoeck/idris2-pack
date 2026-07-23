@@ -11,7 +11,7 @@ that's a bug in the package collection). This is similar to what
 There is a second GitHub repository containing the package collections:
 [idris2-pack-db](https://github.com/stefan-hoeck/idris2-pack-db).
 See instructions there if you want to make your own packages
-available to pack. The list of currently available packages plus
+available to Pack. The list of currently available packages plus
 their current build status can also be found on the collection
 [status page](https://github.com/stefan-hoeck/idris2-pack-db/blob/main/STATUS.md).
 
@@ -19,7 +19,7 @@ their current build status can also be found on the collection
 
 For detailed instructions and prerequisites, see [installation](INSTALL.md).
 Assuming you have already installed Chez Scheme,
-you can set up pack and the corresponding Idris2
+you can set up Pack and the corresponding Idris2
 compiler with
 
 ```sh
@@ -34,7 +34,7 @@ folder `$HOME/.local/bin` to your `$PATH` variable.
 
 In the following sections, we assume folder `$HOME/.local/bin`
 is on your path and you have installed
-pack as described under [installation](INSTALL.md).
+Pack as described under [installation](INSTALL.md).
 
 ### Creating a new library
 
@@ -90,7 +90,7 @@ pack install-app katla
 > Idris packages can contain additional instructions to run before and after build and installation of a package,
 > we call them *custom build hooks*.
 > This can be potentially dangerous because hooks may invoke arbitrary code in your system.
-> By default pack prompts for continuation in case when requested package contains them, e.g.
+> By default Pack prompts for continuation in case when requested package contains them, e.g.
 >
 > ```sh
 > Package lsp uses custom build hooks. Continue (yes/*no)?
@@ -102,20 +102,20 @@ If you no longer require *katla* and want to remove it, run
 pack remove-app katla
 ```
 
-### Updating Idris2, packages, and pack
+### Updating Idris2, packages, and Pack
 
-To switch to the latest pack collection:
+To switch to the latest Pack collection:
 
 ```sh
 pack switch latest
 ```
 
 Note that if there's a library or application (e.g. idris2-lsp) that you always want
-to be installed upon switching to a new pack collection, then you should specify
+to be installed upon switching to a new Pack collection, then you should specify
 this in the `pack.toml` file located in the `~/.config/pack` directory. More detailed
 instructions can be found in the comments of that file.
 
-To update pack itself:
+To update Pack itself:
 
 ```sh
 pack update
@@ -124,7 +124,7 @@ pack update
 ### Building packages and running executables
 
 It is also possible to work with local `.ipkg` files as long
-as they depend on packages known to pack:
+as they depend on packages known to Pack:
 
 ```sh
 pack build json.ipkg
@@ -143,7 +143,7 @@ pack run katla --help
 
 ### Starting an Idris REPL
 
-You can use pack to start an Idris REPL session, optionally
+You can use Pack to start an Idris REPL session, optionally
 with making dependencies listed in an `.ipkg` file available
 (these will first be built and installed if necessary):
 
@@ -171,7 +171,7 @@ pack help update
 
 User settings are stored in file `$XDG_CONFIG_HOME/pack/pack.toml`,
 with `$XDG_CONFIG_HOME` defaulting to `$HOME/.config`.
-This file should have been generated automatically by pack
+This file should have been generated automatically by Pack
 when setting up the application for the first time. The
 different settings have been annotated with comments to
 make it more accessible.
@@ -185,7 +185,7 @@ pack switch nightly-220507
 
 It is also possible to add local projects as well as GitHub
 projects not yet managed by your package collection of choice
-to the set of packages known to pack. For instance, assuming you
+to the set of packages known to Pack. For instance, assuming you
 have a local project called `hello` located in directory
 `/data/me/idris/hello` with `.ipkg` file `hello.ipkg`,
 and you want to make this available to all package collections
@@ -209,7 +209,7 @@ path = "/data/me/idris/hello"
 ipkg = "hello.ipkg"
 ```
 
-Likewise, you could add a GitHub project not yet known to pack
+Likewise, you could add a GitHub project not yet known to Pack
 to one or all of the package collections:
 
 ```toml
@@ -239,7 +239,7 @@ at the first one it finds.
 
 ## Directory Structure
 
-It is useful to understand how pack keeps track of the
+It is useful to understand how Pack keeps track of the
 libraries it installs, where it looks for user settings
 and package collections, and how it reuses existing
 versions of the Idris2 compiler and libraries.
@@ -299,7 +299,7 @@ package collection's `bin` folder, which can be found at
 $XDG_STATE_HOME/pack/install/[collection]/bin
 ```
 
-This will be enough to execute an application via pack,
+This will be enough to execute an application via Pack,
 for instance by running
 
 ```sh
@@ -320,7 +320,7 @@ variable.
 ## Developing Applications
 
 There are two example projects explaining in detail how to use
-pack to develop groups of related projects. The first, which
+Pack to develop groups of related projects. The first, which
 can be found in the `example1` subfolder, sets up
 two libraries plus a test suite for local development.
 A detailed description how it works can be found [here](example1/README.md).
@@ -336,12 +336,12 @@ on several packages in parallel via git. Details can be found
 > package uses a shared library or support files, set `packagePath` option to
 > `true` in an appropriate section for you package in a `pack.toml` (both local
 > and in the pack collection).
-> You can see an example of such usage [here](https://github.com/stefan-hoeck/idris2-pack-db/blob/bcc8dc61706c73361bb1e6e18dd1b0c5981f0e18/collections/HEAD.toml#L297).
+> You can see an example of such usage [here](https://github.com/stefan-hoeck/idris2-Pack-db/blob/bcc8dc61706c73361bb1e6e18dd1b0c5981f0e18/collections/HEAD.toml#L297).
 > Technical details can be found [here](https://github.com/stefan-hoeck/idris2-pack/issues/256#issuecomment-1689305587).
 
 ## Packaging Shared Libraries
 If you are writing an Idris2 package that requires a shared library (via
-Idris2's FFI), pack can help you install the shared library alongside your
+Idris2's FFI), Pack can help you install the shared library alongside your
 package such that downstream applications will also get packaged up with your
 shared library.
 
@@ -352,7 +352,7 @@ such files.
 
 ## Uninstallation
 
-If you would like to uninstall pack from your system, you can simply use the following command:
+If you would like to uninstall Pack from your system, you can simply use the following command:
 
 ```sh
 pack uninstall
@@ -363,4 +363,4 @@ contain the Idris compiler, installed libraries, and other executables, as well 
 cached `.ipkg` files and git repositories. The global `pack.toml` file located at
 `$XDG_CONFIG_HOME/pack/pack.toml` will not be removed. Additionally, the following
 executables will be removed from `$HOME/.local/bin`: `pack`, `idris2`, and `idris2-lsp`.
-Other executables that might be managed by pack will have to be cleaned up manually.
+Other executables that might be managed by Pack will have to be cleaned up manually.
