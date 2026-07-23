@@ -2,11 +2,11 @@
 
 [![Check Collection](https://github.com/stefan-hoeck/idris2-pack-db/actions/workflows/ci-db.yml/badge.svg)](https://github.com/stefan-hoeck/idris2-pack-db/blob/main/STATUS.md)
 
-This is a simple package manager that makes use
-of curated collections of packages linked to a specific version/commit
-of Idris2, which are guaranteed to properly work together (otherwise,
+This is a simple package manager that makes use of curated collections
+of packages linked to a specific version/commit of Idris2,
+which are guaranteed to properly work together (otherwise,
 that's a bug in the package collection). This is similar to what
-*stack* for Haskell does: It avoids dependency hell by design.
+*stack* for Haskell does: it avoids dependency hell by design.
 
 There is a second GitHub repository containing the package collections:
 [idris2-pack-db](https://github.com/stefan-hoeck/idris2-pack-db).
