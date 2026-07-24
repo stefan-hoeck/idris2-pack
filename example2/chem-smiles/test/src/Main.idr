@@ -5,6 +5,8 @@ import Hedgehog
 import Text.Smiles.Parser
 import Text.Smiles.Types
 
+%hide Hedgehog.Result
+
 atom : Gen String
 atom = element ["C", "N", "O"]
 
