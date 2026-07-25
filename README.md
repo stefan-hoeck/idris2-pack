@@ -11,7 +11,7 @@ that's a bug in the package collection). This is similar to what
 There is a second GitHub repository containing the package collections:
 [idris2-pack-db](https://github.com/stefan-hoeck/idris2-pack-db).
 See instructions there if you want to make your own packages
-available to Pack. The list of currently available packages plus
+available to pack. The list of currently available packages plus
 their current build status can also be found on the collection
 [status page](https://github.com/stefan-hoeck/idris2-pack-db/blob/main/STATUS.md).
 
@@ -19,7 +19,7 @@ their current build status can also be found on the collection
 
 For detailed instructions and prerequisites, see [installation](INSTALL.md).
 Assuming you have already installed Chez Scheme,
-you can set up Pack and the corresponding Idris2
+you can set up pack and the corresponding Idris2
 compiler with
 
 ```sh
@@ -209,7 +209,7 @@ path = "/data/me/idris/hello"
 ipkg = "hello.ipkg"
 ```
 
-Likewise, you could add a GitHub project not yet known to Pack
+Likewise, you could add a GitHub project not yet known to pack
 to one or all of the package collections:
 
 ```toml
@@ -239,7 +239,7 @@ at the first one it finds.
 
 ## Directory Structure
 
-It is useful to understand how Pack keeps track of the
+It is useful to understand how pack keeps track of the
 libraries it installs, where it looks for user settings
 and package collections, and how it reuses existing
 versions of the Idris2 compiler and libraries.
@@ -258,10 +258,10 @@ pack update-db
 ### Idris Compiler and Libraries
 
 All packages, applications, and different versions of the Idris
-compiler can be found in `$XDG_STATE_HOME/pack/install/`. The path to a
-library or application includes the commit hash of the Idris
-compiler it was built with, as well as the commit hash used for
-the library or application itself.
+compiler can be found in subdirectories of
+`$HOME/.pack/install`. The path to a library or application
+includes the commit hash of the Idris compiler it was built with,
+as well as the commit hash used for the library or application itself.
 
 For instance, if you installed commit `46bff04` of library
 [collie](https://github.com/ohad/collie) after building it
@@ -299,7 +299,7 @@ package collection's `bin` folder, which can be found at
 $XDG_STATE_HOME/pack/install/[collection]/bin
 ```
 
-This will be enough to execute an application via Pack,
+This will be enough to execute an application via pack,
 for instance by running
 
 ```sh
