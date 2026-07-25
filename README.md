@@ -258,10 +258,10 @@ pack update-db
 ### Idris Compiler and Libraries
 
 All packages, applications, and different versions of the Idris
-compiler can be found in subdirectories of
-`$HOME/.pack/install`. The path to a library or application
-includes the commit hash of the Idris compiler it was built with,
-as well as the commit hash used for the library or application itself.
+compiler can be found in `$HOME/.pack/install`. The path to a
+library or application includes the commit hash of the Idris
+compiler it was built with, as well as the commit hash used for
+the library or application itself.
 
 For instance, if you installed commit `46bff04` of library
 [collie](https://github.com/ohad/collie) after building it
