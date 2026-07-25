@@ -3,7 +3,7 @@
 [![Check Collection](https://github.com/stefan-hoeck/idris2-pack-db/actions/workflows/ci-db.yml/badge.svg)](https://github.com/stefan-hoeck/idris2-pack-db/blob/main/STATUS.md)
 
 Pack is a simple package manager that makes use of curated collections
-of packages linked to a specific version/commit of Idris2,
+of packages linked to a specific version and commit of Idris2,
 which are guaranteed to properly work together (otherwise,
 that's a bug in the package collection). This is similar to what
 *stack* for Haskell does: it avoids dependency hell by design.
