@@ -2,28 +2,25 @@
 
 [![Check Collection](https://github.com/stefan-hoeck/idris2-pack-db/actions/workflows/ci-db.yml/badge.svg)](https://github.com/stefan-hoeck/idris2-pack-db/blob/main/STATUS.md)
 
-This is a simple package manager taking a slightly different
-approach than other available options like
-[sirdi](https://github.com/eayus/sirdi) or
-[inigo](https://github.com/idris-community/inigo): It makes use
-of curated collections of packages linked to a specific version/commit
-of Idris2, which are guaranteed to properly work together (otherwise,
+Pack is a simple package manager that makes use of curated collections
+of packages linked to a specific version and commit of Idris2,
+which are guaranteed to properly work together (otherwise,
 that's a bug in the package collection). This is similar to what
-*stack* for Haskell does: It avoids dependency hell by design.
+*stack* for Haskell does: it avoids dependency hell by design.
 
 There is a second GitHub repository containing the package collections:
 [idris2-pack-db](https://github.com/stefan-hoeck/idris2-pack-db).
 See instructions there if you want to make your own packages
 available to pack. The list of currently available packages plus
-their current build status can also be found
-[here](https://github.com/stefan-hoeck/idris2-pack-db/blob/main/STATUS.md).
+their current build status can also be found on the collection
+[status page](https://github.com/stefan-hoeck/idris2-pack-db/blob/main/STATUS.md).
 
 ## Quick Installation
 
 For detailed instructions and prerequisites, see [installation](INSTALL.md).
-Assuming, you have already installed Chez Scheme
+Assuming you have already installed Chez Scheme,
 you can set up pack and the corresponding Idris2
-compiler with the following command:
+compiler with
 
 ```sh
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/stefan-hoeck/idris2-pack/main/install.bash)"
@@ -52,7 +49,7 @@ a default module, a skeleton test suite, a local `pack.toml` file and a `.ipkg` 
 Passing the `--git-init` command-line option will create a git repository (`.git`)
 along with a suitable `.gitignore` file.  By default, calling `pack new`
 does not create the git repository or the `.gitignore` file.
-If you wish to create a new application project, replace `lib` with `app`.
+If you wish to create a new application project, replace `lib` with `bin`.
 
 ### Installing and removing libraries
 
@@ -93,7 +90,7 @@ pack install-app katla
 > Idris packages can contain additional instructions to run before and after build and installation of a package,
 > we call them *custom build hooks*.
 > This can be potentially dangerous because hooks may invoke arbitrary code in your system.
-> By default pack prompts for continuation in case when requested package contains them, e.g.
+> By default, pack prompts for continuation in case when requested package contains them, e.g.
 >
 > ```sh
 > Package lsp uses custom build hooks. Continue (yes/*no)?
@@ -212,7 +209,7 @@ path = "/data/me/idris/hello"
 ipkg = "hello.ipkg"
 ```
 
-Likewise, you could at a GitHub project not yet known to pack
+Likewise, you could add a GitHub project not yet known to pack
 to one or all of the package collections:
 
 ```toml
@@ -242,8 +239,8 @@ at the first one it finds.
 
 ## Directory Structure
 
-It is important to understand, how pack keeps track of the
-libraries it installed, where it looks for user settings
+It is useful to understand how pack keeps track of the
+libraries it installs, where it looks for user settings
 and package collections, and how it reuses existing
 versions of the Idris2 compiler and libraries.
 
@@ -302,7 +299,7 @@ package collection's `bin` folder, which can be found at
 $XDG_STATE_HOME/pack/install/[collection]/bin
 ```
 
-This will be enough for executing an application via pack,
+This will be enough to execute an application via pack,
 for instance by running
 
 ```sh
