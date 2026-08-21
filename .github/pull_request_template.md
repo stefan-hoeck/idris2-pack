@@ -1,3 +1,3 @@
 Confirmation
 
-- [ ] I confirm that this contribution did not involve GenerativeAI nor Large Language Models.
+- [ ] I confirm that this contribution did not involve generative AI nor large language models.
