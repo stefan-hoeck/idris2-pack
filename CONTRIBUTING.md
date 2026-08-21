@@ -6,8 +6,8 @@ Pack adopts a similar approach as the Idris compiler regarding
 how its code is written, in that any code or prose originating
 from generative AI, such as LLMs (large language models),
 is not suitable for the pack project. Changes made using such
-tools will not be accepted, even if the code is co-authored
-or reviewed by a human.
+tools will not be accepted, even if the code is co-authored,
+edited, collated, or reviewed by a human.
 
 To help new contributors navigate the codebase and understand how
 *pack* is implemented, this document provides a source
