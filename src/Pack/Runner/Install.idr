@@ -14,6 +14,92 @@ import System.Escape
 %default total
 
 --------------------------------------------------------------------------------
+--          Paths
+--------------------------------------------------------------------------------
+
+pathDirs :
+     {auto _ : HasIO io}
+  -> {auto _ : PackDirs}
+  -> {auto e : Env}
+  -> (pre : Path Abs)
+  -> (pth : PkgName -> Hash -> Package -> Path Abs)
+  -> EitherT PackErr io DirList
+pathDirs pre pth = do
+  rs <- traverse resolveLib (keys e.all)
+  ps <- filterM (\r => exists $ pth r.name r.hash r.pkg) rs
+  let ps' := filter (not . isCorePkg . value . name) ps
+  pure $ (pre ::) $ map (\r => pth r.name r.hash r.pkg) ps'
+
+||| Directories to be listed in the `IDRIS2_PACKAGE_PATH` variable, so
+||| that Idris finds all libraries installed by pack in custom locations.
+export
+packagePathDirs : HasIO io => Env -> EitherT PackErr io DirList
+packagePathDirs _ = pathDirs idrisInstallDir pkgPathDir
+
+||| Directories to be listed in the `IDRIS2_LIBS` variable, so
+||| that Idris finds all `.so` files installed by pack in custom locations.
+export
+packageLibDirs : HasIO io => Env -> EitherT PackErr io DirList
+packageLibDirs _ = pathDirs idrisLibDir pkgLibDir
+
+||| Directories to be listed in the `IDRIS2_DATA` variable, so
+||| that Idris finds all support files installed by pack in custom locations.
+export
+packageDataDirs : HasIO io => Env -> EitherT PackErr io DirList
+packageDataDirs _ = pathDirs idrisDataDir pkgDataDir
+
+||| `IDRIS2_PACKAGE_PATH` variable to be used with Idris, so
+||| that it finds all libraries installed by pack in custom locations.
+export
+packagePath : HasIO io => Env => EitherT PackErr io EnvVar
+packagePath = IdrisPackagePathVar <$> packagePathDirs %search
+
+||| `IDRIS2_LIBS` variable to be used with Idris, so
+||| that it finds all `.so` files installed by pack in custom locations.
+export
+libPath : HasIO io => Env => EitherT PackErr io EnvVar
+libPath = IdrisLibsVar <$> packageLibDirs %search
+
+||| `IDRIS2_DATA` variable to be used with Idris, so
+||| that it finds all support files installed by pack in custom locations.
+export
+dataPath : HasIO io => Env => EitherT PackErr io EnvVar
+dataPath = IdrisDataVar <$> packageDataDirs %search
+
+||| This unifies `packagePath`, `libPath` and `dataPath`,
+||| to generate an environment necessary to build packages with Idris
+||| the dependencies of which are handled by pack.
+export
+buildEnv : HasIO io => Env => EitherT PackErr io (List EnvVar)
+buildEnv =
+  let pre := if useRacket then [IdrisCodegenVar Racket] else []
+   in (pre ++ ) <$> sequence [packagePath, libPath, dataPath]
+
+||| Idris executable loading the given package plus the
+||| environment variables needed to run it.
+export
+idrisWithPkg :
+     {auto _ : HasIO io}
+  -> {auto _ : IdrisEnv}
+  -> ResolvedLib t
+  -> EitherT PackErr io (CmdArgList, List EnvVar)
+idrisWithPkg rl =
+  (idrisWithCG ++ ["-p", name rl],) <$> buildEnv
+
+||| Idris executable loading the given packages plus the
+||| environment variables needed to run it.
+export
+idrisWithPkgs :
+     {auto _ : HasIO io}
+  -> {auto _ : IdrisEnv}
+  -> List (ResolvedLib t)
+  -> EitherT PackErr io (CmdArgList, List EnvVar)
+idrisWithPkgs [] = pure (idrisWithCG, [])
+idrisWithPkgs pkgs =
+  let ps = concatMap (\p => ["-p", name p]) pkgs
+   in (idrisWithCG ++ ps,) <$> buildEnv
+
+--------------------------------------------------------------------------------
 --          Utilities
 --------------------------------------------------------------------------------
 
@@ -36,7 +122,7 @@ coreGitDir = gitTmpDir compiler
 
 copyApp : HasIO io => IdrisEnv => SafeApp -> EitherT PackErr io ()
 copyApp ra =
-  let dir := pkgBinDir ra.name ra.pkg
+  let dir := pkgBinDir ra.name ra.hash ra.pkg
    in do
      debug "Copying application to \{dir}"
      mkDir dir
@@ -50,14 +136,14 @@ noAppError app = lines $ """
             directory. Try to reinstall it with `pack install-app \{app}`.
   """
 
-pthStr : (c : Config) => PackDir => Bool -> String
-pthStr False = ""
-pthStr True =
+pthStr : (c : Config) => PackDirs => Bool -> (packBinaryLoc : String) -> String
+pthStr False _ = ""
+pthStr True packBinaryLoc =
   let racket := if useRacket then "export \{schemeVar}" else ""
    in """
-   export IDRIS2_PACKAGE_PATH="$(\{packExec} package-path)"
-   export IDRIS2_LIBS="$(\{packExec} libs-path)"
-   export IDRIS2_DATA="$(\{packExec} data-path)"
+   export IDRIS2_PACKAGE_PATH="$(\{packBinaryLoc} package-path)"
+   export IDRIS2_LIBS="$(\{packBinaryLoc} libs-path)"
+   export IDRIS2_DATA="$(\{packBinaryLoc} data-path)"
    \{racket}
    """
 
@@ -71,7 +157,7 @@ pthStr True =
 appLink :
      {auto _ : HasIO io}
   -> {auto e : Env}
-  -> {auto _ : PackDir}
+  -> {auto _ : PackDirs}
   -> (exec        : Body)
   -> (app         : PkgName)
   -> (withPkgPath : Bool)
@@ -86,11 +172,16 @@ appLink exec app withPkgPath cg =
       content := """
       #!/bin/sh
 
-      if ! APPLICATION="$(\{packExec} app-path \{app})" || [ ! -r "$APPLICATION" ]; then {
+      PACK=pack
+      if [ -f "\{packExec}" ] && [ -x "\{packExec}" ]; then
+        PACK="\{packExec}"
+      fi
+
+      if ! APPLICATION="$(${PACK} app-path \{app})" || [ ! -r "$APPLICATION" ]; then {
       \{unlines $ noAppError app <&> \s => "  echo '\{s}'"}
         } >&2; exit 2
       fi
-      \{pthStr withPkgPath}
+      \{pthStr withPkgPath "${PACK}"}
 
       \{interp}$APPLICATION "$@"
       """
@@ -130,7 +221,7 @@ export covering
 libPkg :
      {auto _     : HasIO io}
   -> {auto e     : IdrisEnv}
-  -> (env        : List (String,String))
+  -> (env        : List EnvVar)
   -> (logLevel   : LogLevel)
   -> (cleanBuild : Bool)
   -> (cmd        : CmdArgList)
@@ -173,15 +264,38 @@ getTTCVersion = do
 -- Tries to build Idris from an existing version of the compiler.
 tryDirectBuild : HasIO io => Env => io (Either PackErr ())
 tryDirectBuild =
-  runEitherT $
-    sysAndLog Build ["make", "support", prefixVar, schemeVar] >>
+  runEitherT $ do
+    sysAndLog Build ["make", "support"]
     sysAndLog Build ["make", "idris2-exec", prefixVar, schemeVar]
 
 idrisCleanup : HasIO io => Env => io ()
 idrisCleanup =
-  ignore $ runEitherT $ do
+  ignoreError $ do
     sysAndLog Build ["make", "clean-libs"]
     sysAndLog Build ["rm", "-r", "build/ttc", "build/exec"]
+
+idrisBootstrapWithStage3 : HasIO io => (e : Env) => Path Abs -> EitherT PackErr io ()
+idrisBootstrapWithStage3 dir = do
+  let bootstrappedPrefixVar = PrefixVar dir
+  sysAndLog Build ["make", bootstrapCmd, bootstrappedPrefixVar, schemeVar]
+  debug "Install bootstrapped Idris..."
+  sysAndLog Build ["make", "bootstrap-install", bootstrappedPrefixVar, schemeVar]
+  idrisCleanup
+
+  debug "Stage 3: Rebuilding Idris..."
+  let idrisBootVar = IdrisBootVar $ dir /> "bin" /> "idris2"
+  let idrisDataVar = IdrisDataVar [dir /> idrisDir /> "support"]
+  sysAndLog Build ["make", "idris2-exec", prefixVar, idrisBootVar, idrisDataVar, schemeVar]
+
+  ignoreError $ sysAndLog Build ["rm", "-rf", dir]
+
+idrisBootstrap : HasIO io => (e : Env) => Path Abs -> EitherT PackErr io ()
+idrisBootstrap dir = do
+  debug "Bootstrapping Idris..."
+  if e.config.bootstrapStage3
+     then idrisBootstrapWithStage3 $ dir </> "bootstrapped"
+     else sysAndLog Build ["make", bootstrapCmd, prefixVar, schemeVar]
+  ignoreError $ sysAndLog Build ["make", "bootstrap-clean"]
 
 ||| Builds and installs the Idris commit given in the environment.
 export covering
@@ -192,16 +306,14 @@ mkIdris = do
     debug "No Idris compiler found. Installing..."
     withCoreGit $ \dir => do
       case e.config.bootstrap of
-        True  =>
-          sysAndLog Build ["make", bootstrapCmd, prefixVar, schemeVar]
+        True  => idrisBootstrap dir
         False =>
           -- if building with an existing installation fails for whatever reason
           -- we revert to bootstrapping
           tryDirectBuild >>= \case
             Left x => do
               warn "Building Idris failed. Trying to bootstrap now."
-              idrisCleanup
-              sysAndLog Build ["make", bootstrapCmd, prefixVar, schemeVar]
+              idrisBootstrap dir
             Right () => pure ()
 
       sysAndLog Build ["make", "install-support", prefixVar]
@@ -222,6 +334,10 @@ withSrcStr = case c.withSrc of
   True  => " (with sources)"
   False => ""
 
+maybeGiveNotice : HasIO io => Config => SafeLib -> io ()
+maybeGiveNotice (RL (Git _ _ _ _ _ (Just notice)) _ _ _ _ _) = warn notice
+maybeGiveNotice _ = pure ()
+
 installImpl :
      {auto _ : HasIO io}
   -> {auto e : IdrisEnv}
@@ -234,16 +350,17 @@ installImpl dir rl =
       libDir   := rl.desc.path.parent </> "lib"
    in do
      info "Installing library\{withSrcStr}: \{name rl}"
+     maybeGiveNotice rl
      when (isInstalled rl) $ do
        info "Removing currently installed version of \{name rl}"
-       rmDir (pkgInstallDir rl.name rl.pkg rl.desc)
-       rmDir (pkgLibDir rl.name rl.pkg)
+       rmDir (pkgInstallDir rl.name rl.hash rl.pkg rl.desc)
+       rmDir (pkgLibDir rl.name rl.hash rl.pkg)
      libPkg pre Build True ["--build"] rl.desc
      libPkg pre Debug False instCmd rl.desc
      debug "checking if libdir at \{libDir} exists"
      when !(exists libDir) $ do
        debug "copying lib dir"
-       copyDir libDir (pkgLibDir rl.name rl.pkg)
+       copyDir libDir (pkgLibDir rl.name rl.hash rl.pkg)
 
 preInstall :
      {auto _ : HasIO io}
@@ -253,7 +370,7 @@ preInstall :
 preInstall rl = withPkgEnv rl.name rl.pkg $ \dir =>
   let ipkgAbs := ipkg dir rl.pkg
    in case rl.pkg of
-        Git u c ipkg _ _ => do
+        Git u c ipkg _ _ _ => do
           let cache := ipkgCachePath rl.name c ipkg
           copyFile cache ipkgAbs
         Local _ _ _ _ => pure ()
@@ -273,14 +390,17 @@ installLib :
   -> SafeLib
   -> EitherT PackErr io ()
 installLib rl = case rl.status of
-  Installed _ => pure ()
-  _           => do
+  Installed _ _ => pure ()
+  _             => do
     preInstall rl
     withPkgEnv rl.name rl.pkg $ \dir => do
       installImpl dir rl
       case rl.pkg of
-       Local _ _ _ _ => write (libTimestamp rl.name rl.pkg) ""
-       _             => pure ()
+        Local _ _ _ _ =>
+          when (not $ isInstalled rl) $ do
+            debug "writing \{nanoString} to \{libTimestamp rl.name}"
+            write (libTimestamp rl.name) nanoString
+        _             => pure ()
 
     uncacheLib (name rl)
 
@@ -300,15 +420,15 @@ installApp :
 installApp b ra =
   let cg := ipkgCodeGen ra.desc.desc
   in case ra.status of
-    BinInstalled => pure ()
-    Installed    => case b of
+    BinInstalled _ => pure ()
+    Installed    _ => case b of
       False => pure ()
       True  => appLink ra.exec ra.name (usePackagePath ra) cg
     _            => withPkgEnv ra.name ra.pkg $ \dir =>
       let ipkgAbs := ipkg dir ra.pkg
        in case ra.pkg of
             Core _            => pure ()
-            Git u c ipkg pp _ => do
+            Git u c ipkg pp _ _ => do
               let cache   := ipkgCachePath ra.name c ipkg
               copyFile cache ipkgAbs
               libPkg [] Build True ["--build"] (notPackIsSafe ra.desc)
@@ -318,7 +438,7 @@ installApp b ra =
               libPkg [] Build True ["--build"] (notPackIsSafe ra.desc)
               copyApp ra
               when b $ appLink ra.exec ra.name pp cg
-              write (appTimestamp ra.name ra.pkg) ""
+              write (libTimestamp ra.name) nanoString
 
 
 --------------------------------------------------------------------------------
@@ -333,12 +453,12 @@ installDocs :
   -> SafeLib
   -> EitherT PackErr io ()
 installDocs rl = case rl.status of
-  Installed True => pure ()
-  _              => withPkgEnv rl.name rl.pkg $ \dir => do
+  Installed _ True => pure ()
+  _                => withPkgEnv rl.name rl.pkg $ \dir => do
     let docsDir : Path Abs
         docsDir = buildPath rl.desc /> "docs"
 
-        pre : List (String,String)
+        pre : List EnvVar
         pre = libInstallPrefix rl
 
         htmlDir : Path Abs
@@ -352,15 +472,16 @@ installDocs rl = case rl.status of
       info "Building highlighted sources for: \{name rl}"
       mkDir htmlDir
       rp <- resolveApp "katla"
-      let katla := pkgExec rp.name rp.pkg rp.exec
+      let katla := pkgExec rp.name rp.hash rp.pkg rp.exec
       fs <- map (MkF htmlDir) <$> htmlFiles htmlDir
       for_ fs $ \htmlFile =>
         let Just ds@(MkDS _ src ttm srcHtml) := sourceForDoc rl.desc htmlFile
               | Nothing => pure ()
-         in sysAndLog Build [katla, "html", src, ttm, NoEscape ">", srcHtml] >>
-            insertSources ds
+         in when !(srcExists ds) $ do
+              sysAndLog Build [katla, "html", src, ttm, NoEscape ">", srcHtml]
+              insertSources ds
 
-    let docs := pkgDocs rl.name rl.pkg rl.desc
+    let docs := pkgDocs rl.name rl.hash rl.pkg rl.desc
     when !(exists docs) (rmDir docs)
     copyDir docsDir docs
     uncacheLib (name rl)
@@ -430,12 +551,12 @@ installDeps = install . map (Library,) . dependencies
 export covering
 idrisEnv :
      {auto _ : HasIO io}
-  -> {auto _ : PackDir}
+  -> {auto _ : PackDirs}
   -> {auto _ : TmpDir}
   -> {auto _ : LibCache}
   -> {auto _ : LineBufferingCmd}
   -> MetaConfig
-  -> (fetch : Bool)
+  -> (fetch : FetchMethod)
   -> EitherT PackErr io IdrisEnv
 idrisEnv mc fetch = env mc fetch >>= (\e => mkIdris)
 
@@ -447,8 +568,9 @@ update e =
    in do
      info "Updating pack. If this fails, try switching to the latest package collection."
      commit <- maybe (gitLatest packRepo "main") pure packCommit
+     info "Using commit \{commit}"
 
-     withGit "pack" packRepo commit $ \dir => do
+     withGit "pack" packRepo commit True $ \dir => do
        let ipkg := MkF dir "pack.ipkg"
        d <- parseLibIpkg ipkg ipkg
        installDeps d
@@ -473,7 +595,7 @@ removeApp n = do
   info "Removing application \{n}"
   ra <- resolveApp n
   rmFile (pathExec ra.exec)
-  rmDir (pkgBinDir ra.name ra.pkg)
+  rmDir (pkgBinDir ra.name ra.hash ra.pkg)
 
 covering
 removeLib : HasIO io => Env => PkgName -> EitherT PackErr io ()
@@ -482,8 +604,8 @@ removeLib n = do
   case isInstalled rl of
     True  => do
       info "Removing library \{n}"
-      rmDir (pkgInstallDir rl.name rl.pkg rl.desc)
-      rmDir (pkgLibDir rl.name rl.pkg)
+      rmDir (pkgInstallDir rl.name rl.hash rl.pkg rl.desc)
+      rmDir (pkgLibDir rl.name rl.hash rl.pkg)
     False => warn "Package \{n} is not installed. Ignoring."
 
 ||| Remove the given libs or apps

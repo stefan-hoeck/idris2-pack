@@ -1,6 +1,7 @@
 module Pack.Core.IO
 
 import public Control.Monad.Either
+import Pack.Config.Environment.Variable
 import Pack.Config.Types
 import Pack.Core.Logging
 import Pack.Core.Types
@@ -28,6 +29,10 @@ filterM f (x :: xs) = do
   True <- f x | False => filterM f xs
   (x ::) <$> filterM f xs
 
+export
+ignoreError : Monad m => EitherT err m () -> m ()
+ignoreError = ignore . runEitherT
+
 ||| Convert an IO action with the potential of failure
 ||| to an `EitherT PackErr`.
 export
@@ -48,7 +53,7 @@ finally :
   -> EitherT err m a
 finally cleanup act = MkEitherT $ do
   res <- runEitherT act
-  ignore $ runEitherT cleanup
+  ignoreError cleanup
   pure res
 
 ||| Runs a *pack* program, printing errors to standard out.
@@ -63,8 +68,8 @@ run (MkEitherT io) = io >>= either fatal pure
 ||| Display a list of variable-value pairs in the format
 ||| `VAR1="val1" VAR2="val2"`.
 export
-dispEnv : List (String,String) -> String
-dispEnv = unwords . map (\(e,v) => "\{e}=\{quote v}")
+dispEnv : List EnvVar -> String
+dispEnv = unwords . map interpolate
 
 ||| Tries to run a system command.
 export
@@ -100,7 +105,7 @@ sysAndLog lvl cmd = do
     | n => throwE (Sys cmd n)
   pure ()
 
-cmdWithEnv : CmdArgList -> List (String,String) -> String
+cmdWithEnv : CmdArgList -> List EnvVar -> String
 cmdWithEnv cmd []  = escapeCmd cmd
 cmdWithEnv cmd env = "\{dispEnv env} \{escapeCmd cmd}"
 
@@ -116,7 +121,7 @@ export
 sysWithEnv :
      {auto _ : HasIO io}
   -> (cmd : CmdArgList)
-  -> (env : List (String,String))
+  -> (env : List EnvVar)
   -> EitherT PackErr io ()
 sysWithEnv cmd env = do
   0 <- system (cmdWithEnv cmd env) | n => throwE (Sys cmd n)
@@ -128,7 +133,7 @@ sysWithEnvAndLog :
   -> {auto _ : Env}
   -> (lvl : LogLevel)
   -> (cmd : CmdArgList)
-  -> (env : List (String,String))
+  -> (env : List EnvVar)
   -> EitherT PackErr io ()
 sysWithEnvAndLog lvl cmd env = do
   0 <- runProcessingOutput
@@ -156,7 +161,7 @@ export covering
 sysRunWithEnv :
      {auto _ : HasIO io}
   -> (cmd : CmdArgList)
-  -> (env : List (String,String))
+  -> (env : List EnvVar)
   -> EitherT PackErr io String
 sysRunWithEnv cmd env = do
   (res,0) <- System.run (cmdWithEnv cmd env) | (_,n) => throwE (Sys cmd n)
@@ -290,22 +295,41 @@ findInParentDirs p (PAbs d sb) = go sb
 
 ||| Tries to find the first file, the body of which return `True` for
 ||| the given predicate, in each parent directory.
+||| Will stop the aggregation at the first encountered `PermissionDenied`.
 export
 findInAllParentDirs :  {auto _ : HasIO io}
   -> (Body -> Bool)
   -> Path Abs
-  -> EitherT PackErr io $ List $ File Abs
-findInAllParentDirs p = go [] where
-  go : List (File Abs) -> Path Abs -> EitherT PackErr io $ List $ File Abs
-  go presentRes currD = do
-    Just af <- findInParentDirs p currD
-      | Nothing => pure presentRes
-    let nextRes = af::presentRes
-    case parentDir $ parent af of
-      Just parentD => go nextRes $ assert_smaller currD parentD
-      Nothing      => pure nextRes
+  -> EitherT PackErr io (List (File Abs))
+findInAllParentDirs p = go []
 
-mkTmpDir : HasIO io => PackDir => EitherT PackErr io TmpDir
+  where
+    go : List (File Abs) -> Path Abs -> EitherT PackErr io (List (File Abs))
+    go presentRes currD = do
+      Just af <-
+        catchE
+          (findInParentDirs p currD)
+          (handlePermissionDenied presentRes)
+        | Nothing => pure presentRes
+      let nextRes := af::presentRes
+      case parentDir $ parent af of
+        Just parentD => go nextRes $ assert_smaller currD parentD
+        Nothing      => pure nextRes
+
+      where
+        -- If we get a PermissionDenied FileError when some `pack.toml` where
+        -- already found, then we simply pretend that `findInParentDirs`
+        -- couldn't find anything above. Otherwise we forward the error.
+        -- (See github #386)
+        handlePermissionDenied :
+             (presentRes : List (File Abs))
+          -> PackErr
+          -> EitherT PackErr io (Maybe (File Abs))
+        handlePermissionDenied (_::_) (DirEntries path PermissionDenied) =
+          pure Nothing
+        handlePermissionDenied _ err = throwE err
+
+mkTmpDir : HasIO io => (pd : PackDirs) => EitherT PackErr io TmpDir
 mkTmpDir = go 100 0
 
   where
@@ -313,14 +337,14 @@ mkTmpDir = go 100 0
     go 0     _ = throwE NoTmpDir
     go (S k) n =
       let Just body := Body.parse ".tmp\{show n}" | Nothing => go k (S n)
-          dir       := packDir /> body
+          dir       := pd.cache /> body
        in do
          False <- exists dir | True => go k (S n)
          when (n > 50) $
            warn {ref = MkLogRef Info}
              """
              Too many temporary directories. Please remove all `.tmpXY`
-             directories in `PACK_DIR` or run `pack gc` to let pack
+             directories in `\{pd.cache}` or run `pack gc` to let pack
              clean them up.
              """
          mkDir dir
@@ -329,7 +353,7 @@ mkTmpDir = go 100 0
 export
 withTmpDir :
      {auto _ : HasIO io}
-  -> {auto _ : PackDir}
+  -> {auto _ : PackDirs}
   -> (TmpDir => EitherT PackErr io a)
   -> EitherT PackErr io a
 withTmpDir f = do

@@ -1,18 +1,26 @@
 module Pack.Database.Types
 
 import Core.Name.Namespace
+import Data.Either
 import Data.List1
 import Data.List.Elem
 import Data.SortedMap
 import Data.String
+import Derive.Prelude
 import Idris.Package.Types
 import Pack.Core.Types
 
 %default total
+%language ElabReflection
 
 --------------------------------------------------------------------------------
 --          MetaCommits
 --------------------------------------------------------------------------------
+
+||| Type-level identity
+public export
+0 I : Type -> Type
+I t = t
 
 ||| A git commit hash or tag, or a meta commit: The latest commit of a branch.
 public export
@@ -20,6 +28,8 @@ data MetaCommit : Type where
   MC     : Commit -> MetaCommit
   Latest : Branch -> MetaCommit
   Fetch  : Branch -> MetaCommit
+
+%runElab derive "MetaCommit" [Show,Eq]
 
 public export
 FromString MetaCommit where
@@ -38,6 +48,24 @@ export
 toLatest : MetaCommit -> MetaCommit
 toLatest (MC x) = Latest (MkBranch x.value)
 toLatest x      = x
+
+||| Strategy for resolving `MetaCommit`s
+public export
+data FetchMethod : Type where
+  ||| Update only meta commits, which don't have a cached entry in the
+  ||| "commits" directory. This is the default.
+  MissingOnly  : FetchMethod
+
+  ||| Update all custom commits. This is the strategy used with the `fetch`
+  ||| command.
+  All          : FetchMethod
+
+  ||| Remove the "commits" directory, thus forcing all meta commits to
+  ||| be resolved again. This is the strategy used with the `switch latest`
+  ||| command
+  ClearCommits : FetchMethod
+
+%runElab derive "FetchMethod" [Show,Eq,Ord]
 
 --------------------------------------------------------------------------------
 --          Core Packages
@@ -132,18 +160,19 @@ isCorePkg = isJust . readCorePkg
 ||| Note: This does not contain the package name, as it
 ||| will be paired with its name in a `SortedMap`.
 public export
-data Package_ : (c : Type) -> Type where
+data Package_ : (f : Type -> Type) -> (c : Type) -> Type where
   ||| A Git repository, given as the package's URL,
   ||| commit (hash or tag), and name of `.ipkg` file to use.
   ||| `pkgPath` should be set to `True` for executables which need
   ||| access to the `IDRIS2_PACKAGE_PATH`: The list of directories
   ||| where Idris packages are installed.
-  Git :  (url      : URL)
-      -> (commit   : c)
-      -> (ipkg     : File Rel)
-      -> (pkgPath  : Bool)
+  Git :  (url      : f URL)
+      -> (commit   : f c)
+      -> (ipkg     : f $ File Rel)
+      -> (pkgPath  : f $ Bool)
       -> (testIpkg : Maybe (File Rel))
-      -> Package_ c
+      -> (notice   : Maybe String)
+      -> Package_ f c
 
   ||| A local Idris project given as an absolute path to a local
   ||| directory, and `.ipkg` file to use.
@@ -154,20 +183,20 @@ data Package_ : (c : Type) -> Type where
          -> (ipkg     : File Rel)
          -> (pkgPath  : Bool)
          -> (testIpkg : Maybe (File Rel))
-         -> Package_ c
+         -> Package_ f c
 
   ||| A core package of the Idris2 project
-  Core   : (core : CorePkg) -> Package_ c
+  Core   : (core : CorePkg) -> Package_ f c
 
 export
-Functor Package_ where
-  map f (Git u c i p t) = Git u (f c) i p t
+Functor (Package_ I) where
+  map f (Git u c i p t n) = Git u (f c) i p t n
   map f (Local d i p t) = Local d i p t
   map f (Core c)        = Core c
 
 export
-traverse : Applicative f => (URL -> a -> f b) -> Package_ a -> f (Package_ b)
-traverse g (Git u c i p t) = (\c' => Git u c' i p t) <$> g u c
+traverse : Applicative f => (URL -> a -> f b) -> Package_ I a -> f (Package_ I b)
+traverse g (Git u c i p t n) = (\c' => Git u c' i p t n) <$> g u c
 traverse _ (Local d i p t)    = pure $ Local d i p t
 traverse _ (Core c)           = pure $ Core c
 
@@ -175,13 +204,21 @@ traverse _ (Core c)           = pure $ Core c
 ||| meta commits already resolved.
 public export
 0 Package : Type
-Package = Package_ Commit
+Package = Package_ I Commit
 
 ||| An alias for `Package_ MetaCommit`: A package description where
 ||| the commit might still contain meta information.
 public export
 0 UserPackage : Type
-UserPackage = Package_ MetaCommit
+UserPackage = Package_ Maybe MetaCommit
+
+public export
+0 PackageMap : Type
+PackageMap = SortedMap PkgName Package
+
+public export
+0 CustomMap : Type
+CustomMap = SortedMap DBName (SortedMap PkgName UserPackage)
 
 ||| Proof that a package is a core package
 public export
@@ -249,15 +286,15 @@ isGit (Local {}) = No absurd
 ||| True, if the given application needs access to the
 ||| folders where Idris package are installed.
 export
-usePackagePath : Package_ c -> Bool
-usePackagePath (Git _ _ _ pp _) = pp
+usePackagePath : Package_ I c -> Bool
+usePackagePath (Git _ _ _ pp _ _) = pp
 usePackagePath (Local _ _ pp _) = pp
 usePackagePath (Core _)         = False
 
 ||| Absolute path to the `.ipkg` file of a package.
 export
 ipkg : (dir : Path Abs) -> Package -> File Abs
-ipkg dir (Git _ _ i _ _) = toAbsFile dir i
+ipkg dir (Git _ _ i _ _ _) = toAbsFile dir i
 ipkg dir (Local _ i _ _) = toAbsFile dir i
 ipkg dir (Core c)        = toAbsFile dir (coreIpkgPath c)
 
@@ -265,14 +302,16 @@ ipkg dir (Core c)        = toAbsFile dir (coreIpkgPath c)
 --          Resolved Packages
 --------------------------------------------------------------------------------
 
-||| Installation status of an Idris package. Local packages can be
-||| `Outdated`, if some of their source files contain changes newer
-||| a timestamp created during package installation.
+||| Installation status of an Idris package.
 public export
 data PkgStatus : Package -> Type where
-  Missing     : PkgStatus p
-  Installed   : (withDocs : Bool) -> PkgStatus p
-  Outdated    : (0 isLocal : IsLocal p) => PkgStatus p
+  Missing     : Hash -> PkgStatus p
+  Installed   : Hash -> (withDocs : Bool) -> PkgStatus p
+
+export
+hash : PkgStatus p -> Hash
+hash (Missing h)     = h
+hash (Installed h _) = h
 
 ||| A resolved library, which was cloned from a Git repo
 ||| or looked up in the local file system. This comes with
@@ -281,6 +320,7 @@ public export
 record ResolvedLib t where
   constructor RL
   pkg     : Package
+  hash    : Hash
   name    : PkgName
   desc    : Desc t
   status  : PkgStatus pkg
@@ -306,28 +346,22 @@ namespace ResolvedLib
   export
   isInstalled : ResolvedLib t -> Bool
   isInstalled rl = case rl.status of
-    Missing => False
-    _       => True
+    Missing _ => False
+    _         => True
 
 namespace AppStatus
-  ||| Installation status of an Idris app. Local apps can be
-  ||| `Outdated`, if some of their source files contain changes newer
-  ||| a timestamp created during package installation.
+  ||| Installation status of an Idris app.
   public export
   data AppStatus : Package -> Type where
     ||| The app has not been compiled and is therfore missing
-    Missing      :  AppStatus p
+    Missing      :  Hash -> AppStatus p
 
     ||| The app has been built but is not on the `PATH`.
-    Installed    :  AppStatus p
+    Installed    :  Hash -> AppStatus p
 
     ||| The app has been built and a wrapper script has been added
     ||| to `$PACK_DIR/bin`, so it should be on the `PATH`.
-    BinInstalled :  AppStatus p
-
-    ||| The local app has changes in its source files, which have
-    ||| not yet been included in the installed version.
-    Outdated     :  (0 isLocal : IsLocal p) => AppStatus p
+    BinInstalled :  Hash -> AppStatus p
 
 ||| A resolved application, which was cloned from a Git repo
 ||| or looked up in the local file system. This comes with
@@ -336,6 +370,7 @@ public export
 record ResolvedApp t where
   constructor RA
   pkg     : Package
+  hash    : Hash
   name    : PkgName
   desc    : Desc t
   status  : AppStatus pkg
@@ -416,7 +451,7 @@ record DB_ c where
   idrisURL     : URL
   idrisCommit  : c
   idrisVersion : PkgVersion
-  packages     : SortedMap PkgName (Package_ c)
+  packages     : SortedMap PkgName (Package_ I c)
 
 export
 Functor DB_ where
@@ -433,6 +468,11 @@ public export
 0 MetaDB : Type
 MetaDB = DB_ MetaCommit
 
+||| Sets the package version.
+export %inline
+setVersion : PkgVersion -> DB -> DB
+setVersion v = {idrisVersion := v}
+
 ||| Effectfully convert package descriptions in a DB
 export
 traverseDB :
@@ -445,28 +485,30 @@ traverseDB g db =
       pkgs := traverse (traverse g) db.packages
    in [| adj ic pkgs |]
     where
-      adj : b -> SortedMap PkgName (Package_ b) -> DB_ b
+      adj : b -> SortedMap PkgName (Package_ I b) -> DB_ b
       adj ic cb = {idrisCommit := ic, packages := cb} db
 
 tomlBool : Bool -> String
 tomlBool True  = "true"
 tomlBool False = "false"
 
-testPath : Maybe (File Rel) -> List String
-testPath Nothing  = []
-testPath (Just x) = [ "test        = \{quote x}" ]
+testPath : Maybe (File Rel) -> Maybe String
+testPath = map (\x => "test        = \{quote x}")
+
+notice : Maybe String -> Maybe String
+notice = map (\x =>   "notice      = \{quote x}")
 
 -- we need to print `Git` packages as `"github"` at
 -- least for the time being for reasons of compatibility
 printPair : (PkgName,Package) -> List String
-printPair (x, Git url commit ipkg pp t) =
+printPair (x, Git url commit ipkg pp t n) =
   [ "[db.\{x}]"
   , "type        = \"github\""
   , "url         = \{quote url}"
   , "commit      = \{quote commit}"
   , "ipkg        = \{quote ipkg}"
   , "packagePath = \{tomlBool pp}"
-  ] ++ testPath t
+  ] ++ (catMaybes [testPath t, notice n])
 
 printPair (x, Local dir ipkg pp t) =
   [ "[db.\{x}]"
@@ -474,7 +516,7 @@ printPair (x, Local dir ipkg pp t) =
   , "path        = \{quote dir}"
   , "ipkg        = \{quote ipkg}"
   , "packagePath = \{tomlBool pp}"
-  ] ++ testPath t
+  ] ++ (catMaybes [testPath t])
 
 printPair (x, Core c) =
   [ "[db.\{x}]"
@@ -492,6 +534,16 @@ printDB (MkDB u c v db) =
         commit  = "\{c}"
         """
    in unlines $ header :: (SortedMap.toList db >>= \p => "" :: printPair p)
+
+--------------------------------------------------------------------------------
+--          Resolving Packages
+--------------------------------------------------------------------------------
+
+export
+mergeUP : UserPackage -> UserPackage -> UserPackage
+mergeUP (Git u1 c1 i1 p1 t1 n1) (Git u2 c2 i2 p2 t2 n2) =
+  Git (u1<|>u2)(c1<|>c2)(i1<|>i2)(p1<|>p2)(t1<|>t2)(n1<|>n2)
+mergeUP _ y = y
 
 --------------------------------------------------------------------------------
 --          Tests

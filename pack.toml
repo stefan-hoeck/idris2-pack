@@ -1,3 +1,7 @@
+[pack]
+
+commit = "latest:main"
+
 [custom.all.pack]
 type   = "local"
 path   = "."
@@ -13,8 +17,26 @@ type   = "local"
 path   = "."
 ipkg   = "micropack.ipkg"
 
-[custom.all.filepath]
+[custom.all.literal]
 type   = "git"
-url    = "https://github.com/stefan-hoeck/idris2-filepath"
+url    = "https://github.com/stefan-hoeck/idris2-literal"
 commit = "latest:main"
-ipkg   = "filepath.ipkg"
+ipkg   = "literal.ipkg"
+
+[custom.all.ilex]
+type   = "git"
+url    = "https://github.com/stefan-hoeck/idris2-ilex"
+commit = "latest:main"
+ipkg   = "ilex.ipkg"
+
+[custom.all.ilex-core]
+type   = "git"
+url    = "https://github.com/stefan-hoeck/idris2-ilex"
+commit = "latest:main"
+ipkg   = "core/ilex-core.ipkg"
+
+[custom.all.ilex-toml]
+type   = "git"
+url    = "https://github.com/stefan-hoeck/idris2-ilex"
+commit = "latest:main"
+ipkg   = "toml/ilex-toml.ipkg"

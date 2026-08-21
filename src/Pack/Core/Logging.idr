@@ -1,10 +1,54 @@
 module Pack.Core.Logging
 
+import Control.Monad.Either
+import Control.Monad.Trans
 import Pack.Core.Types
 
 import System
 
 %default total
+
+--------------------------------------------------------------------------------
+--          Support
+--------------------------------------------------------------------------------
+
+public export
+data ConfirmResult = Yes | No | Unknown
+
+||| Converts a string into a `ConfirmResult`, ignoring case.
+||| Recognises `"y"` or `"yes"` as `Yes`, `"n"` or `"no"` as `No`.
+||| An empty string defaults to `No`. Any other input is treated as `Unknown`.
+parseConfirmResult : String -> ConfirmResult
+parseConfirmResult x = case toLower x of
+  "y"   => Yes
+  "yes" => Yes
+  "n"   => No
+  "no"  => No
+  ""    => No -- Default
+  _     => Unknown
+
+||| Constructs a prompt message for a confirmation dialog.
+confirmMessage : String -> String
+confirmMessage msg =
+  if isLong
+     then "\{msg}\n\n\{continueMessage}"
+     else "\{msg} \{continueMessage}"
+  where
+    isLong : Bool
+    isLong = length msg > 80 || isInfixOf "\n\n" msg
+
+    continueMessage : String
+    continueMessage = "Continue (yes/*no)?"
+
+||| Executes an action that returns a `ConfirmResult` and ensures
+||| that it is confirmed by the user. If not, throws `SafetyAbort`.
+mustConfirm :
+     HasIO io
+  => io ConfirmResult
+  -> EitherT PackErr io ()
+mustConfirm action = case !(lift action) of
+  Yes => pure ()
+  _   => throwE SafetyAbort
 
 --------------------------------------------------------------------------------
 --          Logging
@@ -55,6 +99,29 @@ export %inline
 prompt : HasIO io => (lvl : LogLevel) -> (msg : String) -> io String
 prompt lvl msg = log (MkLogRef lvl) lvl msg >> map trim getLine
 
+||| Requests confirmation from the user with the specified message and
+||| parses a reply from stdin as `Yes` or `No`.
+|||
+||| This uses the given log level but makes sure the message is always
+||| printed no matter the current log level preferences.
+export %inline
+confirm : HasIO io => (lvl : LogLevel) -> (msg : String) -> io ConfirmResult
+confirm lvl msg =
+  map parseConfirmResult $ prompt lvl $ confirmMessage msg
+
+||| Requests confirmation from the user with the specified message and
+||| If the reply is not `Yes`, aborts with `SafetyAbort`.
+|||
+||| This uses the given log level but makes sure the message is always
+||| printed no matter the current log level preferences.
+export %inline
+confirmOrAbort :
+     HasIO io
+  => (lvl : LogLevel)
+  -> (msg : String)
+  -> EitherT PackErr io ()
+confirmOrAbort = mustConfirm .: confirm
+
 ||| Logs an idented list of values to stdout if the given log level
 ||| is greater than or equal than the (auto-implicit) reference level `ref`.
 ||| If messages list is empty, no log message is printed.
@@ -93,6 +160,35 @@ promptMany :
 promptMany lvl msg msgs =
   let ref := MkLogRef lvl
    in logMany lvl msg msgs >> map trim getLine
+
+||| Logs an indented list of values to stdout and requests confirmation
+||| from the user and parses a reply from stdin as `Yes` or `No`.
+|||
+||| This uses the given log level but makes sure the message is always
+||| printed no matter the current log level preferences.
+export %inline
+confirmMany :
+     {auto _ : HasIO io}
+  -> (lvl : LogLevel)
+  -> (msg : String)
+  -> (msgs : List String)
+  -> io ConfirmResult
+confirmMany lvl msg msgs =
+  map parseConfirmResult $ promptMany lvl (confirmMessage msg) msgs
+
+||| Logs an indented list of values to stdout and requests confirmation
+||| from the user. If the reply is not `Yes`, aborts with `SafetyAbort`.
+|||
+||| This uses the given log level but makes sure the message is always
+||| printed no matter the current log level preferences.
+export %inline
+confirmManyOrAbort :
+     {auto _ : HasIO io}
+  -> (lvl : LogLevel)
+  -> (msg : String)
+  -> (msgs : List String)
+  -> EitherT PackErr io ()
+confirmManyOrAbort lvl = mustConfirm .: confirmMany lvl
 
 ||| Alias for `log ref Debug`.
 |||

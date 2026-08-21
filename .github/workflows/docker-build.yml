@@ -4,6 +4,8 @@ name: Docker Build
 permissions: read-all
 
 on:
+  workflow_dispatch:
+
   pull_request:
     branches:
       - main
@@ -28,25 +30,34 @@ jobs:
           export DB_VERSION
           echo "DB_VERSION=$DB_VERSION" >> "$GITHUB_ENV"
 
-      - name: Build Docker Image
+      - name: Build Docker Images
         run: |
           export NO_CACHE="${{ github.ref == 'refs/heads/main' }}"
-          DB="$DB_VERSION" make docker-build
+          # Change all uppercase to lowercase
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "REPO_OWNER=$REPO_OWNER" >> "$GITHUB_ENV"
+          UBUNTU_RELEASE=noble OWNER=$REPO_OWNER make docker-build
+          UBUNTU_RELEASE=jammy OWNER=$REPO_OWNER make docker-build
 
       - name: Log in to registry
         if: github.ref == 'refs/heads/main'
         # This is where you will update the PAT to GITHUB_TOKEN
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Push image
+      - name: Push images
         if: github.ref == 'refs/heads/main'
         run: |
-          IMAGE_ID="ghcr.io/${{ github.repository_owner }}/idris2-pack"
-          # Change all uppercase to lowercase
-          IMAGE_ID="$(echo "$IMAGE_ID" | tr '[:upper:]' '[:lower:]')"
+          IMAGE_ID="ghcr.io/$REPO_OWNER/idris2-pack"
           # Strip git ref prefix from version
           echo IMAGE_ID="$IMAGE_ID"
           echo DB_VERSION="$DB_VERSION"
-          docker tag "$IMAGE_ID:latest" "$IMAGE_ID:$DB_VERSION"
+          docker tag "$IMAGE_ID:jammy" "$IMAGE_ID:$DB_VERSION-jammy"
+          docker tag "$IMAGE_ID:noble" "$IMAGE_ID:$DB_VERSION-noble"
+          docker tag "$IMAGE_ID:noble" "$IMAGE_ID:$DB_VERSION"
+          docker tag "$IMAGE_ID:noble" "$IMAGE_ID:latest"
           docker push "$IMAGE_ID:latest"
+          docker push "$IMAGE_ID:jammy"
+          docker push "$IMAGE_ID:noble"
           docker push "$IMAGE_ID:$DB_VERSION"
+          docker push "$IMAGE_ID:$DB_VERSION-jammy"
+          docker push "$IMAGE_ID:$DB_VERSION-noble"

@@ -6,6 +6,7 @@ import Pack.Core
 import Pack.Database
 import Pack.Config.Types
 import System.GetOpts
+import System
 
 %default total
 
@@ -48,6 +49,9 @@ setPrompt b _ = Right . {safetyPrompt := b}
 setGCPrompt : Bool -> AdjConf
 setGCPrompt b _ = Right . {gcPrompt := b}
 
+setGCPurge : Bool -> AdjConf
+setGCPurge b _ = Right . {gcPurge := b}
+
 setWarnDepends : Bool -> AdjConf
 setWarnDepends b _ = Right . {warnDepends := b}
 
@@ -59,6 +63,9 @@ setScheme s _ = Right . {scheme := fromString s}
 
 setBootstrap : Bool -> AdjConf
 setBootstrap b _ = Right . {bootstrap := b}
+
+setBootstrapStage3 : Bool -> AdjConf
+setBootstrapStage3 b _ = Right . {bootstrapStage3 := b}
 
 setRlwrap : Maybe String -> AdjConf
 setRlwrap args _ = Right . {rlwrap := UseRlwrap $ maybe [] (\s => [NoEscape s]) args}
@@ -81,6 +88,9 @@ noIpkg _ = Right . {withIpkg := None}
 
 codegen : String -> AdjConf
 codegen v _ = Right . {codegen := fromString v}
+
+setGitInit : AdjConf
+setGitInit _ = Right . {gitInit := True}
 
 -- command line options with description
 descs : List $ OptDescr AdjConf
@@ -114,7 +124,7 @@ descs =
       "Print a dependency tree of a package known to pack"
   , MkOpt [] ["reverse-tree"]   (NoArg $ setQuery ReverseTree)
       """
-      Print a tree of packages depending on a package know to pack.
+      Print a tree of packages depending on a package known to pack.
       Use this to find all packages transitively depending on a specific
       library
       """
@@ -141,9 +151,19 @@ descs =
       """
       Prompt before deleting directories when running command `gc`.
       """
+  , MkOpt [] ["gc-purge"]   (NoArg $ setGCPurge True)
+      """
+      Remove *all* outdated libraries during garbage collection.
+      """
   , MkOpt [] ["no-gc-prompt"]   (NoArg $ setGCPrompt False)
       """
       Don't prompt before deleting directories when running command `gc`.
+      """
+  , MkOpt [] ["no-gc-purge"]   (NoArg $ setGCPurge False)
+      """
+      Only remove libraries built with an outdated compiler but not
+      outdated libraries built with the current compiler during garbage
+      collection.
       """
   , MkOpt [] ["bootstrap"]   (NoArg $ setBootstrap True)
       """
@@ -157,14 +177,23 @@ descs =
       This will fail if `idris2` is not on the computer's `$PATH` or
       is too old to build the current version of the compiler.
       """
+  , MkOpt [] ["bootstrap-stage3"]   (NoArg $ setBootstrapStage3 True)
+      """
+      When bootstrapping, rebuilds the compiler once more using the newly
+      built compiler to produce a more optimised final version.
+      """
+  , MkOpt [] ["no-bootstrap-stage3"]   (NoArg $ setBootstrapStage3 False)
+      """
+      Don't perform an additional compiler rebuild during bootstrapping.
+      """
   , MkOpt [] ["warn-depends"]   (NoArg $ setWarnDepends True)
       """
-      Issue a warning in precense of a local `depends` directory, which might
+      Issue a warning in presence of a local `depends` directory, which might
       interfere with the libraries managed by pack.
       """
   , MkOpt [] ["no-warn-depends"]   (NoArg $ setWarnDepends False)
       """
-      Don't issue a warning in precense of a local `depends` directory.
+      Don't issue a warning in presence of a local `depends` directory.
       """
   , MkOpt [] ["skip-tests"]   (NoArg $ setSkipTests True)
       """
@@ -208,6 +237,10 @@ descs =
       Specify the logging level to use. Accepted values are:
       \{joinBy ", " $ show . fst <$> logLevels}.
       """
+  , MkOpt [] ["git-init"] (NoArg setGitInit)
+      """
+      Initialize git for a pack project.
+      """
   ]
 
 ||| Names of all command line options (prefixed with "-" in case of
@@ -221,6 +254,39 @@ optionNames = foldMap names descs
     names : OptDescr a -> List String
     names (MkOpt sns lns _ _) =
       map (\c => "-\{String.singleton c}") sns ++ map ("--" ++) lns
+
+||| A Package of the current directory, current command, its arguments, and the
+||| options.
+public export
+record ParsedArgs (0 c : Type) {auto 0 prf : Command c} where
+  constructor MkParsedArgs
+  curDir : CurDir
+  cmd    : CommandWithArgs c
+  opts   : List AdjConf
+
+||| Get the arguments (not including the defacto first argument that is the
+||| name of the binary).
+export
+getArgs' : HasIO io => io (List String)
+getArgs' = drop 1 <$> getArgs
+
+||| Given the current directory (from which pack was
+||| invoked) parse the arguments into a command, positional arguments, and
+||| options.
+export
+parseOpts :
+     (0 c : Type)
+  -> {auto _ : Command c}
+  -> (curDir : CurDir)
+  -> (args : List String)
+  -> Either PackErr (ParsedArgs c)
+parseOpts c dir args =
+  case getOpt RequireOrder descs args of
+    MkResult opts n  []      []       => do
+      cmd <- readCommand c dir n
+      pure $ MkParsedArgs dir cmd opts
+    MkResult _    _ (u :: _) _        => Left (UnknownArg u)
+    MkResult _    _ _        (e :: _) => Left (ErroneousArg e)
 
 ||| Given the current directory (from which pack was invoked)
 ||| and an initial config assembled from the `pack.toml` files
@@ -241,23 +307,15 @@ export
 applyArgs :
      (0 c : Type)
   -> {auto _ : Command c}
-  -> (curDir : CurDir)
   -> (init   : MetaConfig)
-  -> (args   : List String)
-  -> Either PackErr (MetaConfig, CommandWithArgs c)
-applyArgs c dir init args =
-  case getOpt RequireOrder descs args of
-    MkResult opts n  []      []       => do
-      cmd  <- readCommand c dir n
-      let lvl_m := lookup (cmdName $ fst cmd) init.levels
-          dflt  := defaultLevel $ fst cmd
+  -> (args   : ParsedArgs c)
+  -> Either PackErr MetaConfig
+applyArgs c init args = do
+  let lvl_m := lookup (cmdName $ fst args.cmd) init.levels
+      dflt  := defaultLevel $ fst args.cmd
 
-          init' = {logLevel := fromMaybe dflt lvl_m} init
-      conf <- foldlM (\c,f => f dir c) init' opts
-      Right (conf, cmd)
-
-    MkResult _    _ (u :: _) _        => Left (UnknownArg u)
-    MkResult _    _ _        (e :: _) => Left (ErroneousArg e)
+      init' = {logLevel := fromMaybe dflt lvl_m} init
+  foldlM (\c,f => f args.curDir c) init' args.opts
 
 --------------------------------------------------------------------------------
 --          Usage Info
@@ -273,5 +331,5 @@ usageInfo = """
   Run `pack help <cmd>` to get detailed information about a command.
 
   Available commands:
-  \{unlines $ map (indent 2 . fst) namesAndCommands}
+  \{unlines $ map (indent 2 . fst) Types.namesAndCommands}
   """

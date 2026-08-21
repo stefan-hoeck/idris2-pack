@@ -29,8 +29,8 @@ first one it finds. This allows us to make use of these files
 even when we move into one of the subfolders of a project.
 Settings listed in local `pack.toml` files
 take precedence over the ones given in the global `pack.toml` file
-at `$PACK_DIR/user/pack.toml` (remember that `$PACK_DIR` defaults
-to `$HOME/.pack`).
+in the `$XDG_CONFIG_HOME/pack` directory (remember that
+`$XDG_CONFIG_HOME` defaults to `$HOME/.config`).
 
 ## Type-checking, Building, and Testing with pack
 

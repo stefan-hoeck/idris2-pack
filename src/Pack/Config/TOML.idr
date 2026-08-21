@@ -29,19 +29,19 @@ extractString errMsg _ = Left $ WrongType [] errMsg
 
 export
 FromTOML RlwrapConfig where
-  fromTOML _ (TBool x)   = Right $ if x then UseRlwrap [] else DoNotUseRlwrap
-  fromTOML _ (TStr str)  = Right $ UseRlwrap [NoEscape str]
-  fromTOML _ (TArr _ xs) =
+  fromTOML _ (TBool x)  = Right $ if x then UseRlwrap [] else DoNotUseRlwrap
+  fromTOML _ (TStr str) = Right $ UseRlwrap [NoEscape str]
+  fromTOML _ (TArr xs)  =
     map (UseRlwrap . fromStrList) $
-      traverse (extractString "array of strings") (xs <>> [])
+      traverse (extractString "array of strings") xs
   fromTOML _ _ = Left $ WrongType [] "boolean, string or array of strings"
 
 export
 FromTOML CmdArgList where
-  fromTOML _ (TStr str)  = Right $ [NoEscape str]
-  fromTOML _ (TArr _ xs) =
+  fromTOML _ (TStr str) = Right $ [NoEscape str]
+  fromTOML _ (TArr xs)  =
     fromStrList <$>
-      traverse (extractString "array of strings") (xs <>> [])
+      traverse (extractString "array of strings") xs
   fromTOML _ _ = Left $ WrongType [] "string or array of strings"
 
 export
@@ -56,8 +56,10 @@ FromTOML UserConfig where
           (maybeValAt "pack.commit" f v)
           (maybeValAt "idris2.scheme" f v)
           (maybeValAt "idris2.bootstrap" f v)
+          (maybeValAt "idris2.bootstrap-stage3" f v)
           (maybeValAt "install.safety-prompt" f v)
           (maybeValAt "install.gc-prompt" f v)
+          (maybeValAt "install.gc-purge" f v)
           (maybeValAt "install.warn-depends" f v)
           (maybeValAt "admin.skip-tests" f v)
           (maybeValAt "install.whitelist" f v)
@@ -76,22 +78,20 @@ FromTOML UserConfig where
           (maybeValAt "idris2.codegen" f v)
           (pure Nothing)
           (maybeValAt "log" f v)
+          (maybeValAt "idris2.git" f v)
       |]
 
-||| Initial content of an auto-generated `PACK_DIR/user/pack.toml` file.
+||| Initial content of an auto-generated `PACK_USER_DIR/pack.toml` file.
 export
-initToml : (scheme : String) -> (db : DBName) -> String
-initToml scheme db = """
-  # The package collection to use
-  collection = "\{db}"
-
+initToml : (scheme : String) -> String
+initToml scheme = """
   [install]
 
   # Whether to install packages together with their
   # sources or not. This is mainly useful for programmers
   # who have set their editor up with some *go to definition*
   # functionality (for instance by using idris2-lsp with neovim).
-  with-src   = true
+  # with-src   = true
 
   # Whether to install API docs together with installed
   # libraries.
@@ -104,28 +104,34 @@ initToml scheme db = """
   # Whether to prompt the user before building or installing
   # packages or applications with custom build hooks in their
   # `.ipkg` file.
-  safety-prompt = true
+  # safety-prompt = true
 
   # Whether to prompt the user before running the garbage collector
   # via command `gc`.
-  gc-prompt = true
+  # gc-prompt = true
+
+  # Whether to remove all outdated libraries and applications during
+  # garbage collection (command `gc`).
+  # gc-purge = false
 
   # Whether to issue a warning in presence of a local `depends` directory
   # which might interfere with the libraries managed by pack
-  warn-depends = true
+  # warn-depends = true
 
   # List of packages and apps with custom build hooks we trust to
   # be safe. This gives more fine grained control over package safety
   # than `safety-prompt`.
-  whitelist = [ "pack", "idris2-lsp" ]
+  # whitelist = [ "pack", "idris2-lsp" ]
 
   # Must-have libraries. These will be installed automatically
   # when using a new package collection.
-  # libs       = [ "toml", "elab-util" ]
+  # Example: `libs       = [ "toml", "elab-util" ]`
+  # libs       = []
 
   # Must-have applications. These will be installed automatically
   # when using a new package collection.
-  # apps       = [ "idris2-lsp" ]
+  # Example: `apps       = [ "idris2-lsp" ]`
+  # apps       = []
 
   [pack]
 
@@ -141,7 +147,12 @@ initToml scheme db = """
   # Bootstrapping takes longer than building with an existing
   # Idris2 installation, but it will work even if the existing
   # Idris2 compiler is outdated.
-  bootstrap  = false
+  # bootstrap  = false
+
+  # Whether to rebuild Idris2 when bootstrapping, using the newly
+  # built compiler. Produces a more optimised final executable,
+  # but increases build time.
+  # bootstrap-stage3 = true
 
   # Name or path to the scheme executable to use.
   scheme      = "\{scheme}"
@@ -155,7 +166,7 @@ initToml scheme db = """
   # Alternatively, you can pass additional command-line arguments
   # to `rlwrap` by setting this to a string or an array of strings,
   # e.g. to "-pGreen -aN" or ["-pGreen", "--no-children"].
-  repl.rlwrap = false
+  # repl.rlwrap = false
 
   # Packages to load automatically when starting a REPL session
   # without an `.ipkg` file in scope. This defaults to "none".
@@ -169,6 +180,14 @@ initToml scheme db = """
 
   # Override this to use a custom commit and branch for the Idris compiler
   # commit = "latest:main"
+
+  # Override this to have a .gitignore file and .git directory
+  # created inside of a new pack project upon its creation.
+  # git = false
+
+  # Additional arguments to be passed to the Idris compiler
+  # This can be a single string or a list of strings.
+  # extra-args = []
 
   # Below are some examples for custom packages
 
@@ -191,21 +210,56 @@ initToml scheme db = """
   # [custom.all.foo]
   # type = "git"
   # url  = "https://github.com/bar/foo"
+  # commit = "commit-ref"
   # ipkg = "foo.ipkg"
 
   # Override library `toml` from package collection `nightly-220503`
   # by using a custom commit hash.
-  # [custom.nightly-220503.toml]
+  # [custom.nightly-251023.ilex]
   # type   = "git"
-  # url    = "https://github.com/cuddlefishie/toml-idr"
+  # url    = "https://github.com/stefan-hoeck/idirs2-ilex"
   # commit = "eb7a146f565276f82ebf30cb6d5502e9f65dcc3c"
-  # ipkg   = "toml.ipkg"
+  # ipkg   = "ilex.ipkg"
 
   # Uncomment and adjust the following entries to specify the
   # default log level associated with each pack command.
-  # [log]
+  # Possible log levels are:
+  #   "debug"
+  #   "build"
+  #   "info"
+  #   "cache"
+  #   "warning"
+  #   "silence"
+  [log]
 
-  # exec = "debug"
-  # run  = "info"
-  # test = "warning"
+  # build             = "build"
+  # install-deps      = "build"
+  # typecheck         = "build"
+  # clean             = "build"
+  # cleanbuild        = "build"
+  # repl              = "warning"
+  # exec              = "warning"
+  # install           = "build"
+  # install-app       = "build"
+  # remove            = "build"
+  # remove-app        = "build"
+  # run               = "warning"
+  # test              = "warning"
+  # new               = "build"
+  # update            = "build"
+  # fetch             = "build"
+  # package-path      = "silence"
+  # libs-path         = "silence"
+  # data-path         = "silence"
+  # app-path          = "silence"
+  # switch            = "build"
+  # update-db         = "build"
+  # gc                = "info"
+  # info              = "cache"
+  # query             = "cache"
+  # fuzzy             = "cache"
+  # completion        = "silence"
+  # completion-script = "silence"
+  # uninstall         = "info"
+  # help              = "silence"
   """

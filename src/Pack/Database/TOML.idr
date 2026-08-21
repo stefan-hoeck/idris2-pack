@@ -13,7 +13,7 @@ import Pack.Database.Types
 export
 FromTOML MetaCommit where fromTOML = tmap fromString
 
-git : FromTOML c => File Abs -> TomlValue -> Either TOMLErr (Package_ c)
+git : FromTOML c => File Abs -> TomlValue -> Either TOMLErr (Package_ I c)
 git f v =
   [| Git
        (valAt "url" f v)
@@ -21,9 +21,10 @@ git f v =
        (valAt "ipkg" f v)
        (optValAt "packagePath" f False v)
        (maybeValAt "test" f v)
+       (maybeValAt "notice" f v)
   |]
 
-local : File Abs -> TomlValue -> Either TOMLErr (Package_ c)
+local : File Abs -> TomlValue -> Either TOMLErr (Package_ f c)
 local f v =
   [| Local
        (valAt "path" f v)
@@ -32,7 +33,7 @@ local f v =
        (maybeValAt "test" f v)
   |]
 
-package : FromTOML c => File Abs -> TomlValue -> Either TOMLErr (Package_ c)
+package : FromTOML c => File Abs -> TomlValue -> Either TOMLErr (Package_ I c)
 package f v = valAt {a = String} "type" f v >>=
   \case
     "git"    => git f v
@@ -40,13 +41,38 @@ package f v = valAt {a = String} "type" f v >>=
     "local"  => local f v
     _        => Left $ WrongType ["type"] "Package Type"
 
+gitM : FromTOML c => File Abs -> TomlValue -> Either TOMLErr (Package_ Maybe c)
+gitM f v =
+  [| Git
+       (maybeValAt "url" f v)
+       (maybeValAt "commit" f v)
+       (maybeValAt "ipkg" f v)
+       (maybeValAt "packagePath" f v)
+       (maybeValAt "test" f v)
+       (maybeValAt "notice" f v)
+  |]
+
+packageM : FromTOML c => File Abs -> TomlValue -> Either TOMLErr (Package_ Maybe c)
+packageM f v = optValAt {a = String} "type" f "git" v >>=
+  \case
+    "git"    => gitM f v
+    "github" => gitM f v -- for compatibility
+    "local"  => local f v
+    _        => Left $ WrongType ["type"] "Package Type"
+
 export %inline
-FromTOML c => FromTOML (Package_ c) where fromTOML = package
+FromTOML c => FromTOML (Package_ I c) where fromTOML = package
+
+export %inline
+FromTOML c => FromTOML (Package_ Maybe c) where fromTOML = packageM
 
 ||| URL of the Idris repository
 export
 idrisRepo : URL
 idrisRepo = "https://github.com/idris-lang/Idris2.git"
+
+v0 : PkgVersion
+v0 = MkPkgVersion (0:::[0,0])
 
 export
 FromTOML MetaDB where
@@ -54,6 +80,6 @@ FromTOML MetaDB where
     [| MkDB
          (optValAt "idris2.url" f idrisRepo v)
          (valAt "idris2.commit" f v)
-         (valAt "idris2.version" f v)
+         (pure v0)
          (optValAt "db" f empty v)
     |]

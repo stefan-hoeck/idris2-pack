@@ -8,10 +8,10 @@ is not suitable for the pack project; changes made using such
 tools will not be accepted. This holds even if the code is
 edited or reviewed by a human.
 
-To help new contributors find their way around the codebase
-and understand how*pack* is implemented, this document provides
-a source map and some details about the structure of the
-`$HOME/.pack` directory.
+To help new contributors navigate the codebase and understand how
+*pack* is implemented, this document provides a source
+map and some details about the directory layout of pack and its
+managed libraries.
 
 ## General Recommendations
 
@@ -27,9 +27,9 @@ consider the following guidelines:
 
 * When adding a new command-line option, the same as
   for new commands holds: It should be well documented and
-  support tab completion. In addition, consider to allow
+  support tab completion. In addition, consider allowing
   users to permanently set this option in the
-  `$HOME/.pack/user/pack.toml` file.
+  `$XDG_CONFIG_HOME/pack/pack.toml` file.
 
 * When adding new user settings, micropack should include
   these in its automatically generated `pack.toml` file
@@ -37,13 +37,25 @@ consider the following guidelines:
 
 ## Directory Layout
 
-The root directory pack works on is located at `$HOME/.pack`,
-although this can be changed by setting environment variable
-`$PACK_DIR`.
+As a default, *pack* and all its managed libraries will be installed
+in the following directories, which can be overridden as specified:
+
+* The global `pack.toml` file goes to `$XDG_CONFIG_HOME/pack/pack.toml`.
+  Override the directory by setting environment variable `$PACK_USER_DIR`.
+
+* The built compiler as well as installed libraries and applications
+  go to `$XDG_STATE_HOME/pack/`.
+  Override this by setting environment variable `$PACK_STATE_DIR`.
+
+* Cached `.ipkg` files and git repositories go to `$XDG_CACHE_HOME/pack/`.
+  Override this by setting environment variable `$PACK_CACHE_DIR`.
+
+* Executables go to `$HOME/.local/bin`. Override this by setting
+  environment variable `$PACK_BIN_DIR`.
 
 ### Data Collections
 
-These are stored in folder `$HOME/.pack/db` and have a `.toml`
+These are stored in folder `$XDG_STATE_HOME/pack/db` and have a `.toml`
 file ending. These are [toml](https://toml.io/en/) files with
 a small table called `idris2` for specifying the Idris2 version and
 commit to use, followed by a table of packages called `db`. Here is
@@ -69,7 +81,7 @@ ipkg   = "collie.ipkg"
 
 ### User Settings
 
-Global settings stored at `$HOME/.pack/user/pack.toml`, local
+Global settings stored at `$XDG_CONFIG_HOME/pack/pack.toml`, local
 settings can also be located at the current working directory.
 These files not only contain general settings like the name of the Scheme
 executable to use or whether to install libraries together with
@@ -89,7 +101,7 @@ patch original.ipkg patched.ipkg
 They are then stored in file
 
 ```sh
-$HOME/.pack/patches/[collection name]/[package name]/[name].ipkg.patch
+$XDG_CONFIG_HOME/pack/patches/[collection name]/[package name]/[name].ipkg.patch
 ```
 
 ### Cache
@@ -102,7 +114,7 @@ consuming, `.ipkg` files will be cached once downloaded
 at the following location:
 
 ```sh
-$HOME/.pack/.cache/[package name]/[commit hash]/[name].ipkg
+$XDG_CACHE_HOME/pack/[package name]/[commit hash]/[name].ipkg
 ```
 
 ### Installed Binaries and Libraries
@@ -176,7 +188,7 @@ Most pack actions take one or more implicit arguments
 representing the packaging environment and user-defined
 configuration. The types involved will be discussed below.
 
-* `Pack.Core.Types.PackDir`: The directory where pack installs
+* `Pack.Core.Types.PackDirs`: These are the directories where pack installs
   the Idris compiler, packages, apps, and some additional files
   like package collections, cached `.ipkg` files and temporary
   directories and data.

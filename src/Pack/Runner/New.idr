@@ -6,6 +6,7 @@ import Data.String
 import Idris.Package.Types
 import Pack.Config
 import Pack.Core
+import Pack.Database.Types
 import Core.Name.Namespace
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Doc
@@ -134,11 +135,12 @@ new (CD curdir) pty pkgName e = do
 
     mkDir (srcDir)
 
-    debug "Initializing git repo"
-    eitherT
-      (\err => warn "Git repo creation failed: \{printErr err}")
-      (\_ => write (pkgRootDir </> ".gitignore") gitIgnoreFile)
-      (sysAndLog Info ["git", "init", pkgRootDir])
+    when (e.env.config.gitInit) $ do
+      debug "Initializing git repo"
+      eitherT
+        (\err => warn "Git repo creation failed: \{printErr err}")
+        (\_ => write (pkgRootDir </> ".gitignore") gitIgnoreFile)
+        (sysAndLog Info ["git", "init", pkgRootDir])
 
     debug "Writing ipkg file"
     write

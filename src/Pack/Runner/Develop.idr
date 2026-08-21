@@ -21,8 +21,9 @@ runIdrisOn :
   -> (cmd        : CmdArgList)
   -> Desc Safe
   -> EitherT PackErr io ()
-runIdrisOn lvl cleanBuild c d = do
+runIdrisOn lvl cleanBuild c d@(MkDesc x _ _ _) = do
   installDeps d
+  info "Building\: \{name x}"
   libPkg [] lvl cleanBuild c d
 
 findIpkg :
@@ -182,10 +183,10 @@ runTest :
   -> (args : CmdArgList)
   -> IdrisEnv
   -> EitherT PackErr io ()
-runTest n args e = case lookup n allPackages of
+runTest n args e = case lookup n e.env.all of
   Nothing                     => throwE (UnknownPkg n)
-  Just (Git u c _ _ $ Just t) => do
-    d <- withGit n u c pure
+  Just (Git u c _ _ (Just t) _) => do
+    d <- withGit n u c False pure
     runIpkg (d </> t) args e
   Just (Local d _ _ $ Just t) => runIpkg (d </> t) args e
   Just _                      => do
@@ -205,8 +206,8 @@ execApp p args e = do
   ra <- resolveApp p
   install [(App False,p)]
   case ipkgCodeGen ra.desc.desc of
-    Node => sys $ ["node", pkgExec ra.name ra.pkg ra.exec] ++ args
-    _    => sys $ [pkgExec ra.name ra.pkg ra.exec] ++ args
+    Node => sys $ ["node", pkgExec ra.name ra.hash ra.pkg ra.exec] ++ args
+    _    => sys $ [pkgExec ra.name ra.hash ra.pkg ra.exec] ++ args
 
 export covering
 runApp :

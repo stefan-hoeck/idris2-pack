@@ -274,6 +274,13 @@ replaceDot : Char -> Char
 replaceDot '.' = '/'
 replaceDot c   = c
 
+export
+srcExists : HasIO io => DocSources -> EitherT PackErr io Bool
+srcExists (MkDS _ s t _) = do
+  es <- fileExists s
+  et <- fileExists t
+  pure (es && et)
+
 ||| Generates the doc paths based on the package description
 ||| (which might use custom source and build directories).
 export

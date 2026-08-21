@@ -6,19 +6,19 @@ authors = "Stefan Höck"
 
 brief   = "A package manager for Idris2 with curated package collections"
 
-langversion >= 0.6.0
+langversion >= 0.8.0
 
 -- script to run before building
 prebuild = "bash version.sh"
 
 postbuild = "bash restore.sh"
 
-depends = base >= 0.6.0
+depends = base >= 0.8.0
         , elab-util
         , filepath
         , getopts
         , idris2
-        , parser-toml
+        , ilex-toml
 
 modules = Pack.CmdLn
         , Pack.CmdLn.Completion
@@ -33,6 +33,7 @@ modules = Pack.CmdLn
         , Pack.Core
         , Pack.Core.Git
         , Pack.Core.Git.Consts
+        , Pack.Core.Hash
         , Pack.Core.IO
         , Pack.Core.Ipkg
         , Pack.Core.Logging

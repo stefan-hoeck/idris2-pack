@@ -7,6 +7,7 @@ import Data.IORef
 import Idris.Package.Types
 import Pack.Config
 import Pack.Core
+import Pack.Core.Hash
 import Pack.Database
 import Pack.Version as V
 
@@ -75,8 +76,8 @@ safe (MkDesc d s f _) =
            not (MkPkgName d.name `elem` e.config.whitelist) of
         False => pure $ MkDesc d s f IsSafe
         True  => do
-          let msg := "Package \{name d} uses custom build hooks. Continue (yes/*no)?"
-          "yes" <- prompt Warning msg | _ => throwE SafetyAbort
+          let msg := "Package \{name d} uses custom build hooks."
+          confirmOrAbort Warning msg
           pure $ MkDesc d s f IsSafe
 
 ||| Like `safe` but verify also that the package does not
@@ -109,7 +110,7 @@ findAndParseLocalIpkg :
   -> EitherT PackErr io (Desc Safe)
 findAndParseLocalIpkg (Ipkg p) = parseLibIpkg p p
 findAndParseLocalIpkg (Pkg n)  =
-  case lookup n allPackages of
+  case lookup n e.all of
     Nothing                   => throwE (UnknownPkg n)
     Just (Local dir ipkg _ _) => let p = dir </> ipkg in parseLibIpkg p p
     Just _                    => throwE (NotLocalPkg n)
@@ -181,13 +182,9 @@ withPkgEnv :
   -> Package
   -> (Path Abs -> EitherT PackErr io a)
   -> EitherT PackErr io a
-withPkgEnv n (Git u c i _ _) f = withGit n u c f
-withPkgEnv n (Local d i _ _) f = inDir d f
-withPkgEnv n (Core _)        f = withCoreGit f
-
-isOutdated : DPair Package PkgStatus -> Bool
-isOutdated (fst ** Outdated) = True
-isOutdated _                 = False
+withPkgEnv n (Git u c i _ _ _) f = withGit n u c False f
+withPkgEnv n (Local d i _ _)   f = inDir d f
+withPkgEnv n (Core _)          f = withCoreGit f
 
 newerSrc : HasIO io => File Abs -> Path Abs -> EitherT PackErr io String
 newerSrc ts src = trim <$> sysRun ["find", src, "-newer", ts]
@@ -196,45 +193,49 @@ newerIpkg : HasIO io => File Abs -> File Abs -> EitherT PackErr io String
 newerIpkg ts ipkg =
   trim <$> sysRun ["find", ipkg.parent, "-name", "\{ipkg.file}", "-newer", ts]
 
--- tests if the files in a directory are new compare to
--- a timestamp file, and returns one of two possible results
--- accordingly
-checkOutdated :
-     {auto _ : HasIO io}
-  -> (ts         : File Abs)
-  -> (ipkg       : File Abs)
-  -> (src        : Path Abs)
-  -> (deps       : List (DPair Package PkgStatus))
-  -> (ifOutdated : a)
-  -> (ifUpToDate : a)
-  -> EitherT PackErr io a
-checkOutdated ts ipkg src deps o u =
-  if any isOutdated deps
-    then pure o
-    else do
-      True <- fileExists ts | False => pure o
-      ""   <- newerSrc ts src | _ => pure o
-      ""   <- newerIpkg ts ipkg | _ => pure o
-      pure u
-
 -- checks the status of a library
 libStatus :
      {auto _ : HasIO io}
-  -> {auto _ : Env}
+  -> {auto e : Env}
   -> PkgName
   -> (p    : Package)
   -> (d    : Desc t)
   -> (deps : List (DPair Package PkgStatus))
   -> EitherT PackErr io (PkgStatus p)
 libStatus n p d deps = do
-  True <- exists (pkgInstallDir n p d) | False => pure Missing
-  b    <- exists $ pkgDocs n p d
-  case isLocal p of
-    No c     => pure $ (Installed b)
-    Yes ploc =>
-      let ts  := libTimestamp n p
-          dir := localSrcDir d
-       in checkOutdated ts d.path dir deps Outdated (Installed b)
+  h    <- pkgHash
+  True <- exists (pkgInstallDir n h p d) | False => do pure (Missing missingHash)
+  b    <- exists $ pkgDocs n h p d
+  pure (Installed h b)
+  where
+    mkHash : String -> Hash
+    mkHash s =
+      MkHash $ hashStrings $ s :: map (\(_ ** s) => value $ hash s) deps
+
+    localHash : Hash
+    localHash = mkHash nanoString
+
+    missingHash : Hash
+    missingHash =
+      case p of
+        Git _ c _ _ _ _          => mkHash c.value
+        Core                   _ => MkHash e.db.idrisCommit.value
+        Local {}                 => localHash
+
+    pkgHash : EitherT PackErr io Hash
+    pkgHash =
+      case p of
+        Local dir ipkg pkgPath _ => do
+          let ts  := libTimestamp n
+              dir := localSrcDir d
+          True <- fileExists ts       | False => pure localHash
+          ""   <- newerSrc ts dir     | s     => pure localHash
+          ""   <- newerIpkg ts d.path | s     => pure localHash
+          s    <- read ts
+          debug "timestamp for \{n}: \{s}"
+          debug "hash for \{n}: \{mkHash $ trim s}"
+          pure (mkHash $ trim s)
+        _ => pure missingHash
 
 ||| Generates the `AppStatus` of a package representing an application.
 export
@@ -242,22 +243,14 @@ appStatus :
      {auto _ : HasIO io}
   -> {auto _ : Env}
   -> PkgName
+  -> (h    : Hash)
   -> (p    : Package)
-  -> (d    : Desc t)
-  -> (deps : List (DPair Package PkgStatus))
   -> (exe  : Body)
   -> EitherT PackErr io (AppStatus p)
-appStatus n p d deps exe = do
-  True      <- fileExists (pkgExec n p exe) | False => pure Missing
-  installed <- do
-    True <- fileExists (pathExec exe) | False => pure Installed
-    pure BinInstalled
-  case isLocal p of
-    No c     => pure installed
-    Yes ploc =>
-      let ts  := appTimestamp n p
-          src := localSrcDir d
-       in checkOutdated ts d.path src deps Outdated installed
+appStatus n h p exe = do
+  True <- fileExists (pkgExec n h p exe) | False => pure (Missing h)
+  True <- fileExists (pathExec exe)      | False => pure (Installed h)
+  pure (BinInstalled h)
 
 loadIpkg :
      {auto _ : HasIO io}
@@ -265,7 +258,7 @@ loadIpkg :
   -> PkgName
   -> Package
   -> EitherT PackErr io (Desc U)
-loadIpkg n (Git u c i _ _) =
+loadIpkg n (Git u c i _ _ _) =
   let cache  := ipkgCachePath n c i
       tmpLoc := gitTmpDir n </> i
    in parseIpkgFile cache tmpLoc
@@ -278,23 +271,33 @@ loadIpkg n (Core c)           =
 ||| Try to fully resolve a library given as a package name.
 ||| This will look up the library in the current package collection
 ||| and will fetch and read its (possibly cached) `.ipkg` file.
-export covering
-resolveLib : HasIO io => Env => PkgName -> EitherT PackErr io (ResolvedLib U)
-resolveLib n = do
+export
+resolveLib :
+     {auto _ : HasIO io}
+  -> {auto e : Env}
+  -> {default [<] vis : SnocList PkgName}
+  -> PkgName
+  -> EitherT PackErr io (ResolvedLib U)
+resolveLib n = assert_total $ do
+  checkCycle vis [n]
   Nothing <- lookupLib n | Just pkg => pure pkg
-  case lookup n allPackages of
+  case lookup n e.all of
     Nothing => throwE (UnknownPkg n)
     Just p  => do
       d    <- loadIpkg n p
       deps <- traverse resolveDep $ dependencies d
       lib  <- libStatus n p d deps
-      cacheLib n $ RL p n d lib deps
+      cacheLib n $ RL p (hash lib) n d lib deps
 
   where
+    checkCycle : SnocList PkgName -> List PkgName -> EitherT PackErr io ()
+    checkCycle [<]       xs = pure ()
+    checkCycle (sx :< x) xs =
+      if x == n then throwE (CyclicDeps $ x::xs) else checkCycle sx (x::xs)
+
     resolveDep : PkgName -> EitherT PackErr io (DPair Package PkgStatus)
-    resolveDep n = do
-      rl <- resolveLib n
-      pure (MkDPair rl.pkg rl.status)
+    resolveDep m =
+      (\l => (_ ** l.status)) <$> resolveLib {vis = vis :< n} m
 
 ||| Try to fully resolve an application given as a package name.
 ||| This will look up the app in the current package collection
@@ -302,11 +305,10 @@ resolveLib n = do
 export covering
 resolveApp : HasIO io => Env => PkgName -> EitherT PackErr io (ResolvedApp U)
 resolveApp n = do
-  RL p n d _ ds <- resolveLib n
+  RL p h n d _ ds <- resolveLib n
   case exec d of
     Nothing  => throwE (NoApp n)
-    Just exe => do
-      (\s => RA p n d s exe ds) <$> appStatus n p d ds exe
+    Just exe => (\s => RA p h n d s exe ds) <$> appStatus n h p exe
 
 ||| Try to fully resolve an application or library given as a package.
 ||| This will look up the package name in the current package collection
@@ -331,7 +333,7 @@ appPath "idris2" e = putStrLn "\{idrisExec}"
 appPath n e = do
   ref <- emptyCache
   ra <- resolveApp n
-  putStrLn . interpolate $ pkgExec ra.name ra.pkg ra.exec
+  putStrLn . interpolate $ pkgExec ra.name ra.hash ra.pkg ra.exec
 
 --------------------------------------------------------------------------------
 --          Deletable
@@ -366,13 +368,11 @@ delPrompt = """
 
 ||| Verifies that the given list of libraries is safe to be deleted
 export covering
-checkDeletable : HasIO io => Env => List PkgName -> EitherT PackErr io ()
+checkDeletable : HasIO io => (e : Env) => List PkgName -> EitherT PackErr io ()
 checkDeletable ns = do
-  ss <- filter (consider ns) <$> traverse resolveLib (keys allPackages)
+  ss <- filter (consider ns) <$> traverse resolveLib (keys e.all)
   bs <- traverse (printDeps ss) ns
-  when (any id bs) $ do
-    "yes" <- prompt Warning delPrompt | _ => throwE SafetyAbort
-    pure ()
+  when (any id bs) $ confirmOrAbort Warning delPrompt
 
 --------------------------------------------------------------------------------
 --         Garbage Collection
@@ -391,24 +391,40 @@ packDelDir b =
 tmpDelDir : (e : Env) => Body -> Maybe (Path Abs)
 tmpDelDir b =
   let s := interpolate b
-      p := packDir /> b
+      p := cacheDir /> b
    in toMaybe ((".tmp" `isPrefixOf` s) && p /= Types.tmpDir) p
+
+purgeDirs : HasIO io => (e : Env) => EitherT PackErr io (List $ Path Abs)
+purgeDirs = join <$> (entries commitDir >>= traverse purgePaths)
+  where
+    purgePaths : Body -> EitherT PackErr io (List $ Path Abs)
+    purgePaths "idris2" = pure []
+    purgePaths x        =
+     let pkg := MkPkgName (interpolate x)
+         dir := commitDir /> x
+      in case lookup pkg e.all of
+           Nothing => pure [dir]
+           Just _  => do
+             rl <- resolveLib pkg
+             es <- entries (commitDir /> x)
+             pure $ (dir />) <$> filter (\b => "\{b}" /= rl.hash.value) es
+
+gcDirs : HasIO io => (e : Env) => EitherT PackErr io (List $ Path Abs)
+gcDirs = do
+  ds <- mapMaybe idrisDelDir <$> entries installDir
+  ps <- mapMaybe packDelDir <$> entries packParentDir
+  ts <- mapMaybe tmpDelDir <$> entries cacheDir
+  pd <- if e.config.gcPurge then purgeDirs else pure []
+  pure (ds ++ ps ++ ts ++ pd)
 
 ||| Delete installations from previous package collections.
 export
 garbageCollector : HasIO io => Env -> EitherT PackErr io ()
 garbageCollector e = do
-  ds <- mapMaybe idrisDelDir <$> entries installDir
-  ps <- mapMaybe packDelDir <$> entries packParentDir
-  ts <- mapMaybe tmpDelDir <$> entries packDir
-
-  let all := ds ++ ps ++ ts
-
+  all <- gcDirs
   when (e.config.gcPrompt && not (null all)) $ do
-    let msg := "The following directories will be deleted. Continue (yes/*no)?"
-    "yes" <- promptMany Warning msg (interpolate <$> all)
-      | _ => throwE SafetyAbort
-    pure ()
+    let msg := "The following directories will be deleted."
+    confirmManyOrAbort Warning msg (interpolate <$> all)
   when (null all) $ info "Nothing to clean up."
   for_ all rmDir
 
@@ -417,16 +433,14 @@ garbageCollector e = do
 --------------------------------------------------------------------------------
 
 pkgNeedsInstalling : {auto c : Config} -> PkgStatus p -> Bool
-pkgNeedsInstalling Missing           = True
-pkgNeedsInstalling (Installed True)  = False
-pkgNeedsInstalling (Installed False) = c.withDocs
-pkgNeedsInstalling Outdated          = True
+pkgNeedsInstalling (Missing h)         = True
+pkgNeedsInstalling (Installed h True)  = False
+pkgNeedsInstalling (Installed h False) = c.withDocs
 
 appNeedsInstalling : (withWrapperScript : Bool) -> AppStatus p -> Bool
-appNeedsInstalling _ Missing      = True
-appNeedsInstalling b Installed    = b
-appNeedsInstalling _ Outdated     = True
-appNeedsInstalling _ BinInstalled = False
+appNeedsInstalling _ (Missing h)      = True
+appNeedsInstalling b (Installed h)    = b
+appNeedsInstalling _ (BinInstalled h) = False
 
 needsInstalling : {auto c : Config} -> LibOrApp t s -> Bool
 needsInstalling (Lib x)   = pkgNeedsInstalling x.status
@@ -472,6 +486,10 @@ transitiveDeps ps = go empty Lin (map Right ps)
         let deps := (\d => Right (Library, d)) <$> dependencies loa
         go ps sx $ deps ++ Left loa :: xs
 
+compilerApp : (InstallType, PkgName) -> Bool
+compilerApp (App _, MkPkgName "idris2") = True
+compilerApp _ = False
+
 ||| Create a build plan for the given list of packages and apps
 ||| plus their dependencies.
 |||
@@ -484,7 +502,10 @@ plan :
   -> List (InstallType, PkgName)
   -> EitherT PackErr io (List SafePkg)
 plan ps =
-  let ps' := (Library, "prelude") :: (Library, "base") :: ps
+  let neededPs := filter (not . compilerApp) ps
+  -- ^ we never need the compiler app because it is installed as part of the
+  -- requisite environment to run any Install command.
+      ps' := (Library, "prelude") :: (Library, "base") :: neededPs
    in do
      debug "Building plan for the following libraries: \n\{showPlan ps}"
      loas <- filter needsInstalling <$> transitiveDeps ps'

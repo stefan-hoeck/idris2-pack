@@ -6,14 +6,14 @@ authors = "Stefan Höck"
 
 brief   = "Administration of pack's package collections"
 
-langversion >= 0.6.0
+langversion >= 0.8.0
 
-depends = base >= 0.6.0
+depends = base >= 0.8.0
         , elab-util
         , filepath
         , getopts
         , idris2
-        , parser-toml
+        , ilex-toml
 
 main       = Pack.Admin.Main
 

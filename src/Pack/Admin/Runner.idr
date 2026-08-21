@@ -109,13 +109,15 @@ writeLatestDB path e = write path (printDB e.db)
 export covering
 runCmd : HasIO io => EitherT PackErr io ()
 runCmd = do
-  pd       <- getPackDir
+  args       <- getArgs'
+  cd         <- CD <$> curDir
+  parsedArgs <- liftEither $ parseOpts ACmd cd args
+  pd         <- getPackDirs
   withTmpDir $ do
-    cd       <- CD <$> curDir
     cache    <- emptyCache
-    (mc,cmd) <- getConfig ACmd
+    mc       <- getConfig ACmd parsedArgs
     linebuf  <- getLineBufferingCmd
-    case cmd of
-      (CheckDB ** [p])  => idrisEnv mc True >>= checkDB p
-      (FromHEAD ** [p]) => env mc True >>= writeLatestDB p
+    case parsedArgs.cmd of
+      (CheckDB ** [p])  => idrisEnv mc ClearCommits >>= checkDB p
+      (FromHEAD ** [p]) => env mc ClearCommits >>= writeLatestDB p
       (Help ** [c])     => putStrLn (usageDesc c)

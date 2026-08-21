@@ -12,6 +12,7 @@ import Libraries.Data.List.Extra
 import Pack.Core.Git.Consts
 import Pack.Core.Types
 import Pack.Database.Types
+import System.Clock
 
 %default total
 
@@ -33,7 +34,7 @@ data Autoload : Type where
   AutoPkgs  : List PkgName -> Autoload
 
   ||| Use the given explicit list of packages even in the
-  ||| precense of an `.ipkg` file.
+  ||| presence of an `.ipkg` file.
   ForcePkgs : List PkgName -> Autoload
 
 ||| What to show when querying the data base
@@ -134,11 +135,6 @@ data RlwrapConfig : Type where
   DoNotUseRlwrap : RlwrapConfig
   UseRlwrap      : CmdArgList -> RlwrapConfig
 
-||| Type-level identity
-public export
-0 I : Type -> Type
-I t = t
-
 ||| User-defined configuration
 |||
 ||| @ f : This is used to represent the context of values.
@@ -180,6 +176,9 @@ record Config_ (f : Type -> Type) (c : Type) where
   ||| Whether to bootstrap when building Idris2
   bootstrap    : f Bool
 
+  ||| Whether to rebuild Idris2 with the stage 2 compiler
+  bootstrapStage3 : f Bool
+
   ||| Whether to prompt for a confirmation when
   ||| building or installing a package with custom
   ||| build or install hooks.
@@ -190,7 +189,12 @@ record Config_ (f : Type -> Type) (c : Type) where
   ||| installation directories.
   gcPrompt : f Bool
 
-  ||| Whether to issue a warning in precense of a local `depends` directory
+  ||| Whether to remove not only stuff compiled with outdated version
+  ||| of the compiler but also libs and apps whose install hash does not
+  ||| match the current one.
+  gcPurge : f Bool
+
+  ||| Whether to issue a warning in presence of a local `depends` directory
   warnDepends : f Bool
 
   ||| Whether to skip tests during collection checking
@@ -230,7 +234,7 @@ record Config_ (f : Type -> Type) (c : Type) where
   autoLoad     : f Autoload
 
   ||| Customizations to the package data base
-  custom       : f (SortedMap DBName (SortedMap PkgName $ Package_ c))
+  custom       : f CustomMap
 
   ||| Type of query to run
   queryType    : f (QueryType)
@@ -246,6 +250,9 @@ record Config_ (f : Type -> Type) (c : Type) where
 
   ||| Default LogLevels for different commands
   levels       : f (SortedMap String LogLevel)
+
+  ||| Whether to initialize git.
+  gitInit      : f Bool
 
 ||| Configuration with mandatory fields.
 public export
@@ -284,21 +291,18 @@ traverse :  Applicative f
 traverse g idrisURL cfg =
   let iurl = fromMaybe idrisURL cfg.idrisURL
       purl = fromMaybe defaultPackRepo cfg.packURL
-      cst = traverse (traverse $ traverse g) cfg.custom
       ic  = traverse (g iurl) cfg.idrisCommit
       ics = traverse (g iurl) cfg.allIdrisCommits
       pc  = traverse (g purl) cfg.packCommit
-   in [| adj ic ics pc cst |]
+   in [| adj ic ics pc |]
     where adj :  (idrisCommit : Maybe b)
               -> (allidrisCommits : List b)
               -> (packCommit  : Maybe b)
-              -> SortedMap DBName (SortedMap PkgName $ Package_ b)
               -> Config_ I b
-          adj ic ics pc cb =
+          adj ic ics pc =
             { idrisCommit     := ic
             , allIdrisCommits := ics
             , packCommit      := pc
-            , custom          := cb
             } cfg
 
 ||| This allows us to use a `Config` in scope when we
@@ -319,20 +323,9 @@ metaConfigToLogRef = MkLogRef c.logLevel
 
 export infixl 8 `mergeRight`
 
+export
 mergeRight : SortedMap k v -> SortedMap k v -> SortedMap k v
 mergeRight = mergeWith (\_,v => v)
-
-pkgs : SortedMap PkgName Package
-pkgs = fromList $ (\c => (corePkgName c, Core c)) <$> corePkgs
-
-||| Merges the "official" package collection with user
-||| defined settings, which will take precedence.
-export
-allPackages : (c : Config) => (db : DB) => SortedMap PkgName Package
-allPackages =
-  let all = fromMaybe empty $ lookup All c.custom
-      loc = fromMaybe empty $ lookup c.collection c.custom
-   in db.packages `mergeRight` all `mergeRight` loc `mergeRight` pkgs
 
 ||| Initial config
 export
@@ -345,13 +338,15 @@ init coll = MkConfig {
   , packURL         = Nothing
   , packCommit      = Nothing
   , scheme          = "scheme"
-  , bootstrap       = True
+  , bootstrap       = False
+  , bootstrapStage3 = True
   , safetyPrompt    = True
   , gcPrompt        = True
+  , gcPurge         = False
   , warnDepends     = True
   , skipTests       = False
-  , whitelist       = []
-  , withSrc         = False
+  , whitelist       = ["pack", "idris2-lsp"]
+  , withSrc         = True
   , withDocs        = False
   , useKatla        = False
   , withIpkg        = Search cur
@@ -366,6 +361,7 @@ init coll = MkConfig {
   , codegen         = Default
   , output          = "_tmppack"
   , levels          = empty
+  , gitInit         = False
   }
 
 export infixl 7 `update`
@@ -373,7 +369,8 @@ export infixl 7 `update`
 ||| Update a config with optional settings
 export
 update : IConfig c -> MConfig c -> IConfig c
-update ci cm = MkConfig {
+update ci cm =
+  MkConfig {
     collection      = fromMaybe ci.collection cm.collection
   , idrisURL        = cm.idrisURL <|> ci.idrisURL
   , idrisCommit     = cm.idrisCommit <|> ci.idrisCommit
@@ -382,10 +379,12 @@ update ci cm = MkConfig {
   , packCommit      = cm.packCommit <|> ci.packCommit
   , scheme          = fromMaybe ci.scheme cm.scheme
   , bootstrap       = fromMaybe ci.bootstrap cm.bootstrap
+  , bootstrapStage3 = fromMaybe ci.bootstrapStage3 cm.bootstrapStage3
   , safetyPrompt    = fromMaybe ci.safetyPrompt cm.safetyPrompt
   , gcPrompt        = fromMaybe ci.gcPrompt cm.gcPrompt
+  , gcPurge         = fromMaybe ci.gcPurge cm.gcPurge
   , warnDepends     = fromMaybe ci.warnDepends cm.warnDepends
-  , skipTests       = fromMaybe ci.warnDepends cm.warnDepends
+  , skipTests       = fromMaybe ci.skipTests cm.skipTests
   , withSrc         = fromMaybe ci.withSrc cm.withSrc
   , withDocs        = fromMaybe ci.withDocs cm.withDocs
   , useKatla        = fromMaybe ci.useKatla cm.useKatla
@@ -396,12 +395,13 @@ update ci cm = MkConfig {
   , autoLibs        = sortedNub (ci.autoLibs ++ concat cm.autoLibs)
   , autoApps        = sortedNub (ci.autoApps ++ concat cm.autoApps)
   , autoLoad        = fromMaybe ci.autoLoad cm.autoLoad
-  , custom          = mergeWith mergeRight ci.custom (fromMaybe empty cm.custom)
+  , custom          = mergeWith (mergeWith mergeUP) ci.custom (fromMaybe empty cm.custom)
   , queryType       = fromMaybe ci.queryType cm.queryType
   , logLevel        = fromMaybe ci.logLevel cm.logLevel
   , codegen         = fromMaybe ci.codegen cm.codegen
   , output          = fromMaybe ci.output cm.output
   , levels          = mergeWith (\_,v => v) ci.levels (fromMaybe empty cm.levels)
+  , gitInit         = fromMaybe ci.gitInit cm.gitInit
   }
 
 --------------------------------------------------------------------------------
@@ -458,21 +458,28 @@ uncacheLib n = modifyIORef ref (delete n)
 public export
 record Env where
   constructor MkEnv
-  packDir : PackDir
-  tmpDir  : TmpDir
-  config  : Config
-  cache   : LibCache
-  db      : DB
-  linebuf : LineBufferingCmd
+  packDirs : PackDirs
+  tmpDir   : TmpDir
+  config   : Config
+  cache    : LibCache
+  db       : DB -- pack collection
+  all      : SortedMap PkgName Package -- packages merged from config and db
+  linebuf  : LineBufferingCmd
+  clock    : Clock UTC
+
+||| Returns the current nanoseconds as a string.
+export
+nanoString : (e : Env) => String
+nanoString = show $ toNano e.clock
 
 ||| This allows us to use an `Env` in scope when we
-||| need an auto-implicit `PackDir`.
+||| need an auto-implicit `PackDirs`.
 export %inline %hint
-envToPackDir : (e : Env) => PackDir
-envToPackDir = e.packDir
+envToPackDirs : (e : Env) => PackDirs
+envToPackDirs = e.packDirs
 
 ||| This allows us to use an `Env` in scope when we
-||| need an auto-implicit `PackDir`.
+||| need an auto-implicit `TmpDir`.
 export %inline %hint
 envToTmpDir : (e : Env) => TmpDir
 envToTmpDir = e.tmpDir
@@ -671,7 +678,7 @@ interface Command c where
   ||| package collection read from the `pack.toml` files with the
   ||| latest package collection available.
   adjConfig_ :  HasIO io
-             => PackDir
+             => PackDirs
              => TmpDir
              => (cmd : c)
              -> All I (ArgTypes cmd)
@@ -764,7 +771,7 @@ readCommand c cd (h :: t) = case readCommand_ {c} h of
 export %inline
 adjConfig :  HasIO io
           => Command c
-          => PackDir
+          => PackDirs
           => TmpDir
           => CommandWithArgs c
           -> MetaConfig

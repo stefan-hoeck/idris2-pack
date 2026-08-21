@@ -24,7 +24,10 @@ jobs:
     name: Build pack with Idris2 latest
     runs-on: ubuntu-latest
     env:
-      PACK_DIR: /root/.pack
+      PACK_USER_DIR: /root/.config/pack
+      PACK_STATE_DIR: /root/.local/state/pack
+      PACK_CACHE_DIR: /root/.cache/pack
+      PACK_BIN_DIR: /root/.local/bin
     strategy:
       fail-fast: false
     container: ghcr.io/stefan-hoeck/idris2-pack:latest
@@ -32,13 +35,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Build lib
-        run: pack typecheck pack.ipkg
+        run: /root/.local/bin/pack typecheck pack.ipkg
       - name: Build admin
-        run: pack typecheck pack-admin.ipkg
+        run: /root/.local/bin/pack typecheck pack-admin.ipkg
 
   micropack:
     name: Bootstrap with micropack
     runs-on: ubuntu-latest
+    env:
+      PACK_USER_DIR: /home/runner/.config/pack
+      PACK_STATE_DIR: /home/runner/.local/state/pack
+      PACK_CACHE_DIR: /home/runner/.cache/pack
+      PACK_BIN_DIR: /home/runner/.local/bin
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,19 +57,24 @@ jobs:
       - name: Run installation script
         run: |
           make micropack SCHEME=chezscheme
-          echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
       - name: Install application
-        run: pack install graph
+        run: |
+          /home/runner/.local/bin/pack --verbose install graph
       - name: Run examples
         run: |
           cd example1
-          pack run chem-formula-example-test -n 1000
+          /home/runner/.local/bin/pack run chem-formula-example-test -n 1000
           cd ../example2
-          pack run chem-smiles-example-test -n 1000
+          /home/runner/.local/bin/pack run chem-smiles-example-test -n 1000
 
   micropack-racket:
     name: Bootstrap with micropack-racket
     runs-on: ubuntu-latest
+    env:
+      PACK_USER_DIR: /home/runner/.config/pack
+      PACK_STATE_DIR: /home/runner/.local/state/pack
+      PACK_CACHE_DIR: /home/runner/.cache/pack
+      PACK_BIN_DIR: /home/runner/.local/bin
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -72,19 +85,24 @@ jobs:
       - name: Run installation script
         run: |
           make micropack-racket
-          echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
       - name: Install application
-        run: pack install graph
+        run: |
+          /home/runner/.local/bin/pack --verbose install graph
       - name: Run examples
         run: |
           cd example1
-          pack run chem-formula-example-test -n 1000
+          /home/runner/.local/bin/pack run chem-formula-example-test -n 1000
           cd ../example2
-          pack run chem-smiles-example-test -n 1000
+          /home/runner/.local/bin/pack run chem-smiles-example-test -n 1000
 
   shellscript:
     name: Bootstrap with the shell script
     runs-on: ubuntu-latest
+    env:
+      PACK_USER_DIR: /home/runner/.config/pack
+      PACK_STATE_DIR: /home/runner/.local/state/pack
+      PACK_CACHE_DIR: /home/runner/.cache/pack
+      PACK_BIN_DIR: /home/runner/.local/bin
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -95,19 +113,24 @@ jobs:
       - name: Run installation script
         run: |
           echo chezscheme | bash -c ./install.bash
-          echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
       - name: Install application
-        run: pack install graph
+        run: |
+          /home/runner/.local/bin/pack --verbose install graph
       - name: Run examples
         run: |
           cd example1
-          pack run chem-formula-example-test -n 1000
+          /home/runner/.local/bin/pack run chem-formula-example-test -n 1000
           cd ../example2
-          pack run chem-smiles-example-test -n 1000
+          /home/runner/.local/bin/pack run chem-smiles-example-test -n 1000
 
   shellscript-racket:
     name: Bootstrap with the shell script and racket
     runs-on: ubuntu-latest
+    env:
+      PACK_USER_DIR: /home/runner/.config/pack
+      PACK_STATE_DIR: /home/runner/.local/state/pack
+      PACK_CACHE_DIR: /home/runner/.cache/pack
+      PACK_BIN_DIR: /home/runner/.local/bin
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -118,12 +141,12 @@ jobs:
       - name: Run installation script
         run: |
           echo racket | bash -c ./install.bash
-          echo "$HOME/.pack/bin" >> "$GITHUB_PATH"
       - name: Install application
-        run: pack install graph
+        run: |
+          /home/runner/.local/bin/pack --verbose install graph
       - name: Run examples
         run: |
           cd example1
-          pack run chem-formula-example-test -n 1000
+          /home/runner/.local/bin/pack run chem-formula-example-test -n 1000
           cd ../example2
           pack run chem-smiles-example-test -n 1000

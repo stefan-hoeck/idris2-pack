@@ -17,15 +17,18 @@ before you continue:
 * `git` version >= 2.35.1. Earlier versions of `git` will cause issues
   when caching GitHub repositories locally.
 
-* A Scheme compiler; either [Chez Scheme](https://cisco.github.io/ChezScheme/)
-  (default), or Racket.
-  If you install Chez Scheme from source files, building it locally,
-  make sure you run `./configure --threads` to build multithreading support in.
+* A Scheme compiler; either Chez Scheme (default) or Racket.
 
-  Note: On Apple Silicon, Chez Scheme works out-of-the-box as of version 10.0.0,
+  * Some Linux distributions' package managers have Chez Scheme packages
+  readily available (e.g. Fedora's [DNF](https://packages.fedoraproject.org/pkgs/chez-scheme/chez-scheme/),
+  Arch's [AUR](https://aur.archlinux.org/packages/chez-scheme)).
+  * On Apple Silicon, Chez Scheme works out-of-the-box as of version 10.0.0,
   and `brew install chezscheme` should install the latest version. If for some
   reason you cannot upgrade your Chez version, see the
   [Apple M1 User](#apple-m1-user) appendix.
+  * Otherwise you can build Chez Scheme from [source](https://cisco.github.io/ChezScheme/).
+  If you do build from source, make sure you run `./configure --threads` to
+  build multithreading support in.
 
 * `bash`, `GNU make`, `gcc` or `clang`, `sha256sum`, and `GMP`. On Linux, you probably
   already have these. On macOS and major BSD flavours, you can install them
@@ -35,18 +38,31 @@ before you continue:
   library, which means on some systems the package you need to install will
   be named something more like `libgmp3-dev`.
 
-* As a default, *pack* and all its managed libraries and binaries
-  will be installed to `$HOME/.pack`. You can change this by setting
-  the `PACK_DIR` environment variable to a different directory.
+* As a default, *pack* and all its managed libraries will be installed
+  in the following directories, which can be overridden as specified:
 
-* Make sure that `$HOME/.pack/bin` is on your `PATH` and takes
+  * The global `pack.toml` file goes to `$XDG_CONFIG_HOME/pack/pack.toml`.
+    Override the directory by setting environment variable `$PACK_USER_DIR`.
+
+  * The built compiler as well as installed libraries and applications
+    go to `$XDG_STATE_HOME/pack/`.
+    Override this by setting environment variable `$PACK_STATE_DIR`.
+
+  * Cached `.ipkg` files and git repositories go to `$XDG_CACHE_HOME/pack/`.
+    Override this by setting environment variable `$PACK_CACHE_DIR`.
+
+  * Executables go to `$HOME/.local/bin`. Override this by setting
+    environment variable `$PACK_BIN_DIR`.
+
+* Make sure that `$HOME/.local/bin` (or `$PACK_BIN_DIR`; see above)
+  is on your `PATH` and takes
   precedence over the bin folder(s) (if any) where existing versions of
   Idris2 are already installed.
 
   For instance:
 
   ```sh
-  export PATH="$HOME/.pack/bin:$HOME/.idris2/bin:$PATH"
+  export PATH="$HOME/.local/bin:$HOME/.idris2/bin:$PATH"
   ```
 
 ## 2. Install via the `install.bash` shell script
@@ -75,7 +91,7 @@ If you don't have `curl` installed, you can - as an alternative -
 clone this GitHub repository and execute the shell script like so:
 
 ```sh
-git clone https://github.com/stefan-hoeck/idris2-pack.git pack
+git clone --depth=1 https://github.com/stefan-hoeck/idris2-pack.git pack
 bash -c pack/install.bash
 ```
 ### 2.1. Installation via *micropack*
@@ -163,7 +179,7 @@ enabled, so make sure to pass the `--threads` flag to Chez's `./configure`.
 For example:
 
 ```sh
-git clone 'https://github.com/racket/ChezScheme.git'
+git clone --depth=1 'https://github.com/racket/ChezScheme.git'
 cd ChezScheme
 ./configure --threads
 make
