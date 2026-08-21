@@ -3,7 +3,7 @@
 Contributions from humans are highly welcome!
 
 Pack adopts a similar approach as the Idris compiler regarding
-how its code is produced. Any code or prose originating from LLMs
+how its code is written. Any code or prose originating from LLMs
 is not suitable for the pack project; changes made using such
 tools will not be accepted. This holds even if the code is
 edited or reviewed by a human.
