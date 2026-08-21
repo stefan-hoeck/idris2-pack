@@ -1,10 +1,17 @@
 # Contributing to pack
 
-Contributions are highly welcome! To help new contributor
-find their way around the codebase and understand, how
-*pack* is implemented, this document provides a source
-map and some details about the structure of the `$HOME/.pack`
-directory.
+Contributions from humans are highly welcome!
+
+Pack adopts a similar approach as the Idris compiler regarding
+how its code is produced. Any code or prose originating from LLMs
+is not suitable for the pack project; changes made using such
+tools will not be accepted. This holds even if the code is
+edited or reviewed by a human.
+
+To help new contributors find their way around the codebase
+and understand how*pack* is implemented, this document provides
+a source map and some details about the structure of the
+`$HOME/.pack` directory.
 
 ## General Recommendations
 
