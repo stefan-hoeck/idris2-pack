@@ -170,6 +170,13 @@ pushd "$CLONES_DIR/idris2-literal"
 "$BOOT_PATH" --install literal.ipkg
 popd
 
+# Install enum
+
+git clone --depth=1 https://github.com/stefan-hoeck/idris2-enum.git "$CLONES_DIR/idris2-enum"
+pushd "$CLONES_DIR/idris2-enum"
+"$BOOT_PATH" --install enum.ipkg
+popd
+
 # Install ilex-core, ilex, and ilex-toml
 
 git clone --depth=1 https://github.com/stefan-hoeck/idris2-ilex.git "$CLONES_DIR/idris2-ilex"
