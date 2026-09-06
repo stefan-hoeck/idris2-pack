@@ -172,7 +172,7 @@ popd
 
 # Install enum
 
-git clone --depth=1 https://github.com/stefan-hoeck/idris2-enum.git "$CLONES_DIR/idris2-finite"
+git clone --depth=1 https://github.com/stefan-hoeck/idris2-finite.git "$CLONES_DIR/idris2-finite"
 pushd "$CLONES_DIR/idris2-finite"
 "$BOOT_PATH" --install finite.ipkg
 popd
