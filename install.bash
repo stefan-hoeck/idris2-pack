@@ -89,7 +89,7 @@ IDRIS2_COMMIT=$(sed -ne '/^\[idris2\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-
 
 # Bootstrap the Idris compiler
 
-git clone --depth=1 https://github.com/idris-lang/Idris2.git "$CLONES_DIR/Idris2"
+git clone https://github.com/idris-lang/Idris2.git "$CLONES_DIR/Idris2"
 pushd "$CLONES_DIR/Idris2"
 git checkout "$IDRIS2_COMMIT"
 
