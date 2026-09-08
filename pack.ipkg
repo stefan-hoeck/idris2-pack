@@ -27,6 +27,7 @@ modules = Pack.CmdLn
 
         , Pack.Config
         , Pack.Config.Environment
+        , Pack.Config.Environment.Variable
         , Pack.Config.TOML
         , Pack.Config.Types
 
@@ -51,6 +52,7 @@ modules = Pack.CmdLn
         , Pack.Runner.Install
         , Pack.Runner.New
         , Pack.Runner.Query
+        , Pack.Runner.Uninstall
 
         , Pack.Version
 
