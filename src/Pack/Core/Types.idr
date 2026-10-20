@@ -453,6 +453,13 @@ Interpolation MachineType where
   interpolate Ubuntu = "ubuntu"
   interpolate MacOS  = "macos"
 
+export
+runsOn : Maybe (List MachineType) -> Maybe String
+runsOn = map $ \xs =>
+  "runs-on     = [" ++
+  concat (intersperse ", " $ map quote xs) ++
+  "]"
+
 --------------------------------------------------------------------------------
 --          Desc
 --------------------------------------------------------------------------------

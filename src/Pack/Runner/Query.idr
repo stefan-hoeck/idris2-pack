@@ -152,12 +152,6 @@ testFile = map (\f => "Test File    : \{f}")
 notice : Maybe String -> Maybe String
 notice = map (\f =>   "Notice       : \{f}")
 
-runsOn : Maybe (List MachineType) -> Maybe String
-runsOn = map $ \xs =>
-  "runs-on     = [" ++
-  concat (intersperse ", " $ map quote xs) ++
-  "]"
-
 details : Hash -> QPkg -> List String
 details hash qp = case qp.lib.pkg of
   Git url commit ipkg _ t n ro => [

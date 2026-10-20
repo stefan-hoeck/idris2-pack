@@ -499,12 +499,6 @@ testPath = map (\x => "test        = \{quote x}")
 notice : Maybe String -> Maybe String
 notice = map (\x =>   "notice      = \{quote x}")
 
-runsOn : Maybe (List MachineType) -> Maybe String
-runsOn = map $ \xs =>
-  "runs-on     = [" ++
-  concat (intersperse ", " $ map quote xs) ++
-  "]"
-
 -- we need to print `Git` packages as `"github"` at
 -- least for the time being for reasons of compatibility
 printPair : (PkgName,Package) -> List String

@@ -243,25 +243,28 @@ libPkg env lvl cleanBuild cmd desc =
 
      inDir (desc.path.parent) (\_ => sysWithEnvAndLog lvl s pre)
 
-||| Check whether the current platform
-||| is one of the supported installation
-||| platforms.
-verifyInstallationPlatform :
-     List MachineType
-  -> Bool
-verifyInstallationPlatform mts =
-  any (== os)
-      (map (\mt =>
-             case mt of
-               Ubuntu => "unix"
-               _      => "darwin"
-           ) mts
-      )
-
 ||| Mapping from OS to platform.
 toPlatform : String -> MachineType
 toPlatform "unix" = Ubuntu
 toPlatform _      = MacOS
+
+||| Check whether a machine type represents the current platform.
+platformOf : MachineType -> Bool
+platformOf mt = mt == toPlatform os
+
+||| Verify that the current platform is supported by a package.
+verifyPlatform :
+     {auto _ : HasIO io}
+  -> PkgName
+  -> Maybe (List MachineType)
+  -> EitherT PackErr io ()
+verifyPlatform _    Nothing    = pure ()
+verifyPlatform name (Just mts) =
+  if any platformOf mts
+     then pure ()
+     else throwE $ InstallOnIncompatibleMachinePkg
+                     (toPlatform os)
+                     name
 
 --------------------------------------------------------------------------------
 --          Installing Idris
@@ -391,20 +394,10 @@ preInstall :
 preInstall rl = withPkgEnv rl.name rl.pkg $ \dir =>
   let ipkgAbs := ipkg dir rl.pkg
    in case rl.pkg of
-        Git u c ipkg _ _ _ ro =>
-          case ro of
-            Nothing => do
-              let cache := ipkgCachePath rl.name c ipkg
-              copyFile cache ipkgAbs
-            Just ro' =>
-              case verifyInstallationPlatform ro' of
-                False =>
-                  throwE (InstallOnIncompatibleMachinePkg (toPlatform os)
-                                                          rl.name
-                         )
-                True => do
-                  let cache := ipkgCachePath rl.name c ipkg
-                  copyFile cache ipkgAbs
+        Git u c ipkg _ _ _ ro => do
+          verifyPlatform rl.name ro
+          let cache := ipkgCachePath rl.name c ipkg
+          copyFile cache ipkgAbs
         Local _ _ _ _ => pure ()
         Core c => do
           let cache   := coreCachePath c
@@ -459,32 +452,18 @@ installApp b ra =
       let ipkgAbs := ipkg dir ra.pkg
        in case ra.pkg of
             Core _            => pure ()
-            Git u c ipkg pp _ _ ro =>
-              case ro of
-                Nothing => do
-                  let cache   := ipkgCachePath ra.name c ipkg
-                  copyFile cache ipkgAbs
-                  libPkg [] Build True ["--build"] (notPackIsSafe ra.desc)
-                  copyApp ra
-                  when b $ appLink ra.exec ra.name pp cg
-                Just ro' =>
-                  case verifyInstallationPlatform ro' of
-                    False =>
-                      throwE (InstallOnIncompatibleMachinePkg (toPlatform os)
-                                                              ra.name
-                             )
-                    True => do
-                      let cache   := ipkgCachePath ra.name c ipkg
-                      copyFile cache ipkgAbs
-                      libPkg [] Build True ["--build"] (notPackIsSafe ra.desc)
-                      copyApp ra
-                      when b $ appLink ra.exec ra.name pp cg
+            Git u c ipkg pp _ _ ro => do
+              verifyPlatform ra.name ro
+              let cache   := ipkgCachePath ra.name c ipkg
+              copyFile cache ipkgAbs
+              libPkg [] Build True ["--build"] (notPackIsSafe ra.desc)
+              copyApp ra
+              when b $ appLink ra.exec ra.name pp cg
             Local _ _ pp _    => do
               libPkg [] Build True ["--build"] (notPackIsSafe ra.desc)
               copyApp ra
               when b $ appLink ra.exec ra.name pp cg
               write (libTimestamp ra.name) nanoString
-
 
 --------------------------------------------------------------------------------
 --          Generating API Docs
