@@ -185,7 +185,7 @@ runTest :
   -> EitherT PackErr io ()
 runTest n args e = case lookup n e.env.all of
   Nothing                     => throwE (UnknownPkg n)
-  Just (Git u c _ _ (Just t) _) => do
+  Just (Git u c _ _ (Just t) _ _) => do
     d <- withGit n u c False pure
     runIpkg (d </> t) args e
   Just (Local d _ _ $ Just t) => runIpkg (d </> t) args e

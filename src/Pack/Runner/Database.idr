@@ -182,9 +182,9 @@ withPkgEnv :
   -> Package
   -> (Path Abs -> EitherT PackErr io a)
   -> EitherT PackErr io a
-withPkgEnv n (Git u c i _ _ _) f = withGit n u c False f
-withPkgEnv n (Local d i _ _)   f = inDir d f
-withPkgEnv n (Core _)          f = withCoreGit f
+withPkgEnv n (Git u c i _ _ _ _) f = withGit n u c False f
+withPkgEnv n (Local d i _ _)     f = inDir d f
+withPkgEnv n (Core _)            f = withCoreGit f
 
 newerSrc : HasIO io => File Abs -> Path Abs -> EitherT PackErr io String
 newerSrc ts src = trim <$> sysRun ["find", src, "-newer", ts]
@@ -218,9 +218,9 @@ libStatus n p d deps = do
     missingHash : Hash
     missingHash =
       case p of
-        Git _ c _ _ _ _          => mkHash c.value
-        Core                   _ => MkHash e.db.idrisCommit.value
-        Local {}                 => localHash
+        Git _ c _ _ _ _ _         => mkHash c.value
+        Core                    _ => MkHash e.db.idrisCommit.value
+        Local {}                  => localHash
 
     pkgHash : EitherT PackErr io Hash
     pkgHash =
@@ -258,7 +258,7 @@ loadIpkg :
   -> PkgName
   -> Package
   -> EitherT PackErr io (Desc U)
-loadIpkg n (Git u c i _ _ _) =
+loadIpkg n (Git u c i _ _ _ _) =
   let cache  := ipkgCachePath n c i
       tmpLoc := gitTmpDir n </> i
    in parseIpkgFile cache tmpLoc

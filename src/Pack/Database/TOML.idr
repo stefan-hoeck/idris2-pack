@@ -22,6 +22,7 @@ git f v =
        (optValAt "packagePath" f False v)
        (maybeValAt "test" f v)
        (maybeValAt "notice" f v)
+       (maybeValAt "runsOn" f v)
   |]
 
 local : File Abs -> TomlValue -> Either TOMLErr (Package_ f c)
@@ -50,6 +51,7 @@ gitM f v =
        (maybeValAt "packagePath" f v)
        (maybeValAt "test" f v)
        (maybeValAt "notice" f v)
+       (maybeValAt "runsOn" f v)
   |]
 
 packageM : FromTOML c => File Abs -> TomlValue -> Either TOMLErr (Package_ Maybe c)

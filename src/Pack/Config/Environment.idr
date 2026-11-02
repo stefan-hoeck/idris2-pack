@@ -228,9 +228,9 @@ pkgInstallDir n h p d =
   let vers := db.idrisVersion
       dir  := pkgPrefixDir n h p /> idrisDir
    in case p of
-        Core c          => dir /> (c <-> vers)
-        Git _ _ _ _ _ _ => dir </> pkgRelDir d
-        Local _ _ _ _   => dir </> pkgRelDir d
+        Core c            => dir /> (c <-> vers)
+        Git _ _ _ _ _ _ _ => dir </> pkgRelDir d
+        Local _ _ _ _     => dir </> pkgRelDir d
 
 ||| Directory where the API docs of the package will be installed.
 export %inline
@@ -428,19 +428,20 @@ adjPkgMap fetch ((nm,up)::ps) m = adj >>= adjPkgMap fetch ps
       case up of
         Local d i p t => pure $ insert nm (Local d i p t) m
         Core c        => pure $ insert nm (Core c) m
-        Git (Just u) (Just c) (Just i) p t n =>
-          (\x => insert nm (Git u x i (fromMaybe False p) t n) m) <$> resolveMeta fetch u c
-        Git mu mc mi mp mt mn => case lookup nm m of
-          Just (Git u c i p t n) =>
-           let u2 := fromMaybe u mu
-               i2 := fromMaybe i mi
-               p2 := fromMaybe p mp
-               t2 := mt <|> t
-               n2 := mn <|> n
+        Git (Just u) (Just c) (Just i) p t n ro =>
+          (\x => insert nm (Git u x i (fromMaybe False p) t n ro) m) <$> resolveMeta fetch u c
+        Git mu mc mi mp mt mn mro => case lookup nm m of
+          Just (Git u c i p t n ro) =>
+           let u2  := fromMaybe u mu
+               i2  := fromMaybe i mi
+               p2  := fromMaybe p mp
+               t2  := mt <|> t
+               n2  := mn <|> n
+               ro2 := mro <|> ro
             in case mc of
-                 Nothing => pure $ insert nm (Git u2 c i2 p2 t2 n2) m
+                 Nothing => pure $ insert nm (Git u2 c i2 p2 t2 n2 ro2) m
                  Just y  =>
-                   (\x => insert nm (Git u2 x i2 p2 t2 n2) m) <$> resolveMeta fetch u y
+                   (\x => insert nm (Git u2 x i2 p2 t2 n2 ro2) m) <$> resolveMeta fetch u y
           _ => throwE (IncompletePkg nm)
 
 ||| Content of pack-generated `pack.toml` containing the globally
@@ -580,9 +581,9 @@ cacheCoreIpkgFiles dir = do
 
 export
 notCached : HasIO io => (e : Env) => PkgName -> Package -> io Bool
-notCached n (Git u c i _ _ _) = fileMissing $ ipkgCachePath n c i
-notCached n (Local d i _ _) = pure False
-notCached n (Core c)        = fileMissing $ coreCachePath c
+notCached n (Git u c i _ _ _ _) = fileMissing $ ipkgCachePath n c i
+notCached n (Local d i _ _)     = pure False
+notCached n (Core c)            = fileMissing $ coreCachePath c
 
 export
 cachePkg :
@@ -591,7 +592,7 @@ cachePkg :
   -> PkgName
   -> Package
   -> EitherT PackErr io ()
-cachePkg n (Git u c i _ _ _) =
+cachePkg n (Git u c i _ _ _ _) =
   let cache  := ipkgCachePath n c i
       tmpLoc := gitTmpDir n </> i
    in withGit n u c False $ \dir => do

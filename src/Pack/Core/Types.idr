@@ -435,6 +435,32 @@ All : DBName
 All = MkDBName "all"
 
 --------------------------------------------------------------------------------
+--          Machine Type
+--------------------------------------------------------------------------------
+
+||| Possible compatible machine types (for installation and CI/CD).
+public export
+data MachineType = Ubuntu | MacOS
+
+%runElab derive "MachineType" [Eq,Ord]
+
+machineTypeToNat : MachineType -> Nat
+machineTypeToNat Ubuntu  = 0
+machineTypeToNat MacOS   = 1
+
+export
+Interpolation MachineType where
+  interpolate Ubuntu = "ubuntu"
+  interpolate MacOS  = "macos"
+
+export
+runsOn : Maybe (List MachineType) -> Maybe String
+runsOn = map $ \xs =>
+  "runs-on     = [" ++
+  concat (intersperse ", " $ map quote xs) ++
+  "]"
+
+--------------------------------------------------------------------------------
 --          Desc
 --------------------------------------------------------------------------------
 
@@ -727,6 +753,10 @@ data PackErr : Type where
   ||| The given package is not a local package
   NotLocalPkg : (name : PkgName) -> PackErr
 
+  ||| The given package is trying to be installed on
+  ||| an incompatible machine type.
+  InstallOnIncompatibleMachinePkg : (mt : MachineType) -> (name : PkgName) -> PackErr
+
   ||| The given package is not an applicatio
   ||| (No executable name set in the `.ipkg` file)
   NoApp      : (rep : PkgName) -> PackErr
@@ -889,6 +919,11 @@ printErr (UnknownPkg name) = "Unknown package: \{name}"
 printErr (IncompletePkg name) = "Incomplete data for custom package: \{name}"
 
 printErr (NotLocalPkg name) = "Not a local package: \{name}"
+
+printErr (InstallOnIncompatibleMachinePkg mt name) = """
+  Trying to install the following package on
+  an incompatible machine type (\{mt}): \{name}
+  """
 
 printErr (NoApp rep) = "Package \{rep} is not an application"
 

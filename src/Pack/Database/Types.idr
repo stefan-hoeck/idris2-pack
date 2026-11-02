@@ -172,6 +172,7 @@ data Package_ : (f : Type -> Type) -> (c : Type) -> Type where
       -> (pkgPath  : f $ Bool)
       -> (testIpkg : Maybe (File Rel))
       -> (notice   : Maybe String)
+      -> (runsOn   : Maybe (List MachineType))
       -> Package_ f c
 
   ||| A local Idris project given as an absolute path to a local
@@ -190,13 +191,13 @@ data Package_ : (f : Type -> Type) -> (c : Type) -> Type where
 
 export
 Functor (Package_ I) where
-  map f (Git u c i p t n) = Git u (f c) i p t n
+  map f (Git u c i p t n ro) = Git u (f c) i p t n ro
   map f (Local d i p t) = Local d i p t
   map f (Core c)        = Core c
 
 export
 traverse : Applicative f => (URL -> a -> f b) -> Package_ I a -> f (Package_ I b)
-traverse g (Git u c i p t n) = (\c' => Git u c' i p t n) <$> g u c
+traverse g (Git u c i p t n ro) = (\c' => Git u c' i p t n ro) <$> g u c
 traverse _ (Local d i p t)    = pure $ Local d i p t
 traverse _ (Core c)           = pure $ Core c
 
@@ -287,16 +288,16 @@ isGit (Local {}) = No absurd
 ||| folders where Idris package are installed.
 export
 usePackagePath : Package_ I c -> Bool
-usePackagePath (Git _ _ _ pp _ _) = pp
-usePackagePath (Local _ _ pp _) = pp
-usePackagePath (Core _)         = False
+usePackagePath (Git _ _ _ pp _ _ _) = pp
+usePackagePath (Local _ _ pp _)     = pp
+usePackagePath (Core _)             = False
 
 ||| Absolute path to the `.ipkg` file of a package.
 export
 ipkg : (dir : Path Abs) -> Package -> File Abs
-ipkg dir (Git _ _ i _ _ _) = toAbsFile dir i
-ipkg dir (Local _ i _ _) = toAbsFile dir i
-ipkg dir (Core c)        = toAbsFile dir (coreIpkgPath c)
+ipkg dir (Git _ _ i _ _ _ _) = toAbsFile dir i
+ipkg dir (Local _ i _ _)     = toAbsFile dir i
+ipkg dir (Core c)            = toAbsFile dir (coreIpkgPath c)
 
 --------------------------------------------------------------------------------
 --          Resolved Packages
@@ -501,14 +502,14 @@ notice = map (\x =>   "notice      = \{quote x}")
 -- we need to print `Git` packages as `"github"` at
 -- least for the time being for reasons of compatibility
 printPair : (PkgName,Package) -> List String
-printPair (x, Git url commit ipkg pp t n) =
+printPair (x, Git url commit ipkg pp t n ro) =
   [ "[db.\{x}]"
   , "type        = \"github\""
   , "url         = \{quote url}"
   , "commit      = \{quote commit}"
   , "ipkg        = \{quote ipkg}"
   , "packagePath = \{tomlBool pp}"
-  ] ++ (catMaybes [testPath t, notice n])
+  ] ++ (catMaybes [testPath t, notice n, runsOn ro])
 
 printPair (x, Local dir ipkg pp t) =
   [ "[db.\{x}]"
@@ -541,8 +542,8 @@ printDB (MkDB u c v db) =
 
 export
 mergeUP : UserPackage -> UserPackage -> UserPackage
-mergeUP (Git u1 c1 i1 p1 t1 n1) (Git u2 c2 i2 p2 t2 n2) =
-  Git (u1<|>u2)(c1<|>c2)(i1<|>i2)(p1<|>p2)(t1<|>t2)(n1<|>n2)
+mergeUP (Git u1 c1 i1 p1 t1 n1 ro1) (Git u2 c2 i2 p2 t2 n2 ro2) =
+  Git (u1<|>u2)(c1<|>c2)(i1<|>i2)(p1<|>p2)(t1<|>t2)(n1<|>n2)(ro1<|>ro2)
 mergeUP _ y = y
 
 --------------------------------------------------------------------------------

@@ -10,6 +10,7 @@ import Pack.Core
 import Pack.Database
 import Pack.Runner.Database
 import System.Escape
+import System.Info
 
 %default total
 
@@ -242,6 +243,29 @@ libPkg env lvl cleanBuild cmd desc =
 
      inDir (desc.path.parent) (\_ => sysWithEnvAndLog lvl s pre)
 
+||| Mapping from OS to platform.
+toPlatform : String -> MachineType
+toPlatform "unix" = Ubuntu
+toPlatform _      = MacOS
+
+||| Check whether a machine type represents the current platform.
+platformOf : MachineType -> Bool
+platformOf mt = mt == toPlatform os
+
+||| Verify that the current platform is supported by a package.
+verifyPlatform :
+     {auto _ : HasIO io}
+  -> PkgName
+  -> Maybe (List MachineType)
+  -> EitherT PackErr io ()
+verifyPlatform _    Nothing    = pure ()
+verifyPlatform name (Just mts) =
+  if any platformOf mts
+     then pure ()
+     else throwE $ InstallOnIncompatibleMachinePkg
+                     (toPlatform os)
+                     name
+
 --------------------------------------------------------------------------------
 --          Installing Idris
 --------------------------------------------------------------------------------
@@ -335,7 +359,7 @@ withSrcStr = case c.withSrc of
   False => ""
 
 maybeGiveNotice : HasIO io => Config => SafeLib -> io ()
-maybeGiveNotice (RL (Git _ _ _ _ _ (Just notice)) _ _ _ _ _) = warn notice
+maybeGiveNotice (RL (Git _ _ _ _ _ (Just notice) _) _ _ _ _ _) = warn notice
 maybeGiveNotice _ = pure ()
 
 installImpl :
@@ -370,11 +394,11 @@ preInstall :
 preInstall rl = withPkgEnv rl.name rl.pkg $ \dir =>
   let ipkgAbs := ipkg dir rl.pkg
    in case rl.pkg of
-        Git u c ipkg _ _ _ => do
+        Git u c ipkg _ _ _ ro => do
+          verifyPlatform rl.name ro
           let cache := ipkgCachePath rl.name c ipkg
           copyFile cache ipkgAbs
         Local _ _ _ _ => pure ()
-
         Core c => do
           let cache   := coreCachePath c
           copyFile cache ipkgAbs
@@ -428,7 +452,8 @@ installApp b ra =
       let ipkgAbs := ipkg dir ra.pkg
        in case ra.pkg of
             Core _            => pure ()
-            Git u c ipkg pp _ _ => do
+            Git u c ipkg pp _ _ ro => do
+              verifyPlatform ra.name ro
               let cache   := ipkgCachePath ra.name c ipkg
               copyFile cache ipkgAbs
               libPkg [] Build True ["--build"] (notPackIsSafe ra.desc)
@@ -439,7 +464,6 @@ installApp b ra =
               copyApp ra
               when b $ appLink ra.exec ra.name pp cg
               write (libTimestamp ra.name) nanoString
-
 
 --------------------------------------------------------------------------------
 --          Generating API Docs

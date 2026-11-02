@@ -43,7 +43,7 @@ test (RL pkg h n d _ _) =
   case e.env.config.skipTests of
     True  => pure Skipped
     False => case  pkg of
-      Git u c _ _ (Just t) _ => do
+      Git u c _ _ (Just t) _ _ => do
         d <- withGit n u c False pure
         runIpkg (d </> t) [] e
         pure TestSuccess
