@@ -347,8 +347,8 @@ that downstream applications will also get packaged up with your shared library.
 Note that this mechanism supersedes that described in the Idris documentation.
 
 In your project's `ipkg` file, add a `preinstall` script that builds/installs
-the required shared library (a `.so` file or `.dylib` file) into a `./lib`
-directory relative to the project's .ipkg file. Pack knows to look in this
+the required shared library (a `.so` file or `.dylib` file) into a `lib/`
+directory located alongside the project's .ipkg file. Pack knows to look in this
 location for such files.
 
 ## Uninstallation
