@@ -123,6 +123,41 @@ jobs:
           cd ../example2
           /home/runner/.local/bin/pack run chem-smiles-example-test -n 1000
 
+  powershellscript:
+    name: Bootstrap with the PowerShell script
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run installation script
+        shell: powershell
+        run: |
+          powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\install.ps1
+          "$HOME\.local\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Install application
+        shell: powershell
+        working-directory: ${{ runner.temp }}
+        run: |
+          pack --verbose install graph
+      - name: Run examples
+        shell: powershell
+        run: |
+          $ExampleRoot = Join-Path $env:RUNNER_TEMP "idris2-pack-examples"
+          New-Item -ItemType Directory -Force -Path $ExampleRoot |
+            Out-Null
+          Copy-Item `
+            -Path ".\example1" `
+            -Destination "$ExampleRoot\example1" `
+            -Recurse
+          Copy-Item `
+            -Path ".\example2" `
+            -Destination "$ExampleRoot\example2" `
+            -Recurse
+          Set-Location "$ExampleRoot\example1"
+          pack run chem-formula-example-test -n 1000
+          Set-Location "$ExampleRoot\example2"
+          pack run chem-smiles-example-test -n 1000
+
   shellscript-racket:
     name: Bootstrap with the shell script and racket
     runs-on: ubuntu-latest
