@@ -177,15 +177,15 @@ pushd "$CLONES_DIR/idris2-finite"
 "$BOOT_PATH" --install finite.ipkg
 popd
 
-# Install enum
-#
-pushd "$CLONES_DIR/idris2-array/darray"
-"$BOOT_PATH" --install darray.ipkg
-popd
+# Install enum and darray
 
 git clone --depth=1 https://github.com/stefan-hoeck/idris2-enum.git "$CLONES_DIR/idris2-enum"
 pushd "$CLONES_DIR/idris2-enum"
 "$BOOT_PATH" --install enum.ipkg
+popd
+
+pushd "$CLONES_DIR/idris2-array/darray"
+"$BOOT_PATH" --install darray.ipkg
 popd
 
 # Install ilex-core, ilex, and ilex-toml
