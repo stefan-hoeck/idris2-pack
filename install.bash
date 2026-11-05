@@ -178,6 +178,10 @@ pushd "$CLONES_DIR/idris2-finite"
 popd
 
 # Install enum
+#
+pushd "$CLONES_DIR/idris2-array/darray"
+"$BOOT_PATH" --install darray.ipkg
+popd
 
 git clone --depth=1 https://github.com/stefan-hoeck/idris2-enum.git "$CLONES_DIR/idris2-enum"
 pushd "$CLONES_DIR/idris2-enum"
