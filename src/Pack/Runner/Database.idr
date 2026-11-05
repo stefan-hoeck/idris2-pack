@@ -204,7 +204,11 @@ libStatus :
   -> EitherT PackErr io (PkgStatus p)
 libStatus n p d deps = do
   h    <- pkgHash
-  True <- exists (pkgInstallDir n h p d) | False => do pure (Missing missingHash)
+  let installDir = pkgInstallDir n h p d
+  True <- exists installDir
+    | False => do
+      debug "missing lib for package \{n} with hash \{h}\n"
+      pure (Missing h)
   b    <- exists $ pkgDocs n h p d
   pure (Installed h b)
   where
@@ -214,13 +218,6 @@ libStatus n p d deps = do
 
     localHash : Hash
     localHash = mkHash nanoString
-
-    missingHash : Hash
-    missingHash =
-      case p of
-        Git _ c _ _ _ _ _         => mkHash c.value
-        Core                    _ => MkHash e.db.idrisCommit.value
-        Local {}                  => localHash
 
     pkgHash : EitherT PackErr io Hash
     pkgHash =
@@ -232,10 +229,13 @@ libStatus n p d deps = do
           ""   <- newerSrc ts dir     | s     => pure localHash
           ""   <- newerIpkg ts d.path | s     => pure localHash
           s    <- read ts
+          let h = mkHash $ trim s
           debug "timestamp for \{n}: \{s}"
-          debug "hash for \{n}: \{mkHash $ trim s}"
-          pure (mkHash $ trim s)
-        _ => pure missingHash
+          debug "hash for \{n}: \{h}"
+          pure h
+        Git _ c _ _ _ _ _  => pure $ mkHash c.value
+        Core _ => pure $ MkHash e.db.idrisCommit.value
+
 
 ||| Generates the `AppStatus` of a package representing an application.
 export
@@ -248,8 +248,17 @@ appStatus :
   -> (exe  : Body)
   -> EitherT PackErr io (AppStatus p)
 appStatus n h p exe = do
-  True <- fileExists (pkgExec n h p exe) | False => pure (Missing h)
-  True <- fileExists (pathExec exe)      | False => pure (Installed h)
+  debug "checking app status for hash: \{h}\n"
+  let exePath = (pkgExec n h p exe)
+      execPath = (pathExec exe)
+  True <- fileExists exePath
+    | False => do
+            debug "File does not exist: \{exePath}\n"
+            pure (Missing h)
+  True <- fileExists (pathExec exe)
+    | False => do
+            debug "File \{execPath} installed\n"
+            pure (Installed h)
   pure (BinInstalled h)
 
 loadIpkg :
