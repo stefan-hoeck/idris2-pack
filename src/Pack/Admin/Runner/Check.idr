@@ -51,22 +51,78 @@ test (RL pkg h n d _ _) =
       Local d _ _ (Just t) => runIpkg (d </> t) [] e $> TestSuccess
       _                    => info "No tests to run for \{n}" $> NoTests
 
+||| Call test and update report.
 covering
-testPkg :
-     {auto _  : HasIO io}
-  -> {auto e  : IdrisEnv}
-  -> {auto db : ReportDB}
+callTestAndUpdateReport :
+     {auto _ : HasIO io}
+  -> {auto _ : IdrisEnv}
+  -> {auto _ : ReportDB}
   -> PkgName
-  -> io ()
-testPkg n = do
-  Just (Success pkg NoTests) <- getRep n | _ => pure ()
+  -> SafeLib
+  -> EitherT PackErr io ()
+callTestAndUpdateReport n pkg = do
   Right res <- runEitherT $ test pkg
     | Left _ => do
         warn "Tests for package \{n} failed"
         updateRep_ n (Success pkg TestFailure)
   updateRep_ n (Success pkg res)
 
+||| Ensure that we are testing a package against the
+||| operating system(s) it is intended to run on.
+covering
+testPlatform :
+     {auto _ : HasIO io}
+  -> {auto _ : IdrisEnv}
+  -> {auto _ : ReportDB}
+  -> PkgName
+  -> SafeLib
+  -> EitherT PackErr io ()
+testPlatform n (RL (Core _) _ name _ _ _)                         =
+  throwE $ InvalidPkgType name.value
+testPlatform n pkg@(RL (Git _ _ _ _ _ _ (Just mts)) _ name _ _ _) =
+  if -- ensure package can be tested against current os
+     any platformOf mts
+     then callTestAndUpdateReport n pkg
+     else throwE $ TestOnIncompatibleMachinePkg
+                     (toPlatform os)
+                     name
+testPlatform n pkg@(RL (Git _ _ _ _ _ _ Nothing)    _ name _ _ _) =
+  -- assume package was intended to be tested against all oses
+  callTestAndUpdateReport n pkg
+testPlatform _ (RL (Local _ _ _ _) _ name _ _ _)                  =
+  throwE $ InvalidPkgType name.value
+
+covering
+testPkg :
+     {auto _  : HasIO io}
+  -> {auto e  : IdrisEnv}
+  -> {auto db : ReportDB}
+  -> PkgName
+  -> EitherT PackErr io ()
+testPkg n = do
+  Just (Success pkg NoTests) <- getRep n | _ => pure ()
+  testPlatform n pkg
+
 mutual
+  ||| Ensure no failing dependencies, install dependencies for the package
+  ||| and update report.
+  covering
+  ensureNoFailingDepsInstallLibsAndUpdateReport :
+         {auto _ : HasIO io}
+      -> {auto _ : IdrisEnv}
+      -> {auto _ : ReportDB}
+      -> PkgName
+      -> SafeLib
+      -> EitherT PackErr io Report
+  ensureNoFailingDepsInstallLibsAndUpdateReport p rl = do
+    [] <- failingDeps <$> traverse checkPkg (dependencies rl)
+      | rs => warn "\{p} had failing dependencies" >>
+              updateRep p (Failure rl rs)
+    Right () <- runEitherT $ installLibs [p]
+      | Left err => warn "Failed to build \{p}" >>
+                    updateRep p (Failure rl [])
+    updateRep p (Success rl NoTests)
+
   covering
   checkPkg :
        {auto _ : HasIO io}
@@ -97,26 +153,13 @@ mutual
   checkPlatform p rl@(RL (Git _ _ _ _ _ _ (Just mts)) _ name _ _ _) =
     if -- ensure package can be built against current os
        any platformOf mts
-       then do
-         [] <- failingDeps <$> traverse checkPkg (dependencies rl)
-           | rs => warn "\{p} had failing dependencies" >>
-                   updateRep p (Failure rl rs)
-         Right () <- runEitherT $ installLibs [p]
-           | Left err => warn "Failed to build \{p}" >>
-                         updateRep p (Failure rl [])
-         updateRep p (Success rl NoTests)
+       then ensureNoFailingDepsInstallLibsAndUpdateReport p rl
        else throwE $ InstallOnIncompatibleMachinePkg
                        (toPlatform os)
                        name
-  checkPlatform p rl@(RL (Git _ _ _ _ _ _ Nothing)    _ name _ _ _) = do
+  checkPlatform p rl@(RL (Git _ _ _ _ _ _ Nothing)    _ name _ _ _) =
     -- assume package was intended to be built against all oses
-    [] <- failingDeps <$> traverse checkPkg (dependencies rl)
-      | rs => warn "\{p} had failing dependencies" >>
-              updateRep p (Failure rl rs)
-    Right () <- runEitherT $ installLibs [p]
-      | Left err => warn "Failed to build \{p}" >>
-                    updateRep p (Failure rl [])
-    updateRep p (Success rl NoTests)
+    ensureNoFailingDepsInstallLibsAndUpdateReport p rl
   checkPlatform _ (RL (Local _ _ _ _) _ name _ _ _)                 =
     throwE $ InvalidPkgType name.value
 
@@ -169,7 +212,6 @@ checkDB p e = do
   logMany Warning "The following packages could not be resolved:"
     (mapMaybe resolveLine rep)
   write (p /> "STATUS.md") (printReport rep)
-
   let dbName := cast {to = Body} e.env.config.collection <+> ".toml"
   case numberOfFailures rep of
     0 =>

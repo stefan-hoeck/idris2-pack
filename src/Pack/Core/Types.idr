@@ -757,6 +757,10 @@ data PackErr : Type where
   ||| an incompatible machine type.
   InstallOnIncompatibleMachinePkg : (mt : MachineType) -> (name : PkgName) -> PackErr
 
+  ||| The given package is trying to be tested on
+  ||| an incompatible machine type.
+  TestOnIncompatibleMachinePkg : (mt : MachineType) -> (name : PkgName) -> PackErr
+
   ||| The given package is not an applicatio
   ||| (No executable name set in the `.ipkg` file)
   NoApp      : (rep : PkgName) -> PackErr
@@ -922,6 +926,11 @@ printErr (NotLocalPkg name) = "Not a local package: \{name}"
 
 printErr (InstallOnIncompatibleMachinePkg mt name) = """
   Trying to install the following package on
+  an incompatible machine type (\{mt}): \{name}
+  """
+
+printErr (TestOnIncompatibleMachinePkg mt name) = """
+  Trying to run the following package's test suite on
   an incompatible machine type (\{mt}): \{name}
   """
 
