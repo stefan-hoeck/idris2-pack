@@ -10,6 +10,7 @@ import Pack.Database
 import Pack.Runner.Database
 import Pack.Runner.Develop
 import Pack.Runner.Install
+import System.Info
 
 %default total
 
@@ -42,7 +43,7 @@ test :
 test (RL pkg h n d _ _) =
   case e.env.config.skipTests of
     True  => pure Skipped
-    False => case  pkg of
+    False => case pkg of
       Git u c _ _ (Just t) _ _ => do
         d <- withGit n u c False pure
         runIpkg (d </> t) [] e
@@ -65,26 +66,58 @@ testPkg n = do
         updateRep_ n (Success pkg TestFailure)
   updateRep_ n (Success pkg res)
 
-covering
-checkPkg :
-     {auto _ : HasIO io}
-  -> {auto _ : IdrisEnv}
-  -> {auto _ : ReportDB}
-  -> PkgName
-  -> io Report
-checkPkg p = do
-  Nothing  <- getRep p | Just rep => pure rep
-  info "Checking \{p}"
-  Right rl <- runEitherT $ resolveLib p >>= safeLib . missing
-    | Left err => warn "Could not resolve \{p}" >>
-                  updateRep p (Error p err)
-  [] <- failingDeps <$> traverse checkPkg (dependencies rl)
-    | rs => warn "\{p} had failing dependencies" >>
-            updateRep p (Failure rl rs)
-  Right () <- runEitherT $ installLibs [p]
-    | Left err => warn "Failed to build \{p}" >>
-                  updateRep p (Failure rl [])
-  updateRep p (Success rl NoTests)
+mutual
+  covering
+  checkPkg :
+       {auto _ : HasIO io}
+    -> {auto _ : IdrisEnv}
+    -> {auto _ : ReportDB}
+    -> PkgName
+    -> EitherT PackErr io Report
+  checkPkg p = do
+    Nothing  <- getRep p | Just rep => pure rep
+    info "Checking \{p}"
+    Right rl <- runEitherT $ resolveLib p >>= safeLib . missing
+      | Left err => warn "Could not resolve \{p}" >>
+                    updateRep p (Error p err)
+    checkPlatform p rl
+
+  ||| Ensure that we are checking a package against the packages intended os.
+  covering
+  checkPlatform :
+       {auto _ : HasIO io}
+    -> {auto _ : IdrisEnv}
+    -> {auto _ : ReportDB}
+    -> PkgName
+    -> SafeLib
+    -> EitherT PackErr io Report
+  checkPlatform _ (RL (Core _) _ name _ _ _)                        =
+    throwE $ InvalidPkgType name.value
+  checkPlatform p rl@(RL (Git _ _ _ _ _ _ (Just mts)) _ name _ _ _) =
+    if -- ensure that package can be built against current os
+       any platformOf mts
+       then do
+         [] <- failingDeps <$> traverse checkPkg (dependencies rl)
+           | rs => warn "\{p} had failing dependencies" >>
+                   updateRep p (Failure rl rs)
+         Right () <- runEitherT $ installLibs [p]
+           | Left err => warn "Failed to build \{p}" >>
+                         updateRep p (Failure rl [])
+         updateRep p (Success rl NoTests)
+       else throwE $ InstallOnIncompatibleMachinePkg
+                       (toPlatform os)
+                       name
+  checkPlatform p rl@(RL (Git _ _ _ _ _ _ Nothing)    _ name _ _ _) = do
+    -- assume that package was intended to be built against all oses
+    [] <- failingDeps <$> traverse checkPkg (dependencies rl)
+      | rs => warn "\{p} had failing dependencies" >>
+              updateRep p (Failure rl rs)
+    Right () <- runEitherT $ installLibs [p]
+      | Left err => warn "Failed to build \{p}" >>
+                    updateRep p (Failure rl [])
+    updateRep p (Success rl NoTests)
+  checkPlatform _ (RL (Local _ _ _ _) _ name _ _ _)                 =
+    throwE $ InvalidPkgType name.value
 
 covering
 checkAll :
@@ -92,7 +125,7 @@ checkAll :
   -> {auto _  : IdrisEnv}
   -> {auto db : ReportDB}
   -> List PkgName
-  -> io (List Report)
+  -> EitherT PackErr io (List Report)
 checkAll xs = do
   traverse_ checkPkg xs
   traverse_ testPkg xs
