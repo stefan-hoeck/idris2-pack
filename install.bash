@@ -28,6 +28,17 @@ DB_DIR="$STATE_DIR/db"
 INSTALL_DIR="$STATE_DIR/install"
 CLONES_DIR="$CACHE_DIR/clones"
 
+# Check for existing install, for early bailout
+
+if [ -d "$STATE_DIR" ]; then
+	set +x
+	echo "A previous installation of Pack was found."
+	echo "Please run \`pack uninstall\` *or* delete \"$STATE_DIR\","
+	echo "then delete \"$USER_DIR/pack.toml\" and rerun this script."
+	set -x
+	exit 1
+fi
+
 # Detect Chez executable
 
 if command -v chezscheme &>/dev/null; then
@@ -54,13 +65,7 @@ else
 	echo "Using $SCHEME for code generation"
 fi
 
-# Check and create directories
-
-if [ -d "$STATE_DIR" ]; then
-	echo "Directory $STATE_DIR exists."
-	echo "Please remove it and rerun this script."
-	exit 1
-fi
+# Create directories
 
 mkdir -p "$USER_DIR"
 mkdir -p "$DB_DIR"
