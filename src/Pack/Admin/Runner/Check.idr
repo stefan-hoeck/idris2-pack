@@ -82,7 +82,8 @@ mutual
                     updateRep p (Error p err)
     checkPlatform p rl
 
-  ||| Ensure that we are checking a package against the packages intended os.
+  ||| Ensure that we are checking a package against the
+  ||| operating system(s) it is intended to run on.
   covering
   checkPlatform :
        {auto _ : HasIO io}
