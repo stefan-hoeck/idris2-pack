@@ -95,7 +95,7 @@ mutual
   checkPlatform _ (RL (Core _) _ name _ _ _)                        =
     throwE $ InvalidPkgType name.value
   checkPlatform p rl@(RL (Git _ _ _ _ _ _ (Just mts)) _ name _ _ _) =
-    if -- ensure that package can be built against current os
+    if -- ensure package can be built against current os
        any platformOf mts
        then do
          [] <- failingDeps <$> traverse checkPkg (dependencies rl)
