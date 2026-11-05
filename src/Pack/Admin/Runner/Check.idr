@@ -109,7 +109,7 @@ mutual
                        (toPlatform os)
                        name
   checkPlatform p rl@(RL (Git _ _ _ _ _ _ Nothing)    _ name _ _ _) = do
-    -- assume that package was intended to be built against all oses
+    -- assume package was intended to be built against all oses
     [] <- failingDeps <$> traverse checkPkg (dependencies rl)
       | rs => warn "\{p} had failing dependencies" >>
               updateRep p (Failure rl rs)
