@@ -36,6 +36,7 @@ jobs:
           # Change all uppercase to lowercase
           REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           echo "REPO_OWNER=$REPO_OWNER" >> "$GITHUB_ENV"
+          UBUNTU_RELEASE=resolute OWNER=$REPO_OWNER make docker-build
           UBUNTU_RELEASE=noble OWNER=$REPO_OWNER make docker-build
           UBUNTU_RELEASE=jammy OWNER=$REPO_OWNER make docker-build
 
@@ -53,11 +54,14 @@ jobs:
           echo DB_VERSION="$DB_VERSION"
           docker tag "$IMAGE_ID:jammy" "$IMAGE_ID:$DB_VERSION-jammy"
           docker tag "$IMAGE_ID:noble" "$IMAGE_ID:$DB_VERSION-noble"
-          docker tag "$IMAGE_ID:noble" "$IMAGE_ID:$DB_VERSION"
-          docker tag "$IMAGE_ID:noble" "$IMAGE_ID:latest"
-          docker push "$IMAGE_ID:latest"
+          docker tag "$IMAGE_ID:resolute" "$IMAGE_ID:$DB_VERSION-resolute"
+          docker tag "$IMAGE_ID:resolute" "$IMAGE_ID:$DB_VERSION"
+          docker tag "$IMAGE_ID:resolute" "$IMAGE_ID:latest"
           docker push "$IMAGE_ID:jammy"
           docker push "$IMAGE_ID:noble"
-          docker push "$IMAGE_ID:$DB_VERSION"
+          docker push "$IMAGE_ID:resolute"
           docker push "$IMAGE_ID:$DB_VERSION-jammy"
           docker push "$IMAGE_ID:$DB_VERSION-noble"
+          docker push "$IMAGE_ID:$DB_VERSION-resolute"
+          docker push "$IMAGE_ID:$DB_VERSION"
+          docker push "$IMAGE_ID:latest"
