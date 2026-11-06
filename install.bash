@@ -79,14 +79,13 @@ check_installed "$SCHEME"
 
 # we need GNU ${MAKE}
 export MAKE=${MAKE:-make}
-check_installed ${MAKE}
+check_installed "${MAKE}"
 
 
 if ! ${MAKE} -v 2>&1 | grep "GNU"; then
-   echo "Idris2 requires GNU ${MAKE}, please install it and set MAKE environment variable" 
-   exit 1
+  echo "Idris2 requires GNU make (found ${MAKE}), please install it and set MAKE environment variable"
+  exit 1
 fi
-
 
 # Install package collection
 
