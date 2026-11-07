@@ -1,5 +1,6 @@
 module Pack.Admin.Runner.Check
 
+import Data.Either
 import Data.IORef
 import Data.SortedMap
 import Idris.Package.Types
@@ -59,7 +60,7 @@ callTestAndUpdateReport :
   -> {auto _ : ReportDB}
   -> PkgName
   -> SafeLib
-  -> EitherT PackErr io ()
+  -> io ()
 callTestAndUpdateReport n pkg = do
   Right res <- runEitherT $ test pkg
     | Left _ => do
@@ -76,21 +77,26 @@ testPlatform :
   -> {auto _ : ReportDB}
   -> PkgName
   -> SafeLib
-  -> EitherT PackErr io ()
-testPlatform n (RL (Core _) _ name _ _ _)                         =
-  throwE $ InvalidPkgType name.value
+  -> io ()
+testPlatform n (RL (Core _) _ name _ _ _)                         = do
+  warn "Invalid SafeLib (ResolvedLib Safe) type (Core)"
+  pure ()
 testPlatform n pkg@(RL (Git _ _ _ _ _ _ (Just mts)) _ name _ _ _) =
   if -- ensure package can be tested against current os
      any platformOf mts
      then callTestAndUpdateReport n pkg
-     else throwE $ TestOnIncompatibleMachinePkg
-                     (toPlatform os)
-                     name
+     else do
+       info """
+         Trying to run the following package's test suite on an
+         incompatible machine type (\{toPlatform os}): \{name}
+       """
+       pure ()
 testPlatform n pkg@(RL (Git _ _ _ _ _ _ Nothing)    _ name _ _ _) =
   -- assume package was intended to be tested against all oses
   callTestAndUpdateReport n pkg
-testPlatform _ (RL (Local _ _ _ _) _ name _ _ _)                  =
-  throwE $ InvalidPkgType name.value
+testPlatform _ (RL (Local _ _ _ _) _ name _ _ _)                  = do
+  warn "Invalid SafeLib (ResolvedLib Safe) type (Local)"
+  pure ()
 
 covering
 testPkg :
@@ -98,7 +104,7 @@ testPkg :
   -> {auto e  : IdrisEnv}
   -> {auto db : ReportDB}
   -> PkgName
-  -> EitherT PackErr io ()
+  -> io ()
 testPkg n = do
   Just (Success pkg NoTests) <- getRep n | _ => pure ()
   testPlatform n pkg
@@ -113,9 +119,10 @@ mutual
       -> {auto _ : ReportDB}
       -> PkgName
       -> SafeLib
-      -> EitherT PackErr io Report
+      -> io Report
   ensureNoFailingDepsInstallLibsAndUpdateReport p rl = do
-    [] <- failingDeps <$> traverse checkPkg (dependencies rl)
+    reps <- rights <$> traverse checkPkg (dependencies rl)
+    []   <- failingDeps <$> pure reps
       | rs => warn "\{p} had failing dependencies" >>
               updateRep p (Failure rl rs)
     Right () <- runEitherT $ installLibs [p]
@@ -129,13 +136,15 @@ mutual
     -> {auto _ : IdrisEnv}
     -> {auto _ : ReportDB}
     -> PkgName
-    -> EitherT PackErr io Report
+    -> io (Either () Report)
   checkPkg p = do
-    Nothing  <- getRep p | Just rep => pure rep
+    Nothing  <- getRep p | Just rep => pure $ Right rep
     info "Checking \{p}"
     Right rl <- runEitherT $ resolveLib p >>= safeLib . missing
-      | Left err => warn "Could not resolve \{p}" >>
-                    updateRep p (Error p err)
+      | Left err => do
+          warn "Could not resolve \{p}"
+          rep <- updateRep p (Error p err)
+          pure $ Right rep
     checkPlatform p rl
 
   ||| Ensure that we are checking a package against the
@@ -147,21 +156,29 @@ mutual
     -> {auto _ : ReportDB}
     -> PkgName
     -> SafeLib
-    -> EitherT PackErr io Report
-  checkPlatform _ (RL (Core _) _ name _ _ _)                        =
-    throwE $ InvalidPkgType name.value
+    -> io (Either () Report)
+  checkPlatform _ (RL (Core _) _ name _ _ _)                        = do
+    warn "Invalid SafeLib (ResolvedLib Safe) type (Core)"
+    pure $ Left ()
   checkPlatform p rl@(RL (Git _ _ _ _ _ _ (Just mts)) _ name _ _ _) =
     if -- ensure package can be built against current os
        any platformOf mts
-       then ensureNoFailingDepsInstallLibsAndUpdateReport p rl
-       else throwE $ InstallOnIncompatibleMachinePkg
-                       (toPlatform os)
-                       name
-  checkPlatform p rl@(RL (Git _ _ _ _ _ _ Nothing)    _ name _ _ _) =
+       then do
+         rep <- ensureNoFailingDepsInstallLibsAndUpdateReport p rl
+         pure $ Right rep
+       else do
+         info """
+           Trying to run the following package's test suite on an
+           incompatible machine type (\{toPlatform os}): \{name}
+           """
+         pure $ Left ()
+  checkPlatform p rl@(RL (Git _ _ _ _ _ _ Nothing)    _ name _ _ _) = do
     -- assume package was intended to be built against all oses
-    ensureNoFailingDepsInstallLibsAndUpdateReport p rl
-  checkPlatform _ (RL (Local _ _ _ _) _ name _ _ _)                 =
-    throwE $ InvalidPkgType name.value
+    rep <- ensureNoFailingDepsInstallLibsAndUpdateReport p rl
+    pure $ Right rep
+  checkPlatform _ (RL (Local _ _ _ _) _ name _ _ _)                 = do
+    warn "Invalid SafeLib (ResolvedLib Safe) type (Local)"
+    pure $ Left ()
 
 covering
 checkAll :
@@ -169,7 +186,7 @@ checkAll :
   -> {auto _  : IdrisEnv}
   -> {auto db : ReportDB}
   -> List PkgName
-  -> EitherT PackErr io (List Report)
+  -> io (List Report)
 checkAll xs = do
   traverse_ checkPkg xs
   traverse_ testPkg xs
