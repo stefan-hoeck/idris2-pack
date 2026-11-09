@@ -9,6 +9,7 @@ import Data.String
 import Derive.Prelude
 import Idris.Package.Types
 import Pack.Core.Types
+import System.Info
 
 %default total
 %language ElabReflection
@@ -545,6 +546,21 @@ mergeUP : UserPackage -> UserPackage -> UserPackage
 mergeUP (Git u1 c1 i1 p1 t1 n1 ro1) (Git u2 c2 i2 p2 t2 n2 ro2) =
   Git (u1<|>u2)(c1<|>c2)(i1<|>i2)(p1<|>p2)(t1<|>t2)(n1<|>n2)(ro1<|>ro2)
 mergeUP _ y = y
+
+--------------------------------------------------------------------------------
+--          Platform
+--------------------------------------------------------------------------------
+
+||| Mapping from OS to platform.
+export
+toPlatform : String -> MachineType
+toPlatform "unix" = Ubuntu
+toPlatform _      = MacOS
+
+||| Check whether a machine type represents the current platform.
+export
+platformOf : MachineType -> Bool
+platformOf mt = mt == toPlatform os
 
 --------------------------------------------------------------------------------
 --          Tests
