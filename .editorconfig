@@ -39,7 +39,7 @@ switch_case_indent = true
 
 [*.bash]
 indent_style = tab
-shell_variant = posix
+shell_variant = bash
 switch_case_indent = true
 
 [*.bat]

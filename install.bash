@@ -3,7 +3,6 @@
 set -eux
 
 # common functions
-
 function check_installed {
 	if ! command -v "$1" &>/dev/null; then
 		echo "Please install $1"
@@ -80,7 +79,6 @@ check_installed "$SCHEME"
 # we need GNU ${MAKE}
 export MAKE=${MAKE:-make}
 check_installed "${MAKE}"
-
 
 if ! ${MAKE} -v 2>&1 | grep "GNU"; then
 	echo "Idris2 requires GNU make (found ${MAKE}), please install it and set MAKE environment variable"
