@@ -559,8 +559,7 @@ installLibs = install . map (Library,)
 ||| all dependencies of the lot.
 export covering %inline
 installApps : HasIO io => IdrisEnv => List PkgName -> EitherT PackErr io ()
-installApps [] = info "No app to install, run as 'pack install-app <appname>+"
-installApps pkgs = install $ map (App True,) pkgs
+installApps = install . map (App True,)
 
 ||| Install the (possibly transitive) dependencies of the given
 ||| loaded `.ipkg` file.
