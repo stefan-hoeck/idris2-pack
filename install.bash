@@ -3,7 +3,6 @@
 set -eux
 
 # common functions
-
 function check_installed {
 	if ! command -v "$1" &>/dev/null; then
 		echo "Please install $1"
@@ -76,7 +75,15 @@ fi
 
 check_installed git
 check_installed "$SCHEME"
-check_installed make
+
+# we need GNU ${MAKE}
+export MAKE=${MAKE:-make}
+check_installed "${MAKE}"
+
+if ! ${MAKE} -v 2>&1 | grep -q "GNU"; then
+	echo "Idris2 requires GNU make (found ${MAKE}), please install it and set MAKE environment variable"
+	exit 1
+fi
 
 # Install package collection
 
@@ -84,7 +91,7 @@ git clone --depth=1 https://github.com/stefan-hoeck/idris2-pack-db.git "$CLONES_
 cp "$CLONES_DIR/idris2-pack-db/collections/"* "$DB_DIR"
 
 LATEST_DB="$(find "$DB_DIR" -name 'nightly-*' | sort | tail -1)"
-PACKAGE_COLLECTION="$(basename -s .toml "$LATEST_DB")"
+PACKAGE_COLLECTION="$(basename "$LATEST_DB" .toml)"
 IDRIS2_COMMIT=$(sed -ne '/^\[idris2\]/,/^commit/{/^commit/s/commit *= *"\([a-f0-9]*\)"/\1/p;}' "$DB_DIR/$PACKAGE_COLLECTION.toml")
 
 # Bootstrap the Idris compiler
@@ -98,20 +105,20 @@ BOOT_PATH="$INSTALL_DIR/$IDRIS2_COMMIT/idris2/bin/idris2"
 
 if [ "$SCHEME" = "racket" ]; then
 	CG="racket"
-	make bootstrap-racket PREFIX="$PREFIX_PATH"
+	${MAKE} bootstrap-racket PREFIX="$PREFIX_PATH"
 else
 	CG="chez"
-	make bootstrap PREFIX="$PREFIX_PATH" SCHEME="$SCHEME"
+	${MAKE} bootstrap PREFIX="$PREFIX_PATH" SCHEME="$SCHEME"
 fi
 
 export IDRIS2_CG="$CG"
 
-make install PREFIX="$PREFIX_PATH" IDRIS2_CG="$CG"
-make clean
-make all IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH" IDRIS2_CG="$CG"
-make install IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH" IDRIS2_CG="$CG"
-make install-with-src-libs IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH" IDRIS2_CG="$CG"
-make install-with-src-api IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH" IDRIS2_CG="$CG"
+${MAKE} install PREFIX="$PREFIX_PATH" IDRIS2_CG="$CG"
+${MAKE} clean
+${MAKE} all IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH" IDRIS2_CG="$CG"
+${MAKE} install IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH" IDRIS2_CG="$CG"
+${MAKE} install-with-src-libs IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH" IDRIS2_CG="$CG"
+${MAKE} install-with-src-api IDRIS2_BOOT="$BOOT_PATH" PREFIX="$PREFIX_PATH" IDRIS2_CG="$CG"
 popd
 
 # Install algebra
