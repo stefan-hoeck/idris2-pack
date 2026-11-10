@@ -17,7 +17,7 @@ jobs:
   on-failure:
     runs-on: ubuntu-latest
     env:
-      notification_receiver_mail:   ${{ secrets.NOTIFICATION_RECEIVER_MAIL   }}
+      notification_receiver_mail: ${{ secrets.NOTIFICATION_RECEIVER_MAIL   }}
       notification_sender_username: ${{ secrets.NOTIFICATION_SENDER_USERNAME }}
       notification_sender_password: ${{ secrets.NOTIFICATION_SENDER_PASSWORD }}
     if: ${{ github.event.workflow_run.conclusion == 'failure' }}
