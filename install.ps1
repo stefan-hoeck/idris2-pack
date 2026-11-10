@@ -942,6 +942,19 @@ foreach ($package in $Packages) {
         -PackageDirectory $clone `
         -Ipkg $package.Ipkg `
         -BootPath $BootPathWindows
+
+    # idris2-ilex now depends on darray. Both array.ipkg and darray.ipkg live
+    # in the same idris2-array repository, so install darray from the clone we
+    # already have instead of cloning the repository a second time.
+    if ($package.Name -eq "array") {
+        Push-Location $clone
+        try {
+            Invoke-Native $BootPathWindows --install "darray.ipkg"
+        }
+        finally {
+            Pop-Location
+        }
+    }
 }
 
 # ---------------------------------------------------------------------------
@@ -1190,7 +1203,7 @@ static const char *command_after_c(void) {
 /*
  * Idris2's System.escapeArg uses CMD escaping on Windows:
  *
- *   space -> ^
+ *   space -> ^ 
  *   &     -> ^&
  *   "     -> ^"
  *   etc.
