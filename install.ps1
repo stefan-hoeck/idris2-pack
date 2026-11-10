@@ -942,21 +942,29 @@ foreach ($package in $Packages) {
         -PackageDirectory $clone `
         -Ipkg $package.Ipkg `
         -BootPath $BootPathWindows
+}
 
-    # idris2-ilex now depends on darray. darray lives in the `darray`
-    # subdirectory of the idris2-array repository, so install it from that
-    # package directory using the clone we already have.
-    if ($package.Name -eq "array") {
-        $DArrayDir = Join-Path $clone "darray"
+# ---------------------------------------------------------------------------
+# Install darray
+# ---------------------------------------------------------------------------
+#
+# darray lives in the `darray` subdirectory of idris2-array and depends on
+# enum. Install it only after the normal prerequisite loop has completed so
+# enum (which is part of $Packages above) is already installed.
+#
+$ArrayClone = Join-Path $ClonesDir "idris2-array"
+$DArrayDir = Join-Path $ArrayClone "darray"
 
-        Push-Location $DArrayDir
-        try {
-            Invoke-Native $BootPathWindows --install "darray.ipkg"
-        }
-        finally {
-            Pop-Location
-        }
-    }
+if (-not (Test-Path -LiteralPath (Join-Path $DArrayDir "darray.ipkg"))) {
+    throw "Could not find darray.ipkg at $DArrayDir"
+}
+
+Push-Location $DArrayDir
+try {
+    Invoke-Native $BootPathWindows --install "darray.ipkg"
+}
+finally {
+    Pop-Location
 }
 
 # ---------------------------------------------------------------------------
