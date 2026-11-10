@@ -136,8 +136,11 @@ jobs:
                          -NoProfile `
                          -ExecutionPolicy Bypass `
                          -File .\install.ps1
-          "$HOME\.local\bin" | \
-          Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          "$HOME\.local\bin" |
+            Out-File `
+            -FilePath $env:GITHUB_PATH `
+            -Encoding utf8 `
+            -Append
       - name: Install application
         shell: powershell
         working-directory: ${{ runner.temp }}
