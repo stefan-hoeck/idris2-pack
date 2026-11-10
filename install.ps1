@@ -1205,7 +1205,7 @@ static const char *command_after_c(void) {
 /*
  * Idris2's System.escapeArg uses CMD escaping on Windows:
  *
- *   space -> ^ 
+ *   space -> ^
  *   &     -> ^&
  *   "     -> ^"
  *   etc.
