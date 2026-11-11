@@ -1092,6 +1092,66 @@ $Utf8NoBomPackPatch = New-Object System.Text.UTF8Encoding($false)
 
 Write-Host "Applied Windows directory-existence fix to idris2-pack."
 
+# ---------------------------------------------------------------------------
+# Windows fix: commit-cache paths for Git URLs
+# ---------------------------------------------------------------------------
+#
+# Pack's commit cache currently constructs a relative filesystem path from the
+# textual form of a URL:
+#
+#   https://github.com/owner/repo
+#
+# On Windows that leaves the URL scheme colon in a path component (`https:`),
+# which is not a valid native Windows directory name. This shows up when using
+# branch-based commit specifications such as `latest:main`.
+#
+# URL already has a path conversion that strips the scheme correctly, so build
+# the cache path through the filepath append operator instead of casting the
+# interpolated URL string.
+#
+$PackConfigEnvironment = Join-Path $PackClone "src\Pack\Config\Environment.idr"
+
+if (-not (Test-Path -LiteralPath $PackConfigEnvironment)) {
+    throw "Could not find Pack.Config.Environment at $PackConfigEnvironment"
+}
+
+$PackConfigEnvironmentText = Get-Content -LiteralPath $PackConfigEnvironment -Raw
+
+$CommitFilePattern = @'
+(?ms)commitFile\s*:\s*PackDirs\s*=>\s*URL\s*->\s*Branch\s*->\s*File Abs\s*\r?\ncommitFile url b\s*=\s*\r?\n\s*let relPath := the \(Path Rel\) \$ cast "\\\{url\}/\\\{b\}"\s*\r?\n\s*in MkF \(commitsDir </> relPath\) "commit"
+'@
+
+$CommitFileReplacement = @'
+commitFile : PackDirs => URL -> Branch -> File Abs
+commitFile url b =
+  MkF (commitsDir <//> url <//> b) "commit"
+'@
+
+$PatchedPackConfigEnvironment = [regex]::Replace(
+    $PackConfigEnvironmentText,
+    $CommitFilePattern,
+    $CommitFileReplacement,
+    1
+)
+
+if ($PatchedPackConfigEnvironment -eq $PackConfigEnvironmentText) {
+    throw @"
+Could not patch Pack.Config.Environment commit cache path.
+
+The upstream source may have changed. Refusing to continue because branch-based
+commit specifications such as `latest:main` generate invalid Windows cache
+paths when the raw URL scheme is used as a directory component.
+"@
+}
+
+[System.IO.File]::WriteAllText(
+    $PackConfigEnvironment,
+    $PatchedPackConfigEnvironment,
+    $Utf8NoBomPackPatch
+)
+
+Write-Host "Applied Windows commit-cache path fix to idris2-pack."
+
 Push-Location $PackClone
 try {
     Invoke-Native $BootPathWindows --build "pack.ipkg"
@@ -1392,6 +1452,19 @@ int main(void) {
             ++p;
         }
     }
+
+    /*
+     * Native Windows Idris2/Chez processes can populate Unix-style dynamic
+     * loader variables before eventually calling system(). If such a value
+     * contains a Windows drive path (for example C:\foo), MSYS2's loader sees
+     * the drive colon as a POSIX list separator and may try to load a library
+     * literally named "C".
+     *
+     * Windows DLL lookup uses PATH rather than LD_LIBRARY_PATH/LD_PRELOAD, so
+     * clear these variables at the Windows -> MSYS2 Bash boundary.
+     */
+    _putenv_s("LD_LIBRARY_PATH", "");
+    _putenv_s("LD_PRELOAD", "");
 
     result =
         _spawnl(
