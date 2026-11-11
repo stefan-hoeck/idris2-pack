@@ -1547,6 +1547,9 @@ set "PACK_BIN_DIR=$BinDir"
 set "PACK_MSYS2_BASH=$($script:BashPath)"
 set "COMSPEC=$PackComspecExe"
 
+rem Preserve the Scheme executable used during bootstrap for later Chez codegen.
+set "SCHEME=$Scheme"
+
 rem Ensure MSYS2 utilities are available in fresh Windows shells.
 set "PATH=$Msys2Root\mingw64\bin;$Msys2Root\usr\bin;%PATH%"
 
@@ -1568,6 +1571,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 export PATH="/mingw64/bin:/usr/bin:$PATH"
+export SCHEME="__PACK_SCHEME__"
 
 if command -v cygpath >/dev/null 2>&1; then
     export HOME="$(cygpath -w "${USERPROFILE:-$HOME}")"
@@ -1582,6 +1586,11 @@ fi
 
 exec "$SCRIPT_DIR/pack-runtime" "$@"
 '@
+
+$PackPosixWrapperText = $PackPosixWrapperText.Replace(
+    "__PACK_SCHEME__",
+    $Scheme
+)
 
 $PackPosixWrapperLf = $PackPosixWrapperText -replace "`r`n", "`n"
 $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
@@ -1627,6 +1636,7 @@ for %%D in (A B C D E F G H I J K L M N O P Q R S T U V W X Y Z) do (
 )
 
 set "IDRIS2_CG=$Cg"
+set "SCHEME=$Scheme"
 
 "%APPLICATION%" %*
 "@
@@ -1692,6 +1702,7 @@ export IDRIS2_PACKAGE_PATH
 export IDRIS2_LIBS
 export IDRIS2_DATA
 export IDRIS2_CG="__IDRIS2_CG__"
+export SCHEME="__PACK_SCHEME__"
 
 # pack is a native Windows executable, so app-path may return a Windows path
 # such as C:\Users\...\idris2.exe. Git Bash and MSYS2 provide cygpath, which
@@ -1706,6 +1717,11 @@ exec "$APPLICATION" "$@"
 $IdrisPosixWrapperContents = $IdrisPosixWrapperContents.Replace(
     "__IDRIS2_CG__",
     $Cg
+)
+
+$IdrisPosixWrapperContents = $IdrisPosixWrapperContents.Replace(
+    "__PACK_SCHEME__",
+    $Scheme
 )
 
 # Use LF line endings for the POSIX shell wrapper.
