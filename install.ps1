@@ -659,7 +659,16 @@ if ($SchemeResults.Count -eq 0) {
 $Scheme = [string]$SchemeResults[$SchemeResults.Count - 1]
 
 Require-Command $Scheme
+
+$SchemeCommand = Get-Command $Scheme -ErrorAction Stop
+$SchemeExecutable = $SchemeCommand.Source
+
+if ([string]::IsNullOrWhiteSpace($SchemeExecutable)) {
+    throw "Unable to resolve the Scheme executable path for $Scheme"
+}
+
 Write-Host "Using $Scheme for code generation"
+Write-Host "Scheme executable: $SchemeExecutable"
 
 # ---------------------------------------------------------------------------
 # Check and create directories
@@ -788,6 +797,11 @@ try {
     }
     else {
         $Cg = "chez"
+
+        # Idris2's Chez backend reads CHEZ at runtime. Keep SCHEME for the
+        # bootstrap Makefile, but also preserve the exact native executable
+        # path so later code generation never falls back to `/usr/bin/env scheme`.
+        $env:CHEZ = $SchemeExecutable
 
         Invoke-Native `
             make `
@@ -1547,8 +1561,9 @@ set "PACK_BIN_DIR=$BinDir"
 set "PACK_MSYS2_BASH=$($script:BashPath)"
 set "COMSPEC=$PackComspecExe"
 
-rem Preserve the Scheme executable used during bootstrap for later Chez codegen.
+rem Preserve Scheme settings used during bootstrap/runtime code generation.
 set "SCHEME=$Scheme"
+set "CHEZ=$SchemeExecutable"
 
 rem Ensure MSYS2 utilities are available in fresh Windows shells.
 set "PATH=$Msys2Root\mingw64\bin;$Msys2Root\usr\bin;%PATH%"
@@ -1572,6 +1587,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 export PATH="/mingw64/bin:/usr/bin:$PATH"
 export SCHEME="__PACK_SCHEME__"
+export CHEZ="__PACK_CHEZ__"
 
 if command -v cygpath >/dev/null 2>&1; then
     export HOME="$(cygpath -w "${USERPROFILE:-$HOME}")"
@@ -1590,6 +1606,11 @@ exec "$SCRIPT_DIR/pack-runtime" "$@"
 $PackPosixWrapperText = $PackPosixWrapperText.Replace(
     "__PACK_SCHEME__",
     $Scheme
+)
+
+$PackPosixWrapperText = $PackPosixWrapperText.Replace(
+    "__PACK_CHEZ__",
+    ($SchemeExecutable -replace '\\', '/')
 )
 
 $PackPosixWrapperLf = $PackPosixWrapperText -replace "`r`n", "`n"
@@ -1637,6 +1658,7 @@ for %%D in (A B C D E F G H I J K L M N O P Q R S T U V W X Y Z) do (
 
 set "IDRIS2_CG=$Cg"
 set "SCHEME=$Scheme"
+set "CHEZ=$SchemeExecutable"
 
 "%APPLICATION%" %*
 "@
@@ -1703,6 +1725,7 @@ export IDRIS2_LIBS
 export IDRIS2_DATA
 export IDRIS2_CG="__IDRIS2_CG__"
 export SCHEME="__PACK_SCHEME__"
+export CHEZ="__PACK_CHEZ__"
 
 # pack is a native Windows executable, so app-path may return a Windows path
 # such as C:\Users\...\idris2.exe. Git Bash and MSYS2 provide cygpath, which
@@ -1722,6 +1745,11 @@ $IdrisPosixWrapperContents = $IdrisPosixWrapperContents.Replace(
 $IdrisPosixWrapperContents = $IdrisPosixWrapperContents.Replace(
     "__PACK_SCHEME__",
     $Scheme
+)
+
+$IdrisPosixWrapperContents = $IdrisPosixWrapperContents.Replace(
+    "__PACK_CHEZ__",
+    ($SchemeExecutable -replace '\\', '/')
 )
 
 # Use LF line endings for the POSIX shell wrapper.
