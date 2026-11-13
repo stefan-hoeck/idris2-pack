@@ -9,7 +9,7 @@ SHELL ["/bin/bash", "-c"]
 ENV PATH "/root/.local/bin:/root/.idris2/bin:$PATH"
 
 # hadolint ignore=DL3008,DL3015
-RUN apt-get update && apt-get install --yes gcc make chezscheme libgmp3-dev git gnupg && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install --yes gcc libc6-dev make chezscheme libgmp3-dev git gnupg && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/idris2-pack
 
