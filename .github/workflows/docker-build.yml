@@ -34,7 +34,8 @@ jobs:
         run: |
           export NO_CACHE="${{ github.ref == 'refs/heads/main' }}"
           # Change all uppercase to lowercase
-          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | \
+          tr '[:upper:]' '[:lower:]')
           echo "REPO_OWNER=$REPO_OWNER" >> "$GITHUB_ENV"
           UBUNTU_RELEASE=resolute OWNER=$REPO_OWNER make docker-build
           UBUNTU_RELEASE=noble OWNER=$REPO_OWNER make docker-build
@@ -43,7 +44,9 @@ jobs:
       - name: Log in to registry
         if: github.ref == 'refs/heads/main'
         # This is where you will update the PAT to GITHUB_TOKEN
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | \
+          docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Push images
         if: github.ref == 'refs/heads/main'

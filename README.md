@@ -18,6 +18,9 @@ their current build status can also be found on the collection
 ## Quick Installation
 
 For detailed instructions and prerequisites, see [installation](INSTALL.md).
+
+### Unix-like
+
 Assuming you have already installed Chez Scheme,
 you can set up pack and the corresponding Idris2
 compiler with
@@ -29,6 +32,42 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/stefan-hoeck/idris2-pack
 You will be asked about the name of your Chez Scheme executable during
 the installation procedure. If all goes well, make sure to add
 folder `$HOME/.local/bin` to your `$PATH` variable.
+
+### Windows
+
+The following PowerShell script will download and install
+Chez Scheme (if it doesn't already exist on the user's system),
+as well as set up pack and the corresponding
+Idris2 compiler with
+
+```powershell
+$installer = "$env:TEMP\install.ps1"
+Invoke-WebRequest `
+    -Uri "https://raw.githubusercontent.com/stefan-hoeck/idris2-pack/main/install.ps1" `
+        -OutFile $installer
+        powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $installer
+    `
+`
+```
+
+This installation script also works with a local Racket installation
+(any of the following `chezscheme`, `scheme`, `chez`, or `racket` will work).
+
+The Windows installer automatically adds
+`%USERPROFILE%\.local\bin` to the user's `PATH`.
+
+After installation, open a new terminal
+before running `pack` or `idris2` so the updated `PATH` is available.
+
+> [!NOTE]
+> On Windows, the installer creates shell-specific launchers in `%USERPROFILE%\.local\bin`:
+>
+> - `pack.cmd` for PowerShell and CMD.
+> - `pack` for Git Bash and MSYS2.
+> - `pack-runtime.cmd` and `pack-runtime` are internal launchers produced by the Idris2 build and are used by the wrappers above.
+>
+> Users should normally invoke `pack` directly from their
+> preferred terminal and should not need to call the `pack-runtime*` files manually.
 
 ## Usage
 
