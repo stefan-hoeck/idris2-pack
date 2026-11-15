@@ -28,7 +28,7 @@ RUN make micropack SCHEME=$SCHEME
 FROM ubuntu:$ubuntu_release
 
 # hadolint ignore=DL3008,DL3015
-RUN apt-get update && apt-get install --yes gcc make chezscheme libgmp3-dev git && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install --yes gcc libc6-dev make chezscheme libgmp3-dev git && rm -rf /var/lib/apt/lists/*
 
 SHELL ["/bin/bash", "-c"]
 
