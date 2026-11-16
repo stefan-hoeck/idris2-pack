@@ -243,15 +243,6 @@ libPkg env lvl cleanBuild cmd desc =
 
      inDir (desc.path.parent) (\_ => sysWithEnvAndLog lvl s pre)
 
-||| Mapping from OS to platform.
-toPlatform : String -> MachineType
-toPlatform "unix" = Ubuntu
-toPlatform _      = MacOS
-
-||| Check whether a machine type represents the current platform.
-platformOf : MachineType -> Bool
-platformOf mt = mt == toPlatform os
-
 ||| Verify that the current platform is supported by a package.
 verifyPlatform :
      {auto _ : HasIO io}
